@@ -11,7 +11,7 @@ export type Specialist = {
   avatar: string;
 };
 
-export type Student = {
+export type Person = {
   id: string;
   name: string;
   phone: string;

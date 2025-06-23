@@ -1,4 +1,4 @@
-import type { Student, Specialist, Actividad, YogaClass, Payment, Space } from '@/types';
+import type { Person, Specialist, Actividad, YogaClass, Payment, Space } from '@/types';
 
 export const actividades: Actividad[] = [
   { id: 'spec-1', name: 'Vinyasa Flow' },
@@ -22,7 +22,7 @@ const daysAgo = (days: number): Date => {
   return date;
 };
 
-export const students: Student[] = [
+export const people: Person[] = [
   { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(180), membershipType: 'Mensual', lastPaymentDate: daysAgo(25), avatar: `https://placehold.co/100x100.png` },
   { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(150), membershipType: 'Mensual', lastPaymentDate: daysAgo(45), avatar: `https://placehold.co/100x100.png` },
   { id: 'stu-3', name: 'Chloe Kim', phone: '555-0103', joinDate: daysAgo(120), membershipType: 'Diario', lastPaymentDate: daysAgo(5), avatar: `https://placehold.co/100x100.png` },

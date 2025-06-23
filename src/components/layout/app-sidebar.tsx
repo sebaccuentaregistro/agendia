@@ -25,7 +25,7 @@ import Link from "next/link";
 const menuItems = [
   { href: "/dashboard", label: "Panel", icon: LayoutGrid },
   { href: "/schedule", label: "Horario", icon: Calendar },
-  { href: "/students", label: "Asistentes", icon: Users },
+  { href: "/students", label: "Personas", icon: Users },
   { href: "/instructors", label: "Especialistas", icon: ClipboardList },
   { href: "/specializations", label: "Actividades", icon: Star },
   { href: "/spaces", label: "Espacios", icon: Warehouse },

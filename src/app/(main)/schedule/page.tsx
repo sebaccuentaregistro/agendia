@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Student, YogaClass } from '@/types';
+import { Person, YogaClass } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -103,7 +103,7 @@ export default function SchedulePage() {
     addYogaClass,
     updateYogaClass,
     deleteYogaClass,
-    students,
+    people,
   } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -161,8 +161,8 @@ export default function SchedulePage() {
     return { specialist, actividad, space };
   };
 
-  const getRoster = (cls: YogaClass): Student[] => {
-    return students.filter(s => cls.studentIds.includes(s.id));
+  const getRoster = (cls: YogaClass): Person[] => {
+    return people.filter(p => cls.studentIds.includes(p.id));
   }
 
   const handleAdd = () => {
@@ -488,7 +488,7 @@ export default function SchedulePage() {
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Esto eliminará permanentemente
-              la clase y desinscribirá a todos los asistentes.
+              la clase y desinscribirá a todas las personas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -508,7 +508,7 @@ export default function SchedulePage() {
       <Sheet open={!!viewingRoster} onOpenChange={(open) => !open && setViewingRoster(null)}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Lista de Asistentes</SheetTitle>
+            <SheetTitle>Lista de Personas</SheetTitle>
             {viewingRoster && (
                 <SheetDescription>
                     {actividades.find(a => a.id === viewingRoster.actividadId)?.name} - {viewingRoster.dayOfWeek}, {formatTime(viewingRoster.time)}
@@ -518,17 +518,17 @@ export default function SchedulePage() {
           <div className="py-4">
             <ul className="space-y-3">
                 {viewingRoster && getRoster(viewingRoster).length > 0 ? (
-                    getRoster(viewingRoster).map(student => (
-                        <li key={student.id} className="flex items-center gap-3">
+                    getRoster(viewingRoster).map(person => (
+                        <li key={person.id} className="flex items-center gap-3">
                             <Avatar>
-                                <AvatarImage src={student.avatar} alt={student.name} data-ai-hint="person photo"/>
-                                <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                                <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
+                                <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <span>{student.name}</span>
+                            <span>{person.name}</span>
                         </li>
                     ))
                 ) : (
-                    <p className="text-sm text-muted-foreground">No hay asistentes inscritos en esta clase.</p>
+                    <p className="text-sm text-muted-foreground">No hay personas inscritas en esta clase.</p>
                 )}
             </ul>
           </div>

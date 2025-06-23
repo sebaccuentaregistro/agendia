@@ -1,13 +1,13 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Student } from "@/types";
+import type { Person } from "@/types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getStudentPaymentStatus(student: Student): 'Al día' | 'Atrasado' {
-  if (student.membershipType === 'Diario') {
+export function getStudentPaymentStatus(person: Person): 'Al día' | 'Atrasado' {
+  if (person.membershipType === 'Diario') {
     return 'Al día';
   }
   
@@ -15,10 +15,10 @@ export function getStudentPaymentStatus(student: Student): 'Al día' | 'Atrasado
   const now = new Date();
   now.setHours(0, 0, 0, 0); // Normalize to start of day
 
-  const lastPaymentDate = new Date(student.lastPaymentDate);
+  const lastPaymentDate = new Date(person.lastPaymentDate);
   lastPaymentDate.setHours(0, 0, 0, 0); // Normalize
 
-  const joinDate = student.joinDate;
+  const joinDate = person.joinDate;
   const dueDayOfMonth = joinDate.getDate();
 
   // Determine the most recent due date that has passed

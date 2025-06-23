@@ -8,28 +8,28 @@ import { useStudio } from '@/context/StudioContext';
 import { format } from 'date-fns';
 
 export default function PaymentsPage() {
-  const { payments, students } = useStudio();
+  const { payments, people } = useStudio();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const getStudentName = (studentId: string): string => {
-    return students.find(s => s.id === studentId)?.name || 'Asistente Desconocido';
+  const getPersonName = (personId: string): string => {
+    return people.find(p => p.id === personId)?.name || 'Persona Desconocida';
   };
 
   const sortedPayments = [...payments].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   const filteredPayments = searchTerm
     ? sortedPayments.filter(payment => {
-        const studentName = getStudentName(payment.studentId).toLowerCase();
-        return studentName.includes(searchTerm.toLowerCase());
+        const personName = getPersonName(payment.studentId).toLowerCase();
+        return personName.includes(searchTerm.toLowerCase());
       })
     : sortedPayments;
 
   return (
     <div>
-      <PageHeader title="Historial de Pagos" description="Un registro de todas las transacciones de pago de los asistentes.">
+      <PageHeader title="Historial de Pagos" description="Un registro de todas las transacciones de pago de las personas.">
         <div className="w-full max-w-sm">
           <Input 
-            placeholder="Buscar por nombre de asistente..."
+            placeholder="Buscar por nombre de persona..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -40,7 +40,7 @@ export default function PaymentsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Asistente</TableHead>
+              <TableHead>Persona</TableHead>
               <TableHead>Monto</TableHead>
               <TableHead>Fecha de Pago</TableHead>
             </TableRow>
@@ -49,7 +49,7 @@ export default function PaymentsPage() {
             {filteredPayments.length > 0 ? (
               filteredPayments.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell className="font-medium">{getStudentName(payment.studentId)}</TableCell>
+                  <TableCell className="font-medium">{getPersonName(payment.studentId)}</TableCell>
                   <TableCell>${payment.amount.toFixed(2)}</TableCell>
                   <TableCell>{format(payment.date, 'dd/MM/yyyy')}</TableCell>
                 </TableRow>

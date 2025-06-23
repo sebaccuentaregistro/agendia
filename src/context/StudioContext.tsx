@@ -1,11 +1,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import type { Actividad, Specialist, Student, YogaClass, Payment, Space } from '@/types';
+import type { Actividad, Specialist, Person, YogaClass, Payment, Space } from '@/types';
 import { 
   actividades as initialActividades, 
   specialists as initialSpecialists,
-  students as initialStudents,
+  people as initialPeople,
   yogaClasses as initialYogaClasses,
   payments as initialPayments,
   spaces as initialSpaces
@@ -15,7 +15,7 @@ import { useToast } from '@/hooks/use-toast';
 interface StudioContextType {
   actividades: Actividad[];
   specialists: Specialist[];
-  students: Student[];
+  people: Person[];
   yogaClasses: YogaClass[];
   payments: Payment[];
   spaces: Space[];
@@ -25,9 +25,9 @@ interface StudioContextType {
   addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
   updateSpecialist: (specialist: Specialist) => void;
   deleteSpecialist: (specialistId: string) => void;
-  addStudent: (student: Omit<Student, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => void;
-  updateStudent: (student: Student) => void;
-  deleteStudent: (studentId: string) => void;
+  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => void;
+  updatePerson: (person: Person) => void;
+  deletePerson: (personId: string) => void;
   recordPayment: (studentId: string) => void;
   undoLastPayment: (studentId: string) => void;
   addSpace: (space: Omit<Space, 'id'>) => void;
@@ -36,7 +36,7 @@ interface StudioContextType {
   addYogaClass: (yogaClass: Omit<YogaClass, 'id' | 'studentIds'>) => void;
   updateYogaClass: (yogaClass: YogaClass) => void;
   deleteYogaClass: (yogaClassId: string) => void;
-  enrollStudentInClasses: (studentId: string, classIds: string[]) => void;
+  enrollPersonInClasses: (personId: string, classIds: string[]) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -44,7 +44,7 @@ const StudioContext = createContext<StudioContextType | undefined>(undefined);
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [actividades, setActividades] = useState<Actividad[]>(initialActividades);
   const [specialists, setSpecialists] = useState<Specialist[]>(initialSpecialists);
-  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [people, setPeople] = useState<Person[]>(initialPeople);
   const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(initialYogaClasses);
   const [payments, setPayments] = useState<Payment[]>(initialPayments);
   const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
@@ -180,61 +180,61 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpecialists(prev => prev.filter(s => s.id !== specialistId));
   };
 
-  const addStudent = (student: Omit<Student, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => {
-    const newStudent: Student = {
+  const addPerson = (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => {
+    const newPerson: Person = {
       id: `stu-${Date.now()}`,
       avatar: `https://placehold.co/100x100.png`,
       joinDate: new Date(),
       lastPaymentDate: new Date(),
-      ...student,
+      ...person,
     };
-    setStudents(prev => [newStudent, ...prev]);
+    setPeople(prev => [newPerson, ...prev]);
     // Also create a corresponding payment record
     const newPayment: Payment = {
       id: `pay-${Date.now()}`,
-      studentId: newStudent.id,
-      amount: newStudent.membershipType === 'Mensual' ? 95.00 : 15.00,
+      studentId: newPerson.id,
+      amount: newPerson.membershipType === 'Mensual' ? 95.00 : 15.00,
       date: new Date(),
     };
     setPayments(prev => [newPayment, ...prev]);
   };
 
-  const updateStudent = (updatedStudent: Student) => {
-    setStudents(prev => 
-      prev.map(s => (s.id === updatedStudent.id ? updatedStudent : s))
+  const updatePerson = (updatedPerson: Person) => {
+    setPeople(prev => 
+      prev.map(p => (p.id === updatedPerson.id ? updatedPerson : p))
     );
   };
 
-  const deleteStudent = (studentId: string) => {
+  const deletePerson = (personId: string) => {
     // Unenroll from all classes first
     setYogaClasses(prevClasses =>
       prevClasses.map(cls => ({
         ...cls,
-        studentIds: cls.studentIds.filter(id => id !== studentId),
+        studentIds: cls.studentIds.filter(id => id !== personId),
       }))
     );
-    setStudents(prev => prev.filter(s => s.id !== studentId));
+    setPeople(prev => prev.filter(p => p.id !== personId));
     // Also delete associated payments
-    setPayments(prev => prev.filter(p => p.studentId !== studentId));
+    setPayments(prev => prev.filter(p => p.studentId !== personId));
   };
 
   const recordPayment = (studentId: string) => {
-    let studentToUpdate: Student | undefined;
-    setStudents(prevStudents =>
-      prevStudents.map(s => {
-        if (s.id === studentId) {
-          studentToUpdate = s;
-          return { ...s, lastPaymentDate: new Date() };
+    let personToUpdate: Person | undefined;
+    setPeople(prevPeople =>
+      prevPeople.map(p => {
+        if (p.id === studentId) {
+          personToUpdate = p;
+          return { ...p, lastPaymentDate: new Date() };
         }
-        return s;
+        return p;
       })
     );
 
-    if (studentToUpdate) {
+    if (personToUpdate) {
       const newPayment: Payment = {
         id: `pay-${Date.now()}`,
-        studentId: studentToUpdate.id,
-        amount: studentToUpdate.membershipType === 'Mensual' ? 95.00 : 15.00,
+        studentId: personToUpdate.id,
+        amount: personToUpdate.membershipType === 'Mensual' ? 95.00 : 15.00,
         date: new Date(),
       };
       setPayments(prev => [newPayment, ...prev].sort((a,b) => b.date.getTime() - a.date.getTime()));
@@ -254,12 +254,12 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ? studentPayments[1].date 
         : new Date(0); // Set to epoch to guarantee overdue status
 
-      setStudents(prevStudents =>
-        prevStudents.map(s => {
-          if (s.id === studentId) {
-            return { ...s, lastPaymentDate: newLastPaymentDate };
+      setPeople(prevPeople =>
+        prevPeople.map(p => {
+          if (p.id === studentId) {
+            return { ...p, lastPaymentDate: newLastPaymentDate };
           }
-          return s;
+          return p;
         })
       );
     }
@@ -427,9 +427,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setYogaClasses(prev => prev.filter(c => c.id !== yogaClassId));
   };
 
-  const enrollStudentInClasses = (studentId: string, newClassIds: string[]) => {
+  const enrollPersonInClasses = (personId: string, newClassIds: string[]) => {
     const oldClassIds = yogaClasses
-      .filter(c => c.studentIds.includes(studentId))
+      .filter(c => c.studentIds.includes(personId))
       .map(c => c.id);
       
     const joiningClassIds = newClassIds.filter(id => !oldClassIds.includes(id));
@@ -442,7 +442,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       if (cls) {
         // Check if the class is full
         if (cls.studentIds.length >= cls.capacity) {
-          // If it's full, we need a "swap slot" from a class the student is leaving.
+          // If it's full, we need a "swap slot" from a class the person is leaving.
           if (availableSwapSlots > 0) {
             availableSwapSlots--; // Use up a swap slot.
           } else {
@@ -462,13 +462,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     // If all checks pass, apply the changes.
     const updatedClasses = yogaClasses.map(cls => {
       const shouldBeEnrolled = newClassIds.includes(cls.id);
-      const isEnrolled = cls.studentIds.includes(studentId);
+      const isEnrolled = cls.studentIds.includes(personId);
 
       if (shouldBeEnrolled && !isEnrolled) {
-        return { ...cls, studentIds: [...cls.studentIds, studentId] };
+        return { ...cls, studentIds: [...cls.studentIds, personId] };
       }
       if (!shouldBeEnrolled && isEnrolled) {
-        return { ...cls, studentIds: cls.studentIds.filter(id => id !== studentId) };
+        return { ...cls, studentIds: cls.studentIds.filter(id => id !== personId) };
       }
       return cls;
     });
@@ -476,7 +476,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setYogaClasses(updatedClasses);
     toast({
       title: "Inscripciones Actualizadas",
-      description: "Se han guardado los cambios en las clases del asistente.",
+      description: "Se han guardado los cambios en las clases de la persona.",
     });
   };
 
@@ -486,7 +486,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       value={{
         actividades,
         specialists,
-        students,
+        people,
         yogaClasses,
         payments,
         spaces,
@@ -496,9 +496,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         addSpecialist,
         updateSpecialist,
         deleteSpecialist,
-        addStudent,
-        updateStudent,
-        deleteStudent,
+        addPerson,
+        updatePerson,
+        deletePerson,
         recordPayment,
         undoLastPayment,
         addSpace,
@@ -507,7 +507,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         addYogaClass,
         updateYogaClass,
         deleteYogaClass,
-        enrollStudentInClasses,
+        enrollPersonInClasses,
       }}
     >
       {children}

@@ -3,7 +3,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import type { Student } from '@/types';
+import type { Person } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -35,14 +35,14 @@ const formSchema = z.object({
   }),
 });
 
-function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChange: (open: boolean) => void }) {
-  const { yogaClasses, specialists, actividades, enrollStudentInClasses, spaces } = useStudio();
+function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
+  const { yogaClasses, specialists, actividades, enrollPersonInClasses, spaces } = useStudio();
 
   const enrolledIn = useMemo(() =>
     yogaClasses
-      .filter(cls => cls.studentIds.includes(student.id))
+      .filter(cls => cls.studentIds.includes(person.id))
       .map(cls => cls.id),
-    [yogaClasses, student.id]
+    [yogaClasses, person.id]
   );
   
   const form = useForm<{ classIds: string[] }>({
@@ -80,6 +80,12 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   }, [specialistFilter, specialists, actividadFilter]);
 
   useEffect(() => {
+    if (actividadFilter !== 'all' && !filteredActividadesForDropdown.some(a => a.id === actividadFilter)) {
+      setActividadFilter('all');
+    }
+  }, [specialistFilter, filteredActividadesForDropdown, actividadFilter]);
+
+  useEffect(() => {
       if (specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
           setSpecialistFilter('all');
       }
@@ -95,7 +101,7 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
 
 
   function onSubmit(data: { classIds: string[] }) {
-    enrollStudentInClasses(student.id, data.classIds);
+    enrollPersonInClasses(person.id, data.classIds);
     onOpenChange(false);
   }
 
@@ -112,7 +118,7 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
     <Dialog open={true} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Asignar Clases a {student.name}</DialogTitle>
+          <DialogTitle>Asignar Clases a {person.name}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -229,29 +235,29 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
 }
 
 export default function StudentsPage() {
-  const { students, addStudent, updateStudent, deleteStudent, recordPayment, undoLastPayment } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | undefined>(undefined);
-  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
-  const [studentToEnroll, setStudentToEnroll] = useState<Student | null>(null);
+  const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
+  const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
+  const [personToEnroll, setPersonToEnroll] = useState<Person | null>(null);
   
   const searchParams = useSearchParams();
 
-  const studentForDialog = useMemo(() => {
-    if (!selectedStudent) return undefined;
-    return students.find(s => s.id === selectedStudent.id);
-  }, [students, selectedStudent]);
+  const personForDialog = useMemo(() => {
+    if (!selectedPerson) return undefined;
+    return people.find(p => p.id === selectedPerson.id);
+  }, [people, selectedPerson]);
 
-  const filteredStudents = useMemo(() => {
+  const filteredPeople = useMemo(() => {
     const filter = searchParams.get('filter');
     if (filter === 'overdue') {
-      return students.filter(
-        (student) => getStudentPaymentStatus(student) === 'Atrasado'
+      return people.filter(
+        (person) => getStudentPaymentStatus(person) === 'Atrasado'
       );
     }
-    return students;
-  }, [students, searchParams]);
+    return people;
+  }, [people, searchParams]);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -263,71 +269,71 @@ export default function StudentsPage() {
     },
   });
 
-  const getPaymentStatusBadge = (student: Student) => {
-    const status = getStudentPaymentStatus(student);
+  const getPaymentStatusBadge = (person: Person) => {
+    const status = getStudentPaymentStatus(person);
     if (status === 'Al día') {
       return <Badge variant="secondary" className="bg-green-100 text-green-800">Al día</Badge>;
     }
     return <Badge variant="destructive">Atrasado</Badge>;
   };
 
-  function handleEdit(student: Student) {
-    setSelectedStudent(student);
+  function handleEdit(person: Person) {
+    setSelectedPerson(person);
     form.reset({
-      name: student.name,
-      phone: student.phone,
-      membershipType: student.membershipType,
+      name: person.name,
+      phone: person.phone,
+      membershipType: person.membershipType,
     });
     setIsDialogOpen(true);
   }
 
   function handleAdd() {
-    setSelectedStudent(undefined);
+    setSelectedPerson(undefined);
     form.reset({ name: '', phone: '', membershipType: 'Mensual' });
     setIsDialogOpen(true);
   }
 
-  function openDeleteDialog(student: Student) {
-    setStudentToDelete(student);
+  function openDeleteDialog(person: Person) {
+    setPersonToDelete(person);
     setIsDeleteDialogOpen(true);
   }
 
   function handleDelete() {
-    if (studentToDelete) {
-      deleteStudent(studentToDelete.id);
+    if (personToDelete) {
+      deletePerson(personToDelete.id);
       setIsDeleteDialogOpen(false);
-      setStudentToDelete(null);
+      setPersonToDelete(null);
     }
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (studentForDialog) {
-      updateStudent({ ...studentForDialog, ...values });
+    if (personForDialog) {
+      updatePerson({ ...personForDialog, ...values });
     } else {
-      addStudent(values);
+      addPerson(values);
     }
     setIsDialogOpen(false);
-    setSelectedStudent(undefined);
+    setSelectedPerson(undefined);
   }
 
   return (
     <div>
-      <PageHeader title="Asistentes" description="Gestiona los perfiles de los asistentes y el estado de los pagos.">
+      <PageHeader title="Personas" description="Gestiona los perfiles de las personas y el estado de los pagos.">
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
             setIsDialogOpen(open);
             if (!open) {
-              setSelectedStudent(undefined);
+              setSelectedPerson(undefined);
             }
         }}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Asistente
+              Añadir Persona
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{studentForDialog ? 'Editar Asistente' : 'Añadir Nuevo Asistente'}</DialogTitle>
+              <DialogTitle>{personForDialog ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -390,13 +396,13 @@ export default function StudentsPage() {
                   />
                 </div>
                 
-                {studentForDialog && studentForDialog.membershipType === 'Mensual' && (
+                {personForDialog && personForDialog.membershipType === 'Mensual' && (
                   <div className="space-y-4 pt-4">
                     <Separator />
                     <div className="space-y-2">
                        <Label>Gestión de Pagos</Label>
                        <p className="text-sm text-muted-foreground">
-                         Cambia manualmente el estado de pago del asistente.
+                         Cambia manualmente el estado de pago de la persona.
                        </p>
                     </div>
                     <div className="flex items-center justify-between rounded-lg border p-3">
@@ -404,17 +410,17 @@ export default function StudentsPage() {
                          <span className="text-sm font-medium">Estado Actual</span>
                          <span className={cn(
                           "text-sm font-bold",
-                          getStudentPaymentStatus(studentForDialog) === 'Al día' ? 'text-green-700' : 'text-destructive'
+                          getStudentPaymentStatus(personForDialog) === 'Al día' ? 'text-green-700' : 'text-destructive'
                          )}>
-                          {getStudentPaymentStatus(studentForDialog)}
+                          {getStudentPaymentStatus(personForDialog)}
                          </span>
                       </div>
-                       {getStudentPaymentStatus(studentForDialog) === 'Al día' ? (
-                          <Button type="button" variant="outline" size="sm" onClick={() => undoLastPayment(studentForDialog.id)}>
+                       {getStudentPaymentStatus(personForDialog) === 'Al día' ? (
+                          <Button type="button" variant="outline" size="sm" onClick={() => undoLastPayment(personForDialog.id)}>
                             Deshacer Pago
                           </Button>
                        ) : (
-                          <Button type="button" variant="outline" size="sm" onClick={() => recordPayment(studentForDialog.id)}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => recordPayment(personForDialog.id)}>
                             Registrar Pago
                           </Button>
                        )}
@@ -444,21 +450,21 @@ export default function StudentsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents.map((student) => (
-              <TableRow key={student.id}>
+            {filteredPeople.map((person) => (
+              <TableRow key={person.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={student.avatar} alt={student.name} data-ai-hint="person photo"/>
-                      <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
+                      <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <span>{student.name}</span>
+                    <span>{person.name}</span>
                   </div>
                 </TableCell>
-                <TableCell>{student.phone}</TableCell>
-                <TableCell>{student.membershipType}</TableCell>
-                <TableCell>{getPaymentStatusBadge(student)}</TableCell>
-                <TableCell>{format(student.joinDate, 'dd/MM/yyyy')}</TableCell>
+                <TableCell>{person.phone}</TableCell>
+                <TableCell>{person.membershipType}</TableCell>
+                <TableCell>{getPaymentStatusBadge(person)}</TableCell>
+                <TableCell>{format(person.joinDate, 'dd/MM/yyyy')}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -468,12 +474,12 @@ export default function StudentsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(student)}>Editar</DropdownMenuItem>
-                       <DropdownMenuItem onClick={() => setStudentToEnroll(student)}>
+                      <DropdownMenuItem onClick={() => handleEdit(person)}>Editar</DropdownMenuItem>
+                       <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>
                         Asignar a Clases
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(student)}>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Eliminar
                       </DropdownMenuItem>
@@ -486,10 +492,10 @@ export default function StudentsPage() {
         </Table>
       </div>
 
-      {studentToEnroll && (
+      {personToEnroll && (
         <EnrollDialog
-            student={studentToEnroll}
-            onOpenChange={(open) => !open && setStudentToEnroll(null)}
+            person={personToEnroll}
+            onOpenChange={(open) => !open && setPersonToEnroll(null)}
         />
       )}
 
@@ -498,13 +504,13 @@ export default function StudentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente al asistente, sus datos de pago y lo desinscribirá de todas las clases.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente a la persona, sus datos de pago y la desinscribirá de todas las clases.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setStudentToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setPersonToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-              Sí, eliminar asistente
+              Sí, eliminar persona
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
