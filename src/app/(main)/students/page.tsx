@@ -71,16 +71,20 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   }, [actividadFilter, specialists]);
 
   useEffect(() => {
-    if (specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
+    // If the current specialist is no longer valid for the selected activity, reset it
+    const specialist = specialists.find(s => s.id === specialistFilter);
+    if (specialist && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
       setSpecialistFilter('all');
     }
-  }, [actividadFilter, filteredSpecialistsForDropdown, specialistFilter]);
-
+  }, [actividadFilter, specialists, specialistFilter]);
+  
   useEffect(() => {
-    if (actividadFilter !== 'all' && !filteredActividadesForDropdown.some(a => a.id === actividadFilter)) {
+    // If the current activity is no longer valid for the selected specialist, reset it
+    const specialist = specialists.find(s => s.id === specialistFilter);
+    if (specialist && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
       setActividadFilter('all');
     }
-  }, [specialistFilter, filteredActividadesForDropdown, actividadFilter]);
+  }, [specialistFilter, specialists, actividadFilter]);
 
   const filteredClasses = useMemo(() => {
     return yogaClasses.filter(cls => {
