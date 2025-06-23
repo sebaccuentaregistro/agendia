@@ -12,7 +12,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
   Users,
-  ClipboardUser,
+  ClipboardList,
   Calendar,
   Star,
   CreditCard,
@@ -25,7 +25,7 @@ const menuItems = [
   { href: "/dashboard", label: "Panel", icon: LayoutGrid },
   { href: "/schedule", label: "Horario", icon: Calendar },
   { href: "/students", label: "Estudiantes", icon: Users },
-  { href: "/instructors", label: "Especialistas", icon: ClipboardUser },
+  { href: "/instructors", label: "Especialistas", icon: ClipboardList },
   { href: "/specializations", label: "Actividades", icon: Star },
   { href: "/payments", label: "Pagos", icon: CreditCard },
   { href: "/assistant", label: "Asistente IA", icon: Sparkles },
