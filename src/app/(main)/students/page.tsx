@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { Person } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -41,7 +41,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
   const enrolledIn = useMemo(() =>
     yogaClasses
-      .filter(cls => cls.studentIds.includes(person.id))
+      .filter(cls => cls.personIds.includes(person.id))
       .map(cls => cls.id),
     [yogaClasses, person.id]
   );
@@ -174,7 +174,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                               name="classIds"
                               render={({ field }) => {
                                 const isEnrolledInForm = field.value?.includes(item.id);
-                                const isFull = item.studentIds.length >= item.capacity;
+                                const isFull = item.personIds.length >= item.capacity;
 
                                 return (
                                 <FormItem
@@ -203,7 +203,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                                         {actividad.name}
                                       </FormLabel>
                                       <p className="text-xs text-muted-foreground">
-                                          {specialist?.name} | {item.dayOfWeek} {formatTime(item.time)} | {space?.name} | ({item.studentIds.length}/{item.capacity})
+                                          {specialist?.name} | {item.dayOfWeek} {formatTime(item.time)} | {space?.name} | ({item.personIds.length}/{item.capacity})
                                       </p>
                                       {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">Clase llena</p>}
                                   </div>
@@ -488,7 +488,6 @@ export default function StudentsPage() {
                        <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>
                         Asignar a Clases
                       </DropdownMenuItem>
-                      <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Eliminar

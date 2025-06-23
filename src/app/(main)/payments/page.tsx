@@ -19,7 +19,7 @@ export default function PaymentsPage() {
 
   const filteredPayments = searchTerm
     ? sortedPayments.filter(payment => {
-        const personName = getPersonName(payment.studentId).toLowerCase();
+        const personName = getPersonName(payment.personId).toLowerCase();
         return personName.includes(searchTerm.toLowerCase());
       })
     : sortedPayments;
@@ -41,7 +41,6 @@ export default function PaymentsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Persona</TableHead>
-              <TableHead>Monto</TableHead>
               <TableHead>Fecha de Pago</TableHead>
             </TableRow>
           </TableHeader>
@@ -49,14 +48,13 @@ export default function PaymentsPage() {
             {filteredPayments.length > 0 ? (
               filteredPayments.map((payment) => (
                 <TableRow key={payment.id}>
-                  <TableCell className="font-medium">{getPersonName(payment.studentId)}</TableCell>
-                  <TableCell>${payment.amount.toFixed(2)}</TableCell>
+                  <TableCell className="font-medium">{getPersonName(payment.personId)}</TableCell>
                   <TableCell>{format(payment.date, 'dd/MM/yyyy')}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={3} className="h-24 text-center">
+                <TableCell colSpan={2} className="h-24 text-center">
                   No se encontraron pagos.
                 </TableCell>
               </TableRow>

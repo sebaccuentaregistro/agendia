@@ -17,7 +17,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -161,7 +160,7 @@ export default function SchedulePage() {
   };
 
   const getRoster = (cls: YogaClass): Person[] => {
-    return people.filter(p => cls.studentIds.includes(p.id));
+    return people.filter(p => cls.personIds.includes(p.id));
   }
 
   const handleAdd = () => {
@@ -416,7 +415,7 @@ export default function SchedulePage() {
           <TableBody>
             {yogaClasses.map((cls) => {
               const { specialist, actividad, space } = getClassDetails(cls);
-              const enrolledCount = cls.studentIds?.length || 0;
+              const enrolledCount = cls.personIds?.length || 0;
               const capacityPercentage =
                 (enrolledCount / cls.capacity) * 100;
 
@@ -460,7 +459,6 @@ export default function SchedulePage() {
                           Editar Clase
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setViewingRoster(cls)}>Ver Lista</DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => openDeleteDialog(cls)}

@@ -38,21 +38,21 @@ export const spaces: Space[] = [
 ];
 
 export const yogaClasses: YogaClass[] = [
-  { id: 'cls-1', instructorId: 'inst-1', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', capacity: 15, studentIds: ['stu-1', 'stu-4'] },
-  { id: 'cls-2', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', capacity: 15, studentIds: ['stu-2', 'stu-5', 'stu-6'] },
-  { id: 'cls-3', instructorId: 'inst-2', actividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', capacity: 12, studentIds: ['stu-1', 'stu-3'] },
-  { id: 'cls-4', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', capacity: 15, studentIds: ['stu-2', 'stu-4'] },
-  { id: 'cls-5', instructorId: 'inst-4', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', capacity: 15, studentIds: ['stu-5', 'stu-6'] },
-  { id: 'cls-6', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', capacity: 15, studentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'] },
+  { id: 'cls-1', instructorId: 'inst-1', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', capacity: 15, personIds: ['stu-1', 'stu-4'] },
+  { id: 'cls-2', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', capacity: 15, personIds: ['stu-2', 'stu-5', 'stu-6'] },
+  { id: 'cls-3', instructorId: 'inst-2', actividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', capacity: 12, personIds: ['stu-1', 'stu-3'] },
+  { id: 'cls-4', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', capacity: 15, personIds: ['stu-2', 'stu-4'] },
+  { id: 'cls-5', instructorId: 'inst-4', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', capacity: 15, personIds: ['stu-5', 'stu-6'] },
+  { id: 'cls-6', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', capacity: 15, personIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'] },
 ];
 
 export const payments: Payment[] = [
-  { id: 'pay-1', studentId: 'stu-1', amount: 95.00, date: daysAgo(25) },
-  { id: 'pay-2', studentId: 'stu-2', amount: 95.00, date: daysAgo(45) },
-  { id: 'pay-3', studentId: 'stu-3', amount: 15.00, date: daysAgo(5) },
-  { id: 'pay-4', studentId: 'stu-4', amount: 95.00, date: daysAgo(10) },
-  { id: 'pay-5', studentId: 'stu-5', amount: 15.00, date: daysAgo(2) },
-  { id: 'pay-6', studentId: 'stu-6', amount: 95.00, date: daysAgo(29) },
-  { id: 'pay-7', studentId: 'stu-1', amount: 95.00, date: daysAgo(55) },
-  { id: 'pay-8', studentId: 'stu-2', amount: 95.00, date: daysAgo(75) },
+  { id: 'pay-1', personId: 'stu-1', date: daysAgo(25) },
+  { id: 'pay-2', personId: 'stu-2', date: daysAgo(45) },
+  { id: 'pay-3', personId: 'stu-3', date: daysAgo(5) },
+  { id: 'pay-4', personId: 'stu-4', date: daysAgo(10) },
+  { id: 'pay-5', personId: 'stu-5', date: daysAgo(2) },
+  { id: 'pay-6', personId: 'stu-6', date: daysAgo(29) },
+  { id: 'pay-7', personId: 'stu-1', date: daysAgo(55) },
+  { id: 'pay-8', personId: 'stu-2', date: daysAgo(75) },
 ];
