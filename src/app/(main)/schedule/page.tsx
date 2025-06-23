@@ -16,7 +16,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
@@ -457,7 +456,6 @@ export default function SchedulePage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleEdit(cls)}>
                           Editar Clase
                         </DropdownMenuItem>
