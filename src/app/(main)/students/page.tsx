@@ -24,6 +24,8 @@ import { useSearchParams } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -71,7 +73,6 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   }, [actividadFilter, specialists]);
 
   useEffect(() => {
-    // If the current specialist is no longer valid for the selected activity, reset it
     const specialist = specialists.find(s => s.id === specialistFilter);
     if (specialist && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
       setSpecialistFilter('all');
@@ -79,7 +80,6 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   }, [actividadFilter, specialists, specialistFilter]);
   
   useEffect(() => {
-    // If the current activity is no longer valid for the selected specialist, reset it
     const specialist = specialists.find(s => s.id === specialistFilter);
     if (specialist && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
       setActividadFilter('all');
@@ -222,7 +222,7 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
 }
 
 export default function StudentsPage() {
-  const { students, addStudent, updateStudent, deleteStudent } = useStudio();
+  const { students, addStudent, updateStudent, deleteStudent, recordPayment, undoLastPayment } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | undefined>(undefined);
@@ -313,7 +313,7 @@ export default function StudentsPage() {
               <DialogTitle>{selectedStudent ? 'Editar Asistente' : 'Añadir Nuevo Asistente'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid gap-4 py-4">
                   <FormField
                     control={form.control}
@@ -372,6 +372,39 @@ export default function StudentsPage() {
                     )}
                   />
                 </div>
+                
+                {selectedStudent && selectedStudent.membershipType === 'Mensual' && (
+                  <div className="space-y-4 pt-4">
+                    <Separator />
+                    <div className="space-y-2">
+                       <Label>Gestión de Pagos</Label>
+                       <p className="text-sm text-muted-foreground">
+                         Cambia manualmente el estado de pago del asistente.
+                       </p>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="flex flex-col">
+                         <span className="text-sm font-medium">Estado Actual</span>
+                         <span className={cn(
+                          "text-sm font-bold",
+                          getStudentPaymentStatus(selectedStudent) === 'Al día' ? 'text-green-700' : 'text-destructive'
+                         )}>
+                          {getStudentPaymentStatus(selectedStudent)}
+                         </span>
+                      </div>
+                       {getStudentPaymentStatus(selectedStudent) === 'Al día' ? (
+                          <Button type="button" variant="outline" size="sm" onClick={() => undoLastPayment(selectedStudent.id)}>
+                            Deshacer Pago
+                          </Button>
+                       ) : (
+                          <Button type="button" variant="outline" size="sm" onClick={() => recordPayment(selectedStudent.id)}>
+                            Registrar Pago
+                          </Button>
+                       )}
+                    </div>
+                  </div>
+                )}
+
                 <DialogFooter>
                   <Button type="submit">Guardar Cambios</Button>
                 </DialogFooter>
