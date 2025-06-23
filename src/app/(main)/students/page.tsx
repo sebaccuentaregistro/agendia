@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Student } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, DollarSign, Undo2, MessageCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, DollarSign, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,7 +21,6 @@ import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -212,7 +211,6 @@ export default function StudentsPage() {
             {displayedStudents.map((student) => {
               const paymentStatus = getStudentPaymentStatus(student);
               const studentPaymentsCount = payments.filter(p => p.studentId === student.id).length;
-              const whatsappUrl = `https://wa.me/${student.phone.replace(/\D/g, '')}`;
 
               return (
                 <TableRow key={student.id}>
@@ -228,20 +226,9 @@ export default function StudentsPage() {
                   <TableCell>{student.phone}</TableCell>
                   <TableCell>{student.membershipType}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getBadgeVariant(paymentStatus)}>
-                        {paymentStatus}
-                      </Badge>
-                      <Link
-                        href={whatsappUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
-                      >
-                        <MessageCircle className="h-4 w-4" />
-                        <span className="sr-only">Enviar WhatsApp</span>
-                      </Link>
-                    </div>
+                    <Badge variant={getBadgeVariant(paymentStatus)}>
+                      {paymentStatus}
+                    </Badge>
                   </TableCell>
                   <TableCell>{format(student.lastPaymentDate, 'dd/MM/yyyy')}</TableCell>
                   <TableCell>
