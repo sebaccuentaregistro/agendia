@@ -60,7 +60,7 @@ export default function Dashboard() {
               <CreditCard className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{overduePayments}</div>
+              <div className="text-2xl font-bold text-destructive">{overduePayments}</div>
               <p className="text-xs text-muted-foreground">Acción requerida</p>
             </CardContent>
           </Card>

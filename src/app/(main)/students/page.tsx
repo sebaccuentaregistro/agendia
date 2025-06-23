@@ -21,6 +21,7 @@ import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -231,12 +232,15 @@ export default function StudentsPage() {
                       <Badge variant={getBadgeVariant(paymentStatus)}>
                         {paymentStatus}
                       </Badge>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
-                          <MessageCircle className="h-4 w-4" />
-                          <span className="sr-only">Enviar WhatsApp</span>
-                        </a>
-                      </Button>
+                      <Link
+                        href={whatsappUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        <span className="sr-only">Enviar WhatsApp</span>
+                      </Link>
                     </div>
                   </TableCell>
                   <TableCell>{format(student.lastPaymentDate, 'dd/MM/yyyy')}</TableCell>
