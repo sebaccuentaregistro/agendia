@@ -212,67 +212,67 @@ export default function StudentsPage() {
               const paymentStatus = getStudentPaymentStatus(student);
               const studentPaymentsCount = payments.filter(p => p.studentId === student.id).length;
               return (
-              <TableRow key={student.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={student.avatar} alt={student.name} data-ai-hint="person photo" />
-                      <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <span>{student.name}</span>
-                  </div>
-                </TableCell>
-                <TableCell>{student.phone}</TableCell>
-                <TableCell>{student.membershipType}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={getBadgeVariant(paymentStatus)}>
-                      {paymentStatus}
-                    </Badge>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                      <a href={`https://wa.me/${student.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                        <MessageCircle className="h-4 w-4" />
-                        <span className="sr-only">Enviar WhatsApp</span>
-                      </a>
-                    </Button>
-                  </div>
-                </TableCell>
-                <TableCell>{format(student.lastPaymentDate, 'dd/MM/yyyy')}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Alternar menú</span>
+                <TableRow key={student.id}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={student.avatar} alt={student.name} data-ai-hint="person photo" />
+                        <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <span>{student.name}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>{student.phone}</TableCell>
+                  <TableCell>{student.membershipType}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getBadgeVariant(paymentStatus)}>
+                        {paymentStatus}
+                      </Badge>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                        <a href={`https://wa.me/${student.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                          <MessageCircle className="h-4 w-4" />
+                          <span className="sr-only">Enviar WhatsApp</span>
+                        </a>
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleEdit(student)}>Editar</DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => recordPayment(student.id)}
-                        disabled={student.membershipType === 'Diario'}
-                      >
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        Registrar Pago
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => undoLastPayment(student.id)}
-                        disabled={studentPaymentsCount === 0}
-                      >
-                        <Undo2 className="mr-2 h-4 w-4" />
-                        Anular último pago
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(student)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-              );
+                    </div>
+                  </TableCell>
+                  <TableCell>{format(student.lastPaymentDate, 'dd/MM/yyyy')}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Alternar menú</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEdit(student)}>Editar</DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => recordPayment(student.id)}
+                          disabled={student.membershipType === 'Diario'}
+                        >
+                          <DollarSign className="mr-2 h-4 w-4" />
+                          Registrar Pago
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => undoLastPayment(student.id)}
+                          disabled={studentPaymentsCount === 0}
+                        >
+                          <Undo2 className="mr-2 h-4 w-4" />
+                          Anular último pago
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(student)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Eliminar
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              )
             })}
           </TableBody>
         </Table>
