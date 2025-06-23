@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Student, YogaClass } from '@/types';
 import { useStudio } from '@/context/StudioContext';
@@ -72,8 +72,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const formSchema = z.object({
   instructorId: z.string({
     required_error: 'Debes seleccionar un especialista.',
-  }),
-  actividadId: z.string({ required_error: 'Debes seleccionar una actividad.' }),
+  }).min(1, { message: 'Debes seleccionar un especialista.' }),
+  actividadId: z.string({ required_error: 'Debes seleccionar una actividad.' }).min(1, { message: 'Debes seleccionar una actividad.' }),
   spaceId: z.string({ required_error: 'Debes seleccionar un espacio.' }),
   dayOfWeek: z.enum([
     'Lunes',
@@ -116,14 +116,43 @@ export default function SchedulePage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      instructorId: undefined,
-      actividadId: undefined,
+      instructorId: '',
+      actividadId: '',
       spaceId: undefined,
       dayOfWeek: 'Lunes',
       time: '09:00',
       capacity: 15,
     },
   });
+
+  const watchedActividadId = form.watch('actividadId');
+  const watchedInstructorId = form.watch('instructorId');
+
+  const filteredSpecialists = useMemo(() => {
+    if (!watchedActividadId) return specialists;
+    return specialists.filter(s => s.actividadIds.includes(watchedActividadId));
+  }, [watchedActividadId, specialists]);
+
+  const filteredActividades = useMemo(() => {
+    if (!watchedInstructorId) return actividades;
+    const specialist = specialists.find(s => s.id === watchedInstructorId);
+    if (!specialist) return actividades;
+    return actividades.filter(a => specialist.actividadIds.includes(a.id));
+  }, [watchedInstructorId, actividades, specialists]);
+
+  useEffect(() => {
+    const instructorId = form.getValues('instructorId');
+    if (instructorId && filteredSpecialists.length > 0 && !filteredSpecialists.find(s => s.id === instructorId)) {
+      form.setValue('instructorId', '', { shouldValidate: true });
+    }
+  }, [watchedActividadId, filteredSpecialists, form]);
+  
+  useEffect(() => {
+    const actividadId = form.getValues('actividadId');
+    if (actividadId && filteredActividades.length > 0 && !filteredActividades.find(a => a.id === actividadId)) {
+      form.setValue('actividadId', '', { shouldValidate: true });
+    }
+  }, [watchedInstructorId, filteredActividades, form]);
 
   const getClassDetails = (cls: YogaClass) => {
     const specialist = specialists.find((i) => i.id === cls.instructorId);
@@ -139,8 +168,8 @@ export default function SchedulePage() {
   const handleAdd = () => {
     setSelectedClass(undefined);
     form.reset({
-      instructorId: undefined,
-      actividadId: undefined,
+      instructorId: '',
+      actividadId: '',
       spaceId: undefined,
       dayOfWeek: 'Lunes',
       time: '09:00',
@@ -226,7 +255,7 @@ export default function SchedulePage() {
                       <FormLabel>Actividad</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -234,7 +263,7 @@ export default function SchedulePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {actividades.map((a) => (
+                          {filteredActividades.map((a) => (
                             <SelectItem key={a.id} value={a.id}>
                               {a.name}
                             </SelectItem>
@@ -253,7 +282,7 @@ export default function SchedulePage() {
                       <FormLabel>Especialista</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -261,7 +290,7 @@ export default function SchedulePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {specialists.map((i) => (
+                          {filteredSpecialists.map((i) => (
                             <SelectItem key={i.id} value={i.id}>
                               {i.name}
                             </SelectItem>
@@ -280,7 +309,7 @@ export default function SchedulePage() {
                       <FormLabel>Espacio</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -308,7 +337,7 @@ export default function SchedulePage() {
                         <FormLabel>Día</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
