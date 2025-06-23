@@ -49,13 +49,13 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
     },
   });
 
-  const [actividadFilter, setActividadFilter] = useState('');
-  const [specialistFilter, setSpecialistFilter] = useState('');
+  const [actividadFilter, setActividadFilter] = useState('all');
+  const [specialistFilter, setSpecialistFilter] = useState('all');
 
   const filteredClasses = useMemo(() => {
     return yogaClasses.filter(cls => {
-        const matchesActividad = !actividadFilter || cls.actividadId === actividadFilter;
-        const matchesSpecialist = !specialistFilter || cls.instructorId === specialistFilter;
+        const matchesActividad = actividadFilter === 'all' || cls.actividadId ===ividadFilter;
+        const matchesSpecialist = specialistFilter === 'all' || cls.instructorId === specialistFilter;
         return matchesActividad && matchesSpecialist;
     }).sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
   }, [yogaClasses, actividadFilter, specialistFilter]);
@@ -83,21 +83,21 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Select onValueChange={setActividadFilter} defaultValue="">
+              <Select onValueChange={setActividadFilter} defaultValue="all">
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrar por actividad..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todas las actividades</SelectItem>
+                  <SelectItem value="all">Todas las actividades</SelectItem>
                   {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select onValueChange={setSpecialistFilter} defaultValue="">
+              <Select onValueChange={setSpecialistFilter} defaultValue="all">
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrar por especialista..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos los especialistas</SelectItem>
+                  <SelectItem value="all">Todos los especialistas</SelectItem>
                   {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
