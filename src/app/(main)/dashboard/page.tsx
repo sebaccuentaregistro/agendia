@@ -1,13 +1,14 @@
+'use client';
+
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { specialists, students, yogaClasses } from '@/lib/data';
+import { useStudio } from '@/context/StudioContext';
 import { ArrowUpRight, Users, ClipboardList, Calendar, CreditCard } from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
+  const { students, specialists, yogaClasses } = useStudio();
+
   const totalStudents = students.length;
   const totalSpecialists = specialists.length;
   const upcomingClassesCount = yogaClasses.filter(c => new Date() < new Date(2024, 6, c.dayOfWeek === 'Lunes' ? 22 : 23)).length; // Mock logic

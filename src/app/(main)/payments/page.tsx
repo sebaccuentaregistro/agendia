@@ -1,10 +1,14 @@
+'use client';
+
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { payments, students } from '@/lib/data';
-import { Payment, Student } from '@/types';
+import { useStudio } from '@/context/StudioContext';
+import { Payment } from '@/types';
 import { Badge } from '@/components/ui/badge';
 
 export default function PaymentsPage() {
+  const { payments, students } = useStudio();
+
   const getStudentName = (studentId: string): string => {
     return students.find(s => s.id === studentId)?.name || 'Estudiante Desconocido';
   };

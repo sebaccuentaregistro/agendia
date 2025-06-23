@@ -3,7 +3,6 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { specialists, actividades, yogaClasses } from '@/lib/data';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -24,6 +23,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { YogaClass } from '@/types';
+import { useStudio } from '@/context/StudioContext';
 
 function ClassForm({ yogaClass }: { yogaClass?: YogaClass }) {
   return (
@@ -38,6 +38,7 @@ function ClassForm({ yogaClass }: { yogaClass?: YogaClass }) {
 }
 
 export default function SchedulePage() {
+  const { specialists, actividades, yogaClasses } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const getClassDetails = (cls: YogaClass) => {

@@ -1,18 +1,30 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import type { Actividad, Specialist } from '@/types';
-import { actividades as initialActividades, specialists as initialSpecialists } from '@/lib/data';
+import type { Actividad, Specialist, Student, YogaClass, Payment } from '@/types';
+import { 
+  actividades as initialActividades, 
+  specialists as initialSpecialists,
+  students as initialStudents,
+  yogaClasses as initialYogaClasses,
+  payments as initialPayments
+} from '@/lib/data';
 
 interface StudioContextType {
   actividades: Actividad[];
   specialists: Specialist[];
+  students: Student[];
+  yogaClasses: YogaClass[];
+  payments: Payment[];
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
   updateActividad: (actividad: Actividad) => void;
   deleteActividad: (actividadId: string) => void;
   addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
   updateSpecialist: (specialist: Specialist) => void;
   deleteSpecialist: (specialistId: string) => void;
+  addStudent: (student: Omit<Student, 'id' | 'avatar' | 'joinDate'>) => void;
+  updateStudent: (student: Student) => void;
+  deleteStudent: (studentId: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -20,6 +32,10 @@ const StudioContext = createContext<StudioContextType | undefined>(undefined);
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [actividades, setActividades] = useState<Actividad[]>(initialActividades);
   const [specialists, setSpecialists] = useState<Specialist[]>(initialSpecialists);
+  const [students, setStudents] = useState<Student[]>(initialStudents);
+  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(initialYogaClasses);
+  const [payments, setPayments] = useState<Payment[]>(initialPayments);
+
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
     const newActividad: Actividad = {
@@ -36,10 +52,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteActividad = (actividadId: string) => {
-    // First, remove the activity itself
     setActividades(prev => prev.filter(a => a.id !== actividadId));
-
-    // Then, remove the activity from all specialists
     setSpecialists(prevSpecialists =>
       prevSpecialists.map(specialist => ({
         ...specialist,
@@ -67,17 +80,45 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpecialists(prev => prev.filter(s => s.id !== specialistId));
   };
 
+  const addStudent = (student: Omit<Student, 'id' | 'avatar' | 'joinDate'>) => {
+    const newStudent: Student = {
+      id: `stu-${Date.now()}`,
+      avatar: `https://placehold.co/100x100.png`,
+      joinDate: new Date(),
+      ...student,
+    };
+    setStudents(prev => [...prev, newStudent]);
+  };
+
+  const updateStudent = (updatedStudent: Student) => {
+    setStudents(prev => 
+      prev.map(s => (s.id === updatedStudent.id ? updatedStudent : s))
+    );
+  };
+
+  const deleteStudent = (studentId: string) => {
+    setStudents(prev => prev.filter(s => s.id !== studentId));
+    // Also delete associated payments
+    setPayments(prev => prev.filter(p => p.studentId !== studentId));
+  };
+
   return (
     <StudioContext.Provider
       value={{
         actividades,
         specialists,
+        students,
+        yogaClasses,
+        payments,
         addActividad,
         updateActividad,
         deleteActividad,
         addSpecialist,
         updateSpecialist,
         deleteSpecialist,
+        addStudent,
+        updateStudent,
+        deleteStudent,
       }}
     >
       {children}
