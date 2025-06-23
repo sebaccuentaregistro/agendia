@@ -1,11 +1,11 @@
 // use server'
 
 /**
- * @fileOverview AI-powered scheduling assistant for suggesting optimal yoga class schedules.
+ * @fileOverview Asistente de programación con IA para sugerir horarios óptimos de clases de yoga.
  *
- * - suggestSchedule - A function that suggests a schedule based on instructor availability, student preferences, and class capacity.
- * - SuggestScheduleInput - The input type for the suggestSchedule function.
- * - SuggestScheduleOutput - The return type for the suggestSchedule function.
+ * - suggestSchedule - Una función que sugiere un horario basado en la disponibilidad de los instructores, las preferencias de los estudiantes y la capacidad de las clases.
+ * - SuggestScheduleInput - El tipo de entrada para la función suggestSchedule.
+ * - SuggestScheduleOutput - El tipo de retorno para la función suggestSchedule.
  */
 
 'use server';
@@ -17,30 +17,31 @@ const SuggestScheduleInputSchema = z.object({
   instructorAvailability: z
     .string()
     .describe(
-      'A description of instructor availability, including days, times, and any constraints.'
+      'Una descripción de la disponibilidad de los instructores, incluyendo días, horarios y cualquier restricción.'
     ),
   studentPreferences: z
     .string()
     .describe(
-      'A description of student preferences, including preferred days, times, class types, and instructors.'
+      'Una descripción de las preferencias de los estudiantes, incluyendo días, horarios, tipos de clase e instructores preferidos.'
     ),
   classCapacity: z
     .number()
-    .describe('The maximum capacity of each yoga class.'),
+    .describe('La capacidad máxima de cada clase de yoga.'),
   currentSchedule: z
     .string()
     .optional()
-    .describe('The current schedule to take into account for suggestions.'),
+    .describe('El horario actual a tener en cuenta para las sugerencias.'),
 });
 export type SuggestScheduleInput = z.infer<typeof SuggestScheduleInputSchema>;
 
 const SuggestScheduleOutputSchema = z.object({
   suggestedSchedule: z
     .string()
-    .describe('The suggested yoga class schedule based on the input parameters.'),
+    .describe('El horario de clases de yoga sugerido basado en los parámetros de entrada.'),
   reasoning: z
     .string()
-    .describe('The AI reasoning for suggesting this schedule.'),
+-    .describe('The AI reasoning for suggesting this schedule.'),
++    .describe('El razonamiento de la IA para sugerir este horario.'),
 });
 export type SuggestScheduleOutput = z.infer<typeof SuggestScheduleOutputSchema>;
 
@@ -52,21 +53,21 @@ const prompt = ai.definePrompt({
   name: 'suggestSchedulePrompt',
   input: {schema: SuggestScheduleInputSchema},
   output: {schema: SuggestScheduleOutputSchema},
-  prompt: `You are an AI assistant designed to create optimal yoga class schedules for yoga studios. Use the information provided to suggest a schedule that maximizes student engagement, accommodates instructor availability and preferences, and respects class capacity.
+  prompt: `Eres un asistente de IA diseñado para crear horarios de clases de yoga óptimos para estudios de yoga. Utiliza la información proporcionada para sugerir un horario que maximice la participación de los estudiantes, se adapte a la disponibilidad y preferencias de los instructores y respete la capacidad de las clases.
 
-Instructor Availability: {{{instructorAvailability}}}
-Student Preferences: {{{studentPreferences}}}
-Class Capacity: {{{classCapacity}}}
-Current Schedule: {{{currentSchedule}}}
+Disponibilidad de los instructores: {{{instructorAvailability}}}
+Preferencias de los estudiantes: {{{studentPreferences}}}
+Capacidad de la clase: {{{classCapacity}}}
+Horario actual: {{{currentSchedule}}}
 
-Based on this information, suggest the optimal class schedule:
+Basándote en esta información, sugiere el horario de clases óptimo:
 
 {{#if currentSchedule}}
-Consider the existing current schedule:
+Considera el horario actual existente:
 {{currentSchedule}}
 {{/if}}
 
-Please provide the suggested schedule and the reasoning for the schedule.`,
+Por favor, proporciona el horario sugerido y el razonamiento para el horario.`,
 });
 
 const suggestScheduleFlow = ai.defineFlow(

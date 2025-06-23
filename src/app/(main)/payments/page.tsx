@@ -6,16 +6,16 @@ import { Badge } from '@/components/ui/badge';
 
 export default function PaymentsPage() {
   const getStudentName = (studentId: string): string => {
-    return students.find(s => s.id === studentId)?.name || 'Unknown Student';
+    return students.find(s => s.id === studentId)?.name || 'Estudiante Desconocido';
   };
 
   const getBadgeVariant = (status: Payment['status']) => {
     switch (status) {
-      case 'Paid':
+      case 'Pagado':
         return 'default';
-      case 'Pending':
+      case 'Pendiente':
         return 'secondary';
-      case 'Overdue':
+      case 'Atrasado':
         return 'destructive';
       default:
         return 'outline';
@@ -24,16 +24,16 @@ export default function PaymentsPage() {
 
   return (
     <div>
-      <PageHeader title="Payments" description="Track student payments and manage outstanding balances." />
+      <PageHeader title="Pagos" description="Realiza un seguimiento de los pagos de los estudiantes y gestiona los saldos pendientes." />
       
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Student</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Estudiante</TableHead>
+              <TableHead>Monto</TableHead>
+              <TableHead>Fecha</TableHead>
+              <TableHead>Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -16,13 +16,13 @@ import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   instructorAvailability: z.string().min(20, {
-    message: "Please describe instructor availability in at least 20 characters.",
+    message: "Por favor, describe la disponibilidad del instructor en al menos 20 caracteres.",
   }),
   studentPreferences: z.string().min(20, {
-    message: "Please describe student preferences in at least 20 characters.",
+    message: "Por favor, describe las preferencias de los estudiantes en al menos 20 caracteres.",
   }),
   classCapacity: z.coerce.number().min(1, {
-    message: "Class capacity must be at least 1.",
+    message: "La capacidad de la clase debe ser de al menos 1.",
   }),
   currentSchedule: z.string().optional(),
 });
@@ -52,8 +52,8 @@ export default function AssistantPage() {
       console.error("Error suggesting schedule:", error);
       toast({
         variant: "destructive",
-        title: "An error occurred",
-        description: "Failed to get a schedule suggestion. Please try again.",
+        title: "Ocurrió un error",
+        description: "No se pudo obtener una sugerencia de horario. Por favor, inténtalo de nuevo.",
       });
     } finally {
       setLoading(false);
@@ -63,14 +63,14 @@ export default function AssistantPage() {
   return (
     <div>
       <PageHeader
-        title="Smart Scheduling Assistant"
-        description="Let AI help you create the optimal class schedule for your studio."
+        title="Asistente de Programación Inteligente"
+        description="Deja que la IA te ayude a crear el horario de clases óptimo para tu estudio."
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Scheduling Preferences</CardTitle>
-            <CardDescription>Provide the details below to get a schedule suggestion.</CardDescription>
+            <CardTitle>Preferencias de Programación</CardTitle>
+            <CardDescription>Proporciona los detalles a continuación para obtener una sugerencia de horario.</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -80,9 +80,9 @@ export default function AssistantPage() {
                   name="instructorAvailability"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Instructor Availability</FormLabel>
+                      <FormLabel>Disponibilidad del Instructor</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="e.g., Elena is available M/W/F mornings. Marcus prefers evenings..." {...field} />
+                        <Textarea placeholder="p.ej., Elena está disponible los lunes/miércoles/viernes por la mañana. Marcus prefiere las tardes..." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -93,9 +93,9 @@ export default function AssistantPage() {
                   name="studentPreferences"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Student Preferences</FormLabel>
+                      <FormLabel>Preferencias de los Estudiantes</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="e.g., Many students requested more evening Vinyasa classes. Beginners prefer weekend mornings." {...field} />
+                        <Textarea placeholder="p.ej., Muchos estudiantes solicitaron más clases de Vinyasa por la tarde. Los principiantes prefieren las mañanas de fin de semana." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -106,7 +106,7 @@ export default function AssistantPage() {
                   name="classCapacity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Maximum Class Capacity</FormLabel>
+                      <FormLabel>Capacidad Máxima de la Clase</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} />
                       </FormControl>
@@ -119,9 +119,9 @@ export default function AssistantPage() {
                   name="currentSchedule"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Current Schedule (Optional)</FormLabel>
+                      <FormLabel>Horario Actual (Opcional)</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="List your current classes, if any." {...field} />
+                        <Textarea placeholder="Enumera tus clases actuales, si las hay." {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -133,7 +133,7 @@ export default function AssistantPage() {
                   ) : (
                     <Sparkles className="mr-2 h-4 w-4" />
                   )}
-                  Suggest Schedule
+                  Sugerir Horario
                 </Button>
               </form>
             </Form>
@@ -145,7 +145,7 @@ export default function AssistantPage() {
             <Card className="flex min-h-[400px] flex-col items-center justify-center">
               <CardContent className="text-center">
                 <Loader2 className="mx-auto h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-muted-foreground">AI is crafting the perfect schedule...</p>
+                <p className="mt-4 text-muted-foreground">La IA está creando el horario perfecto...</p>
               </CardContent>
             </Card>
           )}
@@ -154,7 +154,7 @@ export default function AssistantPage() {
             <>
               <Card>
                 <CardHeader>
-                  <CardTitle>Suggested Schedule</CardTitle>
+                  <CardTitle>Horario Sugerido</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <pre className="whitespace-pre-wrap rounded-md bg-muted p-4 font-sans text-sm text-muted-foreground">
@@ -164,7 +164,7 @@ export default function AssistantPage() {
               </Card>
               <Card>
                 <CardHeader>
-                  <CardTitle>Reasoning</CardTitle>
+                  <CardTitle>Razonamiento</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{result.reasoning}</p>

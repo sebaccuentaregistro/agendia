@@ -31,11 +31,11 @@ function SpecializationForm({ specialization }: { specialization?: Specializatio
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="name" className="text-right">Name</Label>
+        <Label htmlFor="name" className="text-right">Nombre</Label>
         <Input id="name" defaultValue={specialization?.name} className="col-span-3" />
       </div>
       <div className="grid grid-cols-4 items-start gap-4">
-        <Label htmlFor="description" className="text-right pt-2">Description</Label>
+        <Label htmlFor="description" className="text-right pt-2">Descripción</Label>
         <Textarea id="description" defaultValue={specialization?.description} className="col-span-3" />
       </div>
     </div>
@@ -47,21 +47,21 @@ export default function SpecializationsPage() {
 
   return (
     <div>
-      <PageHeader title="Specializations" description="Define and manage the types of yoga your studio offers.">
+      <PageHeader title="Especializaciones" description="Define y gestiona los tipos de yoga que ofrece tu estudio.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add Specialization
+              Añadir Especialización
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Specialization</DialogTitle>
+              <DialogTitle>Añadir Nueva Especialización</DialogTitle>
             </DialogHeader>
             <SpecializationForm />
             <DialogFooter>
-              <Button type="submit">Save</Button>
+              <Button type="submit">Guardar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -71,9 +71,9 @@ export default function SpecializationsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead><span className="sr-only">Actions</span></TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Descripción</TableHead>
+              <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -86,13 +86,13 @@ export default function SpecializationsPage() {
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
+                        <span className="sr-only">Alternar menú</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Delete</DropdownMenuItem>
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuItem>Editar</DropdownMenuItem>
+                      <DropdownMenuItem>Eliminar</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

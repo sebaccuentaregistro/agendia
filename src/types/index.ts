@@ -18,8 +18,8 @@ export type Student = {
   name: string;
   email: string;
   joinDate: Date;
-  status: 'Active' | 'Inactive';
-  paymentStatus: 'Paid' | 'Pending' | 'Overdue';
+  status: 'Activo' | 'Inactivo';
+  paymentStatus: 'Pagado' | 'Pendiente' | 'Atrasado';
   avatar: string;
 };
 
@@ -28,7 +28,7 @@ export type YogaClass = {
   name: string;
   instructorId: string;
   specializationId: string;
-  dayOfWeek: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+  dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
   time: string;
   capacity: number;
   studentsEnrolled: number;
@@ -39,5 +39,5 @@ export type Payment = {
   studentId: string;
   amount: number;
   date: Date;
-  status: 'Paid' | 'Pending' | 'Overdue';
+  status: 'Pagado' | 'Pendiente' | 'Atrasado';
 };

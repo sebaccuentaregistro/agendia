@@ -29,7 +29,7 @@ function ClassForm({ yogaClass }: { yogaClass?: YogaClass }) {
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="name" className="text-right">Class Name</Label>
+        <Label htmlFor="name" className="text-right">Nombre de la Clase</Label>
         <Input id="name" defaultValue={yogaClass?.name} className="col-span-3" />
       </div>
       {/* Add more fields for instructor, time, etc. */}
@@ -48,17 +48,17 @@ export default function SchedulePage() {
 
   return (
     <div>
-      <PageHeader title="Class Schedule" description="Schedule classes, manage instructor assignments, and track capacity.">
+      <PageHeader title="Horario de Clases" description="Programa clases, gestiona las asignaciones de instructores y haz un seguimiento de la capacidad.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Schedule Class
+              Programar Clase
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Schedule New Class</DialogTitle>
+              <DialogTitle>Programar Nueva Clase</DialogTitle>
             </DialogHeader>
             <ClassForm />
           </DialogContent>
@@ -69,11 +69,11 @@ export default function SchedulePage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Class</TableHead>
+              <TableHead>Clase</TableHead>
               <TableHead>Instructor</TableHead>
-              <TableHead>Day & Time</TableHead>
-              <TableHead>Capacity</TableHead>
-              <TableHead><span className="sr-only">Actions</span></TableHead>
+              <TableHead>Día y Hora</TableHead>
+              <TableHead>Capacidad</TableHead>
+              <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -107,13 +107,13 @@ export default function SchedulePage() {
                       <DropdownMenuTrigger asChild>
                         <Button aria-haspopup="true" size="icon" variant="ghost">
                           <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Toggle menu</span>
+                          <span className="sr-only">Alternar menú</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem>Edit Class</DropdownMenuItem>
-                        <DropdownMenuItem>View Roster</DropdownMenuItem>
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem>Editar Clase</DropdownMenuItem>
+                        <DropdownMenuItem>Ver Lista</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

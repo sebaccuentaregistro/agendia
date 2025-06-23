@@ -30,15 +30,15 @@ function InstructorForm({ instructor }: { instructor?: Instructor }) {
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="name" className="text-right">Name</Label>
+        <Label htmlFor="name" className="text-right">Nombre</Label>
         <Input id="name" defaultValue={instructor?.name} className="col-span-3" />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="email" className="text-right">Email</Label>
+        <Label htmlFor="email" className="text-right">Correo Electrónico</Label>
         <Input id="email" type="email" defaultValue={instructor?.email} className="col-span-3" />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="phone" className="text-right">Phone</Label>
+        <Label htmlFor="phone" className="text-right">Teléfono</Label>
         <Input id="phone" type="tel" defaultValue={instructor?.phone} className="col-span-3" />
       </div>
     </div>
@@ -54,17 +54,17 @@ export default function InstructorsPage() {
 
   return (
     <div>
-      <PageHeader title="Instructors" description="Maintain instructor profiles, specializations, and contact information.">
+      <PageHeader title="Instructores" description="Mantén los perfiles de instructores, especializaciones e información de contacto.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add Instructor
+              Añadir Instructor
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Instructor</DialogTitle>
+              <DialogTitle>Añadir Nuevo Instructor</DialogTitle>
             </DialogHeader>
             <InstructorForm />
           </DialogContent>
@@ -75,10 +75,10 @@ export default function InstructorsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Specializations</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead><span className="sr-only">Actions</span></TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Especializaciones</TableHead>
+              <TableHead>Teléfono</TableHead>
+              <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -109,13 +109,13 @@ export default function InstructorsPage() {
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
+                        <span className="sr-only">Alternar menú</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>View Schedule</DropdownMenuItem>
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuItem>Editar</DropdownMenuItem>
+                      <DropdownMenuItem>Ver Horario</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

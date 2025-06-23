@@ -22,13 +22,13 @@ import {
 import Link from "next/link";
 
 const menuItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
-  { href: "/schedule", label: "Schedule", icon: Calendar },
-  { href: "/students", label: "Students", icon: Users },
-  { href: "/instructors", label: "Instructors", icon: UserSquare },
-  { href: "/specializations", label: "Specializations", icon: Star },
-  { href: "/payments", label: "Payments", icon: CreditCard },
-  { href: "/assistant", label: "AI Assistant", icon: Sparkles },
+  { href: "/dashboard", label: "Panel", icon: LayoutGrid },
+  { href: "/schedule", label: "Horario", icon: Calendar },
+  { href: "/students", label: "Estudiantes", icon: Users },
+  { href: "/instructors", label: "Instructores", icon: UserSquare },
+  { href: "/specializations", label: "Especialidades", icon: Star },
+  { href: "/payments", label: "Pagos", icon: CreditCard },
+  { href: "/assistant", label: "Asistente IA", icon: Sparkles },
 ];
 
 export default function AppSidebar() {

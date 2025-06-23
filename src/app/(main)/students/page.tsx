@@ -30,11 +30,11 @@ function StudentForm({ student }: { student?: Student }) {
   return (
     <div className="grid gap-4 py-4">
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="name" className="text-right">Name</Label>
+        <Label htmlFor="name" className="text-right">Nombre</Label>
         <Input id="name" defaultValue={student?.name} className="col-span-3" />
       </div>
       <div className="grid grid-cols-4 items-center gap-4">
-        <Label htmlFor="email" className="text-right">Email</Label>
+        <Label htmlFor="email" className="text-right">Correo Electrónico</Label>
         <Input id="email" type="email" defaultValue={student?.email} className="col-span-3" />
       </div>
     </div>
@@ -46,17 +46,17 @@ export default function StudentsPage() {
 
   return (
     <div>
-      <PageHeader title="Students" description="Manage student profiles, track attendance, and payment status.">
+      <PageHeader title="Estudiantes" description="Gestiona los perfiles de los estudiantes, haz un seguimiento de la asistencia y el estado de los pagos.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add Student
+              Añadir Estudiante
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add New Student</DialogTitle>
+              <DialogTitle>Añadir Nuevo Estudiante</DialogTitle>
             </DialogHeader>
             <StudentForm />
           </DialogContent>
@@ -67,11 +67,11 @@ export default function StudentsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Payment Status</TableHead>
-              <TableHead>Join Date</TableHead>
-              <TableHead><span className="sr-only">Actions</span></TableHead>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead>Estado de Pago</TableHead>
+              <TableHead>Fecha de Inscripción</TableHead>
+              <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -90,10 +90,10 @@ export default function StudentsPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={student.status === 'Active' ? 'default' : 'secondary'}>{student.status}</Badge>
+                  <Badge variant={student.status === 'Activo' ? 'default' : 'secondary'}>{student.status}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={student.paymentStatus === 'Overdue' ? 'destructive' : 'outline'}>
+                  <Badge variant={student.paymentStatus === 'Atrasado' ? 'destructive' : 'outline'}>
                     {student.paymentStatus}
                   </Badge>
                 </TableCell>
@@ -103,13 +103,13 @@ export default function StudentsPage() {
                     <DropdownMenuTrigger asChild>
                       <Button aria-haspopup="true" size="icon" variant="ghost">
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
+                        <span className="sr-only">Alternar menú</span>
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>View Details</DropdownMenuItem>
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuItem>Editar</DropdownMenuItem>
+                      <DropdownMenuItem>Ver Detalles</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
