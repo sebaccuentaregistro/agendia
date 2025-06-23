@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
-import { ArrowUpRight, Users, ClipboardList, Calendar, CreditCard } from 'lucide-react';
+import { Users, ClipboardList, Calendar, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -54,7 +54,7 @@ export default function Dashboard() {
           </CardContent>
         </Card>
         <Link href="/students?filter=overdue" className="block">
-          <Card className="hover:bg-muted/50 transition-colors h-full">
+          <Card className="transition-colors hover:bg-muted/50 h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pagos Atrasados</CardTitle>
               <CreditCard className="h-4 w-4 text-muted-foreground" />
