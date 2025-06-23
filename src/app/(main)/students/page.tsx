@@ -19,6 +19,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
+import { format } from 'date-fns';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -205,7 +206,7 @@ export default function StudentsPage() {
                     {paymentStatus}
                   </Badge>
                 </TableCell>
-                <TableCell>{student.lastPaymentDate.toLocaleDateString()}</TableCell>
+                <TableCell>{format(student.lastPaymentDate, 'dd/MM/yyyy')}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

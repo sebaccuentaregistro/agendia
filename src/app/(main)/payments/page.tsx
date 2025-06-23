@@ -3,6 +3,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useStudio } from '@/context/StudioContext';
+import { format } from 'date-fns';
 
 export default function PaymentsPage() {
   const { payments, students } = useStudio();
@@ -29,7 +30,7 @@ export default function PaymentsPage() {
               <TableRow key={payment.id}>
                 <TableCell className="font-medium">{getStudentName(payment.studentId)}</TableCell>
                 <TableCell>${payment.amount.toFixed(2)}</TableCell>
-                <TableCell>{payment.date.toLocaleDateString()}</TableCell>
+                <TableCell>{format(payment.date, 'dd/MM/yyyy')}</TableCell>
               </TableRow>
             ))}
           </TableBody>

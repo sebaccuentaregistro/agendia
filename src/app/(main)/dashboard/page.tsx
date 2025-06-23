@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { ArrowUpRight, Users, ClipboardList, Calendar, CreditCard } from 'lucide-react';
+import { format } from 'date-fns';
 
 export default function Dashboard() {
   const { students, specialists, yogaClasses } = useStudio();
@@ -82,7 +83,7 @@ export default function Dashboard() {
                   <TableRow key={student.id}>
                     <TableCell>{student.name}</TableCell>
                     <TableCell>{student.phone}</TableCell>
-                    <TableCell className="text-right">{student.joinDate.toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">{format(student.joinDate, 'dd/MM/yyyy')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
