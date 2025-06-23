@@ -17,10 +17,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useStudio } from '@/context/StudioContext';
-import { getStudentPaymentStatus } from '@/lib/utils';
+import { getStudentPaymentStatus, cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useSearchParams } from 'next/navigation';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -30,12 +32,121 @@ const formSchema = z.object({
   }),
 });
 
+function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChange: (open: boolean) => void }) {
+  const { yogaClasses, specialists, actividades, enrollStudentInClasses, spaces } = useStudio();
+
+  const enrolledIn = yogaClasses
+    .filter(cls => cls.studentIds.includes(student.id))
+    .map(cls => cls.id);
+
+  const form = useForm<{ classIds: string[] }>({
+    defaultValues: {
+      classIds: enrolledIn,
+    },
+  });
+
+  function onSubmit(data: { classIds: string[] }) {
+    enrollStudentInClasses(student.id, data.classIds);
+    onOpenChange(false);
+  }
+
+  const formatTime = (time: string) => {
+    if (!time || !time.includes(':')) return 'N/A';
+    const [hour, minute] = time.split(':');
+    const hourNum = parseInt(hour, 10);
+    const ampm = hourNum >= 12 ? 'PM' : 'AM';
+    const formattedHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
+    return `${formattedHour}:${minute} ${ampm}`;
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Asignar Clases a {student.name}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="classIds"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Clases Disponibles</FormLabel>
+                  <ScrollArea className="h-72 rounded-md border p-4">
+                    <div className="space-y-4">
+                      {yogaClasses.map((item) => (
+                        <FormField
+                          key={item.id}
+                          control={form.control}
+                          name="classIds"
+                          render={({ field }) => {
+                            const specialist = specialists.find(i => i.id === item.instructorId);
+                            const actividad = actividades.find(a => a.id === item.actividadId);
+                            const space = spaces.find(s => s.id === item.spaceId);
+                            const isFull = item.studentIds.length >= item.capacity;
+                            const isEnrolled = field.value?.includes(item.id);
+
+                            return (
+                              <FormItem
+                                key={item.id}
+                                className={cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", 
+                                    isFull && !isEnrolled ? "bg-muted/50 opacity-50" : "hover:bg-muted/50",
+                                )}
+                              >
+                                <FormControl>
+                                  <Checkbox
+                                    checked={isEnrolled}
+                                    disabled={isFull && !isEnrolled}
+                                    onCheckedChange={(checked) => {
+                                      return checked
+                                        ? field.onChange([...(field.value || []), item.id])
+                                        : field.onChange(
+                                            field.value?.filter(
+                                              (value) => value !== item.id
+                                            )
+                                          );
+                                    }}
+                                  />
+                                </FormControl>
+                                <div className="space-y-1 leading-none">
+                                    <FormLabel className={cn("font-normal", isFull && !isEnrolled && "cursor-not-allowed")}>
+                                      {actividad?.name || 'Clase desconocida'}
+                                    </FormLabel>
+                                    <p className="text-xs text-muted-foreground">
+                                        {specialist?.name} | {item.dayOfWeek} {formatTime(item.time)} | {space?.name} | ({item.studentIds.length}/{item.capacity})
+                                    </p>
+                                    {isFull && !isEnrolled && <p className="text-xs text-destructive">Clase llena</p>}
+                                </div>
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+              <Button type="submit">Guardar Cambios</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function StudentsPage() {
   const { students, addStudent, updateStudent, deleteStudent } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | undefined>(undefined);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [studentToEnroll, setStudentToEnroll] = useState<Student | null>(null);
   
   const searchParams = useSearchParams();
 
@@ -229,6 +340,9 @@ export default function StudentsPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => handleEdit(student)}>Editar</DropdownMenuItem>
+                       <DropdownMenuItem onClick={() => setStudentToEnroll(student)}>
+                        Asignar a Clases
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(student)}>
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -243,12 +357,19 @@ export default function StudentsPage() {
         </Table>
       </div>
 
+      {studentToEnroll && (
+        <EnrollDialog
+            student={studentToEnroll}
+            onOpenChange={(open) => !open && setStudentToEnroll(null)}
+        />
+      )}
+
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente al asistente y todos sus datos de pago.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al asistente, sus datos de pago y lo desinscribirá de todas las clases.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

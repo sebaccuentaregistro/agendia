@@ -33,9 +33,10 @@ interface StudioContextType {
   addSpace: (space: Omit<Space, 'id'>) => void;
   updateSpace: (space: Space) => void;
   deleteSpace: (spaceId: string) => void;
-  addYogaClass: (yogaClass: Omit<YogaClass, 'id' | 'studentsEnrolled'>) => void;
+  addYogaClass: (yogaClass: Omit<YogaClass, 'id' | 'studentIds'>) => void;
   updateYogaClass: (yogaClass: YogaClass) => void;
   deleteYogaClass: (yogaClassId: string) => void;
+  enrollStudentInClasses: (studentId: string, classIds: string[]) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -65,7 +66,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteActividad = (actividadId: string) => {
-    const isActivityInUse = yogaClasses.some(cls => cls.actividadId === actividadId);
+    const isActivityInUse = yogaClasses.some(cls => cls.actividadId ===ividadId);
 
     if (isActivityInUse) {
       toast({
@@ -80,7 +81,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpecialists(prevSpecialists =>
       prevSpecialists.map(specialist => ({
         ...specialist,
-        actividadIds: specialist.actividadIds.filter(id => id !==ividadId),
+       actividadIds: specialist.actividadIds.filter(id => id !==ividadId),
       }))
     );
   };
@@ -141,6 +142,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteStudent = (studentId: string) => {
+    // Unenroll from all classes first
+    setYogaClasses(prevClasses =>
+      prevClasses.map(cls => ({
+        ...cls,
+        studentIds: cls.studentIds.filter(id => id !== studentId),
+      }))
+    );
     setStudents(prev => prev.filter(s => s.id !== studentId));
     // Also delete associated payments
     setPayments(prev => prev.filter(p => p.studentId !== studentId));
@@ -223,7 +231,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpaces(prev => prev.filter(s => s.id !== spaceId));
   };
   
-  const addYogaClass = (yogaClass: Omit<YogaClass, 'id' | 'studentsEnrolled'>) => {
+  const addYogaClass = (yogaClass: Omit<YogaClass, 'id' | 'studentIds'>) => {
     const conflict = yogaClasses.find(
       (c) =>
         c.instructorId === yogaClass.instructorId &&
@@ -242,7 +250,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     const newYogaClass: YogaClass = {
       id: `cls-${Date.now()}`,
-      studentsEnrolled: 0,
+      studentIds: [],
       ...yogaClass,
     };
     setYogaClasses(prev => [...prev, newYogaClass]);
@@ -275,6 +283,41 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setYogaClasses(prev => prev.filter(c => c.id !== yogaClassId));
   };
 
+  const enrollStudentInClasses = (studentId: string, newClassIds: string[]) => {
+    // Pre-check for capacity issues on new enrollments
+    for (const classId of newClassIds) {
+      const cls = yogaClasses.find(c => c.id === classId);
+      if (cls && !cls.studentIds.includes(studentId) && cls.studentIds.length >= cls.capacity) {
+        constividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Clase';
+        toast({
+          variant: "destructive",
+          title: "Clase Llena",
+          description: `No se pudo inscribir en "${actividadName}" porque ha alcanzado su capacidad máxima.`,
+        });
+        return; // Abort the entire operation
+      }
+    }
+
+    const updatedClasses = yogaClasses.map(cls => {
+      const shouldBeEnrolled = newClassIds.includes(cls.id);
+      const isEnrolled = cls.studentIds.includes(studentId);
+
+      if (shouldBeEnrolled && !isEnrolled) {
+        return { ...cls, studentIds: [...cls.studentIds, studentId] };
+      }
+      if (!shouldBeEnrolled && isEnrolled) {
+        return { ...cls, studentIds: cls.studentIds.filter(id => id !== studentId) };
+      }
+      return cls;
+    });
+
+    setYogaClasses(updatedClasses);
+    toast({
+      title: "Inscripciones Actualizadas",
+      description: "Se han guardado los cambios en las clases del asistente.",
+    });
+  };
+
 
   return (
     <StudioContext.Provider
@@ -302,6 +345,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         addYogaClass,
         updateYogaClass,
         deleteYogaClass,
+        enrollStudentInClasses,
       }}
     >
       {children}

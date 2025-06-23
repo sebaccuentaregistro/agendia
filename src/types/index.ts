@@ -29,7 +29,7 @@ export type YogaClass = {
   dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
   time: string;
   capacity: number;
-  studentsEnrolled: number;
+  studentIds: string[];
 };
 
 export type Payment = {
