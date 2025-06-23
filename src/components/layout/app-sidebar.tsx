@@ -18,6 +18,7 @@ import {
   CreditCard,
   Sparkles,
   HeartPulse,
+  Warehouse,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -27,6 +28,7 @@ const menuItems = [
   { href: "/students", label: "Asistentes", icon: Users },
   { href: "/instructors", label: "Especialistas", icon: ClipboardList },
   { href: "/specializations", label: "Actividades", icon: Star },
+  { href: "/spaces", label: "Espacios", icon: Warehouse },
   { href: "/payments", label: "Pagos", icon: CreditCard },
   { href: "/assistant", label: "Asistente IA", icon: Sparkles },
 ];

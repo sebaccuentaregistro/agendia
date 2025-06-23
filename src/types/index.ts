@@ -38,3 +38,8 @@ export type Payment = {
   amount: number;
   date: Date;
 };
+
+export type Space = {
+  id: string;
+  name: string;
+};

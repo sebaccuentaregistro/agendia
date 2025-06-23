@@ -1,13 +1,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import type { Actividad, Specialist, Student, YogaClass, Payment } from '@/types';
+import type { Actividad, Specialist, Student, YogaClass, Payment, Space } from '@/types';
 import { 
   actividades as initialActividades, 
   specialists as initialSpecialists,
   students as initialStudents,
   yogaClasses as initialYogaClasses,
-  payments as initialPayments
+  payments as initialPayments,
+  spaces as initialSpaces
 } from '@/lib/data';
 
 interface StudioContextType {
@@ -16,6 +17,7 @@ interface StudioContextType {
   students: Student[];
   yogaClasses: YogaClass[];
   payments: Payment[];
+  spaces: Space[];
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
   updateActividad: (actividad: Actividad) => void;
   deleteActividad: (actividadId: string) => void;
@@ -27,6 +29,9 @@ interface StudioContextType {
   deleteStudent: (studentId: string) => void;
   recordPayment: (studentId: string) => void;
   undoLastPayment: (studentId: string) => void;
+  addSpace: (space: Omit<Space, 'id'>) => void;
+  updateSpace: (space: Space) => void;
+  deleteSpace: (spaceId: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -37,6 +42,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [students, setStudents] = useState<Student[]>(initialStudents);
   const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(initialYogaClasses);
   const [payments, setPayments] = useState<Payment[]>(initialPayments);
+  const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
 
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
@@ -162,6 +168,25 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const addSpace = (space: Omit<Space, 'id'>) => {
+    const newSpace: Space = {
+      id: `space-${Date.now()}`,
+      ...space,
+    };
+    setSpaces(prev => [...prev, newSpace]);
+  };
+
+  const updateSpace = (updatedSpace: Space) => {
+    setSpaces(prev =>
+      prev.map(s => (s.id === updatedSpace.id ? updatedSpace : s))
+    );
+  };
+
+  const deleteSpace = (spaceId: string) => {
+    setSpaces(prev => prev.filter(s => s.id !== spaceId));
+    // Note: We might need to handle class assignments here later
+  };
+
   return (
     <StudioContext.Provider
       value={{
@@ -170,6 +195,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         students,
         yogaClasses,
         payments,
+        spaces,
         addActividad,
         updateActividad,
         deleteActividad,
@@ -181,6 +207,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         deleteStudent,
         recordPayment,
         undoLastPayment,
+        addSpace,
+        updateSpace,
+        deleteSpace,
       }}
     >
       {children}

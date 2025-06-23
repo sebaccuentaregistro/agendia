@@ -1,4 +1,4 @@
-import type { Student, Specialist, Actividad, YogaClass, Payment } from '@/types';
+import type { Student, Specialist, Actividad, YogaClass, Payment, Space } from '@/types';
 
 export const actividades: Actividad[] = [
   { id: 'spec-1', name: 'Vinyasa Flow' },
@@ -49,4 +49,10 @@ export const payments: Payment[] = [
   { id: 'pay-6', studentId: 'stu-6', amount: 95.00, date: daysAgo(29) },
   { id: 'pay-7', studentId: 'stu-1', amount: 95.00, date: daysAgo(55) },
   { id: 'pay-8', studentId: 'stu-2', amount: 95.00, date: daysAgo(75) },
+];
+
+export const spaces: Space[] = [
+  { id: 'space-1', name: 'Sala Sol' },
+  { id: 'space-2', name: 'Sala Luna' },
+  { id: 'space-3', name: 'Área de Máquinas' },
 ];
