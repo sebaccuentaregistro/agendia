@@ -66,7 +66,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteActividad = (actividadId: string) => {
-    const isActivityInUse = yogaClasses.some(cls => cls.actividadId ===ividadId);
+    const isActivityInUse = yogaClasses.some(cls => cls.actividadId === actividadId);
 
     if (isActivityInUse) {
       toast({
@@ -77,11 +77,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setActividades(prev => prev.filter(a => a.id !==ividadId));
+    setActividades(prev => prev.filter(a => a.id !== actividadId));
     setSpecialists(prevSpecialists =>
       prevSpecialists.map(specialist => ({
         ...specialist,
-       actividadIds: specialist.actividadIds.filter(id => id !==ividadId),
+       actividadIds: specialist.actividadIds.filter(id => id !== actividadId),
       }))
     );
   };
@@ -288,7 +288,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     for (const classId of newClassIds) {
       const cls = yogaClasses.find(c => c.id === classId);
       if (cls && !cls.studentIds.includes(studentId) && cls.studentIds.length >= cls.capacity) {
-        constividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Clase';
+        const actividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Clase';
         toast({
           variant: "destructive",
           title: "Clase Llena",

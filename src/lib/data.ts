@@ -9,10 +9,10 @@ export const actividades: Actividad[] = [
 ];
 
 export const specialists: Specialist[] = [
-  { id: 'inst-1', name: 'Elena Santos', phone: '123-456-7890',ividadIds: ['spec-1', 'spec-2'], avatar: `https://placehold.co/100x100.png` },
-  { id: 'inst-2', name: 'Marcus Chen', phone: '234-567-8901',ividadIds: ['spec-3'], avatar: `https://placehold.co/100x100.png` },
-  { id: 'inst-3', name: 'Aisha Khan', phone: '345-678-9012',ividadIds: ['spec-4', 'spec-5'], avatar: `https://placehold.co/100x100.png` },
-  { id: 'inst-4', name: 'David Miller', phone: '456-789-0123',ividadIds: ['spec-1', 'spec-4'], avatar: `https://placehold.co/100x100.png` },
+  { id: 'inst-1', name: 'Elena Santos', phone: '123-456-7890', actividadIds: ['spec-1', 'spec-2'], avatar: `https://placehold.co/100x100.png` },
+  { id: 'inst-2', name: 'Marcus Chen', phone: '234-567-8901', actividadIds: ['spec-3'], avatar: `https://placehold.co/100x100.png` },
+  { id: 'inst-3', name: 'Aisha Khan', phone: '345-678-9012', actividadIds: ['spec-4', 'spec-5'], avatar: `https://placehold.co/100x100.png` },
+  { id: 'inst-4', name: 'David Miller', phone: '456-789-0123', actividadIds: ['spec-1', 'spec-4'], avatar: `https://placehold.co/100x100.png` },
 ];
 
 // Helper to create dates in the past
@@ -32,12 +32,12 @@ export const students: Student[] = [
 ];
 
 export const yogaClasses: YogaClass[] = [
-  { id: 'cls-1', instructorId: 'inst-1',ividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', capacity: 15, studentIds: ['stu-1', 'stu-4'] },
-  { id: 'cls-2', instructorId: 'inst-1',ividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', capacity: 20, studentIds: ['stu-2', 'stu-5', 'stu-6'] },
-  { id: 'cls-3', instructorId: 'inst-2',ividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', capacity: 12, studentIds: ['stu-1', 'stu-3'] },
-  { id: 'cls-4', instructorId: 'inst-3',ividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', capacity: 18, studentIds: ['stu-2', 'stu-4'] },
-  { id: 'cls-5', instructorId: 'inst-4',ividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', capacity: 15, studentIds: ['stu-5', 'stu-6'] },
-  { id: 'cls-6', instructorId: 'inst-3',ividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', capacity: 20, studentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'] },
+  { id: 'cls-1', instructorId: 'inst-1', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', capacity: 15, studentIds: ['stu-1', 'stu-4'] },
+  { id: 'cls-2', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', capacity: 20, studentIds: ['stu-2', 'stu-5', 'stu-6'] },
+  { id: 'cls-3', instructorId: 'inst-2', actividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', capacity: 12, studentIds: ['stu-1', 'stu-3'] },
+  { id: 'cls-4', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', capacity: 18, studentIds: ['stu-2', 'stu-4'] },
+  { id: 'cls-5', instructorId: 'inst-4', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', capacity: 15, studentIds: ['stu-5', 'stu-6'] },
+  { id: 'cls-6', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', capacity: 20, studentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'] },
 ];
 
 export const payments: Payment[] = [
