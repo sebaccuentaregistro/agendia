@@ -65,7 +65,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteActividad = (actividadId: string) => {
-    const isActivityInUse = yogaClasses.some(cls => cls.actividadId ===ividadId);
+    const isActivityInUse = yogaClasses.some(cls => cls.actividadId === actividadId);
 
     if (isActivityInUse) {
       toast({
@@ -210,6 +210,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteSpace = (spaceId: string) => {
+    const isSpaceInUse = yogaClasses.some(cls => cls.spaceId === spaceId);
+
+    if (isSpaceInUse) {
+      toast({
+        variant: "destructive",
+        title: "Espacio en Uso",
+        description: "No se puede eliminar. Este espacio está asignado a una o más clases. Por favor, reasigna o elimina esas clases primero.",
+      });
+      return;
+    }
     setSpaces(prev => prev.filter(s => s.id !== spaceId));
   };
   
