@@ -77,7 +77,7 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   }, [actividadFilter, filteredSpecialistsForDropdown, specialistFilter]);
 
   useEffect(() => {
-    if (actividadFilter !== 'all' && !filteredActividadesForDropdown.some(a => a.id ===ividadFilter)) {
+    if (actividadFilter !== 'all' && !filteredActividadesForDropdown.some(a => a.id === actividadFilter)) {
       setActividadFilter('all');
     }
   }, [specialistFilter, filteredActividadesForDropdown, actividadFilter]);
