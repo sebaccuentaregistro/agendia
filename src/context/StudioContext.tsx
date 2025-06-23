@@ -52,6 +52,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
+    const nameExists = actividades.some(a => a.name.trim().toLowerCase() === actividad.name.trim().toLowerCase());
+    if (nameExists) {
+      toast({
+        variant: "destructive",
+        title: "Nombre Duplicado",
+        description: `Ya existe una actividad con el nombre "${actividad.name}".`,
+      });
+      return;
+    }
     const newActividad: Actividad = {
       id: `spec-${Date.now()}`,
       ...actividad,
@@ -60,6 +69,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const updateActividad = (updatedActividad: Actividad) => {
+    const nameExists = actividades.some(a => a.id !== updatedActividad.id && a.name.trim().toLowerCase() === updatedActividad.name.trim().toLowerCase());
+    if (nameExists) {
+      toast({
+        variant: "destructive",
+        title: "Nombre Duplicado",
+        description: `Ya existe otra actividad con el nombre "${updatedActividad.name}".`,
+      });
+      return;
+    }
     setActividades(prev =>
       prev.map(a => (a.id === updatedActividad.id ? updatedActividad : a))
     );
@@ -87,6 +105,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addSpecialist = (specialist: Omit<Specialist, 'id'| 'avatar'>) => {
+    const nameExists = specialists.some(s => s.name.trim().toLowerCase() === specialist.name.trim().toLowerCase());
+    if (nameExists) {
+        toast({
+            variant: "destructive",
+            title: "Nombre Duplicado",
+            description: `Ya existe un especialista con el nombre "${specialist.name}".`,
+        });
+        return;
+    }
     const newSpecialist: Specialist = {
       id: `inst-${Date.now()}`,
       avatar: `https://placehold.co/100x100.png`,
@@ -96,6 +123,43 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSpecialist = (updatedSpecialist: Specialist) => {
+    const nameExists = specialists.some(s => s.id !== updatedSpecialist.id && s.name.trim().toLowerCase() === updatedSpecialist.name.trim().toLowerCase());
+    if (nameExists) {
+        toast({
+            variant: "destructive",
+            title: "Nombre Duplicado",
+            description: `Ya existe otro especialista con el nombre "${updatedSpecialist.name}".`,
+        });
+        return;
+    }
+
+    const originalSpecialist = specialists.find(s => s.id === updatedSpecialist.id);
+    if (originalSpecialist) {
+        const removedActividadIds = originalSpecialist.actividadIds.filter(
+            id => !updatedSpecialist.actividadIds.includes(id)
+        );
+
+        if (removedActividadIds.length > 0) {
+            const affectedClasses = yogaClasses.filter(
+                cls => cls.instructorId === updatedSpecialist.id && removedActividadIds.includes(cls.actividadId)
+            );
+
+            if (affectedClasses.length > 0) {
+                const affectedActividadNames = removedActividadIds
+                    .map(id => actividades.find(a => a.id === id)?.name)
+                    .filter(Boolean)
+                    .join(', ');
+                
+                toast({
+                    variant: "destructive",
+                    title: "No se puede actualizar el especialista",
+                    description: `Este especialista imparte clases de "${affectedActividadNames}" que quedarían sin una actividad válida. Por favor, reasigna o elimina esas clases primero.`,
+                });
+                return;
+            }
+        }
+    }
+
     setSpecialists(prev =>
       prev.map(s => (s.id === updatedSpecialist.id ? updatedSpecialist : s))
     );
@@ -202,6 +266,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addSpace = (space: Omit<Space, 'id'>) => {
+    const nameExists = spaces.some(s => s.name.trim().toLowerCase() === space.name.trim().toLowerCase());
+    if (nameExists) {
+        toast({
+            variant: "destructive",
+            title: "Nombre Duplicado",
+            description: `Ya existe un espacio con el nombre "${space.name}".`,
+        });
+        return;
+    }
     const newSpace: Space = {
       id: `space-${Date.now()}`,
       ...space,
@@ -210,6 +283,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const updateSpace = (updatedSpace: Space) => {
+    const nameExists = spaces.some(s => s.id !== updatedSpace.id && s.name.trim().toLowerCase() === updatedSpace.name.trim().toLowerCase());
+    if (nameExists) {
+        toast({
+            variant: "destructive",
+            title: "Nombre Duplicado",
+            description: `Ya existe otro espacio con el nombre "${updatedSpace.name}".`,
+        });
+        return;
+    }
     setSpaces(prev =>
       prev.map(s => (s.id === updatedSpace.id ? updatedSpace : s))
     );
@@ -230,18 +312,34 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
   
   const addYogaClass = (yogaClass: Omit<YogaClass, 'id' | 'studentIds'>) => {
-    const conflict = yogaClasses.find(
+    const specialistConflict = yogaClasses.find(
       (c) =>
         c.instructorId === yogaClass.instructorId &&
         c.dayOfWeek === yogaClass.dayOfWeek &&
         c.time === yogaClass.time
     );
 
-    if (conflict) {
+    if (specialistConflict) {
       toast({
         variant: "destructive",
         title: "Conflicto de Horario",
         description: "El especialista ya tiene otra clase programada para ese mismo día y hora.",
+      });
+      return;
+    }
+
+    const spaceConflict = yogaClasses.find(
+      (c) =>
+        c.spaceId === yogaClass.spaceId &&
+        c.dayOfWeek === yogaClass.dayOfWeek &&
+        c.time === yogaClass.time
+    );
+
+    if (spaceConflict) {
+      toast({
+        variant: "destructive",
+        title: "Conflicto de Espacio",
+        description: "El espacio ya está ocupado por otra clase en ese mismo día y hora.",
       });
       return;
     }
@@ -255,7 +353,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const updateYogaClass = (updatedYogaClass: YogaClass) => {
-    const conflict = yogaClasses.find(
+    const specialistConflict = yogaClasses.find(
       (c) =>
         c.id !== updatedYogaClass.id &&
         c.instructorId === updatedYogaClass.instructorId &&
@@ -263,11 +361,28 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         c.time === updatedYogaClass.time
     );
 
-    if (conflict) {
+    if (specialistConflict) {
       toast({
         variant: "destructive",
         title: "Conflicto de Horario",
         description: "El especialista ya tiene otra clase programada para ese mismo día y hora.",
+      });
+      return;
+    }
+
+    const spaceConflict = yogaClasses.find(
+      (c) =>
+        c.id !== updatedYogaClass.id &&
+        c.spaceId === updatedYogaClass.spaceId &&
+        c.dayOfWeek === updatedYogaClass.dayOfWeek &&
+        c.time === updatedYogaClass.time
+    );
+
+    if (spaceConflict) {
+      toast({
+        variant: "destructive",
+        title: "Conflicto de Espacio",
+        description: "El espacio ya está ocupado por otra clase en ese mismo día y hora.",
       });
       return;
     }
