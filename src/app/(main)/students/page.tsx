@@ -80,11 +80,10 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   }, [specialistFilter, specialists, actividadFilter, filteredActividadesForDropdown]);
 
   useEffect(() => {
-      const selectedActividad = actividades.find(a => a.id === actividadFilter);
-      if (selectedActividad && specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
+      if (specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
           setSpecialistFilter('all');
       }
-  }, [actividadFilter, especialistas, specialistFilter, filteredSpecialistsForDropdown, actividades]);
+  }, [actividadFilter, specialistFilter, filteredSpecialistsForDropdown]);
 
   const filteredClasses = useMemo(() => {
     return yogaClasses.filter(cls => {
@@ -424,6 +423,7 @@ export default function StudentsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
+              <TableHead>Teléfono</TableHead>
               <TableHead>Membresía</TableHead>
               <TableHead>Estado del Pago</TableHead>
               <TableHead>Inscrito Desde</TableHead>
@@ -439,12 +439,10 @@ export default function StudentsPage() {
                       <AvatarImage src={student.avatar} alt={student.name} data-ai-hint="person photo"/>
                       <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                     <div className="flex flex-col">
-                      <span>{student.name}</span>
-                      <span className="text-xs text-muted-foreground">{student.phone}</span>
-                    </div>
+                    <span>{student.name}</span>
                   </div>
                 </TableCell>
+                <TableCell>{student.phone}</TableCell>
                 <TableCell>{student.membershipType}</TableCell>
                 <TableCell>{getPaymentStatusBadge(student)}</TableCell>
                 <TableCell>{format(student.joinDate, 'dd/MM/yyyy')}</TableCell>
