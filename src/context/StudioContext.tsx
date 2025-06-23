@@ -32,6 +32,9 @@ interface StudioContextType {
   addSpace: (space: Omit<Space, 'id'>) => void;
   updateSpace: (space: Space) => void;
   deleteSpace: (spaceId: string) => void;
+  addYogaClass: (yogaClass: Omit<YogaClass, 'id' | 'studentsEnrolled'>) => void;
+  updateYogaClass: (yogaClass: YogaClass) => void;
+  deleteYogaClass: (yogaClassId: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -184,8 +187,27 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const deleteSpace = (spaceId: string) => {
     setSpaces(prev => prev.filter(s => s.id !== spaceId));
-    // Note: We might need to handle class assignments here later
   };
+  
+  const addYogaClass = (yogaClass: Omit<YogaClass, 'id' | 'studentsEnrolled'>) => {
+    const newYogaClass: YogaClass = {
+      id: `cls-${Date.now()}`,
+      studentsEnrolled: 0,
+      ...yogaClass,
+    };
+    setYogaClasses(prev => [...prev, newYogaClass]);
+  };
+
+  const updateYogaClass = (updatedYogaClass: YogaClass) => {
+    setYogaClasses(prev =>
+      prev.map(c => (c.id === updatedYogaClass.id ? updatedYogaClass : c))
+    );
+  };
+
+  const deleteYogaClass = (yogaClassId: string) => {
+    setYogaClasses(prev => prev.filter(c => c.id !== yogaClassId));
+  };
+
 
   return (
     <StudioContext.Provider
@@ -210,6 +232,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         addSpace,
         updateSpace,
         deleteSpace,
+        addYogaClass,
+        updateYogaClass,
+        deleteYogaClass,
       }}
     >
       {children}
