@@ -428,20 +428,38 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const enrollStudentInClasses = (studentId: string, newClassIds: string[]) => {
-    // Pre-check for capacity issues on new enrollments
-    for (const classId of newClassIds) {
+    const oldClassIds = yogaClasses
+      .filter(c => c.studentIds.includes(studentId))
+      .map(c => c.id);
+      
+    const joiningClassIds = newClassIds.filter(id => !oldClassIds.includes(id));
+    const leavingClassIds = oldClassIds.filter(id => !newClassIds.includes(id));
+
+    let availableSwapSlots = leavingClassIds.length;
+
+    for (const classId of joiningClassIds) {
       const cls = yogaClasses.find(c => c.id === classId);
-      if (cls && !cls.studentIds.includes(studentId) && cls.studentIds.length >= cls.capacity) {
-        const actividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Clase';
-        toast({
-          variant: "destructive",
-          title: "Clase Llena",
-          description: `No se pudo inscribir en "${actividadName}" porque ha alcanzado su capacidad máxima.`,
-        });
-        return; // Abort the entire operation
+      if (cls) {
+        // Check if the class is full
+        if (cls.studentIds.length >= cls.capacity) {
+          // If it's full, we need a "swap slot" from a class the student is leaving.
+          if (availableSwapSlots > 0) {
+            availableSwapSlots--; // Use up a swap slot.
+          } else {
+            // Class is full and no swap slots are available.
+            const actividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Clase';
+            toast({
+              variant: "destructive",
+              title: "Clase Llena",
+              description: `No se pudo inscribir en "${actividadName}" porque no hay cupos disponibles.`,
+            });
+            return; // Abort the entire operation.
+          }
+        }
       }
     }
 
+    // If all checks pass, apply the changes.
     const updatedClasses = yogaClasses.map(cls => {
       const shouldBeEnrolled = newClassIds.includes(cls.id);
       const isEnrolled = cls.studentIds.includes(studentId);
