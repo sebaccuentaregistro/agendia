@@ -54,7 +54,7 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
 
   const filteredClasses = useMemo(() => {
     return yogaClasses.filter(cls => {
-        const matchesActividad = actividadFilter === 'all' || cls.actividadId ===ividadFilter;
+        const matchesActividad = actividadFilter === 'all' || cls.actividadId === actividadFilter;
         const matchesSpecialist = specialistFilter === 'all' || cls.instructorId === specialistFilter;
         return matchesActividad && matchesSpecialist;
     }).sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
