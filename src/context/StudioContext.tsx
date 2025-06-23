@@ -10,6 +10,7 @@ import {
   payments as initialPayments,
   spaces as initialSpaces
 } from '@/lib/data';
+import { useToast } from '@/hooks/use-toast';
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -46,6 +47,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(initialYogaClasses);
   const [payments, setPayments] = useState<Payment[]>(initialPayments);
   const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
+  const { toast } = useToast();
 
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
@@ -198,9 +200,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     );
 
     if (conflict) {
-      alert(
-        'Conflicto de horario: El especialista ya tiene otra clase programada para ese mismo día y hora.'
-      );
+      toast({
+        variant: "destructive",
+        title: "Conflicto de Horario",
+        description: "El especialista ya tiene otra clase programada para ese mismo día y hora.",
+      });
       return;
     }
 
@@ -222,9 +226,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     );
 
     if (conflict) {
-      alert(
-        'Conflicto de horario: El especialista ya tiene otra clase programada para ese mismo día y hora.'
-      );
+      toast({
+        variant: "destructive",
+        title: "Conflicto de Horario",
+        description: "El especialista ya tiene otra clase programada para ese mismo día y hora.",
+      });
       return;
     }
 
