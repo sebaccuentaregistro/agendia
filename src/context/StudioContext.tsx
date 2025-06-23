@@ -65,7 +65,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteActividad = (actividadId: string) => {
-    const isActivityInUse = yogaClasses.some(cls => cls.actividadId === actividadId);
+    const isActivityInUse = yogaClasses.some(cls => cls.actividadId ===ividadId);
 
     if (isActivityInUse) {
       toast({
@@ -76,11 +76,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setActividades(prev => prev.filter(a => a.id !== actividadId));
+    setActividades(prev => prev.filter(a => a.id !==ividadId));
     setSpecialists(prevSpecialists =>
       prevSpecialists.map(specialist => ({
         ...specialist,
-        actividadIds: specialist.actividadIds.filter(id => id !== actividadId),
+        actividadIds: specialist.actividadIds.filter(id => id !==ividadId),
       }))
     );
   };
@@ -101,6 +101,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteSpecialist = (specialistId: string) => {
+    const isSpecialistInUse = yogaClasses.some(cls => cls.instructorId === specialistId);
+
+    if (isSpecialistInUse) {
+      toast({
+        variant: "destructive",
+        title: "Especialista en Uso",
+        description: "No se puede eliminar. Este especialista está asignado a una o más clases. Por favor, reasigna o elimina esas clases primero.",
+      });
+      return;
+    }
+    
     setSpecialists(prev => prev.filter(s => s.id !== specialistId));
   };
 
