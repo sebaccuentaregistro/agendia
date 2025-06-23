@@ -62,9 +62,6 @@ import {
 } from '@/components/ui/select';
 
 const formSchema = z.object({
-  name: z
-    .string()
-    .min(3, { message: 'El nombre debe tener al menos 3 caracteres.' }),
   instructorId: z.string({
     required_error: 'Debes seleccionar un especialista.',
   }),
@@ -109,7 +106,6 @@ export default function SchedulePage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
       instructorId: undefined,
       actividadId: undefined,
       spaceId: undefined,
@@ -129,7 +125,6 @@ export default function SchedulePage() {
   const handleAdd = () => {
     setSelectedClass(undefined);
     form.reset({
-      name: '',
       instructorId: undefined,
       actividadId: undefined,
       spaceId: undefined,
@@ -143,7 +138,6 @@ export default function SchedulePage() {
   const handleEdit = (cls: YogaClass) => {
     setSelectedClass(cls);
     form.reset({
-      name: cls.name,
       instructorId: cls.instructorId,
       actividadId: cls.actividadId,
       spaceId: cls.spaceId,
@@ -212,13 +206,27 @@ export default function SchedulePage() {
               >
                 <FormField
                   control={form.control}
-                  name="name"
+                  name="actividadId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nombre de la Clase</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
+                      <FormLabel>Actividad</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecciona una actividad" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {actividades.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -242,33 +250,6 @@ export default function SchedulePage() {
                           {specialists.map((i) => (
                             <SelectItem key={i.id} value={i.id}>
                               {i.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="actividadId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Actividad</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecciona una actividad" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {actividades.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -380,7 +361,7 @@ export default function SchedulePage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Clase</TableHead>
+              <TableHead>Actividad</TableHead>
               <TableHead>Especialista</TableHead>
               <TableHead>Día y Hora</TableHead>
               <TableHead>Espacio</TableHead>
@@ -399,12 +380,7 @@ export default function SchedulePage() {
               return (
                 <TableRow key={cls.id}>
                   <TableCell className="font-medium">
-                    <div className="flex flex-col">
-                      <span>{cls.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {actividad?.name}
-                      </span>
-                    </div>
+                    {actividad?.name}
                   </TableCell>
                   <TableCell>{specialist?.name}</TableCell>
                   <TableCell>

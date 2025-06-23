@@ -32,12 +32,12 @@ export const students: Student[] = [
 ];
 
 export const yogaClasses: YogaClass[] = [
-  { id: 'cls-1', name: 'Vinyasa Matutino', instructorId: 'inst-1', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', capacity: 15, studentsEnrolled: 12 },
-  { id: 'cls-2', name: 'Hatha Suave', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', capacity: 20, studentsEnrolled: 18 },
-  { id: 'cls-3', name: 'Ashtanga Potente', instructorId: 'inst-2', actividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', capacity: 12, studentsEnrolled: 12 },
-  { id: 'cls-4', name: 'Yin de Estiramiento Profundo', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', capacity: 18, studentsEnrolled: 15 },
-  { id: 'cls-5', name: 'Flow de Tarde', instructorId: 'inst-4', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', capacity: 15, studentsEnrolled: 10 },
-  { id: 'cls-6', name: 'Restaurativo de Fin de Semana', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', capacity: 20, studentsEnrolled: 14 },
+  { id: 'cls-1', instructorId: 'inst-1', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', capacity: 15, studentsEnrolled: 12 },
+  { id: 'cls-2', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', capacity: 20, studentsEnrolled: 18 },
+  { id: 'cls-3', instructorId: 'inst-2', actividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', capacity: 12, studentsEnrolled: 12 },
+  { id: 'cls-4', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', capacity: 18, studentsEnrolled: 15 },
+  { id: 'cls-5', instructorId: 'inst-4', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', capacity: 15, studentsEnrolled: 10 },
+  { id: 'cls-6', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', capacity: 20, studentsEnrolled: 14 },
 ];
 
 export const payments: Payment[] = [

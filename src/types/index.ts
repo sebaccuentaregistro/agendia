@@ -23,7 +23,6 @@ export type Student = {
 
 export type YogaClass = {
   id: string;
-  name: string;
   instructorId: string;
   actividadId: string;
   spaceId: string;
