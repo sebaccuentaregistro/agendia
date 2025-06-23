@@ -40,7 +40,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { YogaClass } from '@/types';
+import { Student, YogaClass } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -60,6 +60,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const formSchema = z.object({
   instructorId: z.string({
@@ -95,6 +103,7 @@ export default function SchedulePage() {
     addYogaClass,
     updateYogaClass,
     deleteYogaClass,
+    students,
   } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -102,6 +111,7 @@ export default function SchedulePage() {
     undefined
   );
   const [classToDelete, setClassToDelete] = useState<YogaClass | null>(null);
+  const [viewingRoster, setViewingRoster] = useState<YogaClass | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -121,6 +131,10 @@ export default function SchedulePage() {
     const space = spaces.find((s) => s.id === cls.spaceId);
     return { specialist, actividad, space };
   };
+
+  const getRoster = (cls: YogaClass): Student[] => {
+    return students.filter(s => cls.studentIds.includes(s.id));
+  }
 
   const handleAdd = () => {
     setSelectedClass(undefined);
@@ -374,8 +388,9 @@ export default function SchedulePage() {
           <TableBody>
             {yogaClasses.map((cls) => {
               const { specialist, actividad, space } = getClassDetails(cls);
+              const enrolledCount = cls.studentIds?.length || 0;
               const capacityPercentage =
-                (cls.studentsEnrolled / cls.capacity) * 100;
+                (enrolledCount / cls.capacity) * 100;
 
               return (
                 <TableRow key={cls.id}>
@@ -396,7 +411,7 @@ export default function SchedulePage() {
                     <div className="flex items-center gap-2">
                       <Progress value={capacityPercentage} className="w-24" />
                       <span className="text-sm text-muted-foreground">
-                        {cls.studentsEnrolled}/{cls.capacity}
+                        {enrolledCount}/{cls.capacity}
                       </span>
                     </div>
                   </TableCell>
@@ -417,7 +432,7 @@ export default function SchedulePage() {
                         <DropdownMenuItem onClick={() => handleEdit(cls)}>
                           Editar Clase
                         </DropdownMenuItem>
-                        <DropdownMenuItem disabled>Ver Lista</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setViewingRoster(cls)}>Ver Lista</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
@@ -444,7 +459,7 @@ export default function SchedulePage() {
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Esto eliminará permanentemente
-              la clase.
+              la clase y desinscribirá a todos los asistentes.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -460,6 +475,36 @@ export default function SchedulePage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Sheet open={!!viewingRoster} onOpenChange={(open) => !open && setViewingRoster(null)}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Lista de Asistentes</SheetTitle>
+            {viewingRoster && (
+                <SheetDescription>
+                    {actividades.find(a => a.id === viewingRoster.actividadId)?.name} - {viewingRoster.dayOfWeek}, {formatTime(viewingRoster.time)}
+                </SheetDescription>
+            )}
+          </SheetHeader>
+          <div className="py-4">
+            <ul className="space-y-3">
+                {viewingRoster && getRoster(viewingRoster).length > 0 ? (
+                    getRoster(viewingRoster).map(student => (
+                        <li key={student.id} className="flex items-center gap-3">
+                            <Avatar>
+                                <AvatarImage src={student.avatar} alt={student.name} data-ai-hint="person photo"/>
+                                <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span>{student.name}</span>
+                        </li>
+                    ))
+                ) : (
+                    <p className="text-sm text-muted-foreground">No hay asistentes inscritos en esta clase.</p>
+                )}
+            </ul>
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
