@@ -1,7 +1,6 @@
-export type Specialization = {
+export type Actividad = {
   id: string;
   name: string;
-  description: string;
 };
 
 export type Instructor = {
@@ -9,7 +8,7 @@ export type Instructor = {
   name: string;
   email: string;
   phone: string;
-  specializationIds: string[];
+  actividadIds: string[];
   avatar: string;
 };
 
@@ -27,7 +26,7 @@ export type YogaClass = {
   id: string;
   name: string;
   instructorId: string;
-  specializationId: string;
+  actividadId: string;
   dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
   time: string;
   capacity: number;

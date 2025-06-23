@@ -26,7 +26,7 @@ const menuItems = [
   { href: "/schedule", label: "Horario", icon: Calendar },
   { href: "/students", label: "Estudiantes", icon: Users },
   { href: "/instructors", label: "Instructores", icon: UserSquare },
-  { href: "/specializations", label: "Especialidades", icon: Star },
+  { href: "/specializations", label: "Actividades", icon: Star },
   { href: "/payments", label: "Pagos", icon: CreditCard },
   { href: "/assistant", label: "Asistente IA", icon: Sparkles },
 ];
