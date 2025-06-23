@@ -22,7 +22,7 @@ import { useStudio } from '@/context/StudioContext';
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
   phone: z.string().min(1, { message: "El teléfono es obligatorio." }),
-  paymentStatus: z.enum(['Pagado', 'Pendiente', 'Atrasado']),
+  paymentStatus: z.enum(['Al día', 'Pendiente', 'Atrasado']),
 });
 
 export default function StudentsPage() {
@@ -83,6 +83,19 @@ export default function StudentsPage() {
     setIsDialogOpen(false);
     setSelectedStudent(undefined);
   }
+
+  const getBadgeVariant = (status: Student['paymentStatus']) => {
+    switch (status) {
+      case 'Al día':
+        return 'default';
+      case 'Pendiente':
+        return 'secondary';
+      case 'Atrasado':
+        return 'destructive';
+      default:
+        return 'outline';
+    }
+  };
   
   return (
     <div>
@@ -140,7 +153,7 @@ export default function StudentsPage() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Pagado">Pagado</SelectItem>
+                            <SelectItem value="Al día">Al día</SelectItem>
                             <SelectItem value="Pendiente">Pendiente</SelectItem>
                             <SelectItem value="Atrasado">Atrasado</SelectItem>
                           </SelectContent>
@@ -185,7 +198,7 @@ export default function StudentsPage() {
                 </TableCell>
                 <TableCell>{student.phone}</TableCell>
                 <TableCell>
-                  <Badge variant={student.paymentStatus === 'Atrasado' ? 'destructive' : student.paymentStatus === 'Pendiente' ? 'secondary' : 'outline'}>
+                  <Badge variant={getBadgeVariant(student.paymentStatus)}>
                     {student.paymentStatus}
                   </Badge>
                 </TableCell>

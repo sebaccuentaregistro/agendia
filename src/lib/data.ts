@@ -16,12 +16,12 @@ export const specialists: Specialist[] = [
 ];
 
 export const students: Student[] = [
-  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: new Date('2023-01-15'), paymentStatus: 'Pagado', avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: new Date('2023-01-15'), paymentStatus: 'Al día', avatar: `https://placehold.co/100x100.png` },
   { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: new Date('2023-02-20'), paymentStatus: 'Atrasado', avatar: `https://placehold.co/100x100.png` },
-  { id: 'stu-3', name: 'Chloe Kim', phone: '555-0103', joinDate: new Date('2023-03-10'), paymentStatus: 'Pagado', avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-3', name: 'Chloe Kim', phone: '555-0103', joinDate: new Date('2023-03-10'), paymentStatus: 'Al día', avatar: `https://placehold.co/100x100.png` },
   { id: 'stu-4', name: 'Benjamin Carter', phone: '555-0104', joinDate: new Date('2023-04-05'), paymentStatus: 'Pendiente', avatar: `https://placehold.co/100x100.png` },
-  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: new Date('2023-05-22'), paymentStatus: 'Pagado', avatar: `https://placehold.co/100x100.png` },
-  { id: 'stu-6', name: 'Noah Rodriguez', phone: '555-0106', joinDate: new Date('2023-06-30'), paymentStatus: 'Pagado', avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: new Date('2023-05-22'), paymentStatus: 'Al día', avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-6', name: 'Noah Rodriguez', phone: '555-0106', joinDate: new Date('2023-06-30'), paymentStatus: 'Al día', avatar: `https://placehold.co/100x100.png` },
 ];
 
 export const yogaClasses: YogaClass[] = [

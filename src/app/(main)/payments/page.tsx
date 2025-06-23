@@ -15,7 +15,7 @@ export default function PaymentsPage() {
 
   const getBadgeVariant = (status: Payment['status']) => {
     switch (status) {
-      case 'Pagado':
+      case 'Al día':
         return 'default';
       case 'Pendiente':
         return 'secondary';

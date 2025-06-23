@@ -16,7 +16,7 @@ export type Student = {
   name: string;
   phone: string;
   joinDate: Date;
-  paymentStatus: 'Pagado' | 'Pendiente' | 'Atrasado';
+  paymentStatus: 'Al día' | 'Pendiente' | 'Atrasado';
   avatar: string;
 };
 
@@ -36,5 +36,5 @@ export type Payment = {
   studentId: string;
   amount: number;
   date: Date;
-  status: 'Pagado' | 'Pendiente' | 'Atrasado';
+  status: 'Al día' | 'Pendiente' | 'Atrasado';
 };
