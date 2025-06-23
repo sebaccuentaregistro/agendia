@@ -87,6 +87,10 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
                             const isFull = item.studentIds.length >= item.capacity;
                             const isEnrolled = field.value?.includes(item.id);
 
+                            if (!actividad) {
+                              return null;
+                            }
+
                             return (
                               <FormItem
                                 key={item.id}
@@ -111,7 +115,7 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
                                 </FormControl>
                                 <div className="space-y-1 leading-none">
                                     <FormLabel className={cn("font-normal", isFull && !isEnrolled && "cursor-not-allowed")}>
-                                      {actividad?.name || 'Clase desconocida'}
+                                      {actividad.name}
                                     </FormLabel>
                                     <p className="text-xs text-muted-foreground">
                                         {specialist?.name} | {item.dayOfWeek} {formatTime(item.time)} | {space?.name} | ({item.studentIds.length}/{item.capacity})
