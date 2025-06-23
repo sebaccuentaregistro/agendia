@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Student } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,15 +18,16 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useStudio } from '@/context/StudioContext';
+import { getStudentPaymentStatus } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
   phone: z.string().min(1, { message: "El teléfono es obligatorio." }),
-  paymentStatus: z.enum(['Al día', 'Pendiente', 'Atrasado']),
+  membershipType: z.enum(['Mensual', 'Diario']),
 });
 
 export default function StudentsPage() {
-  const { students, addStudent, updateStudent, deleteStudent } = useStudio();
+  const { students, addStudent, updateStudent, deleteStudent, recordPayment } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | undefined>(undefined);
@@ -37,7 +38,7 @@ export default function StudentsPage() {
     defaultValues: {
       name: '',
       phone: '',
-      paymentStatus: 'Pendiente',
+      membershipType: 'Mensual',
     },
   });
 
@@ -46,7 +47,7 @@ export default function StudentsPage() {
     form.reset({
       name: '',
       phone: '',
-      paymentStatus: 'Pendiente',
+      membershipType: 'Mensual',
     });
     setIsDialogOpen(true);
   }
@@ -56,7 +57,7 @@ export default function StudentsPage() {
     form.reset({
       name: student.name,
       phone: student.phone,
-      paymentStatus: student.paymentStatus,
+      membershipType: student.membershipType,
     });
     setIsDialogOpen(true);
   }
@@ -84,12 +85,10 @@ export default function StudentsPage() {
     setSelectedStudent(undefined);
   }
 
-  const getBadgeVariant = (status: Student['paymentStatus']) => {
+  const getBadgeVariant = (status: 'Al día' | 'Atrasado') => {
     switch (status) {
       case 'Al día':
         return 'default';
-      case 'Pendiente':
-        return 'secondary';
       case 'Atrasado':
         return 'destructive';
       default:
@@ -142,20 +141,19 @@ export default function StudentsPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="paymentStatus"
+                    name="membershipType"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Estado de Pago</FormLabel>
+                        <FormLabel>Tipo de Membresía</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecciona un estado de pago" />
+                              <SelectValue placeholder="Selecciona un tipo de membresía" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="Al día">Al día</SelectItem>
-                            <SelectItem value="Pendiente">Pendiente</SelectItem>
-                            <SelectItem value="Atrasado">Atrasado</SelectItem>
+                            <SelectItem value="Mensual">Mensual</SelectItem>
+                            <SelectItem value="Diario">Diario</SelectItem>
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -179,13 +177,16 @@ export default function StudentsPage() {
             <TableRow>
               <TableHead>Nombre</TableHead>
               <TableHead>Teléfono</TableHead>
+              <TableHead>Membresía</TableHead>
               <TableHead>Estado de Pago</TableHead>
-              <TableHead>Fecha de Inscripción</TableHead>
+              <TableHead>Último Pago</TableHead>
               <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((student) => (
+            {students.map((student) => {
+              const paymentStatus = getStudentPaymentStatus(student);
+              return (
               <TableRow key={student.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
@@ -197,12 +198,13 @@ export default function StudentsPage() {
                   </div>
                 </TableCell>
                 <TableCell>{student.phone}</TableCell>
+                <TableCell>{student.membershipType}</TableCell>
                 <TableCell>
-                  <Badge variant={getBadgeVariant(student.paymentStatus)}>
-                    {student.paymentStatus}
+                  <Badge variant={getBadgeVariant(paymentStatus)}>
+                    {paymentStatus}
                   </Badge>
                 </TableCell>
-                <TableCell>{student.joinDate.toLocaleDateString()}</TableCell>
+                <TableCell>{student.lastPaymentDate.toLocaleDateString()}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -214,6 +216,13 @@ export default function StudentsPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                       <DropdownMenuItem onClick={() => handleEdit(student)}>Editar</DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => recordPayment(student.id)}
+                        disabled={student.membershipType === 'Diario'}
+                      >
+                        <DollarSign className="mr-2 h-4 w-4" />
+                        Registrar Pago
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(student)}>
                         <Trash2 className="mr-2 h-4 w-4" />
@@ -223,7 +232,7 @@ export default function StudentsPage() {
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </div>

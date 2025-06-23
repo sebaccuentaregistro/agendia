@@ -22,9 +22,10 @@ interface StudioContextType {
   addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
   updateSpecialist: (specialist: Specialist) => void;
   deleteSpecialist: (specialistId: string) => void;
-  addStudent: (student: Omit<Student, 'id' | 'avatar' | 'joinDate'>) => void;
+  addStudent: (student: Omit<Student, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => void;
   updateStudent: (student: Student) => void;
   deleteStudent: (studentId: string) => void;
+  recordPayment: (studentId: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -80,14 +81,23 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpecialists(prev => prev.filter(s => s.id !== specialistId));
   };
 
-  const addStudent = (student: Omit<Student, 'id' | 'avatar' | 'joinDate'>) => {
+  const addStudent = (student: Omit<Student, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => {
     const newStudent: Student = {
       id: `stu-${Date.now()}`,
       avatar: `https://placehold.co/100x100.png`,
       joinDate: new Date(),
+      lastPaymentDate: new Date(),
       ...student,
     };
-    setStudents(prev => [...prev, newStudent]);
+    setStudents(prev => [newStudent, ...prev]);
+    // Also create a corresponding payment record
+    const newPayment: Payment = {
+      id: `pay-${Date.now()}`,
+      studentId: newStudent.id,
+      amount: newStudent.membershipType === 'Mensual' ? 95.00 : 15.00,
+      date: new Date(),
+    };
+    setPayments(prev => [newPayment, ...prev]);
   };
 
   const updateStudent = (updatedStudent: Student) => {
@@ -100,6 +110,29 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setStudents(prev => prev.filter(s => s.id !== studentId));
     // Also delete associated payments
     setPayments(prev => prev.filter(p => p.studentId !== studentId));
+  };
+
+  const recordPayment = (studentId: string) => {
+    let studentToUpdate: Student | undefined;
+    setStudents(prevStudents =>
+      prevStudents.map(s => {
+        if (s.id === studentId) {
+          studentToUpdate = s;
+          return { ...s, lastPaymentDate: new Date() };
+        }
+        return s;
+      })
+    );
+
+    if (studentToUpdate) {
+      const newPayment: Payment = {
+        id: `pay-${Date.now()}`,
+        studentId: studentToUpdate.id,
+        amount: studentToUpdate.membershipType === 'Mensual' ? 95.00 : 15.00,
+        date: new Date(),
+      };
+      setPayments(prev => [newPayment, ...prev].sort((a,b) => b.date.getTime() - a.date.getTime()));
+    }
   };
 
   return (
@@ -119,6 +152,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         addStudent,
         updateStudent,
         deleteStudent,
+        recordPayment,
       }}
     >
       {children}

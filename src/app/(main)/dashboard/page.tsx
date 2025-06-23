@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useStudio } from '@/context/StudioContext';
+import { getStudentPaymentStatus } from '@/lib/utils';
 import { ArrowUpRight, Users, ClipboardList, Calendar, CreditCard } from 'lucide-react';
 
 export default function Dashboard() {
@@ -12,8 +13,8 @@ export default function Dashboard() {
   const totalStudents = students.length;
   const totalSpecialists = specialists.length;
   const upcomingClassesCount = yogaClasses.filter(c => new Date() < new Date(2024, 6, c.dayOfWeek === 'Lunes' ? 22 : 23)).length; // Mock logic
-  const overduePayments = students.filter(s => s.paymentStatus === 'Atrasado').length;
-  const recentStudents = students.slice(0, 5);
+  const overduePayments = students.filter(s => getStudentPaymentStatus(s) === 'Atrasado').length;
+  const recentStudents = students.sort((a, b) => b.joinDate.getTime() - a.joinDate.getTime()).slice(0, 5);
 
   return (
     <div>

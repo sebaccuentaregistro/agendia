@@ -3,8 +3,6 @@
 import { PageHeader } from '@/components/page-header';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useStudio } from '@/context/StudioContext';
-import { Payment } from '@/types';
-import { Badge } from '@/components/ui/badge';
 
 export default function PaymentsPage() {
   const { payments, students } = useStudio();
@@ -13,22 +11,9 @@ export default function PaymentsPage() {
     return students.find(s => s.id === studentId)?.name || 'Asistente Desconocido';
   };
 
-  const getBadgeVariant = (status: Payment['status']) => {
-    switch (status) {
-      case 'Al día':
-        return 'default';
-      case 'Pendiente':
-        return 'secondary';
-      case 'Atrasado':
-        return 'destructive';
-      default:
-        return 'outline';
-    }
-  };
-
   return (
     <div>
-      <PageHeader title="Pagos" description="Realiza un seguimiento de los pagos de los asistentes y gestiona los saldos pendientes." />
+      <PageHeader title="Historial de Pagos" description="Un registro de todas las transacciones de pago de los asistentes." />
       
       <div className="rounded-lg border">
         <Table>
@@ -36,8 +21,7 @@ export default function PaymentsPage() {
             <TableRow>
               <TableHead>Asistente</TableHead>
               <TableHead>Monto</TableHead>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead>Fecha de Pago</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -46,9 +30,6 @@ export default function PaymentsPage() {
                 <TableCell className="font-medium">{getStudentName(payment.studentId)}</TableCell>
                 <TableCell>${payment.amount.toFixed(2)}</TableCell>
                 <TableCell>{payment.date.toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <Badge variant={getBadgeVariant(payment.status)}>{payment.status}</Badge>
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>

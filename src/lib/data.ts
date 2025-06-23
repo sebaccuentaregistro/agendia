@@ -15,13 +15,20 @@ export const specialists: Specialist[] = [
   { id: 'inst-4', name: 'David Miller', phone: '456-789-0123', actividadIds: ['spec-1', 'spec-4'], avatar: `https://placehold.co/100x100.png` },
 ];
 
+// Helper to create dates in the past
+const daysAgo = (days: number): Date => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date;
+};
+
 export const students: Student[] = [
-  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: new Date('2023-01-15'), paymentStatus: 'Al día', avatar: `https://placehold.co/100x100.png` },
-  { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: new Date('2023-02-20'), paymentStatus: 'Atrasado', avatar: `https://placehold.co/100x100.png` },
-  { id: 'stu-3', name: 'Chloe Kim', phone: '555-0103', joinDate: new Date('2023-03-10'), paymentStatus: 'Al día', avatar: `https://placehold.co/100x100.png` },
-  { id: 'stu-4', name: 'Benjamin Carter', phone: '555-0104', joinDate: new Date('2023-04-05'), paymentStatus: 'Pendiente', avatar: `https://placehold.co/100x100.png` },
-  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: new Date('2023-05-22'), paymentStatus: 'Al día', avatar: `https://placehold.co/100x100.png` },
-  { id: 'stu-6', name: 'Noah Rodriguez', phone: '555-0106', joinDate: new Date('2023-06-30'), paymentStatus: 'Al día', avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(180), membershipType: 'Mensual', lastPaymentDate: daysAgo(25), avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(150), membershipType: 'Mensual', lastPaymentDate: daysAgo(45), avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-3', name: 'Chloe Kim', phone: '555-0103', joinDate: daysAgo(120), membershipType: 'Diario', lastPaymentDate: daysAgo(5), avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-4', name: 'Benjamin Carter', phone: '555-0104', joinDate: daysAgo(90), membershipType: 'Mensual', lastPaymentDate: daysAgo(10), avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: daysAgo(60), membershipType: 'Diario', lastPaymentDate: daysAgo(2), avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-6', name: 'Noah Rodriguez', phone: '555-0106', joinDate: daysAgo(30), membershipType: 'Mensual', lastPaymentDate: daysAgo(29), avatar: `https://placehold.co/100x100.png` },
 ];
 
 export const yogaClasses: YogaClass[] = [
@@ -33,10 +40,13 @@ export const yogaClasses: YogaClass[] = [
   { id: 'cls-6', name: 'Restaurativo de Fin de Semana', instructorId: 'inst-3', actividadId: 'spec-5', dayOfWeek: 'Sábado', time: '11:00 AM', capacity: 20, studentsEnrolled: 14 },
 ];
 
-export const payments: Payment[] = students.map((student, index) => ({
-  id: `pay-${index + 1}`,
-  studentId: student.id,
-  amount: 95.00,
-  date: new Date(new Date(student.joinDate).setDate(new Date(student.joinDate).getDate() + 30 * index)),
-  status: student.paymentStatus,
-}));
+export const payments: Payment[] = [
+  { id: 'pay-1', studentId: 'stu-1', amount: 95.00, date: daysAgo(25) },
+  { id: 'pay-2', studentId: 'stu-2', amount: 95.00, date: daysAgo(45) },
+  { id: 'pay-3', studentId: 'stu-3', amount: 15.00, date: daysAgo(5) },
+  { id: 'pay-4', studentId: 'stu-4', amount: 95.00, date: daysAgo(10) },
+  { id: 'pay-5', studentId: 'stu-5', amount: 15.00, date: daysAgo(2) },
+  { id: 'pay-6', studentId: 'stu-6', amount: 95.00, date: daysAgo(29) },
+  { id: 'pay-7', studentId: 'stu-1', amount: 95.00, date: daysAgo(55) },
+  { id: 'pay-8', studentId: 'stu-2', amount: 95.00, date: daysAgo(75) },
+];
