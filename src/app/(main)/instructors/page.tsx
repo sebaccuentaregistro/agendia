@@ -18,6 +18,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useStudio } from '@/context/StudioContext';
+import { WhatsAppIcon } from '@/components/whatsapp-icon';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -78,15 +79,15 @@ export default function SpecialistsPage() {
   
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (selectedSpecialist) {
-      // Update existing specialist
       updateSpecialist({ ...selectedSpecialist, ...values });
     } else {
-      // Add new specialist
       addSpecialist(values);
     }
     setIsDialogOpen(false);
     setSelectedSpecialist(undefined);
   }
+
+  const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
   return (
     <div>
@@ -182,6 +183,7 @@ export default function SpecialistsPage() {
               <TableHead>Nombre</TableHead>
               <TableHead>Actividades</TableHead>
               <TableHead>Teléfono</TableHead>
+              <TableHead><span className="sr-only">WhatsApp</span></TableHead>
               <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
@@ -207,6 +209,12 @@ export default function SpecialistsPage() {
                   </div>
                 </TableCell>
                 <TableCell>{specialist.phone}</TableCell>
+                <TableCell>
+                  <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
+                    <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                    <span className="sr-only">Enviar WhatsApp a {specialist.name}</span>
+                  </a>
+                </TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

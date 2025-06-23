@@ -8,6 +8,7 @@ import { getStudentPaymentStatus } from '@/lib/utils';
 import { Users, ClipboardList, Calendar, CreditCard } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { WhatsAppIcon } from '@/components/whatsapp-icon';
 
 export default function Dashboard() {
   const { people, specialists, yogaClasses } = useStudio();
@@ -17,6 +18,8 @@ export default function Dashboard() {
   const upcomingClassesCount = yogaClasses.filter(c => new Date() < new Date(2024, 6, c.dayOfWeek === 'Lunes' ? 22 : 23)).length; // Mock logic
   const overduePayments = people.filter(s => getStudentPaymentStatus(s) === 'Atrasado').length;
   const recentPeople = people.sort((a, b) => b.joinDate.getTime() - a.joinDate.getTime()).slice(0, 5);
+
+  const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
   return (
     <div>
@@ -78,6 +81,7 @@ export default function Dashboard() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Teléfono</TableHead>
+                  <TableHead><span className="sr-only">WhatsApp</span></TableHead>
                   <TableHead className="text-right">Fecha de Inscripción</TableHead>
                 </TableRow>
               </TableHeader>
@@ -86,6 +90,12 @@ export default function Dashboard() {
                   <TableRow key={person.id}>
                     <TableCell>{person.name}</TableCell>
                     <TableCell>{person.phone}</TableCell>
+                    <TableCell>
+                      <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
+                        <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                        <span className="sr-only">Enviar WhatsApp a {person.name}</span>
+                      </a>
+                    </TableCell>
                     <TableCell className="text-right">{format(person.joinDate, 'dd/MM/yyyy')}</TableCell>
                   </TableRow>
                 ))}
