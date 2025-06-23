@@ -343,6 +343,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
+    
+    const selectedSpace = spaces.find(s => s.id === yogaClass.spaceId);
+    if (selectedSpace && yogaClass.capacity > selectedSpace.capacity) {
+      toast({
+        variant: "destructive",
+        title: "Capacidad Excedida",
+        description: `La capacidad de la clase (${yogaClass.capacity}) no puede ser mayor que la capacidad del espacio "${selectedSpace.name}" (${selectedSpace.capacity}).`,
+      });
+      return;
+    }
+
 
     const newYogaClass: YogaClass = {
       id: `cls-${Date.now()}`,
@@ -386,6 +397,26 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
+
+    if (updatedYogaClass.capacity < updatedYogaClass.studentIds.length) {
+      toast({
+        variant: "destructive",
+        title: "Capacidad Inválida",
+        description: `No se puede establecer la capacidad a ${updatedYogaClass.capacity} porque ya hay ${updatedYogaClass.studentIds.length} asistentes inscritos.`,
+      });
+      return;
+    }
+    
+    const selectedSpace = spaces.find(s => s.id === updatedYogaClass.spaceId);
+    if (selectedSpace && updatedYogaClass.capacity > selectedSpace.capacity) {
+      toast({
+        variant: "destructive",
+        title: "Capacidad Excedida",
+        description: `La capacidad de la clase (${updatedYogaClass.capacity}) no puede ser mayor que la capacidad del espacio "${selectedSpace.name}" (${selectedSpace.capacity}).`,
+      });
+      return;
+    }
+
 
     setYogaClasses(prev =>
       prev.map(c => (c.id === updatedYogaClass.id ? updatedYogaClass : c))

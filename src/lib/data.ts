@@ -31,13 +31,19 @@ export const students: Student[] = [
   { id: 'stu-6', name: 'Noah Rodriguez', phone: '555-0106', joinDate: daysAgo(30), membershipType: 'Mensual', lastPaymentDate: daysAgo(29), avatar: `https://placehold.co/100x100.png` },
 ];
 
+export const spaces: Space[] = [
+  { id: 'space-1', name: 'Sala Sol', capacity: 20 },
+  { id: 'space-2', name: 'Sala Luna', capacity: 15 },
+  { id: 'space-3', name: 'Área de Máquinas', capacity: 10 },
+];
+
 export const yogaClasses: YogaClass[] = [
   { id: 'cls-1', instructorId: 'inst-1', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', capacity: 15, studentIds: ['stu-1', 'stu-4'] },
-  { id: 'cls-2', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', capacity: 20, studentIds: ['stu-2', 'stu-5', 'stu-6'] },
+  { id: 'cls-2', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', capacity: 15, studentIds: ['stu-2', 'stu-5', 'stu-6'] },
   { id: 'cls-3', instructorId: 'inst-2', actividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', capacity: 12, studentIds: ['stu-1', 'stu-3'] },
-  { id: 'cls-4', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', capacity: 18, studentIds: ['stu-2', 'stu-4'] },
+  { id: 'cls-4', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', capacity: 15, studentIds: ['stu-2', 'stu-4'] },
   { id: 'cls-5', instructorId: 'inst-4', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', capacity: 15, studentIds: ['stu-5', 'stu-6'] },
-  { id: 'cls-6', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', capacity: 20, studentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'] },
+  { id: 'cls-6', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', capacity: 15, studentIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4'] },
 ];
 
 export const payments: Payment[] = [
@@ -49,10 +55,4 @@ export const payments: Payment[] = [
   { id: 'pay-6', studentId: 'stu-6', amount: 95.00, date: daysAgo(29) },
   { id: 'pay-7', studentId: 'stu-1', amount: 95.00, date: daysAgo(55) },
   { id: 'pay-8', studentId: 'stu-2', amount: 95.00, date: daysAgo(75) },
-];
-
-export const spaces: Space[] = [
-  { id: 'space-1', name: 'Sala Sol' },
-  { id: 'space-2', name: 'Sala Luna' },
-  { id: 'space-3', name: 'Área de Máquinas' },
 ];

@@ -42,4 +42,5 @@ export type Payment = {
 export type Space = {
   id: string;
   name: string;
+  capacity: number;
 };

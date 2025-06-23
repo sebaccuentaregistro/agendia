@@ -43,6 +43,7 @@ const formSchema = z.object({
   name: z.string().min(2, {
     message: "El nombre debe tener al menos 2 caracteres.",
   }),
+  capacity: z.coerce.number().min(1, { message: 'La capacidad debe ser de al menos 1.' }),
 });
 
 export default function SpacesPage() {
@@ -56,18 +57,19 @@ export default function SpacesPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
+      capacity: 10,
     },
   });
 
   function handleAdd() {
     setSelectedSpace(undefined);
-    form.reset({ name: '' });
+    form.reset({ name: '', capacity: 10 });
     setIsDialogOpen(true);
   }
 
   function handleEdit(space: Space) {
     setSelectedSpace(space);
-    form.reset({ name: space.name });
+    form.reset({ name: space.name, capacity: space.capacity });
     setIsDialogOpen(true);
   }
 
@@ -124,6 +126,19 @@ export default function SpacesPage() {
                       </FormItem>
                     )}
                   />
+                   <FormField
+                    control={form.control}
+                    name="capacity"
+                    render={({ field }) => (
+                      <FormItem className="grid grid-cols-4 items-center gap-4">
+                        <FormLabel className="text-right">Capacidad</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} className="col-span-3" />
+                        </FormControl>
+                        <FormMessage className="col-span-3 col-start-2" />
+                      </FormItem>
+                    )}
+                  />
                 </div>
                 <DialogFooter>
                   <Button type="submit">Guardar Cambios</Button>
@@ -139,6 +154,7 @@ export default function SpacesPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
+              <TableHead>Capacidad</TableHead>
               <TableHead><span className="sr-only">Acciones</span></TableHead>
             </TableRow>
           </TableHeader>
@@ -146,6 +162,7 @@ export default function SpacesPage() {
             {spaces.map((space) => (
               <TableRow key={space.id}>
                 <TableCell className="font-medium">{space.name}</TableCell>
+                <TableCell>{space.capacity}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
