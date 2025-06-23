@@ -3,10 +3,9 @@ export type Actividad = {
   name: string;
 };
 
-export type Instructor = {
+export type Specialist = {
   id: string;
   name: string;
-  email: string;
   phone: string;
   actividadIds: string[];
   avatar: string;

@@ -2,14 +2,14 @@ import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { instructors, students, yogaClasses } from '@/lib/data';
-import { ArrowUpRight, Users, Calendar, UserSquare, CreditCard } from 'lucide-react';
+import { specialists, students, yogaClasses } from '@/lib/data';
+import { ArrowUpRight, Users, ClipboardUser, Calendar, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 export default function Dashboard() {
   const totalStudents = students.length;
-  const totalInstructors = instructors.length;
+  const totalSpecialists = specialists.length;
   const upcomingClassesCount = yogaClasses.filter(c => new Date() < new Date(2024, 6, c.dayOfWeek === 'Lunes' ? 22 : 23)).length; // Mock logic
   const overduePayments = students.filter(s => s.paymentStatus === 'Atrasado').length;
   const recentStudents = students.slice(0, 5);
@@ -31,12 +31,12 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Instructores</CardTitle>
-            <UserSquare className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total de Especialistas</CardTitle>
+            <ClipboardUser className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalInstructors}</div>
-            <p className="text-xs text-muted-foreground">+1 nuevo instructor</p>
+            <div className="text-2xl font-bold">{totalSpecialists}</div>
+            <p className="text-xs text-muted-foreground">+1 nuevo especialista</p>
           </CardContent>
         </Card>
         <Card>

@@ -3,40 +3,41 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { instructors, actividades } from '@/lib/data';
-import type { Instructor } from '@/types';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { specialists, actividades } from '@/lib/data';
+import type { Specialist } from '@/types';
+import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
-  email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
   phone: z.string().min(1, { message: 'El teléfono es obligatorio.' }),
   actividadIds: z.array(z.string()).refine((value) => value.some((item) => item), {
     message: 'Tienes que seleccionar al menos una actividad.',
   }),
 });
 
-export default function InstructorsPage() {
+export default function SpecialistsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedInstructor, setSelectedInstructor] = useState<Instructor | undefined>(undefined);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedSpecialist, setSelectedSpecialist] = useState<Specialist | undefined>(undefined);
+  const [specialistToDelete, setSpecialistToDelete] = useState<Specialist | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      email: '',
       phone: '',
       actividadIds: [],
     },
@@ -46,42 +47,55 @@ export default function InstructorsPage() {
     return ids.map(id => actividades.find(a => a.id === id)?.name).filter(Boolean);
   };
 
-  function handleEdit(instructor: Instructor) {
-    setSelectedInstructor(instructor);
+  function handleEdit(specialist: Specialist) {
+    setSelectedSpecialist(specialist);
     form.reset({
-      name: instructor.name,
-      email: instructor.email,
-      phone: instructor.phone,
-      actividadIds: instructor.actividadIds,
+      name: specialist.name,
+      phone: specialist.phone,
+      actividadIds: specialist.actividadIds,
     });
     setIsDialogOpen(true);
   }
 
   function handleAdd() {
-    setSelectedInstructor(undefined);
-    form.reset({ name: '', email: '', phone: '', actividadIds: [] });
+    setSelectedSpecialist(undefined);
+    form.reset({ name: '', phone: '', actividadIds: [] });
     setIsDialogOpen(true);
+  }
+
+  function openDeleteDialog(specialist: Specialist) {
+    setSpecialistToDelete(specialist);
+    setIsDeleteDialogOpen(true);
+  }
+
+  function handleDelete() {
+    if (specialistToDelete) {
+      // La lógica para eliminar al especialista iría aquí
+      console.log('Eliminando especialista:', specialistToDelete.name);
+      setIsDeleteDialogOpen(false);
+      setSpecialistToDelete(null);
+    }
   }
   
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // Aquí iría la lógica para guardar el instructor (crear o actualizar)
+    // La lógica para guardar el especialista (crear o actualizar) iría aquí
     console.log('Valores del formulario:', values);
     setIsDialogOpen(false);
   }
 
   return (
     <div>
-      <PageHeader title="Instructores" description="Mantén los perfiles de instructores, actividades e información de contacto.">
+      <PageHeader title="Especialistas" description="Mantén los perfiles de especialistas, actividades e información de contacto.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Instructor
+              Añadir Especialista
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{selectedInstructor ? 'Editar Instructor' : 'Añadir Nuevo Instructor'}</DialogTitle>
+              <DialogTitle>{selectedSpecialist ? 'Editar Especialista' : 'Añadir Nuevo Especialista'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -94,19 +108,6 @@ export default function InstructorsPage() {
                         <FormLabel className="text-right">Nombre</FormLabel>
                         <FormControl>
                           <Input {...field} className="col-span-3" />
-                        </FormControl>
-                        <FormMessage className="col-span-4" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Correo</FormLabel>
-                        <FormControl>
-                          <Input type="email" {...field} className="col-span-3" />
                         </FormControl>
                         <FormMessage className="col-span-4" />
                       </FormItem>
@@ -180,28 +181,27 @@ export default function InstructorsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {instructors.map((instructor) => (
-              <TableRow key={instructor.id}>
+            {specialists.map((specialist) => (
+              <TableRow key={specialist.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
                     <Avatar>
-                      <AvatarImage src={instructor.avatar} alt={instructor.name} data-ai-hint="person photo"/>
-                      <AvatarFallback>{instructor.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={specialist.avatar} alt={specialist.name} data-ai-hint="person photo"/>
+                      <AvatarFallback>{specialist.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                      <div className="flex flex-col">
-                      <span>{instructor.name}</span>
-                      <span className="text-xs text-muted-foreground">{instructor.email}</span>
+                      <span>{specialist.name}</span>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {getActividadNames(instructor.actividadIds).map(name => (
+                    {getActividadNames(specialist.actividadIds).map(name => (
                       <Badge key={name} variant="secondary">{name}</Badge>
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>{instructor.phone}</TableCell>
+                <TableCell>{specialist.phone}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -212,8 +212,12 @@ export default function InstructorsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => handleEdit(instructor)}>Editar</DropdownMenuItem>
-                      <DropdownMenuItem>Ver Horario</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEdit(specialist)}>Editar</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(specialist)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -222,6 +226,23 @@ export default function InstructorsPage() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al especialista de nuestros servidores.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSpecialistToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+              Sí, eliminar especialista
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

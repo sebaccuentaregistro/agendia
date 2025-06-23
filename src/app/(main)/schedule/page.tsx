@@ -3,7 +3,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { instructors, actividades, yogaClasses } from '@/lib/data';
+import { specialists, actividades, yogaClasses } from '@/lib/data';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -41,14 +41,14 @@ export default function SchedulePage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   const getClassDetails = (cls: YogaClass) => {
-    const instructor = instructors.find(i => i.id === cls.instructorId);
+    const specialist = specialists.find(i => i.id === cls.instructorId);
     const actividad = actividades.find(s => s.id === cls.actividadId);
-    return { instructor, actividad };
+    return { specialist, actividad };
   };
 
   return (
     <div>
-      <PageHeader title="Horario de Clases" description="Programa clases, gestiona las asignaciones de instructores y haz un seguimiento de la capacidad.">
+      <PageHeader title="Horario de Clases" description="Programa clases, gestiona las asignaciones de especialistas y haz un seguimiento de la capacidad.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -70,7 +70,7 @@ export default function SchedulePage() {
           <TableHeader>
             <TableRow>
               <TableHead>Clase</TableHead>
-              <TableHead>Instructor</TableHead>
+              <TableHead>Especialista</TableHead>
               <TableHead>Día y Hora</TableHead>
               <TableHead>Capacidad</TableHead>
               <TableHead><span className="sr-only">Acciones</span></TableHead>
@@ -78,7 +78,7 @@ export default function SchedulePage() {
           </TableHeader>
           <TableBody>
             {yogaClasses.map((cls) => {
-              const { instructor, actividad } = getClassDetails(cls);
+              const { specialist, actividad } = getClassDetails(cls);
               const capacityPercentage = (cls.studentsEnrolled / cls.capacity) * 100;
 
               return (
@@ -89,7 +89,7 @@ export default function SchedulePage() {
                       <span className="text-xs text-muted-foreground">{actividad?.name}</span>
                     </div>
                   </TableCell>
-                  <TableCell>{instructor?.name}</TableCell>
+                  <TableCell>{specialist?.name}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span>{cls.dayOfWeek}</span>

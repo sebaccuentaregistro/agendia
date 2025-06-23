@@ -15,8 +15,8 @@ import { Loader2, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  instructorAvailability: z.string().min(20, {
-    message: "Por favor, describe la disponibilidad del instructor en al menos 20 caracteres.",
+  specialistAvailability: z.string().min(20, {
+    message: "Por favor, describe la disponibilidad del especialista en al menos 20 caracteres.",
   }),
   studentPreferences: z.string().min(20, {
     message: "Por favor, describe las preferencias de los estudiantes en al menos 20 caracteres.",
@@ -35,7 +35,7 @@ export default function AssistantPage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      instructorAvailability: "",
+      specialistAvailability: "",
       studentPreferences: "",
       classCapacity: 15,
       currentSchedule: "",
@@ -77,10 +77,10 @@ export default function AssistantPage() {
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                 <FormField
                   control={form.control}
-                  name="instructorAvailability"
+                  name="specialistAvailability"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Disponibilidad del Instructor</FormLabel>
+                      <FormLabel>Disponibilidad del Especialista</FormLabel>
                       <FormControl>
                         <Textarea placeholder="p.ej., Elena está disponible los lunes/miércoles/viernes por la mañana. Marcus prefiere las tardes..." {...field} />
                       </FormControl>

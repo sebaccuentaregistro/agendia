@@ -12,7 +12,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
   Users,
-  UserSquare,
+  ClipboardUser,
   Calendar,
   Star,
   CreditCard,
@@ -25,7 +25,7 @@ const menuItems = [
   { href: "/dashboard", label: "Panel", icon: LayoutGrid },
   { href: "/schedule", label: "Horario", icon: Calendar },
   { href: "/students", label: "Estudiantes", icon: Users },
-  { href: "/instructors", label: "Instructores", icon: UserSquare },
+  { href: "/instructors", label: "Especialistas", icon: ClipboardUser },
   { href: "/specializations", label: "Actividades", icon: Star },
   { href: "/payments", label: "Pagos", icon: CreditCard },
   { href: "/assistant", label: "Asistente IA", icon: Sparkles },
@@ -48,7 +48,7 @@ export default function AppSidebar() {
             <SidebarMenuItem key={item.href}>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === item.href}
+                isActive={pathname.startsWith(item.href)}
                 tooltip={item.label}
               >
                 <Link href={item.href}>
