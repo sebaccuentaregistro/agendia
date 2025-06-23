@@ -65,6 +65,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteActividad = (actividadId: string) => {
+    const isActivityInUse = yogaClasses.some(cls => cls.actividadId === actividadId);
+
+    if (isActivityInUse) {
+      toast({
+        variant: "destructive",
+        title: "Actividad en Uso",
+        description: "No se puede eliminar. Esta actividad está en uso en una o más clases. Por favor, elimina o reasigna esas clases primero.",
+      });
+      return;
+    }
+
     setActividades(prev => prev.filter(a => a.id !== actividadId));
     setSpecialists(prevSpecialists =>
       prevSpecialists.map(specialist => ({
