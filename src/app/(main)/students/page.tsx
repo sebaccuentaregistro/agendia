@@ -4,13 +4,13 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Student } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, DollarSign, Undo2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, DollarSign, Undo2, MessageCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -33,6 +34,17 @@ export default function StudentsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | undefined>(undefined);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const filter = searchParams.get('filter');
+
+  const displayedStudents = useMemo(() => {
+    if (filter === 'overdue') {
+      return students.filter(student => getStudentPaymentStatus(student) === 'Atrasado');
+    }
+    return students;
+  }, [students, filter]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -150,7 +162,7 @@ export default function StudentsPage() {
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecciona un tipo de membresía" />
-                            </SelectTrigger>
+                            </Trigger>
                           </FormControl>
                           <SelectContent>
                             <SelectItem value="Mensual">Mensual</SelectItem>
@@ -171,6 +183,17 @@ export default function StudentsPage() {
           </DialogContent>
         </Dialog>
       </PageHeader>
+      
+      {filter === 'overdue' && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border bg-card p-4">
+          <p className="text-sm text-card-foreground">
+            Mostrando solo asistentes con pagos atrasados.
+          </p>
+          <Button variant="outline" onClick={() => router.push('/students')}>
+            Mostrar Todos los Asistentes
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-lg border">
         <Table>
@@ -185,7 +208,7 @@ export default function StudentsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {students.map((student) => {
+            {displayedStudents.map((student) => {
               const paymentStatus = getStudentPaymentStatus(student);
               const studentPaymentsCount = payments.filter(p => p.studentId === student.id).length;
               return (
@@ -202,9 +225,17 @@ export default function StudentsPage() {
                 <TableCell>{student.phone}</TableCell>
                 <TableCell>{student.membershipType}</TableCell>
                 <TableCell>
-                  <Badge variant={getBadgeVariant(paymentStatus)}>
-                    {paymentStatus}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge variant={getBadgeVariant(paymentStatus)}>
+                      {paymentStatus}
+                    </Badge>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
+                      <a href={`https://wa.me/${student.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                        <MessageCircle className="h-4 w-4" />
+                        <span className="sr-only">Enviar WhatsApp</span>
+                      </a>
+                    </Button>
+                  </div>
                 </TableCell>
                 <TableCell>{format(student.lastPaymentDate, 'dd/MM/yyyy')}</TableCell>
                 <TableCell>
