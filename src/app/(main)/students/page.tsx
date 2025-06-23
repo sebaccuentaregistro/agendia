@@ -4,7 +4,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Student } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, DollarSign } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, DollarSign, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,7 +27,7 @@ const formSchema = z.object({
 });
 
 export default function StudentsPage() {
-  const { students, addStudent, updateStudent, deleteStudent, recordPayment } = useStudio();
+  const { students, addStudent, updateStudent, deleteStudent, recordPayment, undoLastPayment, payments } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | undefined>(undefined);
@@ -186,6 +186,7 @@ export default function StudentsPage() {
           <TableBody>
             {students.map((student) => {
               const paymentStatus = getStudentPaymentStatus(student);
+              const studentPaymentsCount = payments.filter(p => p.studentId === student.id).length;
               return (
               <TableRow key={student.id}>
                 <TableCell className="font-medium">
@@ -222,6 +223,13 @@ export default function StudentsPage() {
                       >
                         <DollarSign className="mr-2 h-4 w-4" />
                         Registrar Pago
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => undoLastPayment(student.id)}
+                        disabled={studentPaymentsCount === 0}
+                      >
+                        <Undo2 className="mr-2 h-4 w-4" />
+                        Anular último pago
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(student)}>

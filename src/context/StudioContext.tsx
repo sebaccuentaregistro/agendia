@@ -26,6 +26,7 @@ interface StudioContextType {
   updateStudent: (student: Student) => void;
   deleteStudent: (studentId: string) => void;
   recordPayment: (studentId: string) => void;
+  undoLastPayment: (studentId: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -135,6 +136,32 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const undoLastPayment = (studentId: string) => {
+    const studentPayments = payments
+      .filter(p => p.studentId === studentId)
+      .sort((a, b) => b.date.getTime() - a.date.getTime());
+    
+    if (studentPayments.length > 0) {
+      const lastPaymentId = studentPayments[0].id;
+      setPayments(prev => prev.filter(p => p.id !== lastPaymentId));
+      
+      const newLastPaymentDate = studentPayments.length > 1 
+        ? studentPayments[1].date 
+        : students.find(s => s.id === studentId)?.joinDate;
+
+      if (newLastPaymentDate) {
+         setStudents(prevStudents =>
+          prevStudents.map(s => {
+            if (s.id === studentId) {
+              return { ...s, lastPaymentDate: newLastPaymentDate };
+            }
+            return s;
+          })
+        );
+      }
+    }
+  };
+
   return (
     <StudioContext.Provider
       value={{
@@ -153,6 +180,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         updateStudent,
         deleteStudent,
         recordPayment,
+        undoLastPayment,
       }}
     >
       {children}
