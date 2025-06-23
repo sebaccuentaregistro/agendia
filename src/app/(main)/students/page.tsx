@@ -55,14 +55,14 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   const [specialistFilter, setSpecialistFilter] = useState('all');
 
   const filteredSpecialistsForDropdown = useMemo(() => {
-    if (actividadFilter === 'all') {
+    if (actividadFilter === 'all' || !actividadFilter) {
       return specialists;
     }
     return specialists.filter(s => s.actividadIds.includes(actividadFilter));
   }, [actividadFilter, specialists]);
 
   const filteredActividadesForDropdown = useMemo(() => {
-    if (specialistFilter === 'all') {
+    if (specialistFilter === 'all' || !specialistFilter) {
       return actividades;
     }
     const specialist = specialists.find(s => s.id === specialistFilter);
@@ -74,21 +74,21 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   
   useEffect(() => {
     const specialist = specialists.find(s => s.id === specialistFilter);
-    if (specialist && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
+    if (specialist && actividadFilter && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
         setActividadFilter('all');
     }
-  }, [specialistFilter, specialists, actividadFilter, filteredActividadesForDropdown]);
+  }, [specialistFilter, specialists, actividadFilter]);
 
   useEffect(() => {
-      if (specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
+      if (specialistFilter && specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
           setSpecialistFilter('all');
       }
   }, [actividadFilter, specialistFilter, filteredSpecialistsForDropdown]);
 
   const filteredClasses = useMemo(() => {
     return yogaClasses.filter(cls => {
-        const matchesActividad = actividadFilter === 'all' || cls.actividadId === actividadFilter;
-        const matchesSpecialist = specialistFilter === 'all' || cls.instructorId === specialistFilter;
+        const matchesActividad = (actividadFilter === 'all' || !actividadFilter) || cls.actividadId === actividadFilter;
+        const matchesSpecialist = (specialistFilter === 'all' || !specialistFilter) || cls.instructorId === specialistFilter;
         return matchesActividad && matchesSpecialist;
     }).sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
   }, [yogaClasses, actividadFilter, specialistFilter]);
@@ -116,25 +116,31 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Select onValueChange={setActividadFilter} value={actividadFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por actividad..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las actividades</SelectItem>
-                  {filteredActividadesForDropdown.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select onValueChange={setSpecialistFilter} value={specialistFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Filtrar por especialista..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los especialistas</SelectItem>
-                  {filteredSpecialistsForDropdown.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Actividad</Label>
+                <Select onValueChange={setActividadFilter} value={actividadFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por actividad..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {filteredActividadesForDropdown.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Especialista</Label>
+                <Select onValueChange={setSpecialistFilter} value={specialistFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Filtrar por especialista..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {filteredSpecialistsForDropdown.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <FormField
               control={form.control}
