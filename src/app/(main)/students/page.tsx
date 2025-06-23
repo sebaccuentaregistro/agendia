@@ -21,8 +21,7 @@ import { useStudio } from '@/context/StudioContext';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
-  email: z.string().email({ message: "Por favor, introduce un correo electrónico válido." }),
-  status: z.enum(['Activo', 'Inactivo']),
+  phone: z.string().min(1, { message: "El teléfono es obligatorio." }),
   paymentStatus: z.enum(['Pagado', 'Pendiente', 'Atrasado']),
 });
 
@@ -37,8 +36,7 @@ export default function StudentsPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
-      email: '',
-      status: 'Activo',
+      phone: '',
       paymentStatus: 'Pendiente',
     },
   });
@@ -47,8 +45,7 @@ export default function StudentsPage() {
     setSelectedStudent(undefined);
     form.reset({
       name: '',
-      email: '',
-      status: 'Activo',
+      phone: '',
       paymentStatus: 'Pendiente',
     });
     setIsDialogOpen(true);
@@ -58,8 +55,7 @@ export default function StudentsPage() {
     setSelectedStudent(student);
     form.reset({
       name: student.name,
-      email: student.email,
-      status: student.status,
+      phone: student.phone,
       paymentStatus: student.paymentStatus,
     });
     setIsDialogOpen(true);
@@ -90,17 +86,17 @@ export default function StudentsPage() {
   
   return (
     <div>
-      <PageHeader title="Estudiantes" description="Gestiona los perfiles de los estudiantes, haz un seguimiento de la asistencia y el estado de los pagos.">
+      <PageHeader title="Asistentes" description="Gestiona los perfiles de los asistentes y el estado de los pagos.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Estudiante
+              Añadir Asistente
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{selectedStudent ? 'Editar Estudiante' : 'Añadir Nuevo Estudiante'}</DialogTitle>
+              <DialogTitle>{selectedStudent ? 'Editar Asistente' : 'Añadir Nuevo Asistente'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -112,7 +108,7 @@ export default function StudentsPage() {
                       <FormItem>
                         <FormLabel>Nombre</FormLabel>
                         <FormControl>
-                          <Input placeholder="Nombre del estudiante" {...field} />
+                          <Input placeholder="Nombre del asistente" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -120,34 +116,13 @@ export default function StudentsPage() {
                   />
                   <FormField
                     control={form.control}
-                    name="email"
+                    name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Correo Electrónico</FormLabel>
+                        <FormLabel>Teléfono</FormLabel>
                         <FormControl>
-                          <Input type="email" placeholder="correo@ejemplo.com" {...field} />
+                          <Input type="tel" placeholder="555-123-4567" {...field} />
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="status"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Estado</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona un estado" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="Activo">Activo</SelectItem>
-                            <SelectItem value="Inactivo">Inactivo</SelectItem>
-                          </SelectContent>
-                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -190,7 +165,7 @@ export default function StudentsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>Estado</TableHead>
+              <TableHead>Teléfono</TableHead>
               <TableHead>Estado de Pago</TableHead>
               <TableHead>Fecha de Inscripción</TableHead>
               <TableHead><span className="sr-only">Acciones</span></TableHead>
@@ -205,15 +180,10 @@ export default function StudentsPage() {
                       <AvatarImage src={student.avatar} alt={student.name} data-ai-hint="person photo" />
                       <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    <div className="flex flex-col">
-                      <span>{student.name}</span>
-                      <span className="text-xs text-muted-foreground">{student.email}</span>
-                    </div>
+                    <span>{student.name}</span>
                   </div>
                 </TableCell>
-                <TableCell>
-                  <Badge variant={student.status === 'Activo' ? 'default' : 'secondary'}>{student.status}</Badge>
-                </TableCell>
+                <TableCell>{student.phone}</TableCell>
                 <TableCell>
                   <Badge variant={student.paymentStatus === 'Atrasado' ? 'destructive' : student.paymentStatus === 'Pendiente' ? 'secondary' : 'outline'}>
                     {student.paymentStatus}
@@ -250,13 +220,13 @@ export default function StudentsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente al estudiante de nuestros servidores.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al asistente de nuestros servidores.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setStudentToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-              Sí, eliminar estudiante
+              Sí, eliminar asistente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

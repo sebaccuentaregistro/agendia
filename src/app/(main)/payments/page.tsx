@@ -10,7 +10,7 @@ export default function PaymentsPage() {
   const { payments, students } = useStudio();
 
   const getStudentName = (studentId: string): string => {
-    return students.find(s => s.id === studentId)?.name || 'Estudiante Desconocido';
+    return students.find(s => s.id === studentId)?.name || 'Asistente Desconocido';
   };
 
   const getBadgeVariant = (status: Payment['status']) => {
@@ -28,13 +28,13 @@ export default function PaymentsPage() {
 
   return (
     <div>
-      <PageHeader title="Pagos" description="Realiza un seguimiento de los pagos de los estudiantes y gestiona los saldos pendientes." />
+      <PageHeader title="Pagos" description="Realiza un seguimiento de los pagos de los asistentes y gestiona los saldos pendientes." />
       
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Estudiante</TableHead>
+              <TableHead>Asistente</TableHead>
               <TableHead>Monto</TableHead>
               <TableHead>Fecha</TableHead>
               <TableHead>Estado</TableHead>

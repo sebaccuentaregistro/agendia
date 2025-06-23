@@ -22,7 +22,7 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Estudiantes</CardTitle>
+            <CardTitle className="text-sm font-medium">Total de Asistentes</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -65,14 +65,14 @@ export default function Dashboard() {
       <div className="mt-8">
         <Card>
           <CardHeader>
-            <CardTitle>Estudiantes Recién Inscritos</CardTitle>
+            <CardTitle>Asistentes Recién Inscritos</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Correo Electrónico</TableHead>
+                  <TableHead>Teléfono</TableHead>
                   <TableHead className="text-right">Fecha de Inscripción</TableHead>
                 </TableRow>
               </TableHeader>
@@ -80,7 +80,7 @@ export default function Dashboard() {
                 {recentStudents.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell>{student.name}</TableCell>
-                    <TableCell>{student.email}</TableCell>
+                    <TableCell>{student.phone}</TableCell>
                     <TableCell className="text-right">{student.joinDate.toLocaleDateString()}</TableCell>
                   </TableRow>
                 ))}

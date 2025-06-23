@@ -14,9 +14,8 @@ export type Specialist = {
 export type Student = {
   id: string;
   name: string;
-  email: string;
+  phone: string;
   joinDate: Date;
-  status: 'Activo' | 'Inactivo';
   paymentStatus: 'Pagado' | 'Pendiente' | 'Atrasado';
   avatar: string;
 };
