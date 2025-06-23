@@ -190,6 +190,20 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
   
   const addYogaClass = (yogaClass: Omit<YogaClass, 'id' | 'studentsEnrolled'>) => {
+    const conflict = yogaClasses.find(
+      (c) =>
+        c.instructorId === yogaClass.instructorId &&
+        c.dayOfWeek === yogaClass.dayOfWeek &&
+        c.time === yogaClass.time
+    );
+
+    if (conflict) {
+      alert(
+        'Conflicto de horario: El especialista ya tiene otra clase programada para ese mismo día y hora.'
+      );
+      return;
+    }
+
     const newYogaClass: YogaClass = {
       id: `cls-${Date.now()}`,
       studentsEnrolled: 0,
@@ -199,6 +213,21 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const updateYogaClass = (updatedYogaClass: YogaClass) => {
+    const conflict = yogaClasses.find(
+      (c) =>
+        c.id !== updatedYogaClass.id &&
+        c.instructorId === updatedYogaClass.instructorId &&
+        c.dayOfWeek === updatedYogaClass.dayOfWeek &&
+        c.time === updatedYogaClass.time
+    );
+
+    if (conflict) {
+      alert(
+        'Conflicto de horario: El especialista ya tiene otra clase programada para ese mismo día y hora.'
+      );
+      return;
+    }
+
     setYogaClasses(prev =>
       prev.map(c => (c.id === updatedYogaClass.id ? updatedYogaClass : c))
     );
