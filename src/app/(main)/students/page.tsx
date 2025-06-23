@@ -272,7 +272,7 @@ export default function StudentsPage() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              )
+              );
             })}
           </TableBody>
         </Table>
