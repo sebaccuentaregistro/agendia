@@ -13,7 +13,6 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +28,7 @@ const formSchema = z.object({
 });
 
 export default function SpecialistsPage() {
+  const [specialistsList, setSpecialistsList] = useState<Specialist[]>(specialists);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSpecialist, setSelectedSpecialist] = useState<Specialist | undefined>(undefined);
@@ -70,17 +70,31 @@ export default function SpecialistsPage() {
 
   function handleDelete() {
     if (specialistToDelete) {
-      // La lógica para eliminar al especialista iría aquí
-      console.log('Eliminando especialista:', specialistToDelete.name);
+      setSpecialistsList(prev => prev.filter(s => s.id !== specialistToDelete.id));
       setIsDeleteDialogOpen(false);
       setSpecialistToDelete(null);
     }
   }
   
   function onSubmit(values: z.infer<typeof formSchema>) {
-    // La lógica para guardar el especialista (crear o actualizar) iría aquí
-    console.log('Valores del formulario:', values);
+    if (selectedSpecialist) {
+      // Update existing specialist
+      setSpecialistsList(
+        specialistsList.map((s) =>
+          s.id === selectedSpecialist.id ? { ...s, ...values } : s
+        )
+      );
+    } else {
+      // Add new specialist
+      const newSpecialist: Specialist = {
+        id: `inst-${Date.now()}`,
+        avatar: `https://placehold.co/100x100.png`,
+        ...values,
+      };
+      setSpecialistsList([...specialistsList, newSpecialist]);
+    }
     setIsDialogOpen(false);
+    setSelectedSpecialist(undefined);
   }
 
   return (
@@ -181,7 +195,7 @@ export default function SpecialistsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {specialists.map((specialist) => (
+            {specialistsList.map((specialist) => (
               <TableRow key={specialist.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
