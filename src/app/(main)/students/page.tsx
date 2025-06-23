@@ -54,6 +54,13 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
 
+  const filteredSpecialistsForDropdown = useMemo(() => {
+    if (actividadFilter === 'all') {
+      return specialists;
+    }
+    return specialists.filter(s => s.actividadIds.includes(actividadFilter));
+  }, [actividadFilter, specialists]);
+
   const filteredActividadesForDropdown = useMemo(() => {
     if (specialistFilter === 'all') {
       return actividades;
@@ -64,27 +71,20 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
     }
     return actividades.filter(a => specialist.actividadIds.includes(a.id));
   }, [specialistFilter, actividades, specialists]);
-
-  const filteredSpecialistsForDropdown = useMemo(() => {
-    if (actividadFilter === 'all') {
-      return specialists;
-    }
-    return specialists.filter(s => s.actividadIds.includes(actividadFilter));
-  }, [actividadFilter, specialists]);
-
-  useEffect(() => {
-    const specialist = specialists.find(s => s.id === specialistFilter);
-    if (specialist && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
-      setSpecialistFilter('all');
-    }
-  }, [actividadFilter, specialists, specialistFilter]);
   
   useEffect(() => {
     const specialist = specialists.find(s => s.id === specialistFilter);
     if (specialist && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
-      setActividadFilter('all');
+        setActividadFilter('all');
     }
-  }, [specialistFilter, specialists, actividadFilter]);
+  }, [specialistFilter, specialists, actividadFilter, filteredActividadesForDropdown]);
+
+  useEffect(() => {
+      const selectedActividad = actividades.find(a => a.id === actividadFilter);
+      if (selectedActividad && specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
+          setSpecialistFilter('all');
+      }
+  }, [actividadFilter, especialistas, specialistFilter, filteredSpecialistsForDropdown, actividades]);
 
   const filteredClasses = useMemo(() => {
     return yogaClasses.filter(cls => {
@@ -231,6 +231,11 @@ export default function StudentsPage() {
   
   const searchParams = useSearchParams();
 
+  const studentForDialog = useMemo(() => {
+    if (!selectedStudent) return undefined;
+    return students.find(s => s.id === selectedStudent.id);
+  }, [students, selectedStudent]);
+
   const filteredStudents = useMemo(() => {
     const filter = searchParams.get('filter');
     if (filter === 'overdue') {
@@ -289,8 +294,8 @@ export default function StudentsPage() {
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (selectedStudent) {
-      updateStudent({ ...selectedStudent, ...values });
+    if (studentForDialog) {
+      updateStudent({ ...studentForDialog, ...values });
     } else {
       addStudent(values);
     }
@@ -310,7 +315,7 @@ export default function StudentsPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>{selectedStudent ? 'Editar Asistente' : 'Añadir Nuevo Asistente'}</DialogTitle>
+              <DialogTitle>{studentForDialog ? 'Editar Asistente' : 'Añadir Nuevo Asistente'}</DialogTitle>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -373,7 +378,7 @@ export default function StudentsPage() {
                   />
                 </div>
                 
-                {selectedStudent && selectedStudent.membershipType === 'Mensual' && (
+                {studentForDialog && studentForDialog.membershipType === 'Mensual' && (
                   <div className="space-y-4 pt-4">
                     <Separator />
                     <div className="space-y-2">
@@ -387,17 +392,17 @@ export default function StudentsPage() {
                          <span className="text-sm font-medium">Estado Actual</span>
                          <span className={cn(
                           "text-sm font-bold",
-                          getStudentPaymentStatus(selectedStudent) === 'Al día' ? 'text-green-700' : 'text-destructive'
+                          getStudentPaymentStatus(studentForDialog) === 'Al día' ? 'text-green-700' : 'text-destructive'
                          )}>
-                          {getStudentPaymentStatus(selectedStudent)}
+                          {getStudentPaymentStatus(studentForDialog)}
                          </span>
                       </div>
-                       {getStudentPaymentStatus(selectedStudent) === 'Al día' ? (
-                          <Button type="button" variant="outline" size="sm" onClick={() => undoLastPayment(selectedStudent.id)}>
+                       {getStudentPaymentStatus(studentForDialog) === 'Al día' ? (
+                          <Button type="button" variant="outline" size="sm" onClick={() => undoLastPayment(studentForDialog.id)}>
                             Deshacer Pago
                           </Button>
                        ) : (
-                          <Button type="button" variant="outline" size="sm" onClick={() => recordPayment(selectedStudent.id)}>
+                          <Button type="button" variant="outline" size="sm" onClick={() => recordPayment(studentForDialog.id)}>
                             Registrar Pago
                           </Button>
                        )}

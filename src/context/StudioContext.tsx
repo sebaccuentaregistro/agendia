@@ -188,18 +188,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       
       const newLastPaymentDate = studentPayments.length > 1 
         ? studentPayments[1].date 
-        : students.find(s => s.id === studentId)?.joinDate;
+        : new Date(0); // Set to epoch to guarantee overdue status
 
-      if (newLastPaymentDate) {
-         setStudents(prevStudents =>
-          prevStudents.map(s => {
-            if (s.id === studentId) {
-              return { ...s, lastPaymentDate: newLastPaymentDate };
-            }
-            return s;
-          })
-        );
-      }
+      setStudents(prevStudents =>
+        prevStudents.map(s => {
+          if (s.id === studentId) {
+            return { ...s, lastPaymentDate: newLastPaymentDate };
+          }
+          return s;
+        })
+      );
     }
   };
 
