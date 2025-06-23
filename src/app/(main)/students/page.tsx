@@ -55,14 +55,14 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   const [specialistFilter, setSpecialistFilter] = useState('all');
 
   const filteredSpecialistsForDropdown = useMemo(() => {
-    if (actividadFilter === 'all' || !actividadFilter) {
+    if (actividadFilter === 'all') {
       return specialists;
     }
     return specialists.filter(s => s.actividadIds.includes(actividadFilter));
   }, [actividadFilter, specialists]);
 
   const filteredActividadesForDropdown = useMemo(() => {
-    if (specialistFilter === 'all' || !specialistFilter) {
+    if (specialistFilter === 'all') {
       return actividades;
     }
     const specialist = specialists.find(s => s.id === specialistFilter);
@@ -74,21 +74,21 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   
   useEffect(() => {
     const specialist = specialists.find(s => s.id === specialistFilter);
-    if (specialist && actividadFilter && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
+    if (specialist && actividadFilter !== 'all' && !specialist.actividadIds.includes(actividadFilter)) {
         setActividadFilter('all');
     }
   }, [specialistFilter, specialists, actividadFilter]);
 
   useEffect(() => {
-      if (specialistFilter && specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
+      if (specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
           setSpecialistFilter('all');
       }
   }, [actividadFilter, specialistFilter, filteredSpecialistsForDropdown]);
 
   const filteredClasses = useMemo(() => {
     return yogaClasses.filter(cls => {
-        const matchesActividad = (actividadFilter === 'all' || !actividadFilter) || cls.actividadId === actividadFilter;
-        const matchesSpecialist = (specialistFilter === 'all' || !specialistFilter) || cls.instructorId === specialistFilter;
+        const matchesActividad = actividadFilter === 'all' || cls.actividadId === actividadFilter;
+        const matchesSpecialist = specialistFilter === 'all' || cls.instructorId === specialistFilter;
         return matchesActividad && matchesSpecialist;
     }).sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
   }, [yogaClasses, actividadFilter, specialistFilter]);
@@ -155,8 +155,6 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
                           const specialist = specialists.find(i => i.id === item.instructorId);
                           const actividad = actividades.find(a => a.id === item.actividadId);
                           const space = spaces.find(s => s.id === item.spaceId);
-                          const isFull = item.studentIds.length >= item.capacity;
-                          const isEnrolled = form.getValues('classIds')?.includes(item.id);
 
                           if (!actividad || !specialist) {
                             return null;
@@ -167,17 +165,20 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
                               key={item.id}
                               control={form.control}
                               name="classIds"
-                              render={({ field }) => (
+                              render={({ field }) => {
+                                const isEnrolledInForm = field.value?.includes(item.id);
+                                const isFull = item.studentIds.length >= item.capacity;
+
+                                return (
                                 <FormItem
-                                  key={item.id}
                                   className={cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", 
-                                      isFull && !isEnrolled ? "bg-muted/50 opacity-50" : "hover:bg-muted/50",
+                                      isFull && !isEnrolledInForm ? "bg-muted/50 opacity-50" : "hover:bg-muted/50",
                                   )}
                                 >
                                   <FormControl>
                                     <Checkbox
-                                      checked={field.value?.includes(item.id)}
-                                      disabled={isFull && !isEnrolled}
+                                      checked={isEnrolledInForm}
+                                      disabled={isFull && !isEnrolledInForm}
                                       onCheckedChange={(checked) => {
                                         const currentValues = field.value || [];
                                         return checked
@@ -191,16 +192,17 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
                                     />
                                   </FormControl>
                                   <div className="space-y-1 leading-none">
-                                      <FormLabel className={cn("font-normal", isFull && !isEnrolled && "cursor-not-allowed")}>
+                                      <FormLabel className={cn("font-normal", isFull && !isEnrolledInForm && "cursor-not-allowed")}>
                                         {actividad.name}
                                       </FormLabel>
                                       <p className="text-xs text-muted-foreground">
                                           {specialist?.name} | {item.dayOfWeek} {formatTime(item.time)} | {space?.name} | ({item.studentIds.length}/{item.capacity})
                                       </p>
-                                      {isFull && !isEnrolled && <p className="text-xs text-destructive">Clase llena</p>}
+                                      {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">Clase llena</p>}
                                   </div>
                                 </FormItem>
-                              )}
+                                );
+                              }}
                             />
                           );
                         })
