@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -52,6 +52,36 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
 
+  const filteredActividadesForDropdown = useMemo(() => {
+    if (specialistFilter === 'all') {
+      return actividades;
+    }
+    const specialist = specialists.find(s => s.id === specialistFilter);
+    if (!specialist) {
+      return [];
+    }
+    return actividades.filter(a => specialist.actividadIds.includes(a.id));
+  }, [specialistFilter, actividades, specialists]);
+
+  const filteredSpecialistsForDropdown = useMemo(() => {
+    if (actividadFilter === 'all') {
+      return specialists;
+    }
+    return specialists.filter(s => s.actividadIds.includes(actividadFilter));
+  }, [actividadFilter, specialists]);
+
+  useEffect(() => {
+    if (specialistFilter !== 'all' && !filteredSpecialistsForDropdown.some(s => s.id === specialistFilter)) {
+      setSpecialistFilter('all');
+    }
+  }, [actividadFilter, filteredSpecialistsForDropdown, specialistFilter]);
+
+  useEffect(() => {
+    if (actividadFilter !== 'all' && !filteredActividadesForDropdown.some(a => a.id ===ividadFilter)) {
+      setActividadFilter('all');
+    }
+  }, [specialistFilter, filteredActividadesForDropdown, actividadFilter]);
+
   const filteredClasses = useMemo(() => {
     return yogaClasses.filter(cls => {
         const matchesActividad = actividadFilter === 'all' || cls.actividadId === actividadFilter;
@@ -59,6 +89,7 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
         return matchesActividad && matchesSpecialist;
     }).sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
   }, [yogaClasses, actividadFilter, specialistFilter]);
+
 
   function onSubmit(data: { classIds: string[] }) {
     enrollStudentInClasses(student.id, data.classIds);
@@ -83,22 +114,22 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Select onValueChange={setActividadFilter} defaultValue="all">
+              <Select onValueChange={setActividadFilter} value={actividadFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrar por actividad..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas las actividades</SelectItem>
-                  {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  {filteredActividadesForDropdown.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Select onValueChange={setSpecialistFilter} defaultValue="all">
+              <Select onValueChange={setSpecialistFilter} value={specialistFilter}>
                 <SelectTrigger>
                   <SelectValue placeholder="Filtrar por especialista..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los especialistas</SelectItem>
-                  {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  {filteredSpecialistsForDropdown.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
