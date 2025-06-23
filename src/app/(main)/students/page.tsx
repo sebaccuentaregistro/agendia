@@ -211,6 +211,8 @@ export default function StudentsPage() {
             {displayedStudents.map((student) => {
               const paymentStatus = getStudentPaymentStatus(student);
               const studentPaymentsCount = payments.filter(p => p.studentId === student.id).length;
+              const whatsappUrl = `https://wa.me/${student.phone.replace(/\D/g, '')}`;
+
               return (
                 <TableRow key={student.id}>
                   <TableCell className="font-medium">
@@ -230,7 +232,7 @@ export default function StudentsPage() {
                         {paymentStatus}
                       </Badge>
                       <Button variant="ghost" size="icon" className="h-8 w-8" asChild>
-                        <a href={`https://wa.me/${student.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                        <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                           <MessageCircle className="h-4 w-4" />
                           <span className="sr-only">Enviar WhatsApp</span>
                         </a>
