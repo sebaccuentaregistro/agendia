@@ -3,7 +3,6 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { specialists, actividades } from '@/lib/data';
 import type { Specialist } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +17,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useStudio } from '@/context/StudioContext';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -28,7 +28,7 @@ const formSchema = z.object({
 });
 
 export default function SpecialistsPage() {
-  const [specialistsList, setSpecialistsList] = useState<Specialist[]>(specialists);
+  const { specialists, actividades, addSpecialist, updateSpecialist, deleteSpecialist } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSpecialist, setSelectedSpecialist] = useState<Specialist | undefined>(undefined);
@@ -70,7 +70,7 @@ export default function SpecialistsPage() {
 
   function handleDelete() {
     if (specialistToDelete) {
-      setSpecialistsList(prev => prev.filter(s => s.id !== specialistToDelete.id));
+      deleteSpecialist(specialistToDelete.id);
       setIsDeleteDialogOpen(false);
       setSpecialistToDelete(null);
     }
@@ -79,19 +79,10 @@ export default function SpecialistsPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (selectedSpecialist) {
       // Update existing specialist
-      setSpecialistsList(
-        specialistsList.map((s) =>
-          s.id === selectedSpecialist.id ? { ...s, ...values } : s
-        )
-      );
+      updateSpecialist({ ...selectedSpecialist, ...values });
     } else {
       // Add new specialist
-      const newSpecialist: Specialist = {
-        id: `inst-${Date.now()}`,
-        avatar: `https://placehold.co/100x100.png`,
-        ...values,
-      };
-      setSpecialistsList([...specialistsList, newSpecialist]);
+      addSpecialist(values);
     }
     setIsDialogOpen(false);
     setSelectedSpecialist(undefined);
@@ -195,7 +186,7 @@ export default function SpecialistsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {specialistsList.map((specialist) => (
+            {specialists.map((specialist) => (
               <TableRow key={specialist.id}>
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">

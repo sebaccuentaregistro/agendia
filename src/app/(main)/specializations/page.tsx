@@ -3,7 +3,6 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { actividades } from '@/lib/data';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -38,6 +37,7 @@ import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Actividad } from '@/types';
+import { useStudio } from '@/context/StudioContext';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -46,7 +46,7 @@ const formSchema = z.object({
 });
 
 export default function ActividadesPage() {
-  const [actividadesList, setActividadesList] = useState<Actividad[]>(actividades);
+  const { actividades, addActividad, updateActividad, deleteActividad } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedActividad, setSelectedActividad] = useState<Actividad | undefined>(undefined);
@@ -78,7 +78,7 @@ export default function ActividadesPage() {
   
   function handleDelete() {
     if (actividadToDelete) {
-      setActividadesList(prev => prev.filter(a => a.id !== actividadToDelete.id));
+      deleteActividad(actividadToDelete.id);
       setIsDeleteDialogOpen(false);
       setActividadToDelete(null);
     }
@@ -87,18 +87,10 @@ export default function ActividadesPage() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (selectedActividad) {
       // Update existing
-      setActividadesList(
-        actividadesList.map((a) =>
-          a.id === selectedActividad.id ? { ...a, ...values } : a
-        )
-      );
+      updateActividad({ ...selectedActividad, ...values });
     } else {
       // Add new
-      const newActividad: Actividad = {
-        id: `spec-${Date.now()}`,
-        ...values,
-      };
-      setActividadesList([...actividadesList, newActividad]);
+      addActividad(values);
     }
     setIsDialogOpen(false);
     setSelectedActividad(undefined);
@@ -153,7 +145,7 @@ export default function ActividadesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {actividadesList.map((actividad) => (
+            {actividades.map((actividad) => (
               <TableRow key={actividad.id}>
                 <TableCell className="font-medium">{actividad.name}</TableCell>
                 <TableCell>
@@ -186,7 +178,7 @@ export default function ActividadesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente la actividad.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente la actividad y la quitará de cualquier especialista que la tenga asignada.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
