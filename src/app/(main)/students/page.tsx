@@ -23,6 +23,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useSearchParams } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -35,15 +36,29 @@ const formSchema = z.object({
 function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChange: (open: boolean) => void }) {
   const { yogaClasses, specialists, actividades, enrollStudentInClasses, spaces } = useStudio();
 
-  const enrolledIn = yogaClasses
-    .filter(cls => cls.studentIds.includes(student.id))
-    .map(cls => cls.id);
-
+  const enrolledIn = useMemo(() =>
+    yogaClasses
+      .filter(cls => cls.studentIds.includes(student.id))
+      .map(cls => cls.id),
+    [yogaClasses, student.id]
+  );
+  
   const form = useForm<{ classIds: string[] }>({
     defaultValues: {
       classIds: enrolledIn,
     },
   });
+
+  const [actividadFilter, setActividadFilter] = useState('');
+  const [specialistFilter, setSpecialistFilter] = useState('');
+
+  const filteredClasses = useMemo(() => {
+    return yogaClasses.filter(cls => {
+        const matchesActividad = !actividadFilter || cls.actividadId === actividadFilter;
+        const matchesSpecialist = !specialistFilter || cls.instructorId === specialistFilter;
+        return matchesActividad && matchesSpecialist;
+    }).sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+  }, [yogaClasses, actividadFilter, specialistFilter]);
 
   function onSubmit(data: { classIds: string[] }) {
     enrollStudentInClasses(student.id, data.classIds);
@@ -67,6 +82,26 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Select onValueChange={setActividadFilter} defaultValue="">
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por actividad..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todas las actividades</SelectItem>
+                  {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Select onValueChange={setSpecialistFilter} defaultValue="">
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por especialista..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos los especialistas</SelectItem>
+                  {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <FormField
               control={form.control}
               name="classIds"
@@ -75,58 +110,65 @@ function EnrollDialog({ student, onOpenChange }: { student: Student; onOpenChang
                   <FormLabel>Clases Disponibles</FormLabel>
                   <ScrollArea className="h-72 rounded-md border p-4">
                     <div className="space-y-4">
-                      {yogaClasses.map((item) => (
-                        <FormField
-                          key={item.id}
-                          control={form.control}
-                          name="classIds"
-                          render={({ field }) => {
-                            const specialist = specialists.find(i => i.id === item.instructorId);
-                            const actividad = actividades.find(a => a.id === item.actividadId);
-                            const space = spaces.find(s => s.id === item.spaceId);
-                            const isFull = item.studentIds.length >= item.capacity;
-                            const isEnrolled = field.value?.includes(item.id);
+                      {filteredClasses.length > 0 ? (
+                        filteredClasses.map((item) => {
+                          const specialist = specialists.find(i => i.id === item.instructorId);
+                          const actividad = actividades.find(a => a.id === item.actividadId);
+                          const space = spaces.find(s => s.id === item.spaceId);
+                          const isFull = item.studentIds.length >= item.capacity;
+                          const isEnrolled = form.getValues('classIds')?.includes(item.id);
 
-                            if (!actividad) {
-                              return null;
-                            }
+                          if (!actividad || !specialist) {
+                            return null;
+                          }
 
-                            return (
-                              <FormItem
-                                key={item.id}
-                                className={cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", 
-                                    isFull && !isEnrolled ? "bg-muted/50 opacity-50" : "hover:bg-muted/50",
-                                )}
-                              >
-                                <FormControl>
-                                  <Checkbox
-                                    checked={isEnrolled}
-                                    disabled={isFull && !isEnrolled}
-                                    onCheckedChange={(checked) => {
-                                      return checked
-                                        ? field.onChange([...(field.value || []), item.id])
-                                        : field.onChange(
-                                            field.value?.filter(
-                                              (value) => value !== item.id
-                                            )
-                                          );
-                                    }}
-                                  />
-                                </FormControl>
-                                <div className="space-y-1 leading-none">
-                                    <FormLabel className={cn("font-normal", isFull && !isEnrolled && "cursor-not-allowed")}>
-                                      {actividad.name}
-                                    </FormLabel>
-                                    <p className="text-xs text-muted-foreground">
-                                        {specialist?.name} | {item.dayOfWeek} {formatTime(item.time)} | {space?.name} | ({item.studentIds.length}/{item.capacity})
-                                    </p>
-                                    {isFull && !isEnrolled && <p className="text-xs text-destructive">Clase llena</p>}
-                                </div>
-                              </FormItem>
-                            );
-                          }}
-                        />
-                      ))}
+                          return (
+                            <FormField
+                              key={item.id}
+                              control={form.control}
+                              name="classIds"
+                              render={({ field }) => (
+                                <FormItem
+                                  key={item.id}
+                                  className={cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", 
+                                      isFull && !isEnrolled ? "bg-muted/50 opacity-50" : "hover:bg-muted/50",
+                                  )}
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(item.id)}
+                                      disabled={isFull && !isEnrolled}
+                                      onCheckedChange={(checked) => {
+                                        const currentValues = field.value || [];
+                                        return checked
+                                          ? field.onChange([...currentValues, item.id])
+                                          : field.onChange(
+                                              currentValues.filter(
+                                                (value) => value !== item.id
+                                              )
+                                            );
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <div className="space-y-1 leading-none">
+                                      <FormLabel className={cn("font-normal", isFull && !isEnrolled && "cursor-not-allowed")}>
+                                        {actividad.name}
+                                      </FormLabel>
+                                      <p className="text-xs text-muted-foreground">
+                                          {specialist?.name} | {item.dayOfWeek} {formatTime(item.time)} | {space?.name} | ({item.studentIds.length}/{item.capacity})
+                                      </p>
+                                      {isFull && !isEnrolled && <p className="text-xs text-destructive">Clase llena</p>}
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          );
+                        })
+                      ) : (
+                         <p className="text-center text-sm text-muted-foreground py-4">
+                           No hay clases que coincidan con los filtros seleccionados.
+                         </p>
+                      )}
                     </div>
                   </ScrollArea>
                   <FormMessage />
