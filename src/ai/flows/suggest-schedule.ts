@@ -1,5 +1,3 @@
-// use server'
-
 /**
  * @fileOverview Asistente de programación con IA para sugerir horarios óptimos de clases de yoga.
  *
@@ -40,8 +38,7 @@ const SuggestScheduleOutputSchema = z.object({
     .describe('El horario de clases de yoga sugerido basado en los parámetros de entrada.'),
   reasoning: z
     .string()
--    .describe('The AI reasoning for suggesting this schedule.'),
-+    .describe('El razonamiento de la IA para sugerir este horario.'),
+    .describe('El razonamiento de la IA para sugerir este horario.'),
 });
 export type SuggestScheduleOutput = z.infer<typeof SuggestScheduleOutputSchema>;
 
