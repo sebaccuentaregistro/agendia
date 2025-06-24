@@ -7,7 +7,6 @@
  * - GetSuggestionOutput - The return type for the getSuggestion function.
  */
 
-import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
 // Schemas mirroring the main types
@@ -54,49 +53,11 @@ export type GetSuggestionOutput = z.infer<typeof GetSuggestionOutputSchema>;
 
 
 export async function getSuggestion(input: GetSuggestionInput): Promise<GetSuggestionOutput> {
-  return getSuggestionFlow(input);
+  // Temporarily returning a mock response to isolate the Genkit issue.
+  await new Promise(resolve => setTimeout(resolve, 500));
+  
+  return {
+    suggestion: "Función de IA en depuración. El sistema principal funciona correctamente.",
+    suggestionType: "info"
+  };
 }
-
-const prompt = ai.definePrompt({
-  name: 'getSuggestionPrompt',
-  input: {schema: GetSuggestionInputSchema},
-  output: {schema: GetSuggestionOutputSchema},
-  prompt: `
-    You are an expert AI assistant for a yoga studio manager. Your task is to analyze the studio's data and provide one single, actionable suggestion to improve operations. The suggestions must be in Spanish.
-
-    Analyze the provided data which includes classes, specialists, activities, and spaces.
-
-    First, prioritize finding critical issues. Check for scheduling CONFLICTS:
-    1.  A specialist assigned to two different classes at the exact same day and time.
-    2.  A space being used by two different classes at the exact same day and time.
-    If you find a conflict, this is the most important suggestion to return. Clearly state the conflict (e.g., "Conflicto de Horario: Elena Santos está programada para dos clases el Lunes a las 07:00."). Set suggestionType to 'conflict'.
-
-    If there are no conflicts, look for OPTIMIZATION opportunities:
-    1.  Find a class with low attendance (e.g., less than 50% of the space capacity) that could be moved to a smaller, available room at the same time to free up a larger space. Suggest the move (e.g., "Optimización: La clase de Yin Yoga en Sala Sol tiene solo 4/15 asistentes. Podrías moverla a Sala Luna (capacidad 10) que está libre a esa hora.").
-    2.  Find a class with consistently low attendance and suggest moving it to a more popular time slot if one is available. A popular time slot is one where other classes are near full capacity. (e.g., "Sugerencia: La clase de Vinyasa los miércoles a las 9:00 tiene pocos asistentes. Podrías probar moverla al jueves a las 18:00, un horario más popular.").
-    If you find an optimization, return it as the suggestion and set suggestionType to 'optimization'.
-
-    If you find no conflicts and no clear optimization opportunities, return a positive, encouraging message. For example: "Todo parece estar en orden en el estudio." or "¡Buen trabajo! No se encontraron conflictos ni optimizaciones evidentes.". In this case, set suggestionType to 'info'.
-
-    Provide ONLY ONE suggestion per analysis. Prioritize conflicts over optimizations.
-
-    Here is the studio data in JSON format. Use it to formulate your suggestion.
-
-    Actividades: {{{json actividades}}}
-    Especialistas: {{{json specialists}}}
-    Espacios: {{{json spaces}}}
-    Clases y Horarios: {{{json yogaClasses}}}
-  `,
-});
-
-const getSuggestionFlow = ai.defineFlow(
-  {
-    name: 'getSuggestionFlow',
-    inputSchema: GetSuggestionInputSchema,
-    outputSchema: GetSuggestionOutputSchema,
-  },
-  async (input) => {
-    const {output} = await prompt(input);
-    return output!;
-  }
-);
