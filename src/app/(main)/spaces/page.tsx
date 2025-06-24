@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -37,6 +37,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Space } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -52,6 +53,11 @@ export default function SpacesPage() {
   const [selectedSpace, setSelectedSpace] = useState<Space | undefined>(undefined);
   const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const filteredSpaces = useMemo(() => {
     if (!searchTerm.trim()) {
@@ -166,60 +172,82 @@ export default function SpacesPage() {
         </div>
       </PageHeader>
 
-      {filteredSpaces.length > 0 ? (
+      {isMounted ? (
+        filteredSpaces.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredSpaces.map((space) => (
+              <Card key={space.id} className="flex flex-col">
+                <CardContent className="flex-grow p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                      <Warehouse className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div className="flex-grow">
+                      <h3 className="text-lg font-bold">{space.name}</h3>
+                      <p className="text-sm text-muted-foreground">Capacidad: {space.capacity} personas</p>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-end border-t p-3">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Alternar menú</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(space)}>Editar</DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(space)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Eliminar
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+            <CardHeader>
+              <CardTitle>{searchTerm ? "No se encontraron espacios" : "No Hay Espacios"}</CardTitle>
+              <CardDescription>
+                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a organizar tu estudio añadiendo tu primer espacio."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+               {!searchTerm && (
+                <Button onClick={handleAdd}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Añadir Espacio
+                </Button>
+               )}
+            </CardContent>
+          </Card>
+        )
+      ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredSpaces.map((space) => (
-            <Card key={space.id} className="flex flex-col">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="flex flex-col">
               <CardContent className="flex-grow p-6">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
-                    <Warehouse className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <div className="flex-grow">
-                    <h3 className="text-lg font-bold">{space.name}</h3>
-                    <p className="text-sm text-muted-foreground">Capacidad: {space.capacity} personas</p>
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                  <div className="flex-grow space-y-2">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
                   </div>
                 </div>
               </CardContent>
               <CardFooter className="flex justify-end border-t p-3">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8">
-                      <MoreHorizontal className="h-4 w-4" />
-                      <span className="sr-only">Alternar menú</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEdit(space)}>Editar</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(space)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Eliminar
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                 <Skeleton className="h-8 w-8" />
               </CardFooter>
             </Card>
           ))}
         </div>
-      ) : (
-        <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
-          <CardHeader>
-            <CardTitle>{searchTerm ? "No se encontraron espacios" : "No Hay Espacios"}</CardTitle>
-            <CardDescription>
-              {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a organizar tu estudio añadiendo tu primer espacio."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-             {!searchTerm && (
-              <Button onClick={handleAdd}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Añadir Espacio
-              </Button>
-             )}
-          </CardContent>
-        </Card>
       )}
+
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
