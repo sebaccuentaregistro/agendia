@@ -120,7 +120,7 @@ export default function Dashboard() {
                     "text-green-700": item.isSuccess,
                   })} />
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 h-9">
                   {isMounted && item.value !== undefined ? (
                     <p className={cn("text-3xl font-bold", {
                       "text-destructive": item.isDestructive,
