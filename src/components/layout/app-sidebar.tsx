@@ -6,8 +6,10 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  SidebarFooter
+  SidebarFooter,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import { SheetTitle } from "@/components/ui/sheet";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -35,13 +37,16 @@ const menuItems = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const { isMobile } = useSidebar();
+  
+  const TitleComponent = isMobile ? SheetTitle : "h2";
 
   return (
     <>
       <SidebarHeader>
         <div className="flex items-center gap-2">
           <HeartPulse className="text-primary" size={24} />
-          <h2 className="text-lg font-semibold font-headline text-foreground">YogaFlow</h2>
+          <TitleComponent className="text-lg font-semibold font-headline text-foreground">YogaFlow</TitleComponent>
         </div>
       </SidebarHeader>
       <SidebarContent>
