@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Trash2, Pencil, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -206,7 +206,7 @@ export default function SchedulePage() {
               return (
                 <Card key={cls.id} className="flex flex-col">
                   <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
-                    <h3 className="text-lg font-bold">{classTitle}</h3>
+                    <CardTitle className="text-lg font-bold">{classTitle}</CardTitle>
                     <div className={cn('text-sm font-semibold px-2 py-1 rounded-full', isFull ? 'bg-pink-100 text-pink-800' : 'bg-green-100 text-green-800' )}>
                       {isFull ? 'Clase Llena' : `${availableSpots} Lugares`}
                     </div>

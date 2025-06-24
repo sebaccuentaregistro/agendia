@@ -17,7 +17,7 @@ const menuItems = [
   { href: "/assistant", label: "Asistente IA", icon: Bot },
 ];
 
-function NavLink({ href, label, icon: Icon, isMobile, currentPath }: { href: string, label: string, icon: React.ElementType, isMobile: boolean, currentPath: string }) {
+function NavLink({ href, label, icon: Icon, isSheet, currentPath }: { href: string, label: string, icon: React.ElementType, isSheet: boolean, currentPath: string }) {
   const link = (
     <Link
       href={href}
@@ -31,15 +31,11 @@ function NavLink({ href, label, icon: Icon, isMobile, currentPath }: { href: str
     </Link>
   );
 
-  return isMobile ? <SheetClose asChild>{link}</SheetClose> : link;
+  return isSheet ? <SheetClose asChild>{link}</SheetClose> : link;
 }
 
-export default function AppSidebar() {
+export default function AppSidebar({ isSheet = false }: { isSheet?: boolean }) {
   const pathname = usePathname();
-  // A simple check to see if we are in a mobile sheet context.
-  // This is a trick: SheetClose is only a valid component inside a Sheet.
-  // When not in a sheet, it's just an object, so we can check its displayName.
-  const isMobile = SheetClose.displayName === 'DialogClose';
 
   return (
     <>
@@ -57,7 +53,7 @@ export default function AppSidebar() {
               href={item.href}
               label={item.label}
               icon={item.icon}
-              isMobile={isMobile}
+              isSheet={isSheet}
               currentPath={pathname}
             />
           ))}

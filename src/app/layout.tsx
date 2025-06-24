@@ -45,7 +45,7 @@ export default function RootLayout({
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="left" className="flex flex-col p-0">
-                    <AppSidebar />
+                    <AppSidebar isSheet={true} />
                   </SheetContent>
                 </Sheet>
                 <div className="w-full flex-1">
