@@ -403,10 +403,10 @@ export default function SchedulePage() {
           <TableHeader>
             <TableRow>
               <TableHead>Actividad</TableHead>
-              <TableHead>Especialista</TableHead>
+              <TableHead className="hidden sm:table-cell">Especialista</TableHead>
               <TableHead>Día y Hora</TableHead>
-              <TableHead className="hidden sm:table-cell">Espacio</TableHead>
-              <TableHead className="hidden md:table-cell">Capacidad</TableHead>
+              <TableHead className="hidden md:table-cell">Espacio</TableHead>
+              <TableHead className="hidden lg:table-cell">Capacidad</TableHead>
               <TableHead>
                 <span className="sr-only">Menú</span>
               </TableHead>
@@ -424,7 +424,7 @@ export default function SchedulePage() {
                   <TableCell className="font-medium">
                     {actividad?.name}
                   </TableCell>
-                  <TableCell>{specialist?.name}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{specialist?.name}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span>{cls.dayOfWeek}</span>
@@ -433,8 +433,8 @@ export default function SchedulePage() {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell">{space?.name}</TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className="hidden md:table-cell">{space?.name}</TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <div className="flex items-center gap-2">
                       <Progress value={capacityPercentage} className="w-24" />
                       <span className="text-sm text-muted-foreground">
