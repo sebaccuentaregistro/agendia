@@ -102,7 +102,7 @@ export default function Dashboard() {
       <div>
         <Card>
           <CardHeader>
-            <CardTitle>Clases de Hoy {todayDayName && `(${todayDayName})`}</CardTitle>
+            <CardTitle>Horarios de Hoy {todayDayName && `(${todayDayName})`}</CardTitle>
           </CardHeader>
           <CardContent>
             {todaysClasses.length > 0 ? (
@@ -110,7 +110,7 @@ export default function Dashboard() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Hora</TableHead>
-                    <TableHead>Clase</TableHead>
+                    <TableHead>Actividad</TableHead>
                     <TableHead className="hidden sm:table-cell">Especialista</TableHead>
                     <TableHead className="text-right">Inscritos</TableHead>
                   </TableRow>
@@ -132,7 +132,7 @@ export default function Dashboard() {
               </Table>
             ) : (
               <div className="py-12 text-center">
-                <p className="text-muted-foreground">No hay clases programadas para hoy.</p>
+                <p className="text-muted-foreground">No hay horarios programados para hoy.</p>
               </div>
             )}
           </CardContent>
