@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -293,8 +294,13 @@ export default function StudentsPage() {
   const [personToEnroll, setPersonToEnroll] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
   
   const searchParams = useSearchParams();
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const personForDialog = useMemo(() => {
     if (!selectedPerson) return undefined;
@@ -302,12 +308,15 @@ export default function StudentsPage() {
   }, [people, selectedPerson]);
 
   const filteredPeople = useMemo(() => {
+    if (!isMounted) return [];
+
     const filter = searchParams.get('filter');
     let peopleList = people;
+    const now = new Date();
 
     if (filter === 'overdue') {
       peopleList = people.filter(
-        (person) => getStudentPaymentStatus(person) === 'Atrasado'
+        (person) => getStudentPaymentStatus(person, now) === 'Atrasado'
       );
     }
     
@@ -318,7 +327,7 @@ export default function StudentsPage() {
     }
 
     return peopleList;
-  }, [people, searchParams, searchTerm]);
+  }, [people, searchParams, searchTerm, isMounted]);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -331,7 +340,7 @@ export default function StudentsPage() {
   });
 
   const getPaymentStatusBadge = (person: Person) => {
-    const status = getStudentPaymentStatus(person);
+    const status = getStudentPaymentStatus(person, new Date());
     if (status === 'Al día') {
       return <Badge variant="secondary" className="bg-green-100 text-green-800">Al día</Badge>;
     }
@@ -476,7 +485,31 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      {filteredPeople.length > 0 ? (
+      {!isMounted ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(8)].map((_, i) => (
+             <Card key={i} className="flex flex-col">
+              <CardContent className="flex-grow p-6">
+                 <div className="flex items-start gap-4">
+                  <Skeleton className="h-16 w-16 flex-shrink-0 rounded-full"/>
+                  <div className="flex-grow space-y-2 pt-2">
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </div>
+                </div>
+                <div className="mt-6 space-y-3">
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                  <Skeleton className="h-5 w-full" />
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-end border-t p-2">
+                 <Skeleton className="h-8 w-8" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : filteredPeople.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredPeople.map((person) => {
             const hasPayments = payments.some(p => p.personId === person.id);

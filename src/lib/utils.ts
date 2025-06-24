@@ -6,13 +6,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getStudentPaymentStatus(person: Person): 'Al día' | 'Atrasado' {
+export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
   if (person.membershipType === 'Diario') {
     return 'Al día';
   }
   
   // Logic for 'Mensual'
-  const now = new Date();
+  const now = new Date(referenceDate);
   now.setHours(0, 0, 0, 0); // Normalize to start of day
 
   const lastPaymentDate = new Date(person.lastPaymentDate);

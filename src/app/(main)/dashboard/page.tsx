@@ -40,6 +40,7 @@ export default function Dashboard() {
       return allItems.map(item => ({...item, value: 0, isSuccess: false, isDestructive: false, noValue: item.label === 'Estadísticas'}));
     }
 
+    const now = new Date();
     const totalPeople = people.length;
     const totalSpecialists = specialists.length;
     const totalActividades = actividades.length;
@@ -47,7 +48,7 @@ export default function Dashboard() {
     
     const upcomingClassesCount = (() => {
       const dayOfWeekMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-      const today = new Date();
+      const today = now;
       let count = 0;
       const currentTime = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
       for (let i = 0; i < 7; i++) {
@@ -64,7 +65,7 @@ export default function Dashboard() {
       return count;
     })();
 
-    const overduePayments = people.filter(s => getStudentPaymentStatus(s) === 'Atrasado').length;
+    const overduePayments = people.filter(s => getStudentPaymentStatus(s, now) === 'Atrasado').length;
 
     return [
       { href: "/students", label: "Personas", icon: Users, value: totalPeople },
