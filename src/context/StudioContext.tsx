@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import type { Actividad, Specialist, Person, YogaClass, Payment, Space } from '@/types';
 import { 
   actividades as initialActividades, 
@@ -42,13 +42,110 @@ interface StudioContextType {
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
 export function StudioProvider({ children }: { children: ReactNode }) {
-  const [actividades, setActividades] = useState<Actividad[]>(initialActividades);
-  const [specialists, setSpecialists] = useState<Specialist[]>(initialSpecialists);
-  const [people, setPeople] = useState<Person[]>(initialPeople);
-  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(initialYogaClasses);
-  const [payments, setPayments] = useState<Payment[]>(initialPayments);
-  const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
   const { toast } = useToast();
+
+  const [actividades, setActividades] = useState<Actividad[]>(() => {
+    if (typeof window === 'undefined') return initialActividades;
+    try {
+      const stored = localStorage.getItem('agendia-actividades');
+      return stored ? JSON.parse(stored) : initialActividades;
+    } catch (e) {
+      console.error("Error loading actividades from localStorage", e);
+      return initialActividades;
+    }
+  });
+
+  const [specialists, setSpecialists] = useState<Specialist[]>(() => {
+    if (typeof window === 'undefined') return initialSpecialists;
+    try {
+      const stored = localStorage.getItem('agendia-specialists');
+      return stored ? JSON.parse(stored) : initialSpecialists;
+    } catch (e) {
+      console.error("Error loading specialists from localStorage", e);
+      return initialSpecialists;
+    }
+  });
+
+  const [people, setPeople] = useState<Person[]>(() => {
+    if (typeof window === 'undefined') return initialPeople;
+    try {
+      const stored = localStorage.getItem('agendia-people');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.map((p: any) => ({
+          ...p,
+          joinDate: new Date(p.joinDate),
+          lastPaymentDate: new Date(p.lastPaymentDate),
+        }));
+      }
+    } catch (e) {
+      console.error("Error loading people from localStorage", e);
+    }
+    return initialPeople;
+  });
+
+  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(() => {
+    if (typeof window === 'undefined') return initialYogaClasses;
+    try {
+      const stored = localStorage.getItem('agendia-yogaClasses');
+      return stored ? JSON.parse(stored) : initialYogaClasses;
+    } catch (e) {
+      console.error("Error loading yogaClasses from localStorage", e);
+      return initialYogaClasses;
+    }
+  });
+  
+  const [payments, setPayments] = useState<Payment[]>(() => {
+    if (typeof window === 'undefined') return initialPayments;
+    try {
+      const stored = localStorage.getItem('agendia-payments');
+       if (stored) {
+        const parsed = JSON.parse(stored);
+        return parsed.map((p: any) => ({
+          ...p,
+          date: new Date(p.date),
+        }));
+      }
+    } catch (e) {
+       console.error("Error loading payments from localStorage", e);
+    }
+    return initialPayments;
+  });
+  
+  const [spaces, setSpaces] = useState<Space[]>(() => {
+    if (typeof window === 'undefined') return initialSpaces;
+    try {
+      const stored = localStorage.getItem('agendia-spaces');
+      return stored ? JSON.parse(stored) : initialSpaces;
+    } catch (e) {
+      console.error("Error loading spaces from localStorage", e);
+      return initialSpaces;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('agendia-actividades', JSON.stringify(actividades));
+  }, [actividades]);
+
+  useEffect(() => {
+    localStorage.setItem('agendia-specialists', JSON.stringify(specialists));
+  }, [specialists]);
+  
+  useEffect(() => {
+    localStorage.setItem('agendia-people', JSON.stringify(people));
+  }, [people]);
+
+  useEffect(() => {
+    localStorage.setItem('agendia-yogaClasses', JSON.stringify(yogaClasses));
+  }, [yogaClasses]);
+
+  useEffect(() => {
+    localStorage.setItem('agendia-payments', JSON.stringify(payments));
+  }, [payments]);
+
+  useEffect(() => {
+    localStorage.setItem('agendia-spaces', JSON.stringify(spaces));
+  }, [spaces]);
 
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
