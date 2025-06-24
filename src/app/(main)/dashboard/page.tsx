@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 
 export default function Dashboard() {
-  const { people, specialists, yogaClasses, actividades } = useStudio();
+  const { people, specialists, yogaClasses, actividades, spaces } = useStudio();
   const [todayDayName, setTodayDayName] = useState('');
 
   useEffect(() => {
@@ -20,6 +20,8 @@ export default function Dashboard() {
 
   const totalPeople = people.length;
   const totalSpecialists = specialists.length;
+  const totalActividades = actividades.length;
+  const totalSpaces = spaces.length;
   
   const upcomingClassesCount = useMemo(() => {
     const dayOfWeekMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -66,8 +68,8 @@ export default function Dashboard() {
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, value: totalSpecialists },
     { href: "/schedule", label: "Próximas Clases", icon: Calendar, value: upcomingClassesCount },
     { href: "/students?filter=overdue", label: "Pagos Atrasados", icon: CreditCard, value: overduePayments, isDestructive: true },
-    { href: "/specializations", label: "Actividades", icon: Star },
-    { href: "/spaces", label: "Espacios", icon: Warehouse },
+    { href: "/specializations", label: "Actividades", icon: Star, value: totalActividades },
+    { href: "/spaces", label: "Espacios", icon: Warehouse, value: totalSpaces },
     { href: "/payments", label: "Pagos", icon: CreditCard },
     { href: "/assistant", label: "Asistente IA", icon: Sparkles },
   ];
