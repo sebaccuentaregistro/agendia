@@ -236,10 +236,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         date: new Date(),
       };
       setPayments(prev => [newPayment, ...prev].sort((a,b) => b.date.getTime() - a.date.getTime()));
+      toast({
+        title: "Pago Registrado",
+        description: `Se ha registrado un nuevo pago para ${personToUpdate.name}.`,
+      });
     }
   };
 
   const undoLastPayment = (personId: string) => {
+    const person = people.find(p => p.id === personId);
+    if (!person) return;
+    
     const studentPayments = payments
       .filter(p => p.personId === personId)
       .sort((a, b) => b.date.getTime() - a.date.getTime());
@@ -250,7 +257,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       
       const newLastPaymentDate = studentPayments.length > 1 
         ? studentPayments[1].date 
-        : new Date(0); // Set to epoch to guarantee overdue status
+        : person.joinDate; // Revert to join date if it was the only payment
 
       setPeople(prevPeople =>
         prevPeople.map(p => {
@@ -260,6 +267,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           return p;
         })
       );
+      toast({
+        title: "Pago Deshecho",
+        description: `Se ha revertido el último pago para ${person.name}.`,
+      });
     }
   };
 
