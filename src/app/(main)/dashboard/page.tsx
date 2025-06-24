@@ -103,7 +103,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
           {navItems.map((item, index) => (
             <Link key={index} href={item.href} className="block">
               <Card className={cn(
