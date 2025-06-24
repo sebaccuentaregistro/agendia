@@ -107,7 +107,7 @@ export default function Dashboard() {
           {navItems.map((item, index) => (
             <Link key={index} href={item.href} className="block">
               <Card className={cn(
-                "transition-colors h-full flex flex-col justify-between p-4 hover:bg-muted/50",
+                "transition-colors h-full flex flex-col justify-between p-3 hover:bg-muted/50",
                 {
                   "bg-destructive/5 hover:bg-destructive/10 border-destructive/20": item.isDestructive,
                   "bg-green-100/70 hover:bg-green-100 border-green-200": item.isSuccess,
@@ -120,14 +120,14 @@ export default function Dashboard() {
                     "text-green-700": item.isSuccess,
                   })} />
                 </div>
-                <div className="mt-4 h-9">
+                <div className="mt-2 h-8">
                   {isMounted && item.value !== undefined ? (
-                    <p className={cn("text-3xl font-bold", {
+                    <p className={cn("text-2xl font-bold", {
                       "text-destructive": item.isDestructive,
                       "text-green-700": item.isSuccess,
                     })}>{item.value}</p>
                   ) : item.value !== undefined ? (
-                    <Skeleton className="h-8 w-1/2" />
+                    <Skeleton className="h-7 w-1/2" />
                   ) : null }
                 </div>
               </Card>
