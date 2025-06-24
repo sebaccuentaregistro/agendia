@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const menuItems = [
   { href: "/dashboard", label: "Panel", icon: LayoutGrid },
@@ -29,16 +30,17 @@ const menuItems = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
+  const isMobile = useIsMobile();
+
+  const TitleComponent = isMobile ? SheetTitle : 'h2';
 
   return (
     <>
       <SheetHeader className="border-b p-4">
-        <SheetTitle asChild>
           <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold">
             <HeartPulse className="h-6 w-6 text-primary" />
-            <span>YogaFlow</span>
+            <TitleComponent>YogaFlow</TitleComponent>
           </Link>
-        </SheetTitle>
       </SheetHeader>
       <div className="flex-1 overflow-y-auto">
         <nav className="grid items-start gap-1 p-4">
