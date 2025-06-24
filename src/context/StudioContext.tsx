@@ -398,8 +398,32 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         });
         return;
     }
+
+    const affectedClasses = yogaClasses.filter(c => c.spaceId === updatedSpace.id);
+    for (const cls of affectedClasses) {
+      if (cls.personIds.length > updatedSpace.capacity) {
+        const actividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Una clase';
+        const specialistName = specialists.find(s => s.id === cls.instructorId)?.name || 'un especialista';
+        toast({
+          variant: "destructive",
+          title: "No se puede reducir la capacidad",
+          description: `La clase de ${actividadName} con ${specialistName} (${cls.dayOfWeek} ${cls.time}) tiene ${cls.personIds.length} personas inscritas, que es más que la nueva capacidad de ${updatedSpace.capacity}.`,
+        });
+        return;
+      }
+    }
+
     setSpaces(prev =>
       prev.map(s => (s.id === updatedSpace.id ? updatedSpace : s))
+    );
+
+    setYogaClasses(prevClasses =>
+      prevClasses.map(cls => {
+        if (cls.spaceId === updatedSpace.id && cls.capacity > updatedSpace.capacity) {
+          return { ...cls, capacity: updatedSpace.capacity };
+        }
+        return cls;
+      })
     );
   };
 
