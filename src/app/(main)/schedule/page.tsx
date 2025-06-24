@@ -3,28 +3,19 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from '@/components/ui/card';
+import { PlusCircle, Trash2, Pencil, Users } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
   AlertDialog,
@@ -220,18 +211,25 @@ export default function SchedulePage() {
     const formattedHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
     return `${formattedHour}:${minute} ${ampm}`;
   };
+  
+  const getTimeOfDay = (time: string): string => {
+    if (!time) return '';
+    const hour = parseInt(time.split(':')[0], 10);
+    if (hour < 12) return 'Mañana';
+    if (hour < 18) return 'Tarde';
+    return 'Noche';
+  };
 
   return (
     <div>
       <PageHeader
-        title="Horario de Clases"
-        description="Programa clases, gestiona las asignaciones de especialistas y haz un seguimiento de la capacidad."
+        title="Gestión de Horarios"
       >
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Programar Clase
+              Añadir Horario
             </Button>
           </DialogTrigger>
           <DialogContent>
@@ -398,83 +396,70 @@ export default function SchedulePage() {
         </Dialog>
       </PageHeader>
 
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Actividad</TableHead>
-              <TableHead className="hidden sm:table-cell">Especialista</TableHead>
-              <TableHead>Día y Hora</TableHead>
-              <TableHead className="hidden md:table-cell">Espacio</TableHead>
-              <TableHead className="hidden lg:table-cell">Capacidad</TableHead>
-              <TableHead>
-                <span className="sr-only">Menú</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {yogaClasses.map((cls) => {
-              const { specialist, actividad, space } = getClassDetails(cls);
-              const enrolledCount = cls.personIds?.length || 0;
-              const capacityPercentage =
-                (enrolledCount / cls.capacity) * 100;
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+        {yogaClasses.length > 0 ? (
+          yogaClasses.map((cls) => {
+            const { specialist, actividad, space } = getClassDetails(cls);
+            const enrolledCount = cls.personIds?.length || 0;
+            const availableSpots = cls.capacity - enrolledCount;
+            const classTitle = `${actividad?.name || 'Clase'} ${getTimeOfDay(cls.time)}`;
 
-              return (
-                <TableRow key={cls.id}>
-                  <TableCell className="font-medium">
-                    {actividad?.name}
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell">{specialist?.name}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span>{cls.dayOfWeek}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTime(cls.time)}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">{space?.name}</TableCell>
-                  <TableCell className="hidden lg:table-cell">
-                    <div className="flex items-center gap-2">
-                      <Progress value={capacityPercentage} className="w-24" />
-                      <span className="text-sm text-muted-foreground">
-                        {enrolledCount}/{cls.capacity}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          aria-haspopup="true"
-                          size="icon"
-                          variant="ghost"
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Alternar menú</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEdit(cls)}>
-                          Editar Clase
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setViewingRoster(cls)}>Ver Lista</DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onClick={() => openDeleteDialog(cls)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Eliminar Clase
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+            return (
+              <Card key={cls.id} className="flex flex-col overflow-hidden border-l-4 border-l-green-400 shadow-sm transition-shadow hover:shadow-md">
+                <CardHeader className="p-0">
+                  <div className="bg-green-100 p-2 text-center text-sm font-semibold text-green-800">
+                    {availableSpots} Lugares Disponibles
+                  </div>
+                </CardHeader>
+                <CardContent className="flex-grow p-4">
+                  <h3 className="mb-3 text-lg font-bold text-primary">{classTitle}</h3>
+                  <div className="space-y-1.5 text-sm text-muted-foreground">
+                    <p><span className="font-semibold text-card-foreground">Especialidad:</span> {actividad?.name}</p>
+                    <p><span className="font-semibold text-card-foreground">Profesor:</span> {specialist?.name}</p>
+                    <p><span className="font-semibold text-card-foreground">Día:</span> {cls.dayOfWeek}</p>
+                    <p><span className="font-semibold text-card-foreground">Hora:</span> {formatTime(cls.time)}</p>
+                    <p><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{cls.capacity}</p>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex items-center justify-between border-t p-3">
+                  <Button variant="link" className="h-auto p-0 text-sm" onClick={() => setViewingRoster(cls)}>
+                    <Users className="mr-2 h-4 w-4" />
+                    Ver Personas
+                  </Button>
+                  <div className="flex items-center">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(cls)}>
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Editar</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(cls)}>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Eliminar</span>
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            );
+          })
+        ) : (
+          <div className="col-span-1 md:col-span-2 xl:col-span-3">
+             <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+                <CardHeader>
+                  <CardTitle>No Hay Clases Programadas</CardTitle>
+                  <CardDescription>
+                    Empieza a organizar tu estudio añadiendo tu primera clase.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                   <Button onClick={handleAdd}>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Añadir Horario
+                    </Button>
+                </CardContent>
+              </Card>
+          </div>
+        )}
       </div>
+      
       <AlertDialog
         open={isDeleteDialogOpen}
         onOpenChange={setIsDeleteDialogOpen}
