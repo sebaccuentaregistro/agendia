@@ -2,7 +2,6 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Person } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -442,66 +442,82 @@ export default function StudentsPage() {
         </Dialog>
       </PageHeader>
       
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
-              <TableHead><span className="sr-only">WhatsApp</span></TableHead>
-              <TableHead className="hidden md:table-cell">Membresía</TableHead>
-              <TableHead>Estado del Pago</TableHead>
-              <TableHead className="hidden lg:table-cell">Inscrito Desde</TableHead>
-              <TableHead><span className="sr-only">Menú</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPeople.map((person) => (
-              <TableRow key={person.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
-                      <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <span>{person.name}</span>
+      {filteredPeople.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredPeople.map((person) => (
+            <Card key={person.id} className="flex flex-col">
+              <CardContent className="flex-grow p-6">
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-16 w-16 flex-shrink-0">
+                    <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
+                    <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-grow">
+                    <h3 className="text-xl font-bold">{person.name}</h3>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <span>{person.phone}</span>
+                      <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
+                        <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                        <span className="sr-only">Enviar WhatsApp a {person.name}</span>
+                      </a>
+                    </div>
                   </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">{person.phone}</TableCell>
-                <TableCell>
-                  <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                    <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                    <span className="sr-only">Enviar WhatsApp a {person.name}</span>
-                  </a>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">{person.membershipType}</TableCell>
-                <TableCell>{getPaymentStatusBadge(person)}</TableCell>
-                <TableCell className="hidden lg:table-cell">{format(person.joinDate, 'dd/MM/yyyy')}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Alternar menú</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(person)}>Editar</DropdownMenuItem>
-                       <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>
-                        Asignar a Clases
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Estado de Pago</span>
+                    {getPaymentStatusBadge(person)}
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Membresía</span>
+                    <span className="font-medium">{person.membershipType}</span>
+                  </div>
+                   <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Inscrito Desde</span>
+                    <span className="font-medium">{format(person.joinDate, 'dd/MM/yyyy')}</span>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-end border-t p-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                      <span className="sr-only">Alternar menú</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEdit(person)}>Editar</DropdownMenuItem>
+                     <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>
+                      Asignar a Clases
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Eliminar
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+            <CardHeader>
+              <CardTitle>No Hay Personas</CardTitle>
+              <CardDescription>
+                Empieza a construir tu comunidad añadiendo tu primera persona.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+               <Button onClick={handleAdd}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Añadir Persona
+                </Button>
+            </CardContent>
+          </Card>
+      )}
 
       {personToEnroll && (
         <EnrollDialog
