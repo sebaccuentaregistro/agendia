@@ -2,7 +2,6 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { MoreHorizontal, PlusCircle, Trash2, Warehouse } from 'lucide-react';
 import {
   DropdownMenu,
@@ -29,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -52,6 +51,16 @@ export default function SpacesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<Space | undefined>(undefined);
   const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredSpaces = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return spaces;
+    }
+    return spaces.filter(space =>
+      space.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [spaces, searchTerm]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -99,59 +108,67 @@ export default function SpacesPage() {
   return (
     <div>
       <PageHeader title="Espacios">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Espacio
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{selectedSpace ? 'Editar Espacio' : 'Añadir Nuevo Espacio'}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid gap-4 py-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Nombre</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="col-span-3" />
-                        </FormControl>
-                        <FormMessage className="col-span-3 col-start-2" />
-                      </FormItem>
-                    )}
-                  />
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+          <Input 
+            placeholder="Buscar por nombre..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full md:w-64"
+          />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Añadir Espacio
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{selectedSpace ? 'Editar Espacio' : 'Añadir Nuevo Espacio'}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid gap-4 py-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem className="grid grid-cols-4 items-center gap-4">
+                          <FormLabel className="text-right">Nombre</FormLabel>
+                          <FormControl>
+                            <Input {...field} className="col-span-3" />
+                          </FormControl>
+                          <FormMessage className="col-span-3 col-start-2" />
+                        </FormItem>
+                      )}
+                    />
                    <FormField
-                    control={form.control}
-                    name="capacity"
-                    render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Capacidad</FormLabel>
-                        <FormControl>
-                          <Input type="number" {...field} className="col-span-3" />
-                        </FormControl>
-                        <FormMessage className="col-span-3 col-start-2" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <DialogFooter>
-                  <Button type="submit">Guardar Cambios</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                      control={form.control}
+                      name="capacity"
+                      render={({ field }) => (
+                        <FormItem className="grid grid-cols-4 items-center gap-4">
+                          <FormLabel className="text-right">Capacidad</FormLabel>
+                          <FormControl>
+                            <Input type="number" {...field} className="col-span-3" />
+                          </FormControl>
+                          <FormMessage className="col-span-3 col-start-2" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">Guardar Cambios</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </PageHeader>
 
-      {spaces.length > 0 ? (
+      {filteredSpaces.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {spaces.map((space) => (
+          {filteredSpaces.map((space) => (
             <Card key={space.id} className="flex flex-col">
               <CardContent className="flex-grow p-6">
                 <div className="flex items-start gap-4">
@@ -188,16 +205,18 @@ export default function SpacesPage() {
       ) : (
         <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
           <CardHeader>
-            <CardTitle>No Hay Espacios</CardTitle>
+            <CardTitle>{searchTerm ? "No se encontraron espacios" : "No Hay Espacios"}</CardTitle>
             <CardDescription>
-              Empieza a organizar tu estudio añadiendo tu primer espacio.
+              {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a organizar tu estudio añadiendo tu primer espacio."}
             </CardDescription>
           </CardHeader>
           <CardContent>
+             {!searchTerm && (
               <Button onClick={handleAdd}>
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Añadir Espacio
               </Button>
+             )}
           </CardContent>
         </Card>
       )}
