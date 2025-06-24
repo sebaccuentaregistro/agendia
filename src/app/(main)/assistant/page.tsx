@@ -103,7 +103,7 @@ export default function AssistantPage() {
                {!isLoading && result && (
                 <p className="text-sm text-muted-foreground">{result.reasoning}</p>
               )}
-              {!isLoading && !result && (
+               {!isLoading && !result && (
                 <p className="text-center text-sm text-muted-foreground py-8">
                   La explicación de la IA aparecerá aquí.
                 </p>

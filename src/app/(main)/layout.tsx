@@ -1,9 +1,9 @@
 import AppSidebar from '@/components/layout/app-sidebar';
-import {Button} from '@/components/ui/button';
-import {Sheet, SheetContent, SheetTrigger} from '@/components/ui/sheet';
-import {Menu} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Menu } from 'lucide-react';
 
-export default function MainLayout({children}: {children: React.ReactNode}) {
+export default function MainLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       <div className="hidden border-r bg-background md:block">
@@ -29,7 +29,7 @@ export default function MainLayout({children}: {children: React.ReactNode}) {
           </div>
         </header>
         <main className="flex-grow p-4 sm:p-6 lg:p-8 overflow-auto">
-            {children}
+          {children}
         </main>
       </div>
     </div>
