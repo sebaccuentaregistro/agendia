@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus, cn } from '@/lib/utils';
-import { Users, ClipboardList, Calendar, CreditCard, Star, Warehouse, Sparkles } from 'lucide-react';
+import { Users, ClipboardList, Calendar, CreditCard, Star, Warehouse, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 
 export default function Dashboard() {
-  const { people, specialists, yogaClasses, actividades, spaces } = useStudio();
+  const { people, specialists, yogaClasses, actividades, spaces, payments } = useStudio();
   const [todayDayName, setTodayDayName] = useState('');
 
   useEffect(() => {
@@ -37,9 +37,9 @@ export default function Dashboard() {
       
       const classesForDay = yogaClasses.filter(c => c.dayOfWeek === dayName);
       
-      if (i === 0) { // It's today, only count future classes
+      if (i === 0) {
         count += classesForDay.filter(c => c.time > currentTime).length;
-      } else { // It's a future day, count all classes
+      } else {
         count += classesForDay.length;
       }
     }
@@ -71,7 +71,7 @@ export default function Dashboard() {
     { href: "/specializations", label: "Actividades", icon: Star, value: totalActividades },
     { href: "/spaces", label: "Espacios", icon: Warehouse, value: totalSpaces },
     { href: "/payments", label: "Pagos", icon: CreditCard },
-    { href: "/assistant", label: "Asistente IA", icon: Sparkles },
+    { href: "/assistant", label: "Estadísticas", icon: BarChart3 },
   ];
 
 
