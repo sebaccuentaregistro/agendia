@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -307,16 +308,20 @@ export default function StudentsPage() {
     return people.find(p => p.id === selectedPerson.id);
   }, [people, selectedPerson]);
 
-  const filteredPeople = useMemo(() => {
+  const processedPeople = useMemo(() => {
     if (!isMounted) return [];
 
     const filter = searchParams.get('filter');
-    let peopleList = people;
     const now = new Date();
 
+    let peopleList = people.map(p => ({
+      ...p,
+      paymentStatus: getStudentPaymentStatus(p, now),
+    }));
+
     if (filter === 'overdue') {
-      peopleList = people.filter(
-        (person) => getStudentPaymentStatus(person, now) === 'Atrasado'
+      peopleList = peopleList.filter(
+        (person) => person.paymentStatus === 'Atrasado'
       );
     }
     
@@ -330,17 +335,7 @@ export default function StudentsPage() {
   }, [people, searchParams, searchTerm, isMounted]);
 
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      phone: '',
-      membershipType: 'Mensual',
-    },
-  });
-
-  const getPaymentStatusBadge = (person: Person) => {
-    const status = getStudentPaymentStatus(person, new Date());
+  const getPaymentStatusBadge = (status: 'Al día' | 'Atrasado') => {
     if (status === 'Al día') {
       return <Badge variant="secondary" className="bg-green-100 text-green-800">Al día</Badge>;
     }
@@ -509,9 +504,9 @@ export default function StudentsPage() {
             </Card>
           ))}
         </div>
-      ) : filteredPeople.length > 0 ? (
+      ) : processedPeople.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredPeople.map((person) => {
+          {processedPeople.map((person) => {
             const hasPayments = payments.some(p => p.personId === person.id);
             return (
             <Card key={person.id} className="flex flex-col">
@@ -536,7 +531,7 @@ export default function StudentsPage() {
                 <div className="mt-6 space-y-3">
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Estado de Pago</span>
-                    {getPaymentStatusBadge(person)}
+                    {getPaymentStatusBadge(person.paymentStatus)}
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Membresía</span>
@@ -645,3 +640,6 @@ export default function StudentsPage() {
     </div>
   );
 }
+
+
+    
