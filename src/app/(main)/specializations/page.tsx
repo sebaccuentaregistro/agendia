@@ -2,8 +2,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, Star } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -37,6 +36,8 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Actividad } from '@/types';
 import { useStudio } from '@/context/StudioContext';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -50,6 +51,21 @@ export default function ActividadesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedActividad, setSelectedActividad] = useState<Actividad | undefined>(undefined);
   const [actividadToDelete, setActividadToDelete] = useState<Actividad | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const filteredActividades = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return actividades;
+    }
+    return actividades.filter(actividad =>
+      actividad.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [actividades, searchTerm]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -85,10 +101,8 @@ export default function ActividadesPage() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (selectedActividad) {
-      // Update existing
       updateActividad({ ...selectedActividad, ...values });
     } else {
-      // Add new
       addActividad(values);
     }
     setIsDialogOpen(false);
@@ -98,59 +112,70 @@ export default function ActividadesPage() {
   return (
     <div>
       <PageHeader title="Actividades">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Actividad
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{selectedActividad ? 'Editar Actividad' : 'Añadir Nueva Actividad'}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid gap-4 py-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Nombre</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="col-span-3" />
-                        </FormControl>
-                        <FormMessage className="col-span-3 col-start-2" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                <DialogFooter>
-                  <Button type="submit">Guardar Cambios</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+           <Input 
+            placeholder="Buscar por nombre..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full md:w-64"
+          />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Añadir Actividad
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{selectedActividad ? 'Editar Actividad' : 'Añadir Nueva Actividad'}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid gap-4 py-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem className="grid grid-cols-4 items-center gap-4">
+                          <FormLabel className="text-right">Nombre</FormLabel>
+                          <FormControl>
+                            <Input {...field} className="col-span-3" />
+                          </FormControl>
+                          <FormMessage className="col-span-3 col-start-2" />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button type="submit">Guardar Cambios</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </PageHeader>
 
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead><span className="sr-only">Acciones</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {actividades.map((actividad) => (
-              <TableRow key={actividad.id}>
-                <TableCell className="font-medium">{actividad.name}</TableCell>
-                <TableCell>
+      {isMounted ? (
+        filteredActividades.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredActividades.map((actividad) => (
+              <Card key={actividad.id} className="flex flex-col">
+                <CardContent className="flex-grow p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted">
+                      <Star className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                    <div className="flex-grow">
+                      <h3 className="text-lg font-bold">{actividad.name}</h3>
+                    </div>
+                  </div>
+                </CardContent>
+                <CardFooter className="flex justify-end border-t p-3">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
+                      <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8">
                         <MoreHorizontal className="h-4 w-4" />
                         <span className="sr-only">Alternar menú</span>
                       </Button>
@@ -164,12 +189,48 @@ export default function ActividadesPage() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </TableCell>
-              </TableRow>
+                </CardFooter>
+              </Card>
             ))}
-          </TableBody>
-        </Table>
-      </div>
+          </div>
+        ) : (
+          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+            <CardHeader>
+              <CardTitle>{searchTerm ? "No se encontraron actividades" : "No Hay Actividades"}</CardTitle>
+              <CardDescription>
+                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a definir los servicios que ofreces añadiendo tu primera actividad."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+               {!searchTerm && (
+                <Button onClick={handleAdd}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Añadir Actividad
+                </Button>
+               )}
+            </CardContent>
+          </Card>
+        )
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="flex flex-col">
+              <CardContent className="flex-grow p-6">
+                <div className="flex items-start gap-4">
+                  <Skeleton className="h-12 w-12 rounded-lg" />
+                  <div className="flex-grow space-y-2">
+                    <Skeleton className="h-6 w-3/4" />
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-end border-t p-3">
+                 <Skeleton className="h-8 w-8" />
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
+
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
