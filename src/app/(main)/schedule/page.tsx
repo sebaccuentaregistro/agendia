@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -60,6 +61,7 @@ import {
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   instructorId: z.string({
@@ -101,6 +103,11 @@ export default function SchedulePage() {
   );
   const [classToDelete, setClassToDelete] = useState<YogaClass | null>(null);
   const [viewingRoster, setViewingRoster] = useState<YogaClass | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -381,82 +388,110 @@ export default function SchedulePage() {
       </PageHeader>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        {yogaClasses.length > 0 ? (
-          yogaClasses.map((cls) => {
-            const { specialist, actividad, space } = getClassDetails(cls);
-            const capacity = space?.capacity || 0;
-            const enrolledCount = cls.personIds?.length || 0;
-            const availableSpots = capacity - enrolledCount;
-            const classTitle = `${actividad?.name || 'Clase'} ${getTimeOfDay(cls.time)}`;
-            const isFull = availableSpots <= 0;
+        {isMounted ? (
+          yogaClasses.length > 0 ? (
+            yogaClasses.map((cls) => {
+              const { specialist, actividad, space } = getClassDetails(cls);
+              const capacity = space?.capacity || 0;
+              const enrolledCount = cls.personIds?.length || 0;
+              const availableSpots = capacity - enrolledCount;
+              const classTitle = `${actividad?.name || 'Clase'} ${getTimeOfDay(cls.time)}`;
+              const isFull = availableSpots <= 0;
 
-            return (
-              <Card
-                key={cls.id}
-                className={cn(
-                  'flex flex-col overflow-hidden border-l-4 shadow-sm transition-shadow hover:shadow-md',
-                  isFull ? 'border-l-pink-400' : 'border-l-green-400'
-                )}
-              >
-                <CardHeader className="p-0">
-                  <div
-                    className={cn(
-                      'p-2 text-center text-sm font-semibold',
-                      isFull
-                        ? 'bg-pink-100 text-pink-800'
-                        : 'bg-green-100 text-green-800'
-                    )}
-                  >
-                    {isFull ? 'Clase Llena' : `${availableSpots} Lugares Disponibles`}
-                  </div>
-                </CardHeader>
-                <CardContent className="flex-grow p-4">
-                  <h3 className="mb-3 text-lg font-bold text-primary">{classTitle}</h3>
-                  <div className="space-y-1.5 text-sm text-muted-foreground">
-                    <p><span className="font-semibold text-card-foreground">Especialidad:</span> {actividad?.name}</p>
-                    <p><span className="font-semibold text-card-foreground">Profesor:</span> {specialist?.name}</p>
-                    <p><span className="font-semibold text-card-foreground">Espacio:</span> {space?.name}</p>
-                    <p><span className="font-semibold text-card-foreground">Día:</span> {cls.dayOfWeek}</p>
-                    <p><span className="font-semibold text-card-foreground">Hora:</span> {formatTime(cls.time)}</p>
-                    <p><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{capacity}</p>
-                  </div>
-                </CardContent>
-                <CardFooter className="flex items-center justify-between border-t p-3">
-                  <Button variant="link" className="h-auto p-0 text-sm" onClick={() => setViewingRoster(cls)}>
-                    <Users className="mr-2 h-4 w-4" />
-                    Ver Personas
-                  </Button>
-                  <div className="flex items-center">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(cls)}>
-                      <Pencil className="h-4 w-4" />
-                      <span className="sr-only">Editar</span>
+              return (
+                <Card
+                  key={cls.id}
+                  className={cn(
+                    'flex flex-col overflow-hidden border-l-4 shadow-sm transition-shadow hover:shadow-md',
+                    isFull ? 'border-l-pink-400' : 'border-l-green-400'
+                  )}
+                >
+                  <CardHeader className="p-0">
+                    <div
+                      className={cn(
+                        'p-2 text-center text-sm font-semibold',
+                        isFull
+                          ? 'bg-pink-100 text-pink-800'
+                          : 'bg-green-100 text-green-800'
+                      )}
+                    >
+                      {isFull ? 'Clase Llena' : `${availableSpots} Lugares Disponibles`}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex-grow p-4">
+                    <h3 className="mb-3 text-lg font-bold text-primary">{classTitle}</h3>
+                    <div className="space-y-1.5 text-sm text-muted-foreground">
+                      <p><span className="font-semibold text-card-foreground">Especialidad:</span> {actividad?.name}</p>
+                      <p><span className="font-semibold text-card-foreground">Profesor:</span> {specialist?.name}</p>
+                      <p><span className="font-semibold text-card-foreground">Espacio:</span> {space?.name}</p>
+                      <p><span className="font-semibold text-card-foreground">Día:</span> {cls.dayOfWeek}</p>
+                      <p><span className="font-semibold text-card-foreground">Hora:</span> {formatTime(cls.time)}</p>
+                      <p><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{capacity}</p>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex items-center justify-between border-t p-3">
+                    <Button variant="link" className="h-auto p-0 text-sm" onClick={() => setViewingRoster(cls)}>
+                      <Users className="mr-2 h-4 w-4" />
+                      Ver Personas
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(cls)}>
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Eliminar</span>
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            );
-          })
+                    <div className="flex items-center">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(cls)}>
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Editar</span>
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(cls)}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Eliminar</span>
+                      </Button>
+                    </div>
+                  </CardFooter>
+                </Card>
+              );
+            })
+          ) : (
+            <div className="col-span-1 md:col-span-2 xl:col-span-3">
+               <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+                  <CardHeader>
+                    <CardTitle>No Hay Clases Programadas</CardTitle>
+                    <CardDescription>
+                      Empieza a organizar tu estudio añadiendo tu primera clase.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                     <Button onClick={handleAdd}>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Añadir Horario
+                      </Button>
+                  </CardContent>
+                </Card>
+            </div>
+          )
         ) : (
-          <div className="col-span-1 md:col-span-2 xl:col-span-3">
-             <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
-                <CardHeader>
-                  <CardTitle>No Hay Clases Programadas</CardTitle>
-                  <CardDescription>
-                    Empieza a organizar tu estudio añadiendo tu primera clase.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                   <Button onClick={handleAdd}>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Añadir Horario
-                    </Button>
-                </CardContent>
-              </Card>
-          </div>
+          [...Array(6)].map((_, i) => (
+            <Card key={i} className="flex flex-col overflow-hidden border-l-4 border-l-muted">
+               <CardHeader className="p-0">
+                 <Skeleton className="h-8 w-full" />
+              </CardHeader>
+              <CardContent className="flex-grow p-4">
+                 <Skeleton className="mb-3 h-7 w-3/4" />
+                 <div className="mt-4 space-y-1.5">
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-4/6" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-4 w-1/3" />
+                 </div>
+              </CardContent>
+              <CardFooter className="flex items-center justify-between border-t p-3">
+                 <Skeleton className="h-5 w-24" />
+                 <div className="flex items-center gap-2">
+                    <Skeleton className="h-8 w-8" />
+                    <Skeleton className="h-8 w-8" />
+                 </div>
+              </CardFooter>
+            </Card>
+          ))
         )}
       </div>
       
