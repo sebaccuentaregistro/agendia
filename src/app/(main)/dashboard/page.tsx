@@ -26,17 +26,18 @@ export default function Dashboard() {
   }, [isMounted]);
   
   const navItems = useMemo(() => {
+    const allItems = [
+      { href: "/students", label: "Personas", icon: Users },
+      { href: "/instructors", label: "Especialistas", icon: ClipboardList },
+      { href: "/schedule", label: "Horarios", icon: Calendar },
+      { href: "/students?filter=overdue", label: "Pagos Atrasados", icon: CreditCard },
+      { href: "/specializations", label: "Actividades", icon: Star },
+      { href: "/spaces", label: "Espacios", icon: Warehouse },
+      { href: "/assistant", label: "Estadísticas", icon: TrendingUp },
+    ];
+
     if (!isMounted) {
-      const skeletonItems = [
-        { href: "/students", label: "Personas", icon: Users },
-        { href: "/instructors", label: "Especialistas", icon: ClipboardList },
-        { href: "/schedule", label: "Horarios", icon: Calendar },
-        { href: "/students?filter=overdue", label: "Pagos Atrasados", icon: CreditCard },
-        { href: "/specializations", label: "Actividades", icon: Star },
-        { href: "/spaces", label: "Espacios", icon: Warehouse },
-        { href: "/assistant", label: "Estadísticas", icon: TrendingUp },
-      ];
-      return skeletonItems.map(item => ({...item, value: undefined, isSuccess: false, isDestructive: false}));
+      return allItems.map(item => ({...item, value: 0, isSuccess: false, isDestructive: false}));
     }
 
     const totalPeople = people.length;
@@ -104,32 +105,36 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {navItems.map((item, index) => (
             <Link key={index} href={item.href} className="block">
               <Card className={cn(
-                "transition-colors h-full flex flex-col justify-between p-6 hover:bg-muted/50",
+                "transition-colors h-full flex flex-col justify-between p-4 hover:bg-muted/50",
                 {
                   "bg-destructive/5 hover:bg-destructive/10 border-destructive/20": item.isDestructive,
                   "bg-green-100/70 hover:bg-green-100 border-green-200": item.isSuccess,
                 }
               )}>
                 <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-base">{item.label}</h3>
-                  <item.icon className={cn("h-6 w-6 text-muted-foreground", {
+                  <h3 className="font-semibold text-sm">{item.label}</h3>
+                  <item.icon className={cn("h-5 w-5 text-muted-foreground", {
                     "text-destructive": item.isDestructive,
                     "text-green-700": item.isSuccess,
                   })} />
                 </div>
                 <div className="mt-4">
-                  {isMounted && item.value !== undefined ? (
-                    <p className={cn("text-4xl font-bold", {
-                      "text-destructive": item.isDestructive,
-                      "text-green-700": item.isSuccess,
-                    })}>{item.value}</p>
-                  ) : item.value !== undefined ? (
-                    <Skeleton className="h-10 w-1/2" />
-                  ) : null }
+                  {isMounted ? (
+                    item.value !== undefined ? (
+                      <p className={cn("text-3xl", {
+                        "text-destructive": item.isDestructive,
+                        "text-green-700": item.isSuccess,
+                      })}>{item.value}</p>
+                    ) : (
+                      <div className="h-9" /> 
+                    )
+                  ) : (
+                    <Skeleton className="h-9 w-1/2" />
+                  )}
                 </div>
               </Card>
           </Link>
