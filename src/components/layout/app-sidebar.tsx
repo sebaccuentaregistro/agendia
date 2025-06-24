@@ -7,7 +7,6 @@ import {
   ClipboardList,
   Calendar,
   Star,
-  CreditCard,
   Sparkles,
   HeartPulse,
   Warehouse,
@@ -18,13 +17,12 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const menuItems = [
-  { href: "/dashboard", label: "Panel", icon: LayoutGrid },
+  { href: "/dashboard", label: "Inicio", icon: LayoutGrid },
   { href: "/schedule", label: "Horario", icon: Calendar },
   { href: "/students", label: "Personas", icon: Users },
   { href: "/instructors", label: "Especialistas", icon: ClipboardList },
   { href: "/specializations", label: "Actividades", icon: Star },
   { href: "/spaces", label: "Espacios", icon: Warehouse },
-  { href: "/payments", label: "Pagos", icon: CreditCard },
   { href: "/assistant", label: "Asistente IA", icon: Sparkles },
 ];
 
@@ -39,7 +37,7 @@ export default function AppSidebar() {
       <SheetHeader className="border-b p-4">
           <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold">
             <HeartPulse className="h-6 w-6 text-primary" />
-            <TitleComponent>YogaFlow</TitleComponent>
+            <TitleComponent>Agendia</TitleComponent>
           </Link>
       </SheetHeader>
       <div className="flex-1 overflow-y-auto">

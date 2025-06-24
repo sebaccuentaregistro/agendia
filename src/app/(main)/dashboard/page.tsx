@@ -33,7 +33,6 @@ export default function Dashboard() {
         { href: "/students?filter=overdue", label: "Pagos Atrasados", icon: CreditCard },
         { href: "/specializations", label: "Actividades", icon: Star },
         { href: "/spaces", label: "Espacios", icon: Warehouse },
-        { href: "/payments", label: "Pagos", icon: CreditCard },
         { href: "/assistant", label: "Estadísticas", icon: BarChart3 },
       ];
       return skeletonItems.map(item => ({...item, value: undefined, isSuccess: false, isDestructive: false}));
@@ -79,7 +78,6 @@ export default function Dashboard() {
       },
       { href: "/specializations", label: "Actividades", icon: Star, value: totalActividades },
       { href: "/spaces", label: "Espacios", icon: Warehouse, value: totalSpaces },
-      { href: "/payments", label: "Pagos", icon: CreditCard },
       { href: "/assistant", label: "Estadísticas", icon: BarChart3 },
     ];
 
@@ -128,7 +126,7 @@ export default function Dashboard() {
                       "text-destructive": item.isDestructive,
                       "text-green-700": item.isSuccess,
                     })}>{item.value}</p>
-                  ) : item.value !== undefined || (item.label !== "Pagos" && item.label !== "Estadísticas") ? (
+                  ) : item.value !== undefined ? (
                     <Skeleton className="h-8 w-1/2" />
                   ) : null }
                 </div>

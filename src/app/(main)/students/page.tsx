@@ -3,12 +3,12 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, FileClock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
@@ -26,6 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -236,6 +237,52 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
   );
 }
 
+function PaymentHistoryDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
+    const { payments } = useStudio();
+    
+    const personPayments = useMemo(() => {
+        return payments
+            .filter(p => p.personId === person.id)
+            .sort((a, b) => b.date.getTime() - a.date.getTime());
+    }, [payments, person.id]);
+
+    return (
+        <Dialog open={true} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Historial de Pagos: {person.name}</DialogTitle>
+                    <DialogDescription>
+                        Aquí se listan todos los pagos registrados para esta persona.
+                    </DialogDescription>
+                </DialogHeader>
+                {personPayments.length > 0 ? (
+                    <ScrollArea className="h-72">
+                         <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Fecha de Pago</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {personPayments.map(payment => (
+                                    <TableRow key={payment.id}>
+                                        <TableCell>{format(payment.date, 'dd/MM/yyyy')}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ScrollArea>
+                ) : (
+                    <p className="text-sm text-muted-foreground text-center py-8">No hay pagos registrados para esta persona.</p>
+                )}
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 export default function StudentsPage() {
   const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -243,6 +290,7 @@ export default function StudentsPage() {
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [personToEnroll, setPersonToEnroll] = useState<Person | null>(null);
+  const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   
   const searchParams = useSearchParams();
@@ -481,6 +529,10 @@ export default function StudentsPage() {
                     <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>
                       Asignar a Clases
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPersonForHistory(person)}>
+                      <FileClock className="mr-2 h-4 w-4" />
+                      Ver Historial de Pagos
+                    </DropdownMenuItem>
 
                     {person.membershipType === 'Mensual' && (
                       <>
@@ -533,13 +585,20 @@ export default function StudentsPage() {
         />
       )}
 
+      {personForHistory && (
+        <PaymentHistoryDialog
+            person={personForHistory}
+            onOpenChange={(open) => !open && setPersonForHistory(null)}
+        />
+      )}
+
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescriptionAlert>
               Esta acción no se puede deshacer. Esto eliminará permanentemente a la persona, sus datos de pago y la desinscribirá de todas las clases.
-            </AlertDialogDescription>
+            </AlertDialogDescriptionAlert>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPersonToDelete(null)}>Cancelar</AlertDialogCancel>
