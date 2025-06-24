@@ -100,7 +100,7 @@ export default function SpecialistsPage() {
 
   return (
     <div>
-      <PageHeader title="Especialistas">
+      <PageHeader title="Especialistas" description="Gestionar los perfiles de los instructores.">
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
           <Input 
               placeholder="Buscar por nombre..."
@@ -131,7 +131,7 @@ export default function SpecialistsPage() {
                           <FormControl>
                             <Input {...field} className="col-span-3" />
                           </FormControl>
-                          <FormMessage className="col-span-4" />
+                          <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                         </FormItem>
                       )}
                     />
@@ -144,7 +144,7 @@ export default function SpecialistsPage() {
                           <FormControl>
                             <Input type="tel" {...field} className="col-span-3" />
                           </FormControl>
-                          <FormMessage className="col-span-4" />
+                          <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
                         </FormItem>
                       )}
                     />
@@ -266,7 +266,7 @@ export default function SpecialistsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente al especialista de nuestros servidores.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al especialista.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

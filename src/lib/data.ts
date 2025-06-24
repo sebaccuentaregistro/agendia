@@ -18,7 +18,6 @@ export const specialists: Specialist[] = [
   { id: 'inst-4', name: 'David Miller', phone: '456-789-0123', actividadIds: ['spec-1', 'spec-4'], avatar: `https://placehold.co/100x100.png` },
 ];
 
-// Helper to create dates relative to the fixed reference date
 const daysAgo = (days: number): Date => {
   const date = new Date(refDate);
   date.setDate(date.getDate() - days);
@@ -37,7 +36,6 @@ export const people: Person[] = [
 export const spaces: Space[] = [
   { id: 'space-1', name: 'Sala Sol', capacity: 20 },
   { id: 'space-2', name: 'Sala Luna', capacity: 15 },
-  { id: 'space-3', name: 'Área de Máquinas', capacity: 10 },
 ];
 
 export const yogaClasses: YogaClass[] = [

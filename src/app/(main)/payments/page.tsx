@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useStudio } from '@/context/StudioContext';
 import { format } from 'date-fns';
+import { Card } from '@/components/ui/card';
 
 export default function PaymentsPage() {
   const { payments, people } = useStudio();
@@ -36,7 +37,7 @@ export default function PaymentsPage() {
         </div>
       </PageHeader>
       
-      <div className="rounded-lg border">
+      <Card>
         <Table>
           <TableHeader>
             <TableRow>
@@ -61,7 +62,7 @@ export default function PaymentsPage() {
             )}
           </TableBody>
         </Table>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -41,553 +41,170 @@ interface StudioContextType {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
+// Helper function to safely parse JSON from localStorage
+const loadFromLocalStorage = (key: string, defaultValue: any[]) => {
+  if (typeof window === 'undefined') return defaultValue;
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : defaultValue;
+  } catch (error) {
+    console.warn(`Error reading localStorage key “${key}”:`, error);
+    return defaultValue;
+  }
+};
+
 export function StudioProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [actividades, setActividades] = useState<Actividad[]>(initialActividades);
-  const [specialists, setSpecialists] = useState<Specialist[]>(initialSpecialists);
-  const [people, setPeople] = useState<Person[]>(initialPeople);
-  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(initialYogaClasses);
-  const [payments, setPayments] = useState<Payment[]>(initialPayments);
-  const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
-
-  // Effect to load data from localStorage on client side after initial render
-  useEffect(() => {
-    try {
-      const storedActividades = localStorage.getItem('agendia-actividades');
-      if (storedActividades) setActividades(JSON.parse(storedActividades));
-
-      const storedSpecialists = localStorage.getItem('agendia-specialists');
-      if (storedSpecialists) setSpecialists(JSON.parse(storedSpecialists));
-
-      const storedPeople = localStorage.getItem('agendia-people');
-      if (storedPeople) {
-        const parsed = JSON.parse(storedPeople);
-        setPeople(parsed.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) })));
-      }
-      
-      const storedYogaClasses = localStorage.getItem('agendia-yogaClasses');
-      if (storedYogaClasses) setYogaClasses(JSON.parse(storedYogaClasses));
-
-      const storedPayments = localStorage.getItem('agendia-payments');
-      if (storedPayments) {
-        const parsed = JSON.parse(storedPayments);
-        setPayments(parsed.map((p: any) => ({ ...p, date: new Date(p.date) })));
-      }
-      
-      const storedSpaces = localStorage.getItem('agendia-spaces');
-      if (storedSpaces) setSpaces(JSON.parse(storedSpaces));
-
-    } catch (error) {
-      console.error("Failed to load data from localStorage", error);
-      toast({
-        variant: "destructive",
-        title: "Error de Carga",
-        description: "No se pudieron cargar los datos guardados. Se usarán los valores por defecto.",
-      });
-    } finally {
-      setIsInitialized(true);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Effects to save data to localStorage
-  useEffect(() => {
-    if (isInitialized) localStorage.setItem('agendia-actividades', JSON.stringify(actividades));
-  }, [actividades, isInitialized]);
-
-  useEffect(() => {
-    if (isInitialized) localStorage.setItem('agendia-specialists', JSON.stringify(specialists));
-  }, [specialists, isInitialized]);
+  const [actividades, setActividades] = useState<Actividad[]>(() => loadFromLocalStorage('yoga-actividades', initialActividades));
+  const [specialists, setSpecialists] = useState<Specialist[]>(() => loadFromLocalStorage('yoga-specialists', initialSpecialists));
+  const [spaces, setSpaces] = useState<Space[]>(() => loadFromLocalStorage('yoga-spaces', initialSpaces));
+  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(() => loadFromLocalStorage('yoga-classes', initialYogaClasses));
   
-  useEffect(() => {
-    if (isInitialized) localStorage.setItem('agendia-people', JSON.stringify(people));
-  }, [people, isInitialized]);
+  const [people, setPeople] = useState<Person[]>(() => {
+    const stored = loadFromLocalStorage('yoga-people', initialPeople);
+    return stored.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) }));
+  });
+  const [payments, setPayments] = useState<Payment[]>(() => {
+    const stored = loadFromLocalStorage('yoga-payments', initialPayments);
+    return stored.map((p: any) => ({ ...p, date: new Date(p.date) }));
+  });
 
-  useEffect(() => {
-    if (isInitialized) localStorage.setItem('agendia-yogaClasses', JSON.stringify(yogaClasses));
-  }, [yogaClasses, isInitialized]);
-
-  useEffect(() => {
-    if (isInitialized) localStorage.setItem('agendia-payments', JSON.stringify(payments));
-  }, [payments, isInitialized]);
-
-  useEffect(() => {
-    if (isInitialized) localStorage.setItem('agendia-spaces', JSON.stringify(spaces));
-  }, [spaces, isInitialized]);
-
+  useEffect(() => { localStorage.setItem('yoga-actividades', JSON.stringify(actividades)); }, [actividades]);
+  useEffect(() => { localStorage.setItem('yoga-specialists', JSON.stringify(specialists)); }, [specialists]);
+  useEffect(() => { localStorage.setItem('yoga-people', JSON.stringify(people)); }, [people]);
+  useEffect(() => { localStorage.setItem('yoga-classes', JSON.stringify(yogaClasses)); }, [yogaClasses]);
+  useEffect(() => { localStorage.setItem('yoga-payments', JSON.stringify(payments)); }, [payments]);
+  useEffect(() => { localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces]);
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
-    const nameExists = actividades.some(a => a.name.trim().toLowerCase() === actividad.name.trim().toLowerCase());
-    if (nameExists) {
-      toast({
-        variant: "destructive",
-        title: "Nombre Duplicado",
-        description: `Ya existe una actividad con el nombre "${actividad.name}".`,
-      });
+    setActividades(prev => [...prev, { ...actividad, id: `act-${Date.now()}` }]);
+  };
+  const updateActividad = (updated: Actividad) => {
+    setActividades(prev => prev.map(a => a.id === updated.id ? updated : a));
+  };
+  const deleteActividad = (id: string) => {
+    if (yogaClasses.some(c => c.actividadId === id) || specialists.some(s => s.actividadIds.includes(id))) {
+      toast({ variant: "destructive", title: "Error", description: "No se puede eliminar una actividad en uso." });
       return;
     }
-    const newActividad: Actividad = {
-      id: `spec-${Date.now()}`,
-      ...actividad,
-    };
-    setActividades(prev => [...prev, newActividad]);
+    setActividades(prev => prev.filter(a => a.id !== id));
   };
 
-  const updateActividad = (updatedActividad: Actividad) => {
-    const nameExists = actividades.some(a => a.id !== updatedActividad.id && a.name.trim().toLowerCase() === updatedActividad.name.trim().toLowerCase());
-    if (nameExists) {
-      toast({
-        variant: "destructive",
-        title: "Nombre Duplicado",
-        description: `Ya existe otra actividad con el nombre "${updatedActividad.name}".`,
-      });
+  const addSpecialist = (specialist: Omit<Specialist, 'id' | 'avatar'>) => {
+    setSpecialists(prev => [...prev, { ...specialist, id: `spc-${Date.now()}`, avatar: `https://placehold.co/100x100.png` }]);
+  };
+  const updateSpecialist = (updated: Specialist) => {
+    setSpecialists(prev => prev.map(s => s.id === updated.id ? updated : s));
+  };
+  const deleteSpecialist = (id: string) => {
+    if (yogaClasses.some(c => c.instructorId === id)) {
+      toast({ variant: "destructive", title: "Error", description: "No se puede eliminar un especialista asignado a clases." });
       return;
     }
-    setActividades(prev =>
-      prev.map(a => (a.id === updatedActividad.id ? updatedActividad : a))
-    );
-  };
-
-  const deleteActividad = (actividadId: string) => {
-    const isActivityInUse = yogaClasses.some(cls => cls.actividadId === actividadId);
-
-    if (isActivityInUse) {
-      toast({
-        variant: "destructive",
-        title: "Actividad en Uso",
-        description: "No se puede eliminar. Esta actividad está en uso en una o más clases. Por favor, elimina o reasigna esas clases primero.",
-      });
-      return;
-    }
-
-    setActividades(prev => prev.filter(a => a.id !== actividadId));
-    setSpecialists(prevSpecialists =>
-      prevSpecialists.map(specialist => ({
-        ...specialist,
-       actividadIds: specialist.actividadIds.filter(id => id !== actividadId),
-      }))
-    );
-  };
-
-  const addSpecialist = (specialist: Omit<Specialist, 'id'| 'avatar'>) => {
-    const nameExists = specialists.some(s => s.name.trim().toLowerCase() === specialist.name.trim().toLowerCase());
-    if (nameExists) {
-        toast({
-            variant: "destructive",
-            title: "Nombre Duplicado",
-            description: `Ya existe un especialista con el nombre "${specialist.name}".`,
-        });
-        return;
-    }
-    const newSpecialist: Specialist = {
-      id: `inst-${Date.now()}`,
-      avatar: `https://placehold.co/100x100.png`,
-      ...specialist,
-    };
-    setSpecialists(prev => [...prev, newSpecialist]);
-  };
-
-  const updateSpecialist = (updatedSpecialist: Specialist) => {
-    const nameExists = specialists.some(s => s.id !== updatedSpecialist.id && s.name.trim().toLowerCase() === updatedSpecialist.name.trim().toLowerCase());
-    if (nameExists) {
-        toast({
-            variant: "destructive",
-            title: "Nombre Duplicado",
-            description: `Ya existe otro especialista con el nombre "${updatedSpecialist.name}".`,
-        });
-        return;
-    }
-
-    const originalSpecialist = specialists.find(s => s.id === updatedSpecialist.id);
-    if (originalSpecialist) {
-        const removedActividadIds = originalSpecialist.actividadIds.filter(
-            id => !updatedSpecialist.actividadIds.includes(id)
-        );
-
-        if (removedActividadIds.length > 0) {
-            const affectedClasses = yogaClasses.filter(
-                cls => cls.instructorId === updatedSpecialist.id && removedActividadIds.includes(cls.actividadId)
-            );
-
-            if (affectedClasses.length > 0) {
-                const affectedActividadNames = removedActividadIds
-                    .map(id => actividades.find(a => a.id === id)?.name)
-                    .filter(Boolean)
-                    .join(', ');
-                
-                toast({
-                    variant: "destructive",
-                    title: "No se puede actualizar el especialista",
-                    description: `Este especialista imparte clases de "${affectedActividadNames}" que quedarían sin una actividad válida. Por favor, reasigna o elimina esas clases primero.`,
-                });
-                return;
-            }
-        }
-    }
-
-    setSpecialists(prev =>
-      prev.map(s => (s.id === updatedSpecialist.id ? updatedSpecialist : s))
-    );
-  };
-
-  const deleteSpecialist = (specialistId: string) => {
-    const isSpecialistInUse = yogaClasses.some(cls => cls.instructorId === specialistId);
-
-    if (isSpecialistInUse) {
-      toast({
-        variant: "destructive",
-        title: "Especialista en Uso",
-        description: "No se puede eliminar. Este especialista está asignado a una o más clases. Por favor, reasigna o elimina esas clases primero.",
-      });
-      return;
-    }
-    
-    setSpecialists(prev => prev.filter(s => s.id !== specialistId));
+    setSpecialists(prev => prev.filter(s => s.id !== id));
   };
 
   const addPerson = (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => {
-    const newPerson: Person = {
-      id: `stu-${Date.now()}`,
-      avatar: `https://placehold.co/100x100.png`,
-      joinDate: new Date(),
-      lastPaymentDate: new Date(),
-      ...person,
-    };
+    const now = new Date();
+    const newPerson: Person = { ...person, id: `person-${Date.now()}`, avatar: `https://placehold.co/100x100.png`, joinDate: now, lastPaymentDate: now };
     setPeople(prev => [newPerson, ...prev]);
-    // Also create a corresponding payment record
-    const newPayment: Payment = {
-      id: `pay-${Date.now()}`,
-      personId: newPerson.id,
-      date: new Date(),
-    };
-    setPayments(prev => [newPayment, ...prev]);
+    if (newPerson.membershipType === 'Mensual') {
+      const newPayment: Payment = { id: `pay-${Date.now()}`, personId: newPerson.id, date: now };
+      setPayments(prev => [newPayment, ...prev]);
+    }
   };
-
-  const updatePerson = (updatedPerson: Person) => {
-    setPeople(prev => 
-      prev.map(p => (p.id === updatedPerson.id ? updatedPerson : p))
-    );
+  const updatePerson = (updated: Person) => {
+    setPeople(prev => prev.map(p => p.id === updated.id ? updated : p));
   };
-
-  const deletePerson = (personId: string) => {
-    // Unenroll from all classes first
-    setYogaClasses(prevClasses =>
-      prevClasses.map(cls => ({
-        ...cls,
-        personIds: cls.personIds.filter(id => id !== personId),
-      }))
-    );
-    setPeople(prev => prev.filter(p => p.id !== personId));
-    // Also delete associated payments
-    setPayments(prev => prev.filter(p => p.personId !== personId));
+  const deletePerson = (id: string) => {
+    setPeople(prev => prev.filter(p => p.id !== id));
+    setYogaClasses(prev => prev.map(c => ({ ...c, personIds: c.personIds.filter(pid => pid !== id) })));
+    setPayments(prev => prev.filter(p => p.personId !== id));
   };
 
   const recordPayment = (personId: string) => {
-    let personToUpdate: Person | undefined;
-    setPeople(prevPeople =>
-      prevPeople.map(p => {
-        if (p.id === personId) {
-          personToUpdate = p;
-          return { ...p, lastPaymentDate: new Date() };
-        }
-        return p;
-      })
-    );
-
-    if (personToUpdate) {
-      const newPayment: Payment = {
-        id: `pay-${Date.now()}`,
-        personId: personToUpdate.id,
-        date: new Date(),
-      };
-      setPayments(prev => [newPayment, ...prev].sort((a,b) => b.date.getTime() - a.date.getTime()));
-      toast({
-        title: "Pago Registrado",
-        description: `Se ha registrado un nuevo pago para ${personToUpdate.name}.`,
-      });
-    }
+    const person = people.find(p => p.id === personId);
+    if (!person) return;
+    const now = new Date();
+    setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: now } : p));
+    setPayments(prev => [...prev, { id: `pay-${Date.now()}`, personId, date: now }]);
+    toast({ title: "Pago Registrado", description: `Se ha registrado un nuevo pago para ${person.name}.` });
   };
 
   const undoLastPayment = (personId: string) => {
     const person = people.find(p => p.id === personId);
     if (!person) return;
-    
-    const studentPayments = payments
-      .filter(p => p.personId === personId)
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
-    
-    if (studentPayments.length > 0) {
-      const lastPaymentId = studentPayments[0].id;
-      setPayments(prev => prev.filter(p => p.id !== lastPaymentId));
-      
-      const newLastPaymentDate = studentPayments.length > 1 
-        ? studentPayments[1].date 
-        : person.joinDate; // Revert to join date if it was the only payment
-
-      setPeople(prevPeople =>
-        prevPeople.map(p => {
-          if (p.id === personId) {
-            return { ...p, lastPaymentDate: newLastPaymentDate };
-          }
-          return p;
-        })
-      );
-      toast({
-        title: "Pago Deshecho",
-        description: `Se ha revertido el último pago para ${person.name}.`,
-      });
+    const personPayments = payments.filter(p => p.personId === personId).sort((a,b) => b.date.getTime() - a.date.getTime());
+    if (personPayments.length > 0) {
+      setPayments(prev => prev.filter(p => p.id !== personPayments[0].id));
+      const newLastPaymentDate = personPayments.length > 1 ? personPayments[1].date : person.joinDate;
+      setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: newLastPaymentDate } : p));
+      toast({ title: "Pago Deshecho", description: `Se ha revertido el último pago para ${person.name}.` });
     }
   };
 
   const addSpace = (space: Omit<Space, 'id'>) => {
-    const nameExists = spaces.some(s => s.name.trim().toLowerCase() === space.name.trim().toLowerCase());
-    if (nameExists) {
-        toast({
-            variant: "destructive",
-            title: "Nombre Duplicado",
-            description: `Ya existe un espacio con el nombre "${space.name}".`,
-        });
-        return;
-    }
-    const newSpace: Space = {
-      id: `space-${Date.now()}`,
-      ...space,
-    };
-    setSpaces(prev => [...prev, newSpace]);
+    setSpaces(prev => [...prev, { ...space, id: `space-${Date.now()}` }]);
   };
-
-  const updateSpace = (updatedSpace: Space) => {
-    const nameExists = spaces.some(s => s.id !== updatedSpace.id && s.name.trim().toLowerCase() === updatedSpace.name.trim().toLowerCase());
-    if (nameExists) {
-        toast({
-            variant: "destructive",
-            title: "Nombre Duplicado",
-            description: `Ya existe otro espacio con el nombre "${updatedSpace.name}".`,
-        });
-        return;
-    }
-
-    const affectedClasses = yogaClasses.filter(c => c.spaceId === updatedSpace.id);
-    for (const cls of affectedClasses) {
-      if (cls.personIds.length > updatedSpace.capacity) {
-        const actividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Una clase';
-        const specialistName = specialists.find(s => s.id === cls.instructorId)?.name || 'un especialista';
-        toast({
-          variant: "destructive",
-          title: "No se puede reducir la capacidad",
-          description: `La clase de ${actividadName} con ${specialistName} (${cls.dayOfWeek} ${cls.time}) tiene ${cls.personIds.length} personas inscritas, que es más que la nueva capacidad de ${updatedSpace.capacity}.`,
-        });
-        return;
-      }
-    }
-
-    setSpaces(prev =>
-      prev.map(s => (s.id === updatedSpace.id ? updatedSpace : s))
-    );
-  };
-
-  const deleteSpace = (spaceId: string) => {
-    const isSpaceInUse = yogaClasses.some(cls => cls.spaceId === spaceId);
-
-    if (isSpaceInUse) {
-      toast({
-        variant: "destructive",
-        title: "Espacio en Uso",
-        description: "No se puede eliminar. Este espacio está asignado a una o más clases. Por favor, reasigna o elimina esas clases primero.",
-      });
+  const updateSpace = (updated: Space) => {
+    const classesAffected = yogaClasses.filter(c => c.spaceId === updated.id && c.personIds.length > updated.capacity);
+    if (classesAffected.length > 0) {
+      toast({ variant: "destructive", title: "Error", description: "La nueva capacidad es menor que los inscritos en una clase." });
       return;
     }
-    setSpaces(prev => prev.filter(s => s.id !== spaceId));
+    setSpaces(prev => prev.map(s => s.id === updated.id ? updated : s));
   };
-  
+  const deleteSpace = (id: string) => {
+    if (yogaClasses.some(c => c.spaceId === id)) {
+      toast({ variant: "destructive", title: "Error", description: "No se puede eliminar un espacio en uso." });
+      return;
+    }
+    setSpaces(prev => prev.filter(s => s.id !== id));
+  };
+
   const addYogaClass = (yogaClass: Omit<YogaClass, 'id' | 'personIds'>) => {
-    const specialistConflict = yogaClasses.find(
-      (c) =>
-        c.instructorId === yogaClass.instructorId &&
-        c.dayOfWeek === yogaClass.dayOfWeek &&
-        c.time === yogaClass.time
-    );
-
-    if (specialistConflict) {
-      toast({
-        variant: "destructive",
-        title: "Conflicto de Horario",
-        description: "El especialista ya tiene otra clase programada para ese mismo día y hora.",
-      });
+    const conflict = yogaClasses.some(c => c.dayOfWeek === yogaClass.dayOfWeek && c.time === yogaClass.time && (c.instructorId === yogaClass.instructorId || c.spaceId === yogaClass.spaceId));
+    if (conflict) {
+      toast({ variant: "destructive", title: "Conflicto de Horario", description: "El especialista o el espacio ya están ocupados a esa hora." });
       return;
     }
-
-    const spaceConflict = yogaClasses.find(
-      (c) =>
-        c.spaceId === yogaClass.spaceId &&
-        c.dayOfWeek === yogaClass.dayOfWeek &&
-        c.time === yogaClass.time
-    );
-
-    if (spaceConflict) {
-      toast({
-        variant: "destructive",
-        title: "Conflicto de Espacio",
-        description: "El espacio ya está ocupado por otra clase en ese mismo día y hora.",
-      });
-      return;
-    }
-
-    const newYogaClass: YogaClass = {
-      id: `cls-${Date.now()}`,
-      personIds: [],
-      ...yogaClass,
-    };
-    setYogaClasses(prev => [...prev, newYogaClass]);
+    setYogaClasses(prev => [...prev, { ...yogaClass, id: `class-${Date.now()}`, personIds: [] }]);
   };
-
-  const updateYogaClass = (updatedYogaClass: YogaClass) => {
-    const specialistConflict = yogaClasses.find(
-      (c) =>
-        c.id !== updatedYogaClass.id &&
-        c.instructorId === updatedYogaClass.instructorId &&
-        c.dayOfWeek === updatedYogaClass.dayOfWeek &&
-        c.time === updatedYogaClass.time
-    );
-
-    if (specialistConflict) {
-      toast({
-        variant: "destructive",
-        title: "Conflicto de Horario",
-        description: "El especialista ya tiene otra clase programada para ese mismo día y hora.",
-      });
+  const updateYogaClass = (updated: YogaClass) => {
+    const conflict = yogaClasses.some(c => c.id !== updated.id && c.dayOfWeek === updated.dayOfWeek && c.time === updated.time && (c.instructorId === updated.instructorId || c.spaceId === updated.spaceId));
+    if (conflict) {
+      toast({ variant: "destructive", title: "Conflicto de Horario", description: "El especialista o el espacio ya están ocupados a esa hora." });
       return;
     }
-
-    const spaceConflict = yogaClasses.find(
-      (c) =>
-        c.id !== updatedYogaClass.id &&
-        c.spaceId === updatedYogaClass.spaceId &&
-        c.dayOfWeek === updatedYogaClass.dayOfWeek &&
-        c.time === updatedYogaClass.time
-    );
-
-    if (spaceConflict) {
-      toast({
-        variant: "destructive",
-        title: "Conflicto de Espacio",
-        description: "El espacio ya está ocupado por otra clase en ese mismo día y hora.",
-      });
-      return;
-    }
-
-    const space = spaces.find(s => s.id === updatedYogaClass.spaceId);
-    if (space && space.capacity < updatedYogaClass.personIds.length) {
-      toast({
-        variant: "destructive",
-        title: "Capacidad Inválida",
-        description: `No se puede actualizar la clase porque la capacidad del espacio (${space.capacity}) es menor que el número de personas inscritas (${updatedYogaClass.personIds.length}).`,
-      });
-      return;
-    }
-
-    setYogaClasses(prev =>
-      prev.map(c => (c.id === updatedYogaClass.id ? updatedYogaClass : c))
-    );
+    setYogaClasses(prev => prev.map(c => c.id === updated.id ? updated : c));
   };
-
-  const deleteYogaClass = (yogaClassId: string) => {
-    const classToDelete = yogaClasses.find(c => c.id === yogaClassId);
-
-    if (classToDelete && classToDelete.personIds.length > 0) {
-      toast({
-        variant: "destructive",
-        title: "No se puede eliminar la clase",
-        description: `Hay ${classToDelete.personIds.length} persona(s) inscrita(s). Primero debes reubicar o desinscribir a todas las personas.`,
-      });
-      return;
+  const deleteYogaClass = (id: string) => {
+    const classToDelete = yogaClasses.find(c => c.id === id);
+    if(classToDelete?.personIds.length > 0){
+        toast({ variant: "destructive", title: "Error", description: "No se puede eliminar una clase con personas inscritas." });
+        return;
     }
-    
-    setYogaClasses(prev => prev.filter(c => c.id !== yogaClassId));
+    setYogaClasses(prev => prev.filter(c => c.id !== id));
   };
 
   const enrollPersonInClasses = (personId: string, newClassIds: string[]) => {
-    const oldClassIds = yogaClasses
-      .filter(c => c.personIds.includes(personId))
-      .map(c => c.id);
-      
-    const joiningClassIds = newClassIds.filter(id => !oldClassIds.includes(id));
-    const leavingClassIds = oldClassIds.filter(id => !newClassIds.includes(id));
-
-    let availableSwapSlots = leavingClassIds.length;
-
-    for (const classId of joiningClassIds) {
-      const cls = yogaClasses.find(c => c.id === classId);
-      if (cls) {
-        const space = spaces.find(s => s.id === cls.spaceId);
-        if (space && cls.personIds.length >= space.capacity) {
-          if (availableSwapSlots > 0) {
-            availableSwapSlots--; 
-          } else {
-            const actividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Clase';
-            toast({
-              variant: "destructive",
-              title: "Clase Llena",
-              description: `No se pudo inscribir en "${actividadName}" porque no hay cupos disponibles.`,
-            });
-            return; 
-          }
-        }
+    let classesToUpdate = [...yogaClasses];
+    // Un-enroll from all classes first
+    classesToUpdate = classesToUpdate.map(c => ({...c, personIds: c.personIds.filter(id => id !== personId)}));
+    // Enroll in new classes
+    for (const classId of newClassIds) {
+      const classIndex = classesToUpdate.findIndex(c => c.id === classId);
+      if (classIndex !== -1) {
+        classesToUpdate[classIndex].personIds.push(personId);
       }
     }
-
-    const updatedClasses = yogaClasses.map(cls => {
-      const shouldBeEnrolled = newClassIds.includes(cls.id);
-      const isEnrolled = cls.personIds.includes(personId);
-
-      if (shouldBeEnrolled && !isEnrolled) {
-        return { ...cls, personIds: [...cls.personIds, personId] };
-      }
-      if (!shouldBeEnrolled && isEnrolled) {
-        return { ...cls, personIds: cls.personIds.filter(id => id !== personId) };
-      }
-      return cls;
-    });
-
-    setYogaClasses(updatedClasses);
-    toast({
-      title: "Inscripciones Actualizadas",
-      description: "Se han guardado los cambios en las clases de la persona.",
-    });
+    setYogaClasses(classesToUpdate);
+    toast({ title: "Inscripciones Actualizadas" });
   };
 
-
   return (
-    <StudioContext.Provider
-      value={{
-        actividades,
-        specialists,
-        people,
-        yogaClasses,
-        payments,
-        spaces,
-        addActividad,
-        updateActividad,
-        deleteActividad,
-        addSpecialist,
-        updateSpecialist,
-        deleteSpecialist,
-        addPerson,
-        updatePerson,
-        deletePerson,
-        recordPayment,
-        undoLastPayment,
-        addSpace,
-        updateSpace,
-        deleteSpace,
-        addYogaClass,
-        updateYogaClass,
-        deleteYogaClass,
-        enrollPersonInClasses,
-      }}
-    >
+    <StudioContext.Provider value={{ actividades, specialists, people, yogaClasses, payments, spaces, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addYogaClass, updateYogaClass, deleteYogaClass, enrollPersonInClasses }}>
       {children}
     </StudioContext.Provider>
   );

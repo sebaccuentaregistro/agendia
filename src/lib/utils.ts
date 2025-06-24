@@ -18,14 +18,14 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'A
   const lastPaymentDate = new Date(person.lastPaymentDate);
   lastPaymentDate.setHours(0, 0, 0, 0); // Normalize
 
-  const joinDate = person.joinDate;
+  const joinDate = new Date(person.joinDate);
   const dueDayOfMonth = joinDate.getDate();
 
   // Determine the most recent due date that has passed
   let lastDueDate = new Date(now.getFullYear(), now.getMonth(), dueDayOfMonth);
   lastDueDate.setHours(0,0,0,0);
 
-  if (now < lastDueDate) {
+  if (now.getDate() < dueDayOfMonth) {
     // If today is before this month's due date, the last due date was last month.
     lastDueDate.setMonth(lastDueDate.getMonth() - 1);
   }

@@ -14,11 +14,6 @@ export function AISuggestionCard() {
   const [suggestion, setSuggestion] = useState<GetSuggestionOutput | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const fetchSuggestion = useCallback(async () => {
     setIsLoading(true);
@@ -26,12 +21,7 @@ export function AISuggestionCard() {
     setSuggestion(null);
 
     try {
-      const input: GetSuggestionInput = {
-        yogaClasses,
-        specialists,
-        actividades,
-        spaces,
-      };
+      const input: GetSuggestionInput = { yogaClasses, specialists, actividades, spaces };
       const result = await getSuggestion(input);
       setSuggestion(result);
     } catch (e) {
@@ -43,56 +33,32 @@ export function AISuggestionCard() {
   }, [yogaClasses, specialists, actividades, spaces]);
 
   useEffect(() => {
-    if (isMounted && yogaClasses.length > 0) {
-        fetchSuggestion();
-    } else if (isMounted) {
-        setIsLoading(false);
-        setSuggestion({
-            suggestion: "Añade algunas clases en la sección de Horarios para empezar a recibir sugerencias.",
-            suggestionType: "info",
-        });
+    if (yogaClasses.length > 0) {
+      fetchSuggestion();
+    } else {
+      setIsLoading(false);
+      setSuggestion({ suggestion: "Añade clases para recibir sugerencias.", suggestionType: "info" });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMounted, yogaClasses.length]);
+  }, [yogaClasses.length, fetchSuggestion]);
 
   const { Icon, iconColor, title } = useMemo(() => {
-    if (!suggestion) {
-      return { Icon: Lightbulb, iconColor: 'text-primary', title: 'Sugerencia IA' };
-    }
+    if (!suggestion) return { Icon: Lightbulb, iconColor: 'text-primary', title: 'Sugerencia IA' };
     switch (suggestion.suggestionType) {
-      case 'conflict':
-        return { Icon: AlertTriangle, iconColor: 'text-destructive', title: 'Conflicto Detectado' };
-      case 'optimization':
-        return { Icon: Lightbulb, iconColor: 'text-blue-500', title: 'Oportunidad de Mejora' };
-      case 'info':
-      default:
-        return { Icon: CheckCircle2, iconColor: 'text-green-600', title: 'Todo en Orden' };
+      case 'conflict': return { Icon: AlertTriangle, iconColor: 'text-destructive', title: 'Conflicto Detectado' };
+      case 'optimization': return { Icon: Lightbulb, iconColor: 'text-blue-500', title: 'Oportunidad de Mejora' };
+      default: return { Icon: CheckCircle2, iconColor: 'text-green-600', title: 'Todo en Orden' };
     }
   }, [suggestion]);
 
   const cardContent = () => {
-    if (isLoading) {
-      return (
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-4 w-4/6" />
-        </div>
-      );
-    }
-
-    if (error) {
-      return <p className="text-destructive">{error}</p>;
-    }
-
-    if (suggestion) {
-      return <p className="text-sm text-muted-foreground">{suggestion.suggestion}</p>;
-    }
-
+    if (isLoading) return <Skeleton className="h-10 w-full" />;
+    if (error) return <p className="text-destructive text-sm">{error}</p>;
+    if (suggestion) return <p className="text-sm text-muted-foreground">{suggestion.suggestion}</p>;
     return null;
   };
 
   return (
-    <Card className="flex flex-col">
+    <Card className="flex flex-col h-full">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-base font-medium">{title}</CardTitle>
             <div className="flex items-center gap-2">

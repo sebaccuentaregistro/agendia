@@ -1,243 +1,116 @@
 'use client';
 
 import { PageHeader } from '@/components/page-header';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { useStudio } from '@/context/StudioContext';
-import { es } from 'date-fns/locale';
-import { format, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { useMemo, useState, useEffect } from 'react';
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from 'recharts';
+import { Textarea } from '@/components/ui/textarea';
+import { useState } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Sparkles, Bot, BarChart } from 'lucide-react';
+import { Label } from '@/components/ui/label';
 
-const formatTime = (time: string) => {
-  if (!time || !time.includes(':')) return 'N/A';
-  const [hour, minute] = time.split(':');
-  const hourNum = parseInt(hour, 10);
-  const ampm = hourNum >= 12 ? 'PM' : 'AM';
-  const formattedHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
-  return `${formattedHour}:${minute} ${ampm}`;
-};
+// This is a placeholder for the real Genkit flow output
+type AIResult = {
+  schedule: string;
+  reasoning: string;
+} | null;
 
-function PopularTimesChart() {
-  const { yogaClasses } = useStudio();
-  
-  const chartData = useMemo(() => {
-      const times = yogaClasses.reduce((acc, cls) => {
-          const time = cls.time;
-          const enrolled = cls.personIds.length;
-          if (!acc[time]) {
-              acc[time] = 0;
-          }
-          acc[time] += enrolled;
-          return acc;
-      }, {} as Record<string, number>);
+export default function AssistantPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [result, setResult] = useState<AIResult>(null);
 
-      return Object.entries(times)
-          .map(([time, students]) => ({
-              time: time,
-              displayTime: formatTime(time),
-              Estudiantes: students
-          }))
-          .sort((a, b) => a.time.localeCompare(b.time));
-  }, [yogaClasses]);
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsLoading(true);
+    setResult(null);
 
-  const chartConfig = {
-    Estudiantes: {
-      label: 'Estudiantes',
-      color: 'hsl(var(--chart-1))',
-    },
-  } satisfies ChartConfig;
+    // Simulate AI call
+    setTimeout(() => {
+      // In a real implementation, you would get this from a Genkit flow
+      setResult({
+        schedule: `Lunes 09:00 - Vinyasa Flow (Sala Sol) - Elena Santos\nMartes 18:00 - Hatha Yoga (Sala Luna) - David Miller\nMiércoles 09:00 - Ashtanga Yoga (Sala Sol) - Marcus Chen\nJueves 19:30 - Yin Yoga (Sala Luna) - Aisha Khan\nViernes 07:00 - Vinyasa Flow (Sala Sol) - Elena Santos`,
+        reasoning: "El horario se optimizó para maximizar el uso de la Sala Sol en las horas de mayor demanda (mañana y tarde) y para ofrecer una variedad de estilos a lo largo de la semana, asignando especialistas a sus actividades principales. Se agruparon las clases de Vinyasa en días no consecutivos para permitir la recuperación."
+      });
+      setIsLoading(false);
+    }, 2000);
+  };
 
-  if (chartData.length === 0) {
-      return <p className="text-muted-foreground p-6">No hay datos de clases para mostrar.</p>;
-  }
-
-  return (
-    <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-      <BarChart accessibilityLayer data={chartData}>
-        <CartesianGrid vertical={false} />
-        <XAxis
-          dataKey="displayTime"
-          tickLine={false}
-          tickMargin={10}
-          axisLine={false}
-        />
-        <YAxis allowDecimals={false} />
-        <ChartTooltip content={<ChartTooltipContent />} />
-        <Legend />
-        <Bar dataKey="Estudiantes" fill="var(--color-Estudiantes)" radius={4} />
-      </BarChart>
-    </ChartContainer>
-  );
-}
-
-function MonthlyActivityChart() {
-  const { payments } = useStudio();
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-  const chartData = useMemo(() => {
-    if (!isMounted) return [];
-    
-    const now = new Date();
-    const monthlyData: { name: string; Estudiantes: number }[] = [];
-    
-    for (let i = 11; i >= 0; i--) {
-        const targetMonth = subMonths(now, i);
-        const monthStart = startOfMonth(targetMonth);
-        const monthEnd = endOfMonth(targetMonth);
-        
-        const uniqueStudents = new Set<string>();
-        
-        payments.forEach(payment => {
-            if (isWithinInterval(payment.date, { start: monthStart, end: monthEnd })) {
-                uniqueStudents.add(payment.personId);
-            }
-        });
-        
-        monthlyData.push({
-            name: format(targetMonth, 'MMM yy', { locale: es }),
-            Estudiantes: uniqueStudents.size
-        });
-    }
-    return monthlyData;
-  }, [payments, isMounted]);
-
-  const chartConfig = {
-    Estudiantes: {
-      label: 'Estudiantes Activos',
-      color: 'hsl(var(--chart-2))',
-    },
-  } satisfies ChartConfig;
-  
-  if (chartData.every(d => d.Estudiantes === 0)) {
-      return <p className="text-muted-foreground p-6">No hay suficientes datos de pagos para mostrar tendencias.</p>;
-  }
-
-  return (
-    <ChartContainer config={chartConfig} className="min-h-[200px] w-full">
-      <LineChart
-        accessibilityLayer
-        data={chartData}
-        margin={{
-          left: 12,
-          right: 12,
-        }}
-      >
-        <CartesianGrid vertical={false} />
-        <XAxis
-          dataKey="name"
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-        />
-        <YAxis allowDecimals={false} />
-        <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-        <Legend />
-        <Line
-          dataKey="Estudiantes"
-          type="monotone"
-          stroke="var(--color-Estudiantes)"
-          strokeWidth={2}
-          dot={true}
-        />
-      </LineChart>
-    </ChartContainer>
-  );
-}
-
-function PopularActivitiesChart() {
-  const { yogaClasses, actividades } = useStudio();
-
-  const chartData = useMemo(() => {
-      const activityCounts = yogaClasses.reduce((acc, cls) => {
-          const enrolled = cls.personIds.length;
-          if (!acc[cls.actividadId]) {
-              acc[cls.actividadId] = 0;
-          }
-          acc[cls.actividadId] += enrolled;
-          return acc;
-      }, {} as Record<string, number>);
-
-      const sortedActivities = Object.entries(activityCounts)
-        .sort(([, a], [, b]) => b - a)
-        .map(([id]) => id);
-
-      return Object.entries(activityCounts).map(([actividadId, students]) => ({
-          name: actividades.find(a => a.id === actividadId)?.name || 'Desconocido',
-          value: students,
-          fill: `hsl(var(--chart-${sortedActivities.indexOf(actividadId) + 1}))`
-      }));
-  }, [yogaClasses, actividades]);
-  
-  const chartConfig = chartData.reduce((acc, item) => {
-    if (item.name) {
-      acc[item.name] = { label: item.name, color: item.fill };
-    }
-    return acc;
-  }, {} as ChartConfig);
-
-  if (chartData.length === 0) {
-      return <p className="text-muted-foreground p-6">No hay inscripciones a actividades para mostrar.</p>;
-  }
-
-  return (
-    <ChartContainer config={chartConfig} className="min-h-[300px] w-full">
-      <PieChart accessibilityLayer>
-          <ChartTooltip content={<ChartTooltipContent nameKey="value" hideLabel />} />
-          <Pie
-              data={chartData}
-              label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-              dataKey="value"
-              nameKey="name"
-          >
-           {chartData.map((entry) => (
-                <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-            ))}
-          </Pie>
-      </PieChart>
-    </ChartContainer>
-  );
-}
-
-
-export default function StatisticsPage() {
   return (
     <div>
       <PageHeader
-        title="Estadísticas del Estudio"
+        title="Asistente de IA para Horarios"
+        description="Crea horarios óptimos basados en la disponibilidad y preferencias."
       />
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Horarios Más Populares</CardTitle>
-            <CardDescription>Total de estudiantes inscritos por hora de clase.</CardDescription>
+            <CardTitle>Generar Horario</CardTitle>
+            <CardDescription>
+              Proporciona los detalles para que la IA genere una sugerencia de horario.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <PopularTimesChart />
-          </CardContent>
+          <form onSubmit={handleSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="availability">Disponibilidad de Especialistas</Label>
+                <Textarea
+                  id="availability"
+                  placeholder="Ej: Elena Santos: L-V 9-12, David Miller: M,J 18-21..."
+                  rows={4}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="preferences">Preferencias de Personas</Label>
+                <Textarea
+                  id="preferences"
+                  placeholder="Ej: Mayoría prefiere clases de Vinyasa por la mañana. Yin Yoga es popular por la noche..."
+                  rows={4}
+                />
+              </div>
+            </CardContent>
+            <CardContent>
+               <Button type="submit" disabled={isLoading}>
+                {isLoading ? 'Generando...' : 'Generar Sugerencia'}
+                <Sparkles className="ml-2 h-4 w-4" />
+              </Button>
+            </CardContent>
+          </form>
         </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Actividad Mensual</CardTitle>
-            <CardDescription>Estudiantes activos únicos por mes (basado en pagos).</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MonthlyActivityChart />
-          </CardContent>
-        </Card>
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Distribución de Actividades</CardTitle>
-            <CardDescription>Popularidad de cada tipo de actividad según el número de inscripciones.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex justify-center">
-            <PopularActivitiesChart />
-          </CardContent>
-        </Card>
+        
+        <div className="space-y-8">
+           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5" /> Horario Sugerido</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading && <Skeleton className="h-32 w-full" />}
+              {!isLoading && result && (
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{result.schedule}</p>
+              )}
+              {!isLoading && !result && (
+                <p className="text-center text-sm text-muted-foreground py-10">
+                  La sugerencia de horario aparecerá aquí.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+           <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><BarChart className="h-5 w-5" /> Razonamiento</CardTitle>
+            </CardHeader>
+            <CardContent>
+               {isLoading && <Skeleton className="h-24 w-full" />}
+               {!isLoading && result && (
+                <p className="text-sm text-muted-foreground">{result.reasoning}</p>
+              )}
+              {!isLoading && !result && (
+                <p className="text-center text-sm text-muted-foreground py-8">
+                  La explicación de la IA aparecerá aquí.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   );
