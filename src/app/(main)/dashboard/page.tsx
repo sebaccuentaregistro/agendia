@@ -138,7 +138,7 @@ export default function Dashboard() {
       <div>
         <Card>
           <CardHeader>
-            <CardTitle>Horarios de Hoy {isMounted && todayDayName && `(${todayDayName})`}</CardTitle>
+            <CardTitle>Horarios de Hoy {isMounted && todayDayName && `- ${todayDayName}`}</CardTitle>
           </CardHeader>
           <CardContent>
             {isMounted ? (
