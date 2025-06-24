@@ -77,36 +77,42 @@ export default function Dashboard() {
       <PageHeader title="Panel de control" description="¡Bienvenido de nuevo! Aquí tienes un resumen de tu estudio." />
       
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Personas</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalPeople}</div>
-            <p className="text-xs text-muted-foreground">+2 desde el mes pasado</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Especialistas</CardTitle>
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalSpecialists}</div>
-            <p className="text-xs text-muted-foreground">+1 nuevo especialista</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Próximas Clases</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{upcomingClassesCount}</div>
-            <p className="text-xs text-muted-foreground">en los próximos 7 días</p>
-          </CardContent>
-        </Card>
+        <Link href="/students" className="block">
+          <Card className="transition-colors hover:bg-muted/50 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Personas</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalPeople}</div>
+              <p className="text-xs text-muted-foreground">+2 desde el mes pasado</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/instructors" className="block">
+          <Card className="transition-colors hover:bg-muted/50 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Especialistas</CardTitle>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{totalSpecialists}</div>
+              <p className="text-xs text-muted-foreground">+1 nuevo especialista</p>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/schedule" className="block">
+          <Card className="transition-colors hover:bg-muted/50 h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Próximas Clases</CardTitle>
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{upcomingClassesCount}</div>
+              <p className="text-xs text-muted-foreground">en los próximos 7 días</p>
+            </CardContent>
+          </Card>
+        </Link>
         <Link href="/students?filter=overdue" className="block">
           <Card className="transition-colors hover:bg-muted/50 h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
