@@ -202,7 +202,6 @@ export default function StatisticsPage() {
     <div>
       <PageHeader
         title="Estadísticas del Estudio"
-        description="Visualiza el rendimiento y las tendencias clave de tu negocio."
       />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>

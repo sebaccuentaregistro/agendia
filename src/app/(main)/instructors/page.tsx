@@ -100,7 +100,7 @@ export default function SpecialistsPage() {
 
   return (
     <div>
-      <PageHeader title="Especialistas" description="Mantén los perfiles de especialistas, actividades e información de contacto.">
+      <PageHeader title="Especialistas">
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
           <Input 
               placeholder="Buscar por nombre..."

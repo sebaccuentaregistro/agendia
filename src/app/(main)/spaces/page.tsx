@@ -97,7 +97,7 @@ export default function SpacesPage() {
 
   return (
     <div>
-      <PageHeader title="Espacios" description="Define y gestiona los espacios físicos de tu estudio.">
+      <PageHeader title="Espacios">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}>

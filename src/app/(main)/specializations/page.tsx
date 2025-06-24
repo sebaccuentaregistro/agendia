@@ -97,7 +97,7 @@ export default function ActividadesPage() {
 
   return (
     <div>
-      <PageHeader title="Actividades" description="Define y gestiona las actividades que ofrece tu estudio.">
+      <PageHeader title="Actividades">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}>

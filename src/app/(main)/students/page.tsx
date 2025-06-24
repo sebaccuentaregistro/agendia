@@ -380,7 +380,7 @@ export default function StudentsPage() {
 
   return (
     <div>
-      <PageHeader title="Personas" description="Gestiona los perfiles de las personas y el estado de los pagos.">
+      <PageHeader title="Personas">
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
            <Input 
               placeholder="Buscar por nombre..."

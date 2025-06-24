@@ -101,7 +101,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Inicio" description="¡Bienvenido de nuevo! Aquí tienes un resumen de tu estudio." />
+      <PageHeader title="Inicio" />
       
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {navItems.map((item, index) => (
