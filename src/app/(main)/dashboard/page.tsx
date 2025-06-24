@@ -4,21 +4,10 @@ import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useStudio } from '@/context/StudioContext';
-import { getStudentPaymentStatus } from '@/lib/utils';
+import { getStudentPaymentStatus, cn } from '@/lib/utils';
 import { Users, ClipboardList, Calendar, CreditCard, Star, Warehouse, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
-
-const navItems = [
-  { href: "/schedule", label: "Horario", description: "Gestionar clases", icon: Calendar },
-  { href: "/students", label: "Personas", description: "Gestionar perfiles", icon: Users },
-  { href: "/instructors", label: "Especialistas", description: "Gestionar instructores", icon: ClipboardList },
-  { href: "/payments", label: "Pagos", description: "Ver historial", icon: CreditCard },
-  { href: "/specializations", label: "Actividades", description: "Definir clases", icon: Star },
-  { href: "/spaces", label: "Espacios", description: "Definir salas", icon: Warehouse },
-  { href: "/assistant", label: "Asistente IA", description: "Optimizar horario", icon: Sparkles },
-];
-
 
 export default function Dashboard() {
   const { people, specialists, yogaClasses, actividades } = useStudio();
@@ -72,74 +61,42 @@ export default function Dashboard() {
     return `${formattedHour}:${minute} ${ampm}`;
   };
 
+  const navItems = [
+    { href: "/students", label: "Personas", icon: Users, value: totalPeople },
+    { href: "/instructors", label: "Especialistas", icon: ClipboardList, value: totalSpecialists },
+    { href: "/schedule", label: "Próximas Clases", icon: Calendar, value: upcomingClassesCount },
+    { href: "/students?filter=overdue", label: "Pagos Atrasados", icon: CreditCard, value: overduePayments, isDestructive: true },
+    { href: "/specializations", label: "Actividades", icon: Star },
+    { href: "/spaces", label: "Espacios", icon: Warehouse },
+    { href: "/payments", label: "Pagos", icon: CreditCard },
+    { href: "/assistant", label: "Asistente IA", icon: Sparkles },
+  ];
+
+
   return (
     <div className="space-y-8">
       <PageHeader title="Panel de control" description="¡Bienvenido de nuevo! Aquí tienes un resumen de tu estudio." />
       
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href="/students" className="block">
-          <Card className="transition-colors hover:bg-muted/50 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Personas</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalPeople}</div>
-              <p className="text-xs text-muted-foreground">+2 desde el mes pasado</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/instructors" className="block">
-          <Card className="transition-colors hover:bg-muted/50 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Especialistas</CardTitle>
-              <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalSpecialists}</div>
-              <p className="text-xs text-muted-foreground">+1 nuevo especialista</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/schedule" className="block">
-          <Card className="transition-colors hover:bg-muted/50 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Próximas Clases</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{upcomingClassesCount}</div>
-              <p className="text-xs text-muted-foreground">en los próximos 7 días</p>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/students?filter=overdue" className="block">
-          <Card className="transition-colors hover:bg-muted/50 h-full">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pagos Atrasados</CardTitle>
-              <CreditCard className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{overduePayments}</div>
-              <p className="text-xs text-muted-foreground">Acción requerida</p>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
-      <div>
-        <h2 className="mb-4 text-xl font-bold tracking-tight">Navegación Rápida</h2>
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-           {navItems.map((item) => (
-             <Link key={item.href} href={item.href} className="block">
-              <Card className="flex flex-col items-center justify-center p-6 text-center transition-colors hover:bg-primary/10 h-full">
-                <item.icon className="h-8 w-8 mb-3 text-primary" />
-                <h3 className="text-base font-semibold">{item.label}</h3>
-                <p className="text-xs text-muted-foreground">{item.description}</p>
-              </Card>
-            </Link>
-           ))}
-        </div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+          {navItems.map((item) => (
+            <Link key={item.label} href={item.href} className="block">
+            <Card className={cn("transition-colors h-full flex flex-col justify-between p-4", 
+              item.isDestructive ? "bg-destructive/5 hover:bg-destructive/10 border-destructive/20" : "hover:bg-muted/50"
+            )}>
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold text-sm">{item.label}</h3>
+                <item.icon className={cn("h-5 w-5 text-muted-foreground", item.isDestructive && "text-destructive")} />
+              </div>
+              <div className="mt-4">
+                {item.value !== undefined ? (
+                  <p className={cn("text-3xl font-bold", item.isDestructive && "text-destructive")}>{item.value}</p>
+                ) : (
+                  <p className="text-3xl font-bold">-</p>
+                )}
+              </div>
+            </Card>
+          </Link>
+          ))}
       </div>
 
       <div>
