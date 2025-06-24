@@ -59,6 +59,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
 
 const formSchema = z.object({
   instructorId: z.string({
@@ -405,12 +406,26 @@ export default function SchedulePage() {
             const enrolledCount = cls.personIds?.length || 0;
             const availableSpots = cls.capacity - enrolledCount;
             const classTitle = `${actividad?.name || 'Clase'} ${getTimeOfDay(cls.time)}`;
+            const isFull = availableSpots <= 0;
 
             return (
-              <Card key={cls.id} className="flex flex-col overflow-hidden border-l-4 border-l-green-400 shadow-sm transition-shadow hover:shadow-md">
+              <Card
+                key={cls.id}
+                className={cn(
+                  'flex flex-col overflow-hidden border-l-4 shadow-sm transition-shadow hover:shadow-md',
+                  isFull ? 'border-l-pink-400' : 'border-l-green-400'
+                )}
+              >
                 <CardHeader className="p-0">
-                  <div className="bg-green-100 p-2 text-center text-sm font-semibold text-green-800">
-                    {availableSpots} Lugares Disponibles
+                  <div
+                    className={cn(
+                      'p-2 text-center text-sm font-semibold',
+                      isFull
+                        ? 'bg-pink-100 text-pink-800'
+                        : 'bg-green-100 text-green-800'
+                    )}
+                  >
+                    {isFull ? 'Clase Llena' : `${availableSpots} Lugares Disponibles`}
                   </div>
                 </CardHeader>
                 <CardContent className="flex-grow p-4">
