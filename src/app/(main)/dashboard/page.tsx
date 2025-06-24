@@ -67,7 +67,14 @@ export default function Dashboard() {
     { href: "/students", label: "Personas", icon: Users, value: totalPeople },
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, value: totalSpecialists },
     { href: "/schedule", label: "Horarios", icon: Calendar, value: upcomingClassesCount },
-    { href: "/students?filter=overdue", label: "Pagos Atrasados", icon: CreditCard, value: overduePayments, isDestructive: true },
+    { 
+      href: "/students?filter=overdue", 
+      label: "Pagos Atrasados", 
+      icon: CreditCard, 
+      value: overduePayments, 
+      isDestructive: overduePayments > 0,
+      isSuccess: overduePayments === 0
+    },
     { href: "/specializations", label: "Actividades", icon: Star, value: totalActividades },
     { href: "/spaces", label: "Espacios", icon: Warehouse, value: totalSpaces },
     { href: "/payments", label: "Pagos", icon: CreditCard },
@@ -82,19 +89,29 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {navItems.map((item) => (
             <Link key={item.label} href={item.href} className="block">
-            <Card className={cn("transition-colors h-full flex flex-col justify-between p-4", 
-              item.isDestructive ? "bg-destructive/5 hover:bg-destructive/10 border-destructive/20" : "hover:bg-muted/50"
-            )}>
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm">{item.label}</h3>
-                <item.icon className={cn("h-5 w-5 text-muted-foreground", item.isDestructive && "text-destructive")} />
-              </div>
-              <div className="mt-4">
-                {item.value !== undefined ? (
-                  <p className={cn("text-3xl font-bold", item.isDestructive && "text-destructive")}>{item.value}</p>
-                ) : null }
-              </div>
-            </Card>
+              <Card className={cn(
+                "transition-colors h-full flex flex-col justify-between p-4 hover:bg-muted/50",
+                {
+                  "bg-destructive/5 hover:bg-destructive/10 border-destructive/20": item.isDestructive,
+                  "bg-green-100/70 hover:bg-green-100 border-green-200": item.isSuccess,
+                }
+              )}>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">{item.label}</h3>
+                  <item.icon className={cn("h-5 w-5 text-muted-foreground", {
+                    "text-destructive": item.isDestructive,
+                    "text-green-700": item.isSuccess,
+                  })} />
+                </div>
+                <div className="mt-4">
+                  {item.value !== undefined ? (
+                    <p className={cn("text-3xl font-bold", {
+                      "text-destructive": item.isDestructive,
+                      "text-green-700": item.isSuccess,
+                    })}>{item.value}</p>
+                  ) : null }
+                </div>
+              </Card>
           </Link>
           ))}
       </div>
