@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation';
 
-// This page only exists to handle a malformed route.
-// It redirects to the correct schedule page.
+// This page was causing an infinite loop.
+// It is now corrected to redirect to the main dashboard.
 export default function MalformedScheduleRedirect() {
-  redirect('/schedule');
+  redirect('/dashboard');
   return null;
 }

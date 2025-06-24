@@ -1,5 +1,8 @@
 import type { Person, Specialist, Actividad, YogaClass, Payment, Space } from '@/types';
 
+// Use a fixed reference date to make initial data deterministic
+const refDate = new Date('2024-07-15T10:00:00Z');
+
 export const actividades: Actividad[] = [
   { id: 'spec-1', name: 'Vinyasa Flow' },
   { id: 'spec-2', name: 'Hatha Yoga' },
@@ -15,9 +18,9 @@ export const specialists: Specialist[] = [
   { id: 'inst-4', name: 'David Miller', phone: '456-789-0123', actividadIds: ['spec-1', 'spec-4'], avatar: `https://placehold.co/100x100.png` },
 ];
 
-// Helper to create dates in the past
+// Helper to create dates relative to the fixed reference date
 const daysAgo = (days: number): Date => {
-  const date = new Date();
+  const date = new Date(refDate);
   date.setDate(date.getDate() - days);
   return date;
 };
