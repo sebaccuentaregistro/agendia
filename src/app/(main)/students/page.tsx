@@ -244,6 +244,7 @@ export default function StudentsPage() {
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [personToEnroll, setPersonToEnroll] = useState<Person | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const searchParams = useSearchParams();
 
@@ -254,13 +255,22 @@ export default function StudentsPage() {
 
   const filteredPeople = useMemo(() => {
     const filter = searchParams.get('filter');
+    let peopleList = people;
+
     if (filter === 'overdue') {
-      return people.filter(
+      peopleList = people.filter(
         (person) => getStudentPaymentStatus(person) === 'Atrasado'
       );
     }
-    return people;
-  }, [people, searchParams]);
+    
+    if (searchTerm.trim() !== '') {
+      peopleList = peopleList.filter(person => 
+        person.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return peopleList;
+  }, [people, searchParams, searchTerm]);
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -324,122 +334,130 @@ export default function StudentsPage() {
   return (
     <div>
       <PageHeader title="Personas" description="Gestiona los perfiles de las personas y el estado de los pagos.">
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-            setIsDialogOpen(open);
-            if (!open) {
-              setSelectedPerson(undefined);
-            }
-        }}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Persona
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>{personForDialog ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <div className="grid gap-4 py-4">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Nombre</FormLabel>
-                        <FormControl>
-                          <Input {...field} className="col-span-3" />
-                        </FormControl>
-                        <FormMessage className="col-span-3 col-start-2" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Teléfono</FormLabel>
-                        <FormControl>
-                          <Input type="tel" {...field} className="col-span-3" />
-                        </FormControl>
-                        <FormMessage className="col-span-3 col-start-2" />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="membershipType"
-                    render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-start gap-4">
-                        <FormLabel className="text-right pt-2">Membresía</FormLabel>
-                        <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="col-span-3 flex flex-col space-y-1"
-                          >
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="Mensual" />
-                              </FormControl>
-                              <FormLabel className="font-normal">Mensual</FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="Diario" />
-                              </FormControl>
-                              <FormLabel className="font-normal">Diario</FormLabel>
-                            </FormItem>
-                          </RadioGroup>
-                        </FormControl>
-                        <FormMessage className="col-span-3 col-start-2" />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-                
-                {personForDialog && personForDialog.membershipType === 'Mensual' && (
-                  <div className="space-y-4 pt-4">
-                    <Separator />
-                    <div className="space-y-2">
-                       <Label>Gestión de Pagos</Label>
-                       <p className="text-sm text-muted-foreground">
-                         Cambia manualmente el estado de pago de la persona.
-                       </p>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg border p-3">
-                      <div className="flex flex-col">
-                         <span className="text-sm font-medium">Estado Actual</span>
-                         <span className={cn(
-                          "text-sm font-bold",
-                          getStudentPaymentStatus(personForDialog) === 'Al día' ? 'text-green-700' : 'text-destructive'
-                         )}>
-                          {getStudentPaymentStatus(personForDialog)}
-                         </span>
-                      </div>
-                       {getStudentPaymentStatus(personForDialog) === 'Al día' ? (
-                          <Button type="button" variant="outline" size="sm" onClick={() => undoLastPayment(personForDialog.id)}>
-                            Deshacer Pago
-                          </Button>
-                       ) : (
-                          <Button type="button" variant="outline" size="sm" onClick={() => recordPayment(personForDialog.id)}>
-                            Registrar Pago
-                          </Button>
-                       )}
-                    </div>
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+           <Input 
+              placeholder="Buscar por nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full md:w-64"
+            />
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+              setIsDialogOpen(open);
+              if (!open) {
+                setSelectedPerson(undefined);
+              }
+          }}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Añadir Persona
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>{personForDialog ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <div className="grid gap-4 py-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem className="grid grid-cols-4 items-center gap-4">
+                          <FormLabel className="text-right">Nombre</FormLabel>
+                          <FormControl>
+                            <Input {...field} className="col-span-3" />
+                          </FormControl>
+                          <FormMessage className="col-span-3 col-start-2" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormItem className="grid grid-cols-4 items-center gap-4">
+                          <FormLabel className="text-right">Teléfono</FormLabel>
+                          <FormControl>
+                            <Input type="tel" {...field} className="col-span-3" />
+                          </FormControl>
+                          <FormMessage className="col-span-3 col-start-2" />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="membershipType"
+                      render={({ field }) => (
+                        <FormItem className="grid grid-cols-4 items-start gap-4">
+                          <FormLabel className="text-right pt-2">Membresía</FormLabel>
+                          <FormControl>
+                            <RadioGroup
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              className="col-span-3 flex flex-col space-y-1"
+                            >
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="Mensual" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Mensual</FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="Diario" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Diario</FormLabel>
+                              </FormItem>
+                            </RadioGroup>
+                          </FormControl>
+                          <FormMessage className="col-span-3 col-start-2" />
+                        </FormItem>
+                      )}
+                    />
                   </div>
-                )}
+                  
+                  {personForDialog && personForDialog.membershipType === 'Mensual' && (
+                    <div className="space-y-4 pt-4">
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label>Gestión de Pagos</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Cambia manually el estado de pago de la persona.
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium">Estado Actual</span>
+                          <span className={cn(
+                            "text-sm font-bold",
+                            getStudentPaymentStatus(personForDialog) === 'Al día' ? 'text-green-700' : 'text-destructive'
+                          )}>
+                            {getStudentPaymentStatus(personForDialog)}
+                          </span>
+                        </div>
+                        {getStudentPaymentStatus(personForDialog) === 'Al día' ? (
+                            <Button type="button" variant="outline" size="sm" onClick={() => undoLastPayment(personForDialog.id)}>
+                              Deshacer Pago
+                            </Button>
+                        ) : (
+                            <Button type="button" variant="outline" size="sm" onClick={() => recordPayment(personForDialog.id)}>
+                              Registrar Pago
+                            </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
-                <DialogFooter>
-                  <Button type="submit">Guardar Cambios</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  <DialogFooter>
+                    <Button type="submit">Guardar Cambios</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </PageHeader>
       
       {filteredPeople.length > 0 ? (
@@ -505,16 +523,18 @@ export default function StudentsPage() {
       ) : (
         <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
             <CardHeader>
-              <CardTitle>No Hay Personas</CardTitle>
+              <CardTitle>{searchTerm ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
               <CardDescription>
-                Empieza a construir tu comunidad añadiendo tu primera persona.
+                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-               <Button onClick={handleAdd}>
+               {!searchTerm && (
+                <Button onClick={handleAdd}>
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Añadir Persona
                 </Button>
+               )}
             </CardContent>
           </Card>
       )}
