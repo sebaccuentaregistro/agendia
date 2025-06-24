@@ -3,6 +3,7 @@ import './globals.css';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { Poppins } from 'next/font/google';
+import { StudioProvider } from '@/context/StudioContext';
 
 export const metadata: Metadata = {
   title: 'Gestor YogaFlow',
@@ -23,10 +24,12 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${poppins.variable} font-body antialiased`}>
-        <SidebarProvider>
-          {children}
-        </SidebarProvider>
-        <Toaster />
+        <StudioProvider>
+          <SidebarProvider>
+            {children}
+          </SidebarProvider>
+          <Toaster />
+        </StudioProvider>
       </body>
     </html>
   );

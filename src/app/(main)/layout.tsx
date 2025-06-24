@@ -1,6 +1,5 @@
 import AppSidebar from '@/components/layout/app-sidebar';
 import { Sidebar, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
-import { StudioProvider } from '@/context/StudioContext';
 
 export default function MainLayout({
   children,
@@ -8,7 +7,7 @@ export default function MainLayout({
   children: React.ReactNode;
 }) {
   return (
-    <StudioProvider>
+    <>
       <Sidebar collapsible="icon">
         <AppSidebar />
       </Sidebar>
@@ -20,6 +19,6 @@ export default function MainLayout({
           {children}
         </main>
       </SidebarInset>
-    </StudioProvider>
+    </>
   );
 }
