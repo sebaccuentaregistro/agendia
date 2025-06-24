@@ -1,15 +1,5 @@
 "use client";
 
-import {
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarFooter,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { SheetTitle } from "@/components/ui/sheet";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -23,6 +13,8 @@ import {
   Warehouse,
 } from "lucide-react";
 import Link from "next/link";
+import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
 
 const menuItems = [
   { href: "/dashboard", label: "Panel", icon: LayoutGrid },
@@ -37,39 +29,34 @@ const menuItems = [
 
 export default function AppSidebar() {
   const pathname = usePathname();
-  const { isMobile } = useSidebar();
-  
-  const TitleComponent = isMobile ? SheetTitle : "h2";
 
   return (
     <>
-      <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <HeartPulse className="text-primary" size={24} />
-          <TitleComponent className="text-lg font-semibold font-headline text-foreground">YogaFlow</TitleComponent>
-        </div>
-      </SidebarHeader>
-      <SidebarContent>
-        <SidebarMenu>
+      <SheetHeader className="border-b p-4">
+        <SheetTitle asChild>
+          <Link href="/dashboard" className="flex items-center gap-2 text-lg font-semibold">
+            <HeartPulse className="h-6 w-6 text-primary" />
+            <span>YogaFlow</span>
+          </Link>
+        </SheetTitle>
+      </SheetHeader>
+      <div className="flex-1 overflow-y-auto">
+        <nav className="grid items-start gap-1 p-4">
           {menuItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith(item.href)}
-                tooltip={item.label}
-              >
-                <Link href={item.href}>
-                  <item.icon />
-                  <span>{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                pathname.startsWith(item.href) && "bg-muted text-primary"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </Link>
           ))}
-        </SidebarMenu>
-      </SidebarContent>
-      <SidebarFooter>
-        {/* Can add user profile or settings here */}
-      </SidebarFooter>
+        </nav>
+      </div>
     </>
   );
 }

@@ -1,6 +1,5 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import { SidebarProvider } from '@/components/ui/sidebar';
 import { Toaster } from '@/components/ui/toaster';
 import { Poppins } from 'next/font/google';
 import { StudioProvider } from '@/context/StudioContext';
@@ -25,9 +24,7 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${poppins.variable} font-body antialiased`}>
         <StudioProvider>
-          <SidebarProvider>
-            {children}
-          </SidebarProvider>
+          {children}
           <Toaster />
         </StudioProvider>
       </body>
