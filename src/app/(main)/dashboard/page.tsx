@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -10,6 +9,7 @@ import { Users, ClipboardList, Calendar, CreditCard, Star, Warehouse, BarChart3,
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AISuggestionCard } from '@/components/ai-suggestion-card';
 
 export default function Dashboard() {
   const { people, specialists, yogaClasses, actividades, spaces } = useStudio();
@@ -37,7 +37,7 @@ export default function Dashboard() {
     ];
 
     if (!isMounted) {
-      return allItems.map(item => ({...item, value: 0, isSuccess: false, isDestructive: false}));
+      return allItems.map(item => ({...item, value: 0, isSuccess: false, isDestructive: false, noValue: item.label === 'Estadísticas'}));
     }
 
     const totalPeople = people.length;
@@ -80,7 +80,7 @@ export default function Dashboard() {
       },
       { href: "/specializations", label: "Actividades", icon: Star, value: totalActividades },
       { href: "/spaces", label: "Espacios", icon: Warehouse, value: totalSpaces },
-      { href: "/assistant", label: "Estadísticas", icon: TrendingUp },
+      { href: "/assistant", label: "Estadísticas", icon: TrendingUp, noValue: true },
     ];
 
   }, [isMounted, people, specialists, yogaClasses, actividades, spaces]);
@@ -105,7 +105,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
           {navItems.map((item, index) => (
             <Link key={index} href={item.href} className="block">
               <Card className={cn(
@@ -124,7 +124,7 @@ export default function Dashboard() {
                 </div>
                 <div className="mt-4">
                   {isMounted ? (
-                    item.value !== undefined ? (
+                    !item.noValue ? (
                       <p className={cn("text-3xl", {
                         "text-destructive": item.isDestructive,
                         "text-green-700": item.isSuccess,
@@ -139,6 +139,10 @@ export default function Dashboard() {
               </Card>
           </Link>
           ))}
+      </div>
+
+      <div>
+        {isMounted ? <AISuggestionCard /> : <Skeleton className="h-28 w-full" />}
       </div>
 
       <div>

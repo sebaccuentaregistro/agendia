@@ -1,15 +1,13 @@
-import {genkit} from 'firebase-genkit';
-import {googleAI} from 'firebase-genkit/plugins/googleai';
+import {genkit} from '@genkit-ai/core';
+import firebase from '@genkit-ai/firebase';
+import {googleAI} from '@genkit-ai/googleai';
 
 export const ai = genkit({
   plugins: [
+    firebase(),
     googleAI({
       // The API key is automatically read from the GOOGLE_API_KEY
       // environment variable if it's set.
     }),
   ],
-  // In a production environment, you may want to use a different logger.
-  logLevel: 'info',
-  // In a production environment, you may want to use a different exporter.
-  enableTracingAndMetrics: true,
 });
