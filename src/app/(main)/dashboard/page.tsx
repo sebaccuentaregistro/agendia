@@ -36,7 +36,7 @@ export default function Dashboard() {
         { href: "/payments", label: "Pagos", icon: CreditCard },
         { href: "/assistant", label: "Estadísticas", icon: BarChart3 },
       ];
-      return skeletonItems.map(item => ({...item, value: undefined}));
+      return skeletonItems.map(item => ({...item, value: undefined, isSuccess: false, isDestructive: false}));
     }
 
     const totalPeople = people.length;
@@ -103,7 +103,7 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Panel de control" description="¡Bienvenido de nuevo! Aquí tienes un resumen de tu estudio." />
+      <PageHeader title="Inicio" description="¡Bienvenido de nuevo! Aquí tienes un resumen de tu estudio." />
       
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
           {navItems.map((item, index) => (
