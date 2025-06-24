@@ -96,25 +96,7 @@ const getSuggestionFlow = ai.defineFlow(
     outputSchema: GetSuggestionOutputSchema,
   },
   async (input) => {
-    // The Gemini 1.5 Flash model can sometimes return an empty response if the prompt is too complex.
-    // Simplifying the input by removing non-essential fields for this specific task.
-    const simplifiedInput = {
-      actividades: input.actividades.map(({ id, name }) => ({ id, name })),
-      specialists: input.specialists.map(({ id, name }) => ({ id, name })),
-      spaces: input.spaces.map(({ id, name, capacity }) => ({ id, name, capacity })),
-      yogaClasses: input.yogaClasses,
-    };
-
-    const {output} = await prompt(simplifiedInput);
-    
-    // Fallback in case the model returns nothing
-    if (!output) {
-      return {
-        suggestion: "No se pudo obtener una sugerencia en este momento. Inténtalo de nuevo.",
-        suggestionType: "info",
-      }
-    }
-    
-    return output;
+    const {output} = await prompt(input);
+    return output!;
   }
 );
