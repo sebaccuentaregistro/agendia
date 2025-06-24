@@ -433,6 +433,7 @@ export default function SchedulePage() {
                   <div className="space-y-1.5 text-sm text-muted-foreground">
                     <p><span className="font-semibold text-card-foreground">Especialidad:</span> {actividad?.name}</p>
                     <p><span className="font-semibold text-card-foreground">Profesor:</span> {specialist?.name}</p>
+                    <p><span className="font-semibold text-card-foreground">Espacio:</span> {space?.name}</p>
                     <p><span className="font-semibold text-card-foreground">Día:</span> {cls.dayOfWeek}</p>
                     <p><span className="font-semibold text-card-foreground">Hora:</span> {formatTime(cls.time)}</p>
                     <p><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{cls.capacity}</p>
