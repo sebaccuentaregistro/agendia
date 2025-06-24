@@ -2,11 +2,9 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { Specialist } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -19,6 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Checkbox } from '@/components/ui/checkbox';
 import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -176,67 +175,71 @@ export default function SpecialistsPage() {
         </Dialog>
       </PageHeader>
       
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nombre</TableHead>
-              <TableHead className="hidden sm:table-cell">Actividades</TableHead>
-              <TableHead className="hidden md:table-cell">Teléfono</TableHead>
-              <TableHead><span className="sr-only">WhatsApp</span></TableHead>
-              <TableHead><span className="sr-only">Menú</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {specialists.map((specialist) => (
-              <TableRow key={specialist.id}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-3">
-                    <Avatar>
-                      <AvatarImage src={specialist.avatar} alt={specialist.name} data-ai-hint="person photo"/>
-                      <AvatarFallback>{specialist.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                     <div className="flex flex-col">
-                      <span>{specialist.name}</span>
+      {specialists.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {specialists.map((specialist) => (
+            <Card key={specialist.id} className="flex flex-col">
+              <CardContent className="p-6 flex-grow">
+                <div className="flex items-start gap-4">
+                  <Avatar className="h-16 w-16 flex-shrink-0">
+                    <AvatarImage src={specialist.avatar} alt={specialist.name} data-ai-hint="person photo"/>
+                    <AvatarFallback>{specialist.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div className="flex-grow">
+                    <h3 className="text-xl font-bold">{specialist.name}</h3>
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <span>{specialist.phone}</span>
+                        <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
+                            <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                            <span className="sr-only">Enviar WhatsApp a {specialist.name}</span>
+                        </a>
                     </div>
                   </div>
-                </TableCell>
-                <TableCell className="hidden sm:table-cell">
-                  <div className="flex flex-wrap gap-1">
-                    {getActividadNames(specialist.actividadIds).map(name => (
-                      <Badge key={name} variant="secondary">{name}</Badge>
-                    ))}
+                </div>
+                
+                <div className="mt-6">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actividades</h4>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {getActividadNames(specialist.actividadIds).length > 0 ? (
+                      getActividadNames(specialist.actividadIds).map(name => (
+                        <Badge key={name} variant="secondary">{name}</Badge>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Sin actividades asignadas</p>
+                    )}
                   </div>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">{specialist.phone}</TableCell>
-                <TableCell>
-                  <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
-                    <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                    <span className="sr-only">Enviar WhatsApp a {specialist.name}</span>
-                  </a>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Alternar menú</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEdit(specialist)}>Editar</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(specialist)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Eliminar
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                </div>
+              </CardContent>
+              
+              <CardFooter className="flex justify-end gap-2 p-3 border-t">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(specialist)}>
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Editar</span>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(specialist)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Eliminar</span>
+                </Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+        ) : (
+          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+            <CardHeader>
+              <CardTitle>No Hay Especialistas</CardTitle>
+              <CardDescription>
+                Empieza a organizar tu estudio añadiendo tu primer especialista.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+               <Button onClick={handleAdd}>
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Añadir Especialista
+                </Button>
+            </CardContent>
+          </Card>
+      )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
