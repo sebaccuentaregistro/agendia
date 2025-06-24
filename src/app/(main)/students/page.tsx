@@ -237,7 +237,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 }
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -429,7 +429,9 @@ export default function StudentsPage() {
       
       {filteredPeople.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredPeople.map((person) => (
+          {filteredPeople.map((person) => {
+            const hasPayments = payments.some(p => p.personId === person.id);
+            return (
             <Card key={person.id} className="flex flex-col">
               <CardContent className="flex-grow p-6">
                 <div className="flex items-start gap-4">
@@ -483,17 +485,14 @@ export default function StudentsPage() {
                     {person.membershipType === 'Mensual' && (
                       <>
                         <DropdownMenuSeparator />
-                        {getStudentPaymentStatus(person) === 'Atrasado' ? (
-                          <DropdownMenuItem onClick={() => recordPayment(person.id)}>
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            Registrar Pago
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem onClick={() => undoLastPayment(person.id)}>
-                            <Undo2 className="mr-2 h-4 w-4" />
-                            Deshacer Pago
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem onClick={() => recordPayment(person.id)}>
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Registrar Pago
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}>
+                          <Undo2 className="mr-2 h-4 w-4" />
+                          Deshacer Último Pago
+                        </DropdownMenuItem>
                       </>
                     )}
                     
@@ -506,7 +505,7 @@ export default function StudentsPage() {
                 </DropdownMenu>
               </CardFooter>
             </Card>
-          ))}
+          )})}
         </div>
       ) : (
         <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
