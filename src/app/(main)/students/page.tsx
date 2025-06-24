@@ -3,9 +3,9 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -23,7 +23,6 @@ import { useSearchParams } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -355,7 +354,7 @@ export default function StudentsPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>{personForDialog ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle>
+                <DialogTitle>{personForDialog ? 'Editar Detalles de Persona' : 'Añadir Nueva Persona'}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -417,38 +416,6 @@ export default function StudentsPage() {
                       )}
                     />
                   </div>
-                  
-                  {personForDialog && personForDialog.membershipType === 'Mensual' && (
-                    <div className="space-y-4 pt-4">
-                      <Separator />
-                      <div className="space-y-2">
-                        <Label>Gestión de Pagos</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Cambia manually el estado de pago de la persona.
-                        </p>
-                      </div>
-                      <div className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium">Estado Actual</span>
-                          <span className={cn(
-                            "text-sm font-bold",
-                            getStudentPaymentStatus(personForDialog) === 'Al día' ? 'text-green-700' : 'text-destructive'
-                          )}>
-                            {getStudentPaymentStatus(personForDialog)}
-                          </span>
-                        </div>
-                        {getStudentPaymentStatus(personForDialog) === 'Al día' ? (
-                            <Button type="button" variant="outline" size="sm" onClick={() => undoLastPayment(personForDialog.id)}>
-                              Deshacer Pago
-                            </Button>
-                        ) : (
-                            <Button type="button" variant="outline" size="sm" onClick={() => recordPayment(personForDialog.id)}>
-                              Registrar Pago
-                            </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   <DialogFooter>
                     <Button type="submit">Guardar Cambios</Button>
@@ -506,10 +473,31 @@ export default function StudentsPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEdit(person)}>Editar</DropdownMenuItem>
-                     <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>
+                    <DropdownMenuItem onClick={() => handleEdit(person)}>
+                      Editar Detalles
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>
                       Asignar a Clases
                     </DropdownMenuItem>
+
+                    {person.membershipType === 'Mensual' && (
+                      <>
+                        <DropdownMenuSeparator />
+                        {getStudentPaymentStatus(person) === 'Atrasado' ? (
+                          <DropdownMenuItem onClick={() => recordPayment(person.id)}>
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Registrar Pago
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem onClick={() => undoLastPayment(person.id)}>
+                            <Undo2 className="mr-2 h-4 w-4" />
+                            Deshacer Pago
+                          </DropdownMenuItem>
+                        )}
+                      </>
+                    )}
+                    
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       Eliminar
