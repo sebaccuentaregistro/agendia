@@ -5,8 +5,8 @@ import { Poppins } from 'next/font/google';
 import { StudioProvider } from '@/context/StudioContext';
 
 export const metadata: Metadata = {
-  title: 'Gestor YogaFlow',
-  description: 'Un espacio tranquilo para gestionar tu estudio de yoga.',
+  title: 'Gestor Agendia',
+  description: 'Gestiona tu negocio de forma sencilla y eficiente.',
 };
 
 const poppins = Poppins({
