@@ -92,9 +92,7 @@ export default function Dashboard() {
               <div className="mt-4">
                 {item.value !== undefined ? (
                   <p className={cn("text-3xl font-bold", item.isDestructive && "text-destructive")}>{item.value}</p>
-                ) : (
-                  <p className="text-3xl font-bold">-</p>
-                )}
+                ) : null }
               </div>
             </Card>
           </Link>
