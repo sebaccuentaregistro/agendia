@@ -416,15 +416,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpaces(prev =>
       prev.map(s => (s.id === updatedSpace.id ? updatedSpace : s))
     );
-
-    setYogaClasses(prevClasses =>
-      prevClasses.map(cls => {
-        if (cls.spaceId === updatedSpace.id && cls.capacity > updatedSpace.capacity) {
-          return { ...cls, capacity: updatedSpace.capacity };
-        }
-        return cls;
-      })
-    );
   };
 
   const deleteSpace = (spaceId: string) => {
@@ -473,17 +464,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       });
       return;
     }
-    
-    const selectedSpace = spaces.find(s => s.id === yogaClass.spaceId);
-    if (selectedSpace && yogaClass.capacity > selectedSpace.capacity) {
-      toast({
-        variant: "destructive",
-        title: "Capacidad Excedida",
-        description: `La capacidad de la clase (${yogaClass.capacity}) no puede ser mayor que la capacidad del espacio "${selectedSpace.name}" (${selectedSpace.capacity}).`,
-      });
-      return;
-    }
-
 
     const newYogaClass: YogaClass = {
       id: `cls-${Date.now()}`,
@@ -528,25 +508,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (updatedYogaClass.capacity < updatedYogaClass.personIds.length) {
+    const space = spaces.find(s => s.id === updatedYogaClass.spaceId);
+    if (space && space.capacity < updatedYogaClass.personIds.length) {
       toast({
         variant: "destructive",
         title: "Capacidad Inválida",
-        description: `No se puede establecer la capacidad a ${updatedYogaClass.capacity} porque ya hay ${updatedYogaClass.personIds.length} asistentes inscritos.`,
+        description: `No se puede actualizar la clase porque la capacidad del espacio (${space.capacity}) es menor que el número de personas inscritas (${updatedYogaClass.personIds.length}).`,
       });
       return;
     }
-    
-    const selectedSpace = spaces.find(s => s.id === updatedYogaClass.spaceId);
-    if (selectedSpace && updatedYogaClass.capacity > selectedSpace.capacity) {
-      toast({
-        variant: "destructive",
-        title: "Capacidad Excedida",
-        description: `La capacidad de la clase (${updatedYogaClass.capacity}) no puede ser mayor que la capacidad del espacio "${selectedSpace.name}" (${selectedSpace.capacity}).`,
-      });
-      return;
-    }
-
 
     setYogaClasses(prev =>
       prev.map(c => (c.id === updatedYogaClass.id ? updatedYogaClass : c))
@@ -581,26 +551,23 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     for (const classId of joiningClassIds) {
       const cls = yogaClasses.find(c => c.id === classId);
       if (cls) {
-        // Check if the class is full
-        if (cls.personIds.length >= cls.capacity) {
-          // If it's full, we need a "swap slot" from a class the person is leaving.
+        const space = spaces.find(s => s.id === cls.spaceId);
+        if (space && cls.personIds.length >= space.capacity) {
           if (availableSwapSlots > 0) {
-            availableSwapSlots--; // Use up a swap slot.
+            availableSwapSlots--; 
           } else {
-            // Class is full and no swap slots are available.
             const actividadName = actividades.find(a => a.id === cls.actividadId)?.name || 'Clase';
             toast({
               variant: "destructive",
               title: "Clase Llena",
               description: `No se pudo inscribir en "${actividadName}" porque no hay cupos disponibles.`,
             });
-            return; // Abort the entire operation.
+            return; 
           }
         }
       }
     }
 
-    // If all checks pass, apply the changes.
     const updatedClasses = yogaClasses.map(cls => {
       const shouldBeEnrolled = newClassIds.includes(cls.id);
       const isEnrolled = cls.personIds.includes(personId);

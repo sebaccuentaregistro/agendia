@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus, cn } from '@/lib/utils';
-import { Users, ClipboardList, Calendar, CreditCard, Star, Warehouse, BarChart3 } from 'lucide-react';
+import { Users, ClipboardList, Calendar, CreditCard, Star, Warehouse, BarChart3, TrendingUp, History } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,7 +33,7 @@ export default function Dashboard() {
         { href: "/students?filter=overdue", label: "Pagos Atrasados", icon: CreditCard },
         { href: "/specializations", label: "Actividades", icon: Star },
         { href: "/spaces", label: "Espacios", icon: Warehouse },
-        { href: "/assistant", label: "Estadísticas", icon: BarChart3 },
+        { href: "/assistant", label: "Estadísticas", icon: TrendingUp },
       ];
       return skeletonItems.map(item => ({...item, value: undefined, isSuccess: false, isDestructive: false}));
     }
@@ -78,7 +78,7 @@ export default function Dashboard() {
       },
       { href: "/specializations", label: "Actividades", icon: Star, value: totalActividades },
       { href: "/spaces", label: "Espacios", icon: Warehouse, value: totalSpaces },
-      { href: "/assistant", label: "Estadísticas", icon: BarChart3 },
+      { href: "/assistant", label: "Estadísticas", icon: TrendingUp },
     ];
 
   }, [isMounted, people, specialists, yogaClasses, actividades, spaces]);
@@ -103,7 +103,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
           {navItems.map((item, index) => (
             <Link key={index} href={item.href} className="block">
               <Card className={cn(
@@ -114,20 +114,20 @@ export default function Dashboard() {
                 }
               )}>
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm">{item.label}</h3>
-                  <item.icon className={cn("h-5 w-5 text-muted-foreground", {
+                  <h3 className="font-semibold text-xs">{item.label}</h3>
+                  <item.icon className={cn("h-4 w-4 text-muted-foreground", {
                     "text-destructive": item.isDestructive,
                     "text-green-700": item.isSuccess,
                   })} />
                 </div>
-                <div className="mt-2 h-8">
+                <div className="mt-1 h-7">
                   {isMounted && item.value !== undefined ? (
-                    <p className={cn("text-2xl font-bold", {
+                    <p className={cn("text-xl font-bold", {
                       "text-destructive": item.isDestructive,
                       "text-green-700": item.isSuccess,
                     })}>{item.value}</p>
                   ) : item.value !== undefined ? (
-                    <Skeleton className="h-7 w-1/2" />
+                    <Skeleton className="h-6 w-1/2" />
                   ) : null }
                 </div>
               </Card>
@@ -138,7 +138,7 @@ export default function Dashboard() {
       <div>
         <Card>
           <CardHeader>
-            <CardTitle>Horarios de Hoy {isMounted && todayDayName && `- ${todayDayName}`}</CardTitle>
+            <CardTitle>Horarios de Hoy - {isMounted && todayDayName && `${todayDayName}`}</CardTitle>
           </CardHeader>
           <CardContent>
             {isMounted ? (
@@ -156,12 +156,14 @@ export default function Dashboard() {
                     {todaysClasses.map((cls) => {
                       const specialist = specialists.find(i => i.id === cls.instructorId);
                       const actividad = actividades.find(s => s.id === cls.actividadId);
+                      const space = spaces.find(s => s.id === cls.spaceId);
+                      const capacity = space?.capacity || 0;
                       return (
                         <TableRow key={cls.id}>
                           <TableCell className="font-medium">{formatTime(cls.time)}</TableCell>
                           <TableCell>{actividad?.name || 'N/A'}</TableCell>
                           <TableCell className="hidden sm:table-cell">{specialist?.name || 'N/A'}</TableCell>
-                          <TableCell className="text-right">{`${cls.personIds.length} / ${cls.capacity}`}</TableCell>
+                          <TableCell className="text-right">{`${cls.personIds.length} / ${capacity}`}</TableCell>
                         </TableRow>
                       );
                     })}

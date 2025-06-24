@@ -28,7 +28,6 @@ export type YogaClass = {
   spaceId: string;
   dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
   time: string;
-  capacity: number;
   personIds: string[];
 };
 

@@ -162,6 +162,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                           const specialist = specialists.find(i => i.id === item.instructorId);
                           const actividad = actividades.find(a => a.id === item.actividadId);
                           const space = spaces.find(s => s.id === item.spaceId);
+                          const capacity = space?.capacity || 0;
 
                           if (!actividad || !specialist) {
                             return null;
@@ -174,7 +175,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                               name="classIds"
                               render={({ field }) => {
                                 const isEnrolledInForm = field.value?.includes(item.id);
-                                const isFull = item.personIds.length >= item.capacity;
+                                const isFull = item.personIds.length >= capacity;
 
                                 return (
                                 <FormItem
@@ -205,7 +206,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                                       <div className="text-xs text-muted-foreground">
                                           <p>{specialist?.name}</p>
                                           <p>{item.dayOfWeek} {formatTime(item.time)}</p>
-                                          <p>{space?.name} ({item.personIds.length}/{item.capacity})</p>
+                                          <p>{space?.name} ({item.personIds.length}/{capacity})</p>
                                       </div>
                                       {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">Clase llena</p>}
                                   </div>

@@ -81,9 +81,6 @@ const formSchema = z.object({
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, {
       message: 'Formato de hora inválido (HH:MM).',
     }),
-  capacity: z.coerce
-    .number()
-    .min(1, { message: 'La capacidad debe ser de al menos 1.' }),
 });
 
 export default function SchedulePage() {
@@ -113,7 +110,6 @@ export default function SchedulePage() {
       spaceId: undefined,
       dayOfWeek: 'Lunes',
       time: '09:00',
-      capacity: 15,
     },
   });
 
@@ -165,7 +161,6 @@ export default function SchedulePage() {
       spaceId: undefined,
       dayOfWeek: 'Lunes',
       time: '09:00',
-      capacity: 15,
     });
     setIsDialogOpen(true);
   };
@@ -178,7 +173,6 @@ export default function SchedulePage() {
       spaceId: cls.spaceId,
       dayOfWeek: cls.dayOfWeek,
       time: cls.time,
-      capacity: cls.capacity,
     });
     setIsDialogOpen(true);
   };
@@ -318,7 +312,7 @@ export default function SchedulePage() {
                         <SelectContent>
                           {spaces.map((s) => (
                             <SelectItem key={s.id} value={s.id}>
-                              {s.name}
+                              {s.name} ({s.capacity} pers.)
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -377,19 +371,6 @@ export default function SchedulePage() {
                     )}
                   />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="capacity"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Capacidad</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
                 <DialogFooter>
                   <Button type="submit">Guardar Cambios</Button>
                 </DialogFooter>
@@ -403,8 +384,9 @@ export default function SchedulePage() {
         {yogaClasses.length > 0 ? (
           yogaClasses.map((cls) => {
             const { specialist, actividad, space } = getClassDetails(cls);
+            const capacity = space?.capacity || 0;
             const enrolledCount = cls.personIds?.length || 0;
-            const availableSpots = cls.capacity - enrolledCount;
+            const availableSpots = capacity - enrolledCount;
             const classTitle = `${actividad?.name || 'Clase'} ${getTimeOfDay(cls.time)}`;
             const isFull = availableSpots <= 0;
 
@@ -436,7 +418,7 @@ export default function SchedulePage() {
                     <p><span className="font-semibold text-card-foreground">Espacio:</span> {space?.name}</p>
                     <p><span className="font-semibold text-card-foreground">Día:</span> {cls.dayOfWeek}</p>
                     <p><span className="font-semibold text-card-foreground">Hora:</span> {formatTime(cls.time)}</p>
-                    <p><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{cls.capacity}</p>
+                    <p><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{capacity}</p>
                   </div>
                 </CardContent>
                 <CardFooter className="flex items-center justify-between border-t p-3">
