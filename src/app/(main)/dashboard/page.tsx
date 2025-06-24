@@ -66,7 +66,7 @@ export default function Dashboard() {
   const navItems = [
     { href: "/students", label: "Personas", icon: Users, value: totalPeople },
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, value: totalSpecialists },
-    { href: "/schedule", label: "Próximas Clases", icon: Calendar, value: upcomingClassesCount },
+    { href: "/schedule", label: "Horarios", icon: Calendar, value: upcomingClassesCount },
     { href: "/students?filter=overdue", label: "Pagos Atrasados", icon: CreditCard, value: overduePayments, isDestructive: true },
     { href: "/specializations", label: "Actividades", icon: Star, value: totalActividades },
     { href: "/spaces", label: "Espacios", icon: Warehouse, value: totalSpaces },
