@@ -6,7 +6,7 @@ import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '
 import { useStudio } from '@/context/StudioContext';
 import { es } from 'date-fns/locale';
 import { format, isWithinInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell } from 'recharts';
 
 const formatTime = (time: string) => {
@@ -73,8 +73,15 @@ function PopularTimesChart() {
 
 function MonthlyActivityChart() {
   const { payments } = useStudio();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const chartData = useMemo(() => {
+    if (!isMounted) return [];
+    
     const now = new Date();
     const monthlyData: { name: string; Estudiantes: number }[] = [];
     
@@ -97,7 +104,7 @@ function MonthlyActivityChart() {
         });
     }
     return monthlyData;
-  }, [payments]);
+  }, [payments, isMounted]);
 
   const chartConfig = {
     Estudiantes: {
