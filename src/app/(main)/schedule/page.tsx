@@ -405,10 +405,10 @@ export default function SchedulePage() {
               <TableHead>Actividad</TableHead>
               <TableHead>Especialista</TableHead>
               <TableHead>Día y Hora</TableHead>
-              <TableHead>Espacio</TableHead>
-              <TableHead>Capacidad</TableHead>
+              <TableHead className="hidden sm:table-cell">Espacio</TableHead>
+              <TableHead className="hidden md:table-cell">Capacidad</TableHead>
               <TableHead>
-                <span className="sr-only">Acciones</span>
+                <span className="sr-only">Menú</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -433,8 +433,8 @@ export default function SchedulePage() {
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell>{space?.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">{space?.name}</TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <div className="flex items-center gap-2">
                       <Progress value={capacityPercentage} className="w-24" />
                       <span className="text-sm text-muted-foreground">

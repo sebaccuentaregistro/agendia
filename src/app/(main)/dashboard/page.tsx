@@ -25,7 +25,7 @@ export default function Dashboard() {
     <div>
       <PageHeader title="Panel de control" description="¡Bienvenido de nuevo! Aquí tienes un resumen de tu estudio." />
       
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Personas</CardTitle>
@@ -80,23 +80,23 @@ export default function Dashboard() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Teléfono</TableHead>
+                  <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
                   <TableHead><span className="sr-only">WhatsApp</span></TableHead>
-                  <TableHead className="text-right">Fecha de Inscripción</TableHead>
+                  <TableHead className="hidden md:table-cell text-right">Fecha de Inscripción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {recentPeople.map((person) => (
                   <TableRow key={person.id}>
                     <TableCell>{person.name}</TableCell>
-                    <TableCell>{person.phone}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{person.phone}</TableCell>
                     <TableCell>
                       <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
                         <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
                         <span className="sr-only">Enviar WhatsApp a {person.name}</span>
                       </a>
                     </TableCell>
-                    <TableCell className="text-right">{format(person.joinDate, 'dd/MM/yyyy')}</TableCell>
+                    <TableCell className="hidden md:table-cell text-right">{format(person.joinDate, 'dd/MM/yyyy')}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

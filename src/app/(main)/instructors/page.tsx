@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import type { Specialist } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -181,10 +181,10 @@ export default function SpecialistsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>Actividades</TableHead>
-              <TableHead>Teléfono</TableHead>
+              <TableHead className="hidden sm:table-cell">Actividades</TableHead>
+              <TableHead className="hidden md:table-cell">Teléfono</TableHead>
               <TableHead><span className="sr-only">WhatsApp</span></TableHead>
-              <TableHead><span className="sr-only">Acciones</span></TableHead>
+              <TableHead><span className="sr-only">Menú</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -201,14 +201,14 @@ export default function SpecialistsPage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="hidden sm:table-cell">
                   <div className="flex flex-wrap gap-1">
                     {getActividadNames(specialist.actividadIds).map(name => (
                       <Badge key={name} variant="secondary">{name}</Badge>
                     ))}
                   </div>
                 </TableCell>
-                <TableCell>{specialist.phone}</TableCell>
+                <TableCell className="hidden md:table-cell">{specialist.phone}</TableCell>
                 <TableCell>
                   <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
                     <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
@@ -225,7 +225,6 @@ export default function SpecialistsPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEdit(specialist)}>Editar</DropdownMenuItem>
-                      <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(specialist)}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Eliminar

@@ -202,9 +202,11 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                                       <FormLabel className={cn("font-normal", isFull && !isEnrolledInForm && "cursor-not-allowed")}>
                                         {actividad.name}
                                       </FormLabel>
-                                      <p className="text-xs text-muted-foreground">
-                                          {specialist?.name} | {item.dayOfWeek} {formatTime(item.time)} | {space?.name} | ({item.personIds.length}/{item.capacity})
-                                      </p>
+                                      <div className="text-xs text-muted-foreground">
+                                          <p>{specialist?.name}</p>
+                                          <p>{item.dayOfWeek} {formatTime(item.time)}</p>
+                                          <p>{space?.name} ({item.personIds.length}/{item.capacity})</p>
+                                      </div>
                                       {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">Clase llena</p>}
                                   </div>
                                 </FormItem>
@@ -445,12 +447,12 @@ export default function StudentsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Nombre</TableHead>
-              <TableHead>Teléfono</TableHead>
+              <TableHead className="hidden sm:table-cell">Teléfono</TableHead>
               <TableHead><span className="sr-only">WhatsApp</span></TableHead>
-              <TableHead>Membresía</TableHead>
+              <TableHead className="hidden md:table-cell">Membresía</TableHead>
               <TableHead>Estado del Pago</TableHead>
-              <TableHead>Inscrito Desde</TableHead>
-              <TableHead><span className="sr-only">Acciones</span></TableHead>
+              <TableHead className="hidden lg:table-cell">Inscrito Desde</TableHead>
+              <TableHead><span className="sr-only">Menú</span></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -465,16 +467,16 @@ export default function StudentsPage() {
                     <span>{person.name}</span>
                   </div>
                 </TableCell>
-                <TableCell>{person.phone}</TableCell>
+                <TableCell className="hidden sm:table-cell">{person.phone}</TableCell>
                 <TableCell>
                   <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
                     <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
                     <span className="sr-only">Enviar WhatsApp a {person.name}</span>
                   </a>
                 </TableCell>
-                <TableCell>{person.membershipType}</TableCell>
+                <TableCell className="hidden md:table-cell">{person.membershipType}</TableCell>
                 <TableCell>{getPaymentStatusBadge(person)}</TableCell>
-                <TableCell>{format(person.joinDate, 'dd/MM/yyyy')}</TableCell>
+                <TableCell className="hidden lg:table-cell">{format(person.joinDate, 'dd/MM/yyyy')}</TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
