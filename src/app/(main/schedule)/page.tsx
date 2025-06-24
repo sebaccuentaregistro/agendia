@@ -1,8 +1,5 @@
-import { redirect } from 'next/navigation';
 
-// This page was causing an infinite loop.
-// It is now corrected to redirect to the main dashboard.
-export default function MalformedScheduleRedirect() {
-  redirect('/dashboard');
+// This file is at a malformed path and has been neutralized to prevent build errors.
+export default function MalformedRoute3() {
   return null;
 }

@@ -1,6 +1,5 @@
 
-// This page only exists to handle a malformed route.
-// It is now neutralized to prevent routing conflicts.
-export default function MalformedDashboardRedirect() {
+// This file is a duplicate and has been neutralized to prevent build errors.
+export default function MalformedRoute2() {
   return null;
 }
