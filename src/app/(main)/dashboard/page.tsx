@@ -7,7 +7,7 @@ import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { Users, ClipboardList, Calendar, CreditCard, Star, Warehouse, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 
 const navItems = [
   { href: "/schedule", label: "Horario", description: "Gestionar clases", icon: Calendar },
@@ -31,7 +31,30 @@ export default function Dashboard() {
 
   const totalPeople = people.length;
   const totalSpecialists = specialists.length;
-  const upcomingClassesCount = yogaClasses.filter(c => new Date() < new Date(2024, 6, c.dayOfWeek === 'Lunes' ? 22 : 23)).length; // Mock logic
+  
+  const upcomingClassesCount = useMemo(() => {
+    const dayOfWeekMap = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const today = new Date();
+    let count = 0;
+
+    const currentTime = `${String(today.getHours()).padStart(2, '0')}:${String(today.getMinutes()).padStart(2, '0')}`;
+
+    for (let i = 0; i < 7; i++) {
+      const futureDate = new Date();
+      futureDate.setDate(today.getDate() + i);
+      const dayName = dayOfWeekMap[futureDate.getDay()];
+      
+      const classesForDay = yogaClasses.filter(c => c.dayOfWeek === dayName);
+      
+      if (i === 0) { // It's today, only count future classes
+        count += classesForDay.filter(c => c.time > currentTime).length;
+      } else { // It's a future day, count all classes
+        count += classesForDay.length;
+      }
+    }
+    return count;
+  }, [yogaClasses]);
+
   const overduePayments = people.filter(s => getStudentPaymentStatus(s) === 'Atrasado').length;
   
   const todaysClasses = todayDayName 
