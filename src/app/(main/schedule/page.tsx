@@ -16,9 +16,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -38,9 +36,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
-import { Student, YogaClass } from '@/types';
+import { Person, YogaClass } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -72,8 +70,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 const formSchema = z.object({
   instructorId: z.string({
     required_error: 'Debes seleccionar un especialista.',
-  }),
-  actividadId: z.string({ required_error: 'Debes seleccionar una actividad.' }),
+  }).min(1, { message: 'Debes seleccionar un especialista.' }),
+  actividadId: z.string({ required_error: 'Debes seleccionar una actividad.' }).min(1, { message: 'Debes seleccionar una actividad.' }),
   spaceId: z.string({ required_error: 'Debes seleccionar un espacio.' }),
   dayOfWeek: z.enum([
     'Lunes',
@@ -103,7 +101,7 @@ export default function SchedulePage() {
     addYogaClass,
     updateYogaClass,
     deleteYogaClass,
-    students,
+    people,
   } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -116,14 +114,43 @@ export default function SchedulePage() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      instructorId: undefined,
-      actividadId: undefined,
+      instructorId: '',
+      actividadId: '',
       spaceId: undefined,
       dayOfWeek: 'Lunes',
       time: '09:00',
       capacity: 15,
     },
   });
+
+  const watchedActividadId = form.watch('actividadId');
+  const watchedInstructorId = form.watch('instructorId');
+
+  const filteredSpecialists = useMemo(() => {
+    if (!watchedActividadId) return specialists;
+    return specialists.filter(s => s.actividadIds.includes(watchedActividadId));
+  }, [watchedActividadId, specialists]);
+
+  const filteredActividades = useMemo(() => {
+    if (!watchedInstructorId) return actividades;
+    const specialist = specialists.find(s => s.id === watchedInstructorId);
+    if (!specialist) return actividades;
+    return actividades.filter(a => specialist.actividadIds.includes(a.id));
+  }, [watchedInstructorId, actividades, specialists]);
+
+  useEffect(() => {
+    const instructorId = form.getValues('instructorId');
+    if (instructorId && filteredSpecialists.length > 0 && !filteredSpecialists.find(s => s.id === instructorId)) {
+      form.setValue('instructorId', '', { shouldValidate: true });
+    }
+  }, [watchedActividadId, filteredSpecialists, form]);
+  
+  useEffect(() => {
+    const actividadId = form.getValues('actividadId');
+    if (actividadId && filteredActividades.length > 0 && !filteredActividades.find(a => a.id === actividadId)) {
+      form.setValue('actividadId', '', { shouldValidate: true });
+    }
+  }, [watchedInstructorId, filteredActividades, form]);
 
   const getClassDetails = (cls: YogaClass) => {
     const specialist = specialists.find((i) => i.id === cls.instructorId);
@@ -132,15 +159,15 @@ export default function SchedulePage() {
     return { specialist, actividad, space };
   };
 
-  const getRoster = (cls: YogaClass): Student[] => {
-    return students.filter(s => cls.studentIds.includes(s.id));
+  const getRoster = (cls: YogaClass): Person[] => {
+    return people.filter(p => cls.personIds.includes(p.id));
   }
 
   const handleAdd = () => {
     setSelectedClass(undefined);
     form.reset({
-      instructorId: undefined,
-      actividadId: undefined,
+      instructorId: '',
+      actividadId: '',
       spaceId: undefined,
       dayOfWeek: 'Lunes',
       time: '09:00',
@@ -226,7 +253,7 @@ export default function SchedulePage() {
                       <FormLabel>Actividad</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -234,7 +261,7 @@ export default function SchedulePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {actividades.map((a) => (
+                          {filteredActividades.map((a) => (
                             <SelectItem key={a.id} value={a.id}>
                               {a.name}
                             </SelectItem>
@@ -253,7 +280,7 @@ export default function SchedulePage() {
                       <FormLabel>Especialista</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -261,7 +288,7 @@ export default function SchedulePage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {specialists.map((i) => (
+                          {filteredSpecialists.map((i) => (
                             <SelectItem key={i.id} value={i.id}>
                               {i.name}
                             </SelectItem>
@@ -280,7 +307,7 @@ export default function SchedulePage() {
                       <FormLabel>Espacio</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -308,7 +335,7 @@ export default function SchedulePage() {
                         <FormLabel>Día</FormLabel>
                         <Select
                           onValueChange={field.onChange}
-                          defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>
@@ -388,8 +415,9 @@ export default function SchedulePage() {
           <TableBody>
             {yogaClasses.map((cls) => {
               const { specialist, actividad, space } = getClassDetails(cls);
+              const enrolledCount = cls.personIds?.length || 0;
               const capacityPercentage =
-                ((cls.studentIds?.length || 0) / cls.capacity) * 100;
+                (enrolledCount / cls.capacity) * 100;
 
               return (
                 <TableRow key={cls.id}>
@@ -410,7 +438,7 @@ export default function SchedulePage() {
                     <div className="flex items-center gap-2">
                       <Progress value={capacityPercentage} className="w-24" />
                       <span className="text-sm text-muted-foreground">
-                        {cls.studentIds?.length || 0}/{cls.capacity}
+                        {enrolledCount}/{cls.capacity}
                       </span>
                     </div>
                   </TableCell>
@@ -427,12 +455,10 @@ export default function SchedulePage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleEdit(cls)}>
                           Editar Clase
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setViewingRoster(cls)}>Ver Lista</DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => openDeleteDialog(cls)}
@@ -458,7 +484,7 @@ export default function SchedulePage() {
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Esto eliminará permanentemente
-              la clase y desinscribirá a todos los asistentes.
+              la clase y desinscribirá a todas las personas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -478,7 +504,7 @@ export default function SchedulePage() {
       <Sheet open={!!viewingRoster} onOpenChange={(open) => !open && setViewingRoster(null)}>
         <SheetContent>
           <SheetHeader>
-            <SheetTitle>Lista de Asistentes</SheetTitle>
+            <SheetTitle>Lista de Personas</SheetTitle>
             {viewingRoster && (
                 <SheetDescription>
                     {actividades.find(a => a.id === viewingRoster.actividadId)?.name} - {viewingRoster.dayOfWeek}, {formatTime(viewingRoster.time)}
@@ -488,17 +514,17 @@ export default function SchedulePage() {
           <div className="py-4">
             <ul className="space-y-3">
                 {viewingRoster && getRoster(viewingRoster).length > 0 ? (
-                    getRoster(viewingRoster).map(student => (
-                        <li key={student.id} className="flex items-center gap-3">
+                    getRoster(viewingRoster).map(person => (
+                        <li key={person.id} className="flex items-center gap-3">
                             <Avatar>
-                                <AvatarImage src={student.avatar} alt={student.name} data-ai-hint="person photo"/>
-                                <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                                <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
+                                <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
                             </Avatar>
-                            <span>{student.name}</span>
+                            <span>{person.name}</span>
                         </li>
                     ))
                 ) : (
-                    <p className="text-sm text-muted-foreground">No hay asistentes inscritos en esta clase.</p>
+                    <p className="text-sm text-muted-foreground">No hay personas inscritas en esta clase.</p>
                 )}
             </ul>
           </div>
