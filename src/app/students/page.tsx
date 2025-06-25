@@ -48,7 +48,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
       (actividadFilter === 'all' || cls.actividadId === actividadFilter) &&
       (specialistFilter === 'all' || cls.instructorId === specialistFilter)
     ).sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
-  }, [yogaClasses, actividadFilter, specialistFilter]);
+  }, [yogaClasses, actividadFilter, specialistFilter, actividades, specialists]);
 
   function onSubmit(data: { classIds: string[] }) {
     enrollPersonInClasses(person.id, data.classIds);
@@ -75,14 +75,20 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                 <Label>Filtrar por Actividad</Label>
                 <Select onValueChange={setActividadFilter} value={actividadFilter}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">Todas</SelectItem>{actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    {actividades.slice().sort((a, b) => a.name.localeCompare(b.name)).map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label>Filtrar por Especialista</Label>
                 <Select onValueChange={setSpecialistFilter} value={specialistFilter}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="all">Todos</SelectItem>{specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {specialists.slice().sort((a, b) => a.name.localeCompare(b.name)).map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
                 </Select>
               </div>
             </div>
