@@ -2,7 +2,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
@@ -30,6 +30,7 @@ export default function Dashboard() {
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
     { href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
     { href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
+    { href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
@@ -108,7 +109,9 @@ export default function Dashboard() {
                     <div className="flex items-start justify-between">
                       <div>
                           <CardTitle className="text-lg font-bold">{item.label}</CardTitle>
-                          <p className="text-4xl font-bold mt-2">{item.count}</p>
+                          {item.count !== null && (
+                            <p className="text-4xl font-bold mt-2">{item.count}</p>
+                          )}
                       </div>
                       <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                           <item.icon className="h-6 w-6" />

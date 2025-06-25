@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Users, ClipboardList, Calendar, Star, HeartPulse, Warehouse, Bot } from "lucide-react";
+import { LayoutGrid, Users, ClipboardList, Calendar, Star, HeartPulse, Warehouse, LineChart } from "lucide-react";
 import Link from "next/link";
 import { SheetClose } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ const menuItems = [
   { href: "/instructors", label: "Especialistas", icon: ClipboardList },
   { href: "/specializations", label: "Actividades", icon: Star },
   { href: "/spaces", label: "Espacios", icon: Warehouse },
+  { href: "/statistics", label: "Estadísticas", icon: LineChart },
 ];
 
 function NavLink({ href, label, icon: Icon, isSheet, currentPath }: { href: string, label: string, icon: React.ElementType, isSheet: boolean, currentPath: string }) {
