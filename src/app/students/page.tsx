@@ -139,7 +139,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 }
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, yogaClasses, specialists, actividades, spaces } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, yogaClasses, especialistas, actividades, spaces } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -325,11 +325,9 @@ export default function StudentsPage() {
                         <CardContent className="flex flex-col flex-grow space-y-4 p-4 pt-0">
                             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <div className="text-slate-700 dark:text-slate-200">
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estado</div>
                                     <div>{getPaymentStatusBadge(person.paymentStatus)}</div>
                                 </div>
                                 <div className="text-slate-700 dark:text-slate-200">
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Membresía</div>
                                     <div>{person.membershipType}</div>
                                 </div>
                                 <div className="text-slate-700 dark:text-slate-200">
