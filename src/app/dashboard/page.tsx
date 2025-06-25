@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -178,8 +179,17 @@ export default function Dashboard() {
               <ul className="space-y-4">
                 {filteredClasses.map(cls => {
                   const { specialist, actividad, space } = getClassDetails(cls);
+                  const enrolledCount = cls.personIds.length;
+                  const capacity = space?.capacity ?? 0;
+                  const isFull = capacity > 0 && enrolledCount >= capacity;
                   return (
-                    <li key={cls.id} className="flex items-center gap-4 rounded-lg border p-3">
+                    <li 
+                      key={cls.id}
+                      className={cn(
+                        "flex items-center gap-4 rounded-lg border p-3 transition-colors",
+                        isFull && "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800"
+                      )}
+                    >
                       <div className="flex-1 space-y-1">
                         <p className="font-semibold">{actividad?.name || 'Clase'}</p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -189,7 +199,12 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <p className="font-bold text-primary">{formatTime(cls.time)}</p>
-                        <p className="text-sm text-muted-foreground">{cls.personIds.length} inscritos</p>
+                        <p className={cn(
+                            "text-sm", 
+                            isFull ? "font-semibold text-pink-600" : "text-muted-foreground"
+                          )}>
+                          {enrolledCount}/{capacity} inscritos
+                        </p>
                       </div>
                     </li>
                   );
