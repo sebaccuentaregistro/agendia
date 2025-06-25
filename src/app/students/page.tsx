@@ -116,7 +116,11 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                             </FormControl>
                             <div className="space-y-1 leading-none">
                               <FormLabel className={Utils.cn("font-normal", isFull && !isEnrolledInForm && "cursor-not-allowed")}>{actividad.name}</FormLabel>
-                              <div className="text-xs text-muted-foreground"><p>{specialist?.name}</p><p>{item.dayOfWeek} {formatTime(item.time)}</p><p>{space?.name} ({item.personIds.length}/{space.capacity})</p></div>
+                              <div className="text-xs text-muted-foreground">
+                                <p>{specialist?.name}</p>
+                                <p>{item.dayOfWeek} {formatTime(item.time)}</p>
+                                <p><span className="font-medium">Espacio:</span> {space?.name} ({item.personIds.length}/{space.capacity})</p>
+                              </div>
                               {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">Clase llena</p>}
                             </div>
                           </FormItem>
