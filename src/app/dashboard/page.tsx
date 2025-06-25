@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -137,7 +136,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Especialista" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los especialistas</SelectItem>
+                  <SelectItem value="all">Especialista</SelectItem>
                   {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -146,7 +145,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Actividad" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas las actividades</SelectItem>
+                  <SelectItem value="all">Actividades</SelectItem>
                   {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -155,7 +154,7 @@ export default function Dashboard() {
                   <SelectValue placeholder="Espacio" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todos los espacios</SelectItem>
+                  <SelectItem value="all">Espacios</SelectItem>
                   {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
