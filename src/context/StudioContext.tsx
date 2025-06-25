@@ -38,6 +38,7 @@ interface StudioContextType {
   updateYogaClass: (yogaClass: YogaClass) => void;
   deleteYogaClass: (yogaClassId: string) => void;
   enrollPersonInClasses: (personId: string, classIds: string[]) => void;
+  enrollPeopleInClass: (classId: string, personIds: string[]) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -342,8 +343,32 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     toast({ title: "Inscripciones Actualizadas" });
   };
 
+  const enrollPeopleInClass = (classId: string, personIds: string[]) => {
+    const classToUpdate = yogaClasses.find(c => c.id === classId);
+    if (!classToUpdate) return;
+
+    const space = spaces.find(s => s.id === classToUpdate.spaceId);
+    if (space && personIds.length > space.capacity) {
+      toast({
+        variant: "destructive",
+        title: "Capacidad excedida",
+        description: `Has seleccionado ${personIds.length} personas, pero la capacidad es de ${space.capacity}.`,
+        duration: 5000,
+      });
+      return;
+    }
+
+    setYogaClasses(prevClasses =>
+      prevClasses.map(cls =>
+        cls.id === classId ? { ...cls, personIds: [...new Set(personIds)] } : cls
+      )
+    );
+
+    toast({ title: "Inscripciones actualizadas" });
+  };
+
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, yogaClasses, payments, spaces, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addYogaClass, updateYogaClass, deleteYogaClass, enrollPersonInClasses }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, yogaClasses, payments, spaces, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addYogaClass, updateYogaClass, deleteYogaClass, enrollPersonInClasses, enrollPeopleInClass }}>
       {children}
     </StudioContext.Provider>
   );

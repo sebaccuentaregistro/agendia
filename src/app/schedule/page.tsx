@@ -1,12 +1,11 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Trash2, Pencil, Users, FileDown } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
 import { Person, YogaClass } from '@/types';
 import { useStudio } from '@/context/StudioContext';
@@ -15,11 +14,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn, exportToCsv } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
   instructorId: z.string({ required_error: 'Debes seleccionar un especialista.' }).min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -29,13 +28,96 @@ const formSchema = z.object({
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
 });
 
+function EnrollPeopleDialog({ yogaClass, onClose }: { yogaClass: YogaClass; onClose: () => void; }) {
+  const { people, spaces, enrollPeopleInClass, actividades } = useStudio();
+  
+  const form = useForm<{ personIds: string[] }>({
+    defaultValues: { personIds: yogaClass.personIds || [] },
+  });
+  const watchedPersonIds = form.watch('personIds');
+
+  const space = spaces.find(s => s.id === yogaClass.spaceId);
+  const capacity = space?.capacity ?? 0;
+  const actividad = actividades.find(a => a.id === yogaClass.actividadId);
+
+  function onSubmit(data: { personIds: string[] }) {
+    enrollPeopleInClass(yogaClass.id, data.personIds);
+    onClose();
+  }
+
+  const sortedPeople = [...people].sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <Dialog open onOpenChange={open => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Inscribir: {actividad?.name}</DialogTitle>
+          <DialogDescription>
+            Selecciona las personas para la clase. Ocupación: {watchedPersonIds.length}/{capacity}.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="personIds"
+              render={() => (
+                <FormItem>
+                  <ScrollArea className="h-72 rounded-md border p-4">
+                    {sortedPeople.length > 0 ? sortedPeople.map(person => (
+                      <FormField
+                        key={person.id}
+                        control={form.control}
+                        name="personIds"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 py-2">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value?.includes(person.id)}
+                                disabled={
+                                  !field.value?.includes(person.id) &&
+                                  watchedPersonIds.length >= capacity
+                                }
+                                onCheckedChange={checked => {
+                                  const currentValues = field.value || [];
+                                  return checked
+                                    ? field.onChange([...currentValues, person.id])
+                                    : field.onChange(
+                                        currentValues.filter(value => value !== person.id)
+                                      );
+                                }}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal">{person.name}</FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    )) : <p className="text-center text-sm text-muted-foreground">No hay personas para inscribir.</p>}
+                  </ScrollArea>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancelar
+              </Button>
+              <Button type="submit">Guardar</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function SchedulePage() {
-  const { specialists, actividades, yogaClasses, spaces, addYogaClass, updateYogaClass, deleteYogaClass, people } = useStudio();
+  const { specialists, actividades, yogaClasses, spaces, addYogaClass, updateYogaClass, deleteYogaClass } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<YogaClass | undefined>(undefined);
   const [classToDelete, setClassToDelete] = useState<YogaClass | null>(null);
-  const [viewingRoster, setViewingRoster] = useState<YogaClass | null>(null);
+  const [classToManage, setClassToManage] = useState<YogaClass | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => { setIsMounted(true); }, []);
@@ -90,10 +172,6 @@ export default function SchedulePage() {
     const actividad = actividades.find((s) => s.id === cls.actividadId);
     const space = spaces.find((s) => s.id === cls.spaceId);
     return { specialist, actividad, space };
-  };
-
-  const getRoster = (cls: YogaClass): Person[] => {
-    return people.filter(p => cls.personIds.includes(p.id));
   };
 
   const handleAdd = () => {
@@ -284,9 +362,9 @@ export default function SchedulePage() {
                     <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{capacity}</p>
                   </CardContent>
                   <CardFooter className={cn("flex items-center justify-between bg-muted/50 p-3 border-t", isFull && "border-pink-200 dark:border-pink-800")}>
-                    <Button variant="link" className="h-auto p-0 text-sm" onClick={() => setViewingRoster(cls)}>
+                    <Button variant="outline" className="h-auto px-3 py-1 text-sm" onClick={() => setClassToManage(cls)}>
                       <Users className="mr-2 h-4 w-4" />
-                      Ver Personas
+                      Inscribir Personas
                     </Button>
                     <div className="flex items-center">
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(cls)}><Pencil className="h-4 w-4" /><span className="sr-only">Editar</span></Button>
@@ -318,7 +396,7 @@ export default function SchedulePage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la clase. Si hay personas inscritas, la eliminación será bloqueada para proteger tus datos.</AlertDialogDescription>
+            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente la clase. Si hay personas inscritas, la eliminación será bloqueada para proteger tus datos.</AlertDialogDescriptionAlert>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setClassToDelete(null)}>Cancelar</AlertDialogCancel>
@@ -327,26 +405,7 @@ export default function SchedulePage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Sheet open={!!viewingRoster} onOpenChange={(open) => !open && setViewingRoster(null)}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Lista de Personas</SheetTitle>
-            {viewingRoster && (<SheetDescription>{actividades.find(a => a.id === viewingRoster.actividadId)?.name} - {viewingRoster.dayOfWeek}, {formatTime(viewingRoster.time)}</SheetDescription>)}
-          </SheetHeader>
-          <div className="py-4">
-            <ul className="space-y-3">
-                {viewingRoster && getRoster(viewingRoster).length > 0 ? (
-                    getRoster(viewingRoster).map(person => (
-                        <li key={person.id} className="flex items-center gap-3">
-                            <Avatar><AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/><AvatarFallback>{person.name.charAt(0)}</AvatarFallback></Avatar>
-                            <span>{person.name}</span>
-                        </li>
-                    ))
-                ) : (<p className="text-sm text-muted-foreground">No hay personas inscritas en esta clase.</p>)}
-            </ul>
-          </div>
-        </SheetContent>
-      </Sheet>
+      {classToManage && <EnrollPeopleDialog yogaClass={classToManage} onClose={() => setClassToManage(null)} />}
     </div>
   );
 }
