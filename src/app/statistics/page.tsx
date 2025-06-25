@@ -2,7 +2,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, XAxis, YAxis, Legend, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import { useStudio } from '@/context/StudioContext';
@@ -87,17 +87,23 @@ export default function StatisticsPage() {
     return config;
   }, [activityPopularity]);
 
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
     const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    
+
     if (percent < 0.05) return null;
 
     return (
-      <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" className="text-xs font-bold">
-        {`${(percent * 100).toFixed(0)}%`}
+      <text
+        x={x}
+        y={y}
+        className="text-[11px] font-semibold fill-primary-foreground"
+        textAnchor="middle"
+        dominantBaseline="central"
+      >
+        {name}
       </text>
     );
   };
@@ -149,7 +155,6 @@ export default function StatisticsPage() {
                   cursor={false}
                   content={<ChartTooltipContent indicator="dot" />}
                 />
-                <Legend />
                 <Line
                   type="monotone"
                   dataKey="nuevasPersonas"
@@ -177,7 +182,7 @@ export default function StatisticsPage() {
                 <PieChart>
                   <ChartTooltip
                     cursor={false}
-                    content={<ChartTooltipContent formatter={(value) => `${value} inscritos`} hideLabel />}
+                    content={<ChartTooltipContent hideLabel />}
                   />
                   <Pie
                     data={activityPopularity}
@@ -195,7 +200,6 @@ export default function StatisticsPage() {
                       <Cell key={`cell-${entry.name}`} fill={chartConfig[entry.name]?.color || '#ccc'} />
                     ))}
                   </Pie>
-                  <Legend />
                 </PieChart>
               </ChartContainer>
             ) : (
