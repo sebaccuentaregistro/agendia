@@ -12,7 +12,7 @@ import {
   spaces as initialSpaces
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { set, isBefore, subMonths } from 'date-fns';
+import { getStudentPaymentStatus } from '@/lib/utils';
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -210,6 +210,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const recordPayment = (personId: string) => {
     const person = people.find(p => p.id === personId);
     if (!person) return;
+
+    const paymentStatus = getStudentPaymentStatus(person, new Date());
+    if (paymentStatus === 'Al día') {
+      toast({
+        variant: "destructive",
+        title: "Pago no requerido",
+        description: `${person.name} ya se encuentra al día con sus pagos.`,
+      });
+      return;
+    }
+
     const now = new Date();
     setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: now } : p));
     setPayments(prev => [...prev, { id: `pay-${Date.now()}`, personId, date: now }]);
@@ -243,7 +254,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
     const classesAffected = yogaClasses.filter(c => c.spaceId === updated.id && c.personIds.length > updated.capacity);
     if (classesAffected.length > 0) {
-      toast({ variant: "destructive", title: "Error", description: "La nueva capacidad es menor que los inscritos en una clase." });
+      toast({ variant: "destructive", title: "Error de Capacidad", description: "La nueva capacidad es menor que los inscritos en una o más clases. Reasigna personas antes de cambiar la capacidad." });
       return;
     }
     setSpaces(prev => prev.map(s => s.id === updated.id ? updated : s));

@@ -36,22 +36,26 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'A
   return isBefore(lastPaymentDay, dueDateDay) ? 'Atrasado' : 'Al día';
 }
 
-export function getNextPaymentDate(person: Person, referenceDate: Date): Date | null {
+export function getNextPaymentDate(person: Person): Date | null {
   if (person.membershipType === 'Diario') {
     return null;
   }
 
-  const today = referenceDate;
+  const lastPayment = person.lastPaymentDate;
   const joinDay = person.joinDate.getDate();
-  
-  // Calculate potential due date in the current month
-  let thisMonthDueDate = set(today, { date: joinDay });
 
-  if (isBefore(today, thisMonthDueDate)) {
-    // If today is before this month's due date, then that's the next payment date.
-    return thisMonthDueDate;
+  // The potential due date in the same month as the last payment.
+  const potentialDueDateInMonthOfLastPayment = set(lastPayment, { date: joinDay });
+  
+  // If the last payment was made on or after the due date for that month, the next payment is next month.
+  // We compare just the dates, ignoring time.
+  const lastPaymentDay = set(lastPayment, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+
+  if (isBefore(lastPaymentDay, potentialDueDateInMonthOfLastPayment)) {
+    // Example: Joined on 15th. Last paid June 10th. Next payment is June 15th.
+    return potentialDueDateInMonthOfLastPayment;
   } else {
-    // Otherwise, the next payment date is next month.
-    return addMonths(thisMonthDueDate, 1);
+    // Example: Joined on 15th. Last paid June 15th (or June 20th). Next payment is July 15th.
+    return addMonths(potentialDueDateInMonthOfLastPayment, 1);
   }
 }

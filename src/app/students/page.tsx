@@ -150,7 +150,7 @@ export default function StudentsPage() {
     let peopleList = people.map(p => ({ 
         ...p, 
         paymentStatus: Utils.getStudentPaymentStatus(p, now),
-        nextPaymentDate: Utils.getNextPaymentDate(p, now)
+        nextPaymentDate: Utils.getNextPaymentDate(p)
     }));
     if (filter === 'overdue') { peopleList = peopleList.filter(p => p.paymentStatus === 'Atrasado'); }
     if (searchTerm.trim() !== '') { peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())); }
