@@ -50,6 +50,40 @@ export default function SchedulePage() {
       time: '09:00',
     },
   });
+  
+  const watchedActividadId = form.watch('actividadId');
+  const watchedInstructorId = form.watch('instructorId');
+
+  const availableSpecialists = useMemo(() => {
+    if (!watchedActividadId) return specialists;
+    return specialists.filter(s => s.actividadIds.includes(watchedActividadId));
+  }, [watchedActividadId, specialists]);
+
+  const availableActividades = useMemo(() => {
+    if (!watchedInstructorId) return actividades;
+    const specialist = specialists.find(s => s.id === watchedInstructorId);
+    if (!specialist) return [];
+    const specialistActividadIds = new Set(specialist.actividadIds);
+    return actividades.filter(a => specialistActividadIds.has(a.id));
+  }, [watchedInstructorId, specialists, actividades]);
+
+  useEffect(() => {
+    if (watchedActividadId && watchedInstructorId) {
+      const isValid = availableSpecialists.some(s => s.id === watchedInstructorId);
+      if (!isValid) {
+        form.setValue('instructorId', '', { shouldValidate: true });
+      }
+    }
+  }, [watchedActividadId, watchedInstructorId, availableSpecialists, form]);
+
+  useEffect(() => {
+    if (watchedInstructorId && watchedActividadId) {
+      const isValid = availableActividades.some(a => a.id === watchedActividadId);
+      if (!isValid) {
+        form.setValue('actividadId', '', { shouldValidate: true });
+      }
+    }
+  }, [watchedInstructorId, watchedActividadId, availableActividades, form]);
 
   const getClassDetails = (cls: YogaClass) => {
     const specialist = specialists.find((i) => i.id === cls.instructorId);
@@ -145,7 +179,7 @@ export default function SchedulePage() {
                     <FormLabel>Actividad</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una actividad" /></SelectTrigger></FormControl>
-                      <SelectContent>{actividades.map((a) => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}</SelectContent>
+                      <SelectContent>{availableActividades.map((a) => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}</SelectContent>
                     </Select><FormMessage />
                   </FormItem>
                 )}/>
@@ -154,7 +188,7 @@ export default function SchedulePage() {
                     <FormLabel>Especialista</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un especialista" /></SelectTrigger></FormControl>
-                      <SelectContent>{specialists.map((i) => (<SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>))}</SelectContent>
+                      <SelectContent>{availableSpecialists.map((i) => (<SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>))}</SelectContent>
                     </Select><FormMessage />
                   </FormItem>
                 )}/>
