@@ -2,13 +2,14 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
 import type { YogaClass } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const { yogaClasses, specialists, actividades, spaces, people } = useStudio();
@@ -23,6 +24,8 @@ export default function Dashboard() {
     const now = new Date();
     return people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
   }, [people]);
+
+  const hasOverdue = overdueCount > 0;
 
   const navItems = [
     { href: "/schedule", label: "Horario", icon: Calendar, count: yogaClasses.length },
@@ -91,14 +94,25 @@ export default function Dashboard() {
         <h2 className="text-xl font-semibold tracking-tight">Navegación Rápida</h2>
         <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <Link href="/students?filter=overdue" className="block transition-transform hover:-translate-y-1">
-              <Card className="group flex h-full flex-col justify-between p-6 transition-colors hover:border-destructive hover:shadow-lg">
+              <Card className={cn(
+                  "group flex h-full flex-col justify-between p-6 transition-colors hover:shadow-lg",
+                  hasOverdue ? "hover:border-destructive" : "hover:border-green-500"
+              )}>
                   <div className="flex items-start justify-between">
                     <div>
-                        <CardTitle className="text-lg font-bold text-destructive">Atrasados</CardTitle>
+                        <CardTitle className={cn(
+                          "text-lg font-bold",
+                          hasOverdue ? "text-destructive" : "text-green-600"
+                        )}>
+                          Atrasados
+                        </CardTitle>
                         <p className="text-4xl font-bold mt-2">{overdueCount}</p>
                     </div>
-                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
-                        <AlertTriangle className="h-6 w-6" />
+                    <div className={cn(
+                      "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg",
+                      hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
+                    )}>
+                        {hasOverdue ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
                     </div>
                   </div>
               </Card>
