@@ -94,33 +94,33 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
           <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
-                "group flex flex-col items-center justify-center p-4 transition-colors hover:shadow-lg aspect-square text-center",
+                "group flex flex-col items-center justify-center p-3 transition-colors hover:shadow-lg aspect-square text-center",
                 hasOverdue ? "hover:border-destructive" : "hover:border-green-500"
             )}>
                 <div className={cn(
-                    "flex h-12 w-12 mb-2 flex-shrink-0 items-center justify-center rounded-full",
+                    "flex h-10 w-10 mb-1.5 flex-shrink-0 items-center justify-center rounded-full",
                     hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
                 )}>
                     {hasOverdue ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
                 </div>
                 <CardTitle className={cn(
-                    "text-base font-semibold",
+                    "text-sm font-semibold",
                     hasOverdue ? "text-destructive" : "text-green-600"
                 )}>
                     Atrasados
                 </CardTitle>
-                <p className="text-2xl font-bold">{overdueCount}</p>
+                <p className="text-xl font-bold">{overdueCount}</p>
             </Card>
           </Link>
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-              <Card className="group flex flex-col items-center justify-center p-4 transition-colors hover:border-primary hover:shadow-lg aspect-square text-center">
-                  <div className="flex h-12 w-12 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Card className="group flex flex-col items-center justify-center p-3 transition-colors hover:border-primary hover:shadow-lg aspect-square text-center">
+                  <div className="flex h-10 w-10 mb-1.5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <item.icon className="h-6 w-6" />
                   </div>
-                  <CardTitle className="text-base font-semibold text-card-foreground">{item.label}</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-card-foreground">{item.label}</CardTitle>
                   {item.count !== null && (
-                    <p className="text-2xl font-bold text-muted-foreground">{item.count}</p>
+                    <p className="text-xl font-bold text-muted-foreground">{item.count}</p>
                   )}
               </Card>
           </Link>
