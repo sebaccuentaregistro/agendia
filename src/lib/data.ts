@@ -1,4 +1,4 @@
-import type { Person, Specialist, Actividad, YogaClass, Payment, Space } from '@/types';
+import type { Person, Specialist, Actividad, Session, Payment, Space } from '@/types';
 
 // Use a fixed reference date to make initial data deterministic
 const refDate = new Date('2024-07-15T10:00:00Z');
@@ -60,13 +60,13 @@ export const spaces: Space[] = [
   { id: 'space-2', name: 'Sala Luna', capacity: 15 },
 ];
 
-export const yogaClasses: YogaClass[] = [
-  { id: 'cls-1', instructorId: 'inst-1', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', personIds: ['stu-1', 'stu-4', 'stu-12', 'stu-18'] },
-  { id: 'cls-2', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', personIds: ['stu-2', 'stu-5', 'stu-6', 'stu-9', 'stu-16'] },
-  { id: 'cls-3', instructorId: 'inst-2', actividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', personIds: ['stu-1', 'stu-3', 'stu-10', 'stu-15'] },
-  { id: 'cls-4', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', personIds: ['stu-2', 'stu-4', 'stu-7', 'stu-13'] },
-  { id: 'cls-5', instructorId: 'inst-4', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', personIds: ['stu-5', 'stu-6', 'stu-11', 'stu-17'] },
-  { id: 'cls-6', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', personIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4', 'stu-8', 'stu-14'] },
+export const sessions: Session[] = [
+  { id: 'cls-1', instructorId: 'inst-1', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Lunes', time: '07:00', sessionType: 'Grupal', personIds: ['stu-1', 'stu-4', 'stu-12', 'stu-18'] },
+  { id: 'cls-2', instructorId: 'inst-1', actividadId: 'spec-2', spaceId: 'space-2', dayOfWeek: 'Martes', time: '09:00', sessionType: 'Grupal', personIds: ['stu-2', 'stu-5', 'stu-6', 'stu-9', 'stu-16'] },
+  { id: 'cls-3', instructorId: 'inst-2', actividadId: 'spec-3', spaceId: 'space-1', dayOfWeek: 'Miércoles', time: '18:00', sessionType: 'Grupal', personIds: ['stu-1', 'stu-3', 'stu-10', 'stu-15'] },
+  { id: 'cls-4', instructorId: 'inst-3', actividadId: 'spec-4', spaceId: 'space-2', dayOfWeek: 'Jueves', time: '19:30', sessionType: 'Grupal', personIds: ['stu-2', 'stu-4', 'stu-7', 'stu-13'] },
+  { id: 'cls-5', instructorId: 'inst-4', actividadId: 'spec-1', spaceId: 'space-1', dayOfWeek: 'Viernes', time: '18:30', sessionType: 'Grupal', personIds: ['stu-5', 'stu-6', 'stu-11', 'stu-17'] },
+  { id: 'cls-6', instructorId: 'inst-3', actividadId: 'spec-5', spaceId: 'space-2', dayOfWeek: 'Sábado', time: '11:00', sessionType: 'Grupal', personIds: ['stu-1', 'stu-2', 'stu-3', 'stu-4', 'stu-8', 'stu-14'] },
 ];
 
 export const payments: Payment[] = [

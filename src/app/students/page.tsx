@@ -2,7 +2,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Person } from '@/types';
+import type { Person, Session } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -36,27 +36,27 @@ const formSchema = z.object({
 });
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
-  const { yogaClasses, specialists, actividades, enrollPersonInClasses, spaces } = useStudio();
-  const form = useForm<{ classIds: string[] }>({ defaultValues: { classIds: yogaClasses.filter(cls => cls.personIds.includes(person.id)).map(cls => cls.id) } });
+  const { sessions, specialists, actividades, enrollPersonInSessions, spaces } = useStudio();
+  const form = useForm<{ sessionIds: string[] }>({ defaultValues: { sessionIds: sessions.filter(session => session.personIds.includes(person.id)).map(session => session.id) } });
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
 
-  const filteredClasses = yogaClasses
-      .filter(cls => 
-        (actividadFilter === 'all' || cls.actividadId === actividadFilter) &&
-        (specialistFilter === 'all' || cls.instructorId === specialistFilter)
+  const filteredSessions = sessions
+      .filter(session => 
+        (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
+        (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
-      .map(cls => ({
-        ...cls,
-        specialist: specialists.find(i => i.id === cls.instructorId),
-        actividad: actividades.find(a => a.id === cls.actividadId),
-        space: spaces.find(s => s.id === cls.spaceId),
+      .map(session => ({
+        ...session,
+        specialist: specialists.find(i => i.id === session.instructorId),
+        actividad: actividades.find(a => a.id === session.actividadId),
+        space: spaces.find(s => s.id === session.spaceId),
       }))
       .sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
 
 
-  function onSubmit(data: { classIds: string[] }) {
-    enrollPersonInClasses(person.id, data.classIds);
+  function onSubmit(data: { sessionIds: string[] }) {
+    enrollPersonInSessions(person.id, data.sessionIds);
     onOpenChange(false);
   }
 
@@ -68,7 +68,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
   return (
     <Dialog open={true} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader><DialogTitle>Asignar Clases a {person.name}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Asignar Sesiones a {person.name}</DialogTitle></DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -93,19 +93,21 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                 </Select>
               </div>
             </div>
-            <FormField control={form.control} name="classIds" render={() => (
+            <FormField control={form.control} name="sessionIds" render={() => (
               <FormItem>
-                <FormLabel>Clases Disponibles</FormLabel>
+                <FormLabel>Sesiones Disponibles</FormLabel>
                 <ScrollArea className="h-72 rounded-md border p-4">
                   <div className="space-y-4">
-                    {filteredClasses.map((item) => {
+                    {filteredSessions.map((item) => {
                       const { specialist, actividad, space } = item;
                       if (!actividad || !specialist || !space) return null;
-                      const isEnrolledInForm = form.watch('classIds').includes(item.id);
-                      const isFull = item.personIds.length >= space.capacity;
+                      const isEnrolledInForm = form.watch('sessionIds').includes(item.id);
+                      const isIndividual = item.sessionType === 'Individual';
+                      const capacity = isIndividual ? 1 : space.capacity;
+                      const isFull = item.personIds.length >= capacity;
 
                       return (
-                        <FormField key={item.id} control={form.control} name="classIds" render={({ field }) => (
+                        <FormField key={item.id} control={form.control} name="sessionIds" render={({ field }) => (
                           <FormItem className={Utils.cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", isFull && !isEnrolledInForm ? "bg-muted/50 opacity-50" : "hover:bg-muted/50")}>
                             <FormControl>
                               <Checkbox checked={field.value?.includes(item.id)} disabled={isFull && !isEnrolledInForm} onCheckedChange={(checked) => {
@@ -118,9 +120,9 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                               <div className="text-xs text-muted-foreground">
                                 <p>{specialist?.name}</p>
                                 <p>{item.dayOfWeek} {formatTime(item.time)}</p>
-                                <p><span className="font-medium">Espacio:</span> {space?.name} ({item.personIds.length}/{space.capacity})</p>
+                                <p><span className="font-medium">Espacio:</span> {space?.name} ({item.personIds.length}/{capacity}) {isIndividual && `(Individual)`}</p>
                               </div>
-                              {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">Clase llena</p>}
+                              {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">{isIndividual ? 'Ocupado' : 'Sesión llena'}</p>}
                             </div>
                           </FormItem>
                         )}/>
@@ -142,7 +144,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 }
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, yogaClasses, specialists, actividades, spaces } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -290,7 +292,7 @@ export default function StudentsPage() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {processedPeople.map((person) => {
                 const hasPayments = payments.some(p => p.personId === person.id);
-                const enrolledClasses = yogaClasses.filter(cls => cls.personIds.includes(person.id)).sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+                const enrolledSessions = sessions.filter(session => session.personIds.includes(person.id)).sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
                 return (
                     <Card key={person.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
                         <CardHeader className="flex flex-row items-start gap-4 p-4">
@@ -346,18 +348,18 @@ export default function StudentsPage() {
                             </div>
                             <div className="space-y-2 flex-grow flex flex-col">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                    Horarios inscriptos ({enrolledClasses.length})
+                                    Horarios inscriptos ({enrolledSessions.length})
                                 </h4>
-                                {enrolledClasses.length > 0 ? (
+                                {enrolledSessions.length > 0 ? (
                                     <div className="flex-grow space-y-3 rounded-lg border border-white/20 p-2 bg-white/10 backdrop-blur-sm">
-                                        {enrolledClasses.map(cls => {
-                                            const actividad = actividades.find(a => a.id === cls.actividadId);
-                                            const especialista = specialists.find(s => s.id === cls.instructorId);
-                                            const espacio = spaces.find(s => s.id === cls.spaceId);
+                                        {enrolledSessions.map(session => {
+                                            const actividad = actividades.find(a => a.id === session.actividadId);
+                                            const specialist = specialists.find(s => s.id === session.instructorId);
+                                            const space = spaces.find(s => s.id === session.spaceId);
                                             return (
-                                                <div key={cls.id} className="text-sm">
+                                                <div key={session.id} className="text-sm">
                                                     <p className="font-semibold text-slate-700 dark:text-slate-200">{actividad?.name || 'N/A'}</p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{cls.dayOfWeek}, {formatTime(cls.time)} &bull; {especialista?.name || 'Sin especialista'} &bull; {espacio?.name || 'Sin espacio'}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{session.dayOfWeek}, {formatTime(session.time)} &bull; {specialist?.name || 'Sin especialista'} &bull; {space?.name || 'Sin espacio'}</p>
                                                 </div>
                                             );
                                         })}
@@ -372,7 +374,7 @@ export default function StudentsPage() {
                         <CardFooter className="p-4 border-t border-white/20">
                             <Button className="w-full" variant="outline" onClick={() => setPersonToEnroll(person)}>
                                 <CalendarPlus className="mr-2 h-4 w-4" />
-                                Asignar Horario
+                                Asignar Sesión
                             </Button>
                         </CardFooter>
                     </Card>
@@ -404,7 +406,7 @@ export default function StudentsPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente a la persona, sus datos de pago y la desinscribirá de todas las clases.</AlertDialogDescriptionAlert>
+            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente a la persona, sus datos de pago y la desinscribirá de todas las sesiones.</AlertDialogDescriptionAlert>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setPersonToDelete(null)}>Cancelar</AlertDialogCancel>

@@ -23,7 +23,7 @@ const formSchema = z.object({
 });
 
 export default function SpacesPage() {
-  const { spaces, addSpace, updateSpace, deleteSpace, yogaClasses } = useStudio();
+  const { spaces, addSpace, updateSpace, deleteSpace, sessions } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<Space | undefined>(undefined);
@@ -83,7 +83,7 @@ export default function SpacesPage() {
   }
 
   const getUsageCount = (spaceId: string) => {
-    return yogaClasses.filter(c => c.spaceId === spaceId).length;
+    return sessions.filter(c => c.spaceId === spaceId).length;
   }
 
   return (
@@ -134,7 +134,7 @@ export default function SpacesPage() {
                   <Link href={`/schedule?spaceId=${space.id}`} className="transition-opacity hover:opacity-75">
                     <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                       <Warehouse className="h-4 w-4 text-slate-500" />
-                      <span className="font-semibold text-slate-700 dark:text-slate-200 underline-offset-4 hover:underline">Clases Programadas:</span>
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 underline-offset-4 hover:underline">Sesiones Programadas:</span>
                       {getUsageCount(space.id)}
                     </p>
                   </Link>
@@ -177,7 +177,7 @@ export default function SpacesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción no se puede deshacer. Asegúrate de que no haya clases programadas en este espacio antes de eliminarlo.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción no se puede deshacer. Asegúrate de que no haya sesiones programadas en este espacio antes de eliminarlo.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSpaceToDelete(null)}>Cancelar</AlertDialogCancel>

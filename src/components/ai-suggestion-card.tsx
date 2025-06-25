@@ -10,7 +10,7 @@ import { getSuggestion, GetSuggestionInput, GetSuggestionOutput } from '@/ai/flo
 import { cn } from '@/lib/utils';
 
 export function AISuggestionCard() {
-  const { yogaClasses, specialists, actividades, spaces } = useStudio();
+  const { sessions, specialists, actividades, spaces } = useStudio();
   const [suggestion, setSuggestion] = useState<GetSuggestionOutput | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export function AISuggestionCard() {
     setSuggestion(null);
 
     try {
-      const input: GetSuggestionInput = { yogaClasses, specialists, actividades, spaces };
+      const input: GetSuggestionInput = { sessions, specialists, actividades, spaces };
       const result = await getSuggestion(input);
       setSuggestion(result);
     } catch (e) {
@@ -30,16 +30,16 @@ export function AISuggestionCard() {
     } finally {
       setIsLoading(false);
     }
-  }, [yogaClasses, specialists, actividades, spaces]);
+  }, [sessions, specialists, actividades, spaces]);
 
   useEffect(() => {
-    if (yogaClasses.length > 0) {
+    if (sessions.length > 0) {
       fetchSuggestion();
     } else {
       setIsLoading(false);
-      setSuggestion({ suggestion: "Añade clases para recibir sugerencias.", suggestionType: "info" });
+      setSuggestion({ suggestion: "Añade sesiones para recibir sugerencias.", suggestionType: "info" });
     }
-  }, [yogaClasses.length, fetchSuggestion]);
+  }, [sessions.length, fetchSuggestion]);
 
   const { Icon, iconColor, title } = useMemo(() => {
     if (!suggestion) return { Icon: Lightbulb, iconColor: 'text-primary', title: 'Sugerencia IA' };

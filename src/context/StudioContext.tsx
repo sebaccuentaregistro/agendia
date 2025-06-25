@@ -1,12 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { Actividad, Specialist, Person, YogaClass, Payment, Space } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space } from '@/types';
 import { 
   actividades as initialActividades, 
   specialists as initialSpecialists,
   people as initialPeople,
-  yogaClasses as initialYogaClasses,
+  sessions as initialSessions,
   payments as initialPayments,
   spaces as initialSpaces
 } from '@/lib/data';
@@ -17,7 +17,7 @@ interface StudioContextType {
   actividades: Actividad[];
   specialists: Specialist[];
   people: Person[];
-  yogaClasses: YogaClass[];
+  sessions: Session[];
   payments: Payment[];
   spaces: Space[];
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
@@ -34,11 +34,11 @@ interface StudioContextType {
   addSpace: (space: Omit<Space, 'id'>) => void;
   updateSpace: (space: Space) => void;
   deleteSpace: (spaceId: string) => void;
-  addYogaClass: (yogaClass: Omit<YogaClass, 'id' | 'personIds'>) => void;
-  updateYogaClass: (yogaClass: YogaClass) => void;
-  deleteYogaClass: (yogaClassId: string) => void;
-  enrollPersonInClasses: (personId: string, classIds: string[]) => void;
-  enrollPeopleInClass: (classId: string, personIds: string[]) => void;
+  addSession: (session: Omit<Session, 'id' | 'personIds'>) => void;
+  updateSession: (session: Session) => void;
+  deleteSession: (sessionId: string) => void;
+  enrollPersonInSessions: (personId: string, sessionIds: string[]) => void;
+  enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -74,7 +74,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [actividades, setActividades] = useState<Actividad[]>([]);
   const [specialists, setSpecialists] = useState<Specialist[]>([]);
   const [spaces, setSpaces] = useState<Space[]>([]);
-  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -84,7 +84,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setActividades(loadFromLocalStorage('yoga-actividades', initialActividades));
     setSpecialists(loadFromLocalStorage('yoga-specialists', initialSpecialists));
     setSpaces(loadFromLocalStorage('yoga-spaces', initialSpaces));
-    setYogaClasses(loadFromLocalStorage('yoga-classes', initialYogaClasses));
+    setSessions(loadFromLocalStorage('yoga-sessions', initialSessions));
     setPeople(loadFromLocalStorage('yoga-people', initialPeople));
     setPayments(loadFromLocalStorage('yoga-payments', initialPayments));
     setIsInitialized(true); // Mark as initialized
@@ -94,7 +94,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-actividades', JSON.stringify(actividades)); }, [actividades, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-specialists', JSON.stringify(specialists)); }, [specialists, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-people', JSON.stringify(people)); }, [people, isInitialized]);
-  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-classes', JSON.stringify(yogaClasses)); }, [yogaClasses, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-sessions', JSON.stringify(sessions)); }, [sessions, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-payments', JSON.stringify(payments)); }, [payments, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces, isInitialized]);
 
@@ -115,12 +115,12 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteActividad = (id: string) => {
-    const isUsedInClass = yogaClasses.some(c => c.actividadId === id);
-    if (isUsedInClass) {
+    const isUsedInSession = sessions.some(c => c.actividadId === id);
+    if (isUsedInSession) {
       toast({
         variant: "destructive",
         title: "Actividad en Uso",
-        description: "Esta actividad está siendo utilizada en clases programadas. Debe eliminar o modificar esas clases primero.",
+        description: "Esta actividad está siendo utilizada en sesiones programadas. Debe eliminar o modificar esas sesiones primero.",
       });
       return;
     }
@@ -155,13 +155,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const originalSpecialist = specialists.find(s => s.id === updated.id);
     if (originalSpecialist) {
         const removedActividadIds = originalSpecialist.actividadIds.filter(id => !updated.actividadIds.includes(id));
-        const orphanedClasses = yogaClasses.filter(c => c.instructorId === updated.id && removedActividadIds.includes(c.actividadId));
+        const orphanedSessions = sessions.filter(c => c.instructorId === updated.id && removedActividadIds.includes(c.actividadId));
         
-        if (orphanedClasses.length > 0) {
+        if (orphanedSessions.length > 0) {
             toast({
                 variant: "destructive",
-                title: "Clases Inconsistentes",
-                description: `No se puede quitar la especialidad. Este especialista todavía tiene ${orphanedClasses.length} clase(s) programada(s) de este tipo. Reasigna o elimina esas clases primero.`,
+                title: "Sesiones Inconsistentes",
+                description: `No se puede quitar la especialidad. Este especialista todavía tiene ${orphanedSessions.length} sesión(es) programada(s) de este tipo. Reasigna o elimina esas sesiones primero.`,
                 duration: 6000,
             });
             return;
@@ -172,8 +172,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteSpecialist = (id: string) => {
-    if (yogaClasses.some(c => c.instructorId === id)) {
-      toast({ variant: "destructive", title: "Especialista en Uso", description: "Este especialista está asignado a clases. Debe reasignar o eliminar esas clases primero." });
+    if (sessions.some(c => c.instructorId === id)) {
+      toast({ variant: "destructive", title: "Especialista en Uso", description: "Este especialista está asignado a sesiones. Debe reasignar o eliminar esas sesiones primero." });
       return;
     }
     setSpecialists(prev => prev.filter(s => s.id !== id));
@@ -203,16 +203,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const deletePerson = (id: string) => {
     setPeople(prev => prev.filter(p => p.id !== id));
-    setYogaClasses(prev => prev.map(c => ({ ...c, personIds: c.personIds.filter(pid => pid !== id) })));
+    setSessions(prev => prev.map(c => ({ ...c, personIds: c.personIds.filter(pid => pid !== id) })));
     setPayments(prev => prev.filter(p => p.personId !== id));
   };
 
   const recordPayment = (personId: string) => {
     const person = people.find(p => p.id === personId);
     if (!person) return;
-
-    // Restriction removed to allow advance payments. The logic in `getNextPaymentDate`
-    // now correctly handles advancing the due date.
     
     const now = new Date();
     setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: now } : p));
@@ -245,122 +242,122 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         toast({ variant: "destructive", title: "Nombre Duplicado", description: "Ya existe otro espacio con este nombre." });
         return;
     }
-    const classesAffected = yogaClasses.filter(c => c.spaceId === updated.id && c.personIds.length > updated.capacity);
-    if (classesAffected.length > 0) {
-      toast({ variant: "destructive", title: "Error de Capacidad", description: "La nueva capacidad es menor que los inscritos en una o más clases. Reasigna personas antes de cambiar la capacidad." });
+    const sessionsAffected = sessions.filter(c => c.spaceId === updated.id && c.personIds.length > updated.capacity);
+    if (sessionsAffected.length > 0) {
+      toast({ variant: "destructive", title: "Error de Capacidad", description: "La nueva capacidad es menor que los inscritos en una o más sesiones. Reasigna personas antes de cambiar la capacidad." });
       return;
     }
     setSpaces(prev => prev.map(s => s.id === updated.id ? updated : s));
   };
 
   const deleteSpace = (id: string) => {
-    if (yogaClasses.some(c => c.spaceId === id)) {
-      toast({ variant: "destructive", title: "Espacio en Uso", description: "No se puede eliminar un espacio con clases programadas. Debe reasignar o eliminar esas clases primero." });
+    if (sessions.some(c => c.spaceId === id)) {
+      toast({ variant: "destructive", title: "Espacio en Uso", description: "No se puede eliminar un espacio con sesiones programadas. Debe reasignar o eliminar esas sesiones primero." });
       return;
     }
     setSpaces(prev => prev.filter(s => s.id !== id));
   };
 
-  const addYogaClass = (yogaClass: Omit<YogaClass, 'id' | 'personIds'>) => {
-    const specialistConflict = yogaClasses.some(c => c.dayOfWeek === yogaClass.dayOfWeek && c.time === yogaClass.time && c.instructorId === yogaClass.instructorId);
+  const addSession = (session: Omit<Session, 'id' | 'personIds'>) => {
+    const specialistConflict = sessions.some(c => c.dayOfWeek === session.dayOfWeek && c.time === session.time && c.instructorId === session.instructorId);
     if (specialistConflict) {
-      toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este especialista ya tiene otra clase programada a la misma hora." });
+      toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este especialista ya tiene otra sesión programada a la misma hora." });
       return;
     }
-    const spaceConflict = yogaClasses.some(c => c.dayOfWeek === yogaClass.dayOfWeek && c.time === yogaClass.time && c.spaceId === yogaClass.spaceId);
+    const spaceConflict = sessions.some(c => c.dayOfWeek === session.dayOfWeek && c.time === session.time && c.spaceId === session.spaceId);
     if (spaceConflict) {
       toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este espacio ya está en uso a esa hora." });
       return;
     }
-    setYogaClasses(prev => [...prev, { ...yogaClass, id: `class-${Date.now()}`, personIds: [] }]);
+    setSessions(prev => [...prev, { ...session, id: `session-${Date.now()}`, personIds: [] }]);
   };
 
-  const updateYogaClass = (updated: YogaClass) => {
-    const specialistConflict = yogaClasses.some(c => c.id !== updated.id && c.dayOfWeek === updated.dayOfWeek && c.time === updated.time && c.instructorId === updated.instructorId);
+  const updateSession = (updated: Session) => {
+    const specialistConflict = sessions.some(c => c.id !== updated.id && c.dayOfWeek === updated.dayOfWeek && c.time === updated.time && c.instructorId === updated.instructorId);
     if (specialistConflict) {
-      toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este especialista ya tiene otra clase programada a la misma hora." });
+      toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este especialista ya tiene otra sesión programada a la misma hora." });
       return;
     }
-    const spaceConflict = yogaClasses.some(c => c.id !== updated.id && c.dayOfWeek === updated.dayOfWeek && c.time === updated.time && c.spaceId === updated.spaceId);
+    const spaceConflict = sessions.some(c => c.id !== updated.id && c.dayOfWeek === updated.dayOfWeek && c.time === updated.time && c.spaceId === updated.spaceId);
     if (spaceConflict) {
       toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este espacio ya está en uso a esa hora." });
       return;
     }
-    setYogaClasses(prev => prev.map(c => c.id === updated.id ? updated : c));
+    setSessions(prev => prev.map(c => c.id === updated.id ? updated : c));
   };
 
-  const deleteYogaClass = (id: string) => {
-    const classToDelete = yogaClasses.find(c => c.id === id);
-    if (classToDelete && classToDelete.personIds.length > 0) {
+  const deleteSession = (id: string) => {
+    const sessionToDelete = sessions.find(c => c.id === id);
+    if (sessionToDelete && sessionToDelete.personIds.length > 0) {
       toast({
         variant: 'destructive',
-        title: 'Clase con Inscritos',
-        description: `No se puede eliminar. Hay ${classToDelete.personIds.length} persona(s) inscrita(s). Mueve o desinscribe a las personas primero.`,
+        title: 'Sesión con Inscritos',
+        description: `No se puede eliminar. Hay ${sessionToDelete.personIds.length} persona(s) inscrita(s). Mueve o desinscribe a las personas primero.`,
         duration: 6000,
       });
       return;
     }
-    setYogaClasses(prev => prev.filter(c => c.id !== id));
+    setSessions(prev => prev.filter(c => c.id !== id));
   };
 
-  const enrollPersonInClasses = (personId: string, newClassIds: string[]) => {
-    const uniqueNewClassIds = [...new Set(newClassIds)];
+  const enrollPersonInSessions = (personId: string, newSessionIds: string[]) => {
+    const uniqueNewSessionIds = [...new Set(newSessionIds)];
 
-    // Before any modifications, check for capacity on newly added classes
-    for (const classId of uniqueNewClassIds) {
-        const classToEnroll = yogaClasses.find(c => c.id === classId);
-        if (!classToEnroll) continue; 
+    for (const sessionId of uniqueNewSessionIds) {
+        const sessionToEnroll = sessions.find(c => c.id === sessionId);
+        if (!sessionToEnroll) continue; 
         
-        const isAlreadyEnrolled = classToEnroll.personIds.includes(personId);
-        // Only check capacity if the person is not already in the class
-        if (!isAlreadyEnrolled) {
-            const space = spaces.find(s => s.id === classToEnroll.spaceId);
-            if (space && classToEnroll.personIds.length >= space.capacity) {
-                const actividad = actividades.find(a => a.id === classToEnroll.actividadId);
-                toast({
-                    variant: "destructive",
-                    title: "Clase Llena",
-                    description: `No se puede inscribir en "${actividad?.name}". La clase ha alcanzado su capacidad máxima.`,
-                    duration: 5000,
-                });
-                return; // Abort the entire operation
-            }
+        const isAlreadyEnrolled = sessionToEnroll.personIds.includes(personId);
+        if (isAlreadyEnrolled) continue;
+
+        const space = spaces.find(s => s.id === sessionToEnroll.spaceId);
+        const capacity = sessionToEnroll.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+        
+        if (sessionToEnroll.personIds.length >= capacity) {
+            const actividad = actividades.find(a => a.id === sessionToEnroll.actividadId);
+            toast({
+                variant: "destructive",
+                title: sessionToEnroll.sessionType === 'Individual' ? "Sesión Individual Ocupada" : "Sesión Llena",
+                description: `No se puede inscribir en "${actividad?.name}". La sesión ha alcanzado su capacidad máxima.`,
+                duration: 5000,
+            });
+            return; // Abort the entire operation
         }
     }
 
-    let classesToUpdate = [...yogaClasses];
-    // Un-enroll from all classes first to handle removals cleanly
-    classesToUpdate = classesToUpdate.map(c => ({...c, personIds: c.personIds.filter(pid => pid !== personId)}));
+    let sessionsToUpdate = [...sessions];
+    sessionsToUpdate = sessionsToUpdate.map(c => ({...c, personIds: c.personIds.filter(pid => pid !== personId)}));
     
-    // Enroll in the new, unique list of classes
-    for (const classId of uniqueNewClassIds) {
-      const classIndex = classesToUpdate.findIndex(c => c.id === classId);
-      if (classIndex !== -1) {
-        classesToUpdate[classIndex].personIds.push(personId);
+    for (const sessionId of uniqueNewSessionIds) {
+      const sessionIndex = sessionsToUpdate.findIndex(c => c.id === sessionId);
+      if (sessionIndex !== -1) {
+        sessionsToUpdate[sessionIndex].personIds.push(personId);
       }
     }
-    setYogaClasses(classesToUpdate);
+    setSessions(sessionsToUpdate);
     toast({ title: "Inscripciones Actualizadas" });
   };
 
-  const enrollPeopleInClass = (classId: string, personIds: string[]) => {
-    const classToUpdate = yogaClasses.find(c => c.id === classId);
-    if (!classToUpdate) return;
+  const enrollPeopleInClass = (sessionId: string, personIds: string[]) => {
+    const sessionToUpdate = sessions.find(c => c.id === sessionId);
+    if (!sessionToUpdate) return;
 
-    const space = spaces.find(s => s.id === classToUpdate.spaceId);
-    if (space && personIds.length > space.capacity) {
+    const space = spaces.find(s => s.id === sessionToUpdate.spaceId);
+    const capacity = sessionToUpdate.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+
+    if (personIds.length > capacity) {
       toast({
         variant: "destructive",
         title: "Capacidad excedida",
-        description: `Has seleccionado ${personIds.length} personas, pero la capacidad es de ${space.capacity}.`,
+        description: `Has seleccionado ${personIds.length} personas, pero la capacidad es de ${capacity}.`,
         duration: 5000,
       });
       return;
     }
 
-    setYogaClasses(prevClasses =>
-      prevClasses.map(cls =>
-        cls.id === classId ? { ...cls, personIds: [...new Set(personIds)] } : cls
+    setSessions(prevSessions =>
+      prevSessions.map(session =>
+        session.id === sessionId ? { ...session, personIds: [...new Set(personIds)] } : session
       )
     );
 
@@ -368,7 +365,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, yogaClasses, payments, spaces, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addYogaClass, updateYogaClass, deleteYogaClass, enrollPersonInClasses, enrollPeopleInClass }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass }}>
       {children}
     </StudioContext.Provider>
   );

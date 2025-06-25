@@ -6,7 +6,7 @@ import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserP
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
-import type { YogaClass } from '@/types';
+import type { Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSearchParams } from 'next/navigation';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const formSchema = z.object({
   instructorId: z.string({ required_error: 'Debes seleccionar un especialista.' }).min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -26,22 +27,23 @@ const formSchema = z.object({
   spaceId: z.string({ required_error: 'Debes seleccionar un espacio.' }).min(1, { message: 'Debes seleccionar un espacio.' }),
   dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
+  sessionType: z.enum(['Grupal', 'Individual']),
 });
 
-function EnrollPeopleDialog({ yogaClass, onClose }: { yogaClass: YogaClass; onClose: () => void; }) {
+function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
   const { people, spaces, enrollPeopleInClass, actividades } = useStudio();
   
   const form = useForm<{ personIds: string[] }>({
-    defaultValues: { personIds: yogaClass.personIds || [] },
+    defaultValues: { personIds: session.personIds || [] },
   });
   const watchedPersonIds = form.watch('personIds');
 
-  const space = spaces.find(s => s.id === yogaClass.spaceId);
-  const capacity = space?.capacity ?? 0;
-  const actividad = actividades.find(a => a.id === yogaClass.actividadId);
+  const space = spaces.find(s => s.id === session.spaceId);
+  const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+  const actividad = actividades.find(a => a.id === session.actividadId);
 
   function onSubmit(data: { personIds: string[] }) {
-    enrollPeopleInClass(yogaClass.id, data.personIds);
+    enrollPeopleInClass(session.id, data.personIds);
     onClose();
   }
 
@@ -53,7 +55,7 @@ function EnrollPeopleDialog({ yogaClass, onClose }: { yogaClass: YogaClass; onCl
         <DialogHeader>
           <DialogTitle>Inscribir: {actividad?.name}</DialogTitle>
           <DialogDescription>
-            Selecciona las personas para la clase. Ocupación: {watchedPersonIds.length}/{capacity}.
+            Selecciona las personas para la sesión. Ocupación: {watchedPersonIds.length}/{capacity}.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -112,12 +114,12 @@ function EnrollPeopleDialog({ yogaClass, onClose }: { yogaClass: YogaClass; onCl
 }
 
 export default function SchedulePage() {
-  const { specialists, actividades, yogaClasses, spaces, addYogaClass, updateYogaClass, deleteYogaClass } = useStudio();
+  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedClass, setSelectedClass] = useState<YogaClass | undefined>(undefined);
-  const [classToDelete, setClassToDelete] = useState<YogaClass | null>(null);
-  const [classToManage, setClassToManage] = useState<YogaClass | null>(null);
+  const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
+  const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
+  const [sessionToManage, setSessionToManage] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [filters, setFilters] = useState({
     specialistId: 'all',
@@ -150,6 +152,7 @@ export default function SchedulePage() {
       spaceId: '',
       dayOfWeek: 'Lunes',
       time: '09:00',
+      sessionType: 'Grupal',
     },
   });
   
@@ -187,46 +190,46 @@ export default function SchedulePage() {
     }
   }, [watchedInstructorId, watchedActividadId, availableActividades, form]);
 
-  const getClassDetails = (cls: YogaClass) => {
-    const specialist = specialists.find((i) => i.id === cls.instructorId);
-    const actividad = actividades.find((s) => s.id === cls.actividadId);
-    const space = spaces.find((s) => s.id === cls.spaceId);
+  const getSessionDetails = (session: Session) => {
+    const specialist = specialists.find((i) => i.id === session.instructorId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
+    const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   };
 
   const handleAdd = () => {
-    setSelectedClass(undefined);
-    form.reset({ instructorId: '', actividadId: '', spaceId: '', dayOfWeek: 'Lunes', time: '09:00' });
+    setSelectedSession(undefined);
+    form.reset({ instructorId: '', actividadId: '', spaceId: '', dayOfWeek: 'Lunes', time: '09:00', sessionType: 'Grupal' });
     setIsDialogOpen(true);
   };
 
-  const handleEdit = (cls: YogaClass) => {
-    setSelectedClass(cls);
-    form.reset({ instructorId: cls.instructorId, actividadId: cls.actividadId, spaceId: cls.spaceId, dayOfWeek: cls.dayOfWeek, time: cls.time });
+  const handleEdit = (session: Session) => {
+    setSelectedSession(session);
+    form.reset({ ...session });
     setIsDialogOpen(true);
   };
 
-  const openDeleteDialog = (cls: YogaClass) => {
-    setClassToDelete(cls);
+  const openDeleteDialog = (session: Session) => {
+    setSessionToDelete(session);
     setIsDeleteDialogOpen(true);
   };
 
   const handleDelete = () => {
-    if (classToDelete) {
-      deleteYogaClass(classToDelete.id);
+    if (sessionToDelete) {
+      deleteSession(sessionToDelete.id);
       setIsDeleteDialogOpen(false);
-      setClassToDelete(null);
+      setSessionToDelete(null);
     }
   };
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    if (selectedClass) {
-      updateYogaClass({ ...selectedClass, ...values });
+    if (selectedSession) {
+      updateSession({ ...selectedSession, ...values });
     } else {
-      addYogaClass(values);
+      addSession(values);
     }
     setIsDialogOpen(false);
-    setSelectedClass(undefined);
+    setSelectedSession(undefined);
   }
 
   const formatTime = (time: string) => {
@@ -242,27 +245,27 @@ export default function SchedulePage() {
     return 'Noche';
   };
 
-  const sortedClasses = useMemo(() => {
+  const sortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    return [...yogaClasses].sort((a, b) => {
+    return [...sessions].sort((a, b) => {
         const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
         if (dayComparison !== 0) return dayComparison;
         return a.time.localeCompare(b.time);
     });
-  }, [yogaClasses]);
+  }, [sessions]);
   
-  const filteredClasses = useMemo(() => {
-    return sortedClasses.filter(cls => {
-        const timeOfDay = getTimeOfDay(cls.time);
+  const filteredSessions = useMemo(() => {
+    return sortedSessions.filter(session => {
+        const timeOfDay = getTimeOfDay(session.time);
         return (
-            (filters.actividadId === 'all' || cls.actividadId === filters.actividadId) &&
-            (filters.spaceId === 'all' || cls.spaceId === filters.spaceId) &&
-            (filters.specialistId === 'all' || cls.instructorId === filters.specialistId) &&
-            (filters.dayOfWeek === 'all' || cls.dayOfWeek === filters.dayOfWeek) &&
+            (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
+            (filters.spaceId === 'all' || session.spaceId === filters.spaceId) &&
+            (filters.specialistId === 'all' || session.instructorId === filters.specialistId) &&
+            (filters.dayOfWeek === 'all' || session.dayOfWeek === filters.dayOfWeek) &&
             (filters.timeOfDay === 'all' || timeOfDay === filters.timeOfDay)
         );
     });
-  }, [sortedClasses, filters]);
+  }, [sortedSessions, filters]);
 
 
   const handleExportSchedule = () => {
@@ -272,19 +275,21 @@ export default function SchedulePage() {
         espacio: 'Espacio',
         dia: 'Día',
         hora: 'Hora',
+        tipo: 'Tipo',
         inscritos: 'Inscritos',
         capacidad: 'Capacidad'
     };
-    const dataToExport = filteredClasses.map(cls => {
-        const { specialist, actividad, space } = getClassDetails(cls);
+    const dataToExport = filteredSessions.map(session => {
+        const { specialist, actividad, space } = getSessionDetails(session);
         return {
             actividad: actividad?.name || 'N/A',
             especialista: specialist?.name || 'N/A',
             espacio: space?.name || 'N/A',
-            dia: cls.dayOfWeek,
-            hora: cls.time,
-            inscritos: cls.personIds.length,
-            capacidad: space?.capacity || 0
+            dia: session.dayOfWeek,
+            hora: session.time,
+            tipo: session.sessionType,
+            inscritos: session.personIds.length,
+            capacidad: session.sessionType === 'Individual' ? 1 : (space?.capacity || 0)
         }
     });
 
@@ -297,10 +302,28 @@ export default function SchedulePage() {
        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{selectedClass ? 'Editar Clase' : 'Programar Nueva Clase'}</DialogTitle>
+                <DialogTitle>{selectedSession ? 'Editar Sesión' : 'Programar Nueva Sesión'}</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField control={form.control} name="sessionType" render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>Tipo de Sesión</FormLabel>
+                        <FormControl>
+                          <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl><RadioGroupItem value="Grupal" /></FormControl>
+                              <FormLabel className="font-normal">Grupal</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl><RadioGroupItem value="Individual" /></FormControl>
+                              <FormLabel className="font-normal">Individual</FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}/>
                   <FormField control={form.control} name="actividadId" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Actividad</FormLabel>
@@ -405,39 +428,40 @@ export default function SchedulePage() {
 
       <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
         {isMounted ? (
-          sortedClasses.length > 0 ? (
-            filteredClasses.length > 0 ? (
-                filteredClasses.map((cls) => {
-                const { specialist, actividad, space } = getClassDetails(cls);
-                const capacity = space?.capacity || 0;
-                const enrolledCount = cls.personIds?.length || 0;
+          sessions.length > 0 ? (
+            filteredSessions.length > 0 ? (
+                filteredSessions.map((session) => {
+                const { specialist, actividad, space } = getSessionDetails(session);
+                const isIndividual = session.sessionType === 'Individual';
+                const capacity = isIndividual ? 1 : space?.capacity || 0;
+                const enrolledCount = session.personIds?.length || 0;
                 const availableSpots = capacity - enrolledCount;
-                const classTitle = `${actividad?.name || 'Clase'}`;
+                const sessionTitle = `${actividad?.name || 'Sesión'}`;
                 const isFull = availableSpots <= 0;
 
                 return (
                   <Card 
-                    key={cls.id} 
+                    key={session.id} 
                     className={cn(
                       "flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 border-white/20 shadow-lg",
                       "bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl"
                     )}
                   >
                     <CardHeader className="flex flex-row items-start justify-between p-4">
-                      <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{classTitle}</CardTitle>
+                      <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{sessionTitle}</CardTitle>
                       <div className={cn(
                           'text-xs font-bold px-3 py-1 rounded-full text-white', 
                           isFull 
                             ? 'bg-gradient-to-r from-rose-500 to-pink-600' 
                             : 'bg-gradient-to-r from-emerald-400 to-teal-500'
                         )}>
-                        {isFull ? 'Clase Llena' : `${availableSpots} Lugares`}
+                        {isIndividual ? 'Individual' : (isFull ? 'Llena' : `${availableSpots} Lugares`)}
                       </div>
                     </CardHeader>
                     <CardContent className="flex-grow p-4 pt-0 space-y-3 text-sm">
                       <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
                         <Clock className="h-4 w-4 text-slate-500" />
-                        <span>{cls.dayOfWeek}, {formatTime(cls.time)}</span>
+                        <span>{session.dayOfWeek}, {formatTime(session.time)}</span>
                       </div>
                       <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
                         <User className="h-4 w-4 text-slate-500" />
@@ -448,18 +472,18 @@ export default function SchedulePage() {
                         <span>{space?.name}</span>
                       </div>
                       <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                        <Users className="h-4 w-4 text-slate-500" />
+                        {isIndividual ? <User className="h-4 w-4 text-slate-500" /> : <Users className="h-4 w-4 text-slate-500" />}
                         <span>{enrolledCount}/{capacity} Inscritos</span>
                       </div>
                     </CardContent>
                     <CardFooter className="p-4 flex items-center justify-between gap-2">
-                      <Button className="w-full flex-1 h-12 text-base font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all" onClick={() => setClassToManage(cls)}>
+                      <Button className="w-full flex-1 h-12 text-base font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all" onClick={() => setSessionToManage(session)}>
                         <UserPlus className="mr-2 h-5 w-5" />
                         Inscribir
                       </Button>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => handleEdit(cls)}><Pencil className="h-5 w-5 text-slate-600" /><span className="sr-only">Editar</span></Button>
-                        <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => openDeleteDialog(cls)}><Trash2 className="h-5 w-5 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
+                        <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => handleEdit(session)}><Pencil className="h-5 w-5 text-slate-600" /><span className="sr-only">Editar</span></Button>
+                        <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => openDeleteDialog(session)}><Trash2 className="h-5 w-5 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
                       </div>
                     </CardFooter>
                   </Card>
@@ -469,7 +493,7 @@ export default function SchedulePage() {
                 <div className="col-span-1 md:col-span-2 xl:col-span-3">
                     <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 backdrop-blur-lg rounded-2xl border-white/20">
                     <CardHeader>
-                        <CardTitle className="text-slate-700 dark:text-slate-200">No se encontraron clases</CardTitle>
+                        <CardTitle className="text-slate-700 dark:text-slate-200">No se encontraron sesiones</CardTitle>
                         <CardDescription className="text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</CardDescription>
                     </CardHeader>
                     </Card>
@@ -479,8 +503,8 @@ export default function SchedulePage() {
             <div className="col-span-1 md:col-span-2 xl:col-span-3">
                <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 backdrop-blur-lg rounded-2xl border-white/20">
                   <CardHeader>
-                    <CardTitle className="text-slate-700 dark:text-slate-200">No Hay Clases Programadas</CardTitle>
-                    <CardDescription className="text-slate-500 dark:text-slate-400">Empieza a organizar tu estudio añadiendo tu primera clase.</CardDescription>
+                    <CardTitle className="text-slate-700 dark:text-slate-200">No Hay Sesiones Programadas</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400">Empieza a organizar tu estudio añadiendo tu primera sesión.</CardDescription>
                   </CardHeader>
                   <CardContent>
                      <DialogTrigger asChild>
@@ -501,16 +525,16 @@ export default function SchedulePage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente la clase. Si hay personas inscritas, la eliminación será bloqueada para proteger tus datos.</AlertDialogDescriptionAlert>
+            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente la sesión. Si hay personas inscritas, la eliminación será bloqueada para proteger tus datos.</AlertDialogDescriptionAlert>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setClassToDelete(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Sí, eliminar clase</AlertDialogAction>
+            <AlertDialogCancel onClick={() => setSessionToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Sí, eliminar sesión</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {classToManage && <EnrollPeopleDialog yogaClass={classToManage} onClose={() => setClassToManage(null)} />}
+      {sessionToManage && <EnrollPeopleDialog session={sessionToManage} onClose={() => setSessionToManage(null)} />}
     </div>
   );
 }

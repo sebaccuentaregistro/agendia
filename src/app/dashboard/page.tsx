@@ -9,38 +9,38 @@ import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
-import type { YogaClass, Person } from '@/types';
+import type { Session, Person } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 
 // Helper function to render student cards inside the sheet
-function EnrolledStudentsSheet({ yogaClass, onClose }: { yogaClass: YogaClass; onClose: () => void }) {
+function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, actividades, specialists, spaces } = useStudio();
 
   const enrolledPeople = useMemo(() => {
-    return people.filter(p => yogaClass.personIds.includes(p.id));
-  }, [people, yogaClass]);
+    return people.filter(p => session.personIds.includes(p.id));
+  }, [people, session]);
 
-  const classDetails = useMemo(() => {
-    const specialist = specialists.find((i) => i.id === yogaClass.instructorId);
-    const actividad = actividades.find((s) => s.id === yogaClass.actividadId);
-    const space = spaces.find((s) => s.id === yogaClass.spaceId);
+  const sessionDetails = useMemo(() => {
+    const specialist = specialists.find((i) => i.id === session.instructorId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
+    const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
-  }, [yogaClass, specialists, actividades, spaces]);
+  }, [session, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
   return (
-    <Sheet open={!!yogaClass} onOpenChange={(open) => !open && onClose()}>
+    <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Inscritos en {classDetails.actividad?.name || 'Clase'}</SheetTitle>
+          <SheetTitle>Inscritos en {sessionDetails.actividad?.name || 'Sesión'}</SheetTitle>
           <SheetDescription>
-            {yogaClass.dayOfWeek} a las {yogaClass.time} en {classDetails.space?.name || 'N/A'}.
+            {session.dayOfWeek} a las {session.time} en {sessionDetails.space?.name || 'N/A'}.
             <br/>
-            {enrolledPeople.length} de {classDetails.space?.capacity || 0} personas inscritas.
+            {enrolledPeople.length} de {sessionDetails.space?.capacity || 0} personas inscritas.
           </SheetDescription>
         </SheetHeader>
         <div className="mt-4 space-y-4 h-[calc(100%-8rem)] overflow-y-auto pr-4">
@@ -48,10 +48,6 @@ function EnrolledStudentsSheet({ yogaClass, onClose }: { yogaClass: YogaClass; o
             enrolledPeople.map(person => (
               <Card key={person.id} className="p-3 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border-white/20">
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                      <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
-                      <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
                   <div>
                     <p className="font-semibold text-slate-800 dark:text-slate-100">{person.name}</p>
                     <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
@@ -78,14 +74,14 @@ function EnrolledStudentsSheet({ yogaClass, onClose }: { yogaClass: YogaClass; o
 
 
 export default function Dashboard() {
-  const { yogaClasses, specialists, actividades, spaces, people } = useStudio();
+  const { sessions, specialists, actividades, spaces, people } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
     specialistId: 'all',
     timeOfDay: 'all', // Mañana, Tarde, Noche
   });
-  const [selectedClassForStudents, setSelectedClassForStudents] = useState<YogaClass | null>(null);
+  const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
 
   const overdueCount = useMemo(() => {
     const now = new Date();
@@ -95,7 +91,7 @@ export default function Dashboard() {
   const hasOverdue = overdueCount > 0;
 
   const navItems = [
-    { href: "/schedule", label: "Horarios", icon: Calendar, count: yogaClasses.length },
+    { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
     { href: "/students", label: "Personas", icon: Users, count: people.length },
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
     { href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
@@ -107,8 +103,8 @@ export default function Dashboard() {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
 
-  const { todaysClasses, filteredClasses, todayName } = useMemo(() => {
-    const dayMap: { [key: number]: YogaClass['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
+  const { todaysSessions, filteredSessions, todayName } = useMemo(() => {
+    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const today = new Date();
     const todayName = dayMap[today.getDay()];
 
@@ -120,27 +116,27 @@ export default function Dashboard() {
         return 'Noche';
     };
 
-    const todaysClasses = yogaClasses
-      .filter(cls => cls.dayOfWeek === todayName)
+    const todaysSessions = sessions
+      .filter(session => session.dayOfWeek === todayName)
       .sort((a, b) => a.time.localeCompare(b.time));
 
-    const filtered = todaysClasses.filter(cls => {
-        const timeOfDay = getTimeOfDay(cls.time);
+    const filtered = todaysSessions.filter(session => {
+        const timeOfDay = getTimeOfDay(session.time);
         return (
-            (filters.actividadId === 'all' || cls.actividadId === filters.actividadId) &&
-            (filters.spaceId === 'all' || cls.spaceId === filters.spaceId) &&
-            (filters.specialistId === 'all' || cls.instructorId === filters.specialistId) &&
+            (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
+            (filters.spaceId === 'all' || session.spaceId === filters.spaceId) &&
+            (filters.specialistId === 'all' || session.instructorId === filters.specialistId) &&
             (filters.timeOfDay === 'all' || timeOfDay === filters.timeOfDay)
         );
     });
 
-    return { todaysClasses, filteredClasses: filtered, todayName };
-  }, [yogaClasses, filters]);
+    return { todaysSessions, filteredSessions: filtered, todayName };
+  }, [sessions, filters]);
 
-  const getClassDetails = (cls: YogaClass) => {
-    const specialist = specialists.find((i) => i.id === cls.instructorId);
-    const actividad = actividades.find((s) => s.id === cls.actividadId);
-    const space = spaces.find((s) => s.id === cls.spaceId);
+  const getSessionDetails = (session: Session) => {
+    const specialist = specialists.find((i) => i.id === session.instructorId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
+    const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   };
 
@@ -192,7 +188,7 @@ export default function Dashboard() {
       <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Clases de Hoy - {todayName}</CardTitle>
+            <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
                 <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
@@ -236,32 +232,32 @@ export default function Dashboard() {
           </div>
         </CardHeader>
         <CardContent className="flex-grow">
-          {todaysClasses.length > 0 ? (
-            filteredClasses.length > 0 ? (
+          {todaysSessions.length > 0 ? (
+            filteredSessions.length > 0 ? (
               <ul className="space-y-4">
-                {filteredClasses.map(cls => {
-                  const { specialist, actividad, space } = getClassDetails(cls);
-                  const enrolledCount = cls.personIds.length;
-                  const capacity = space?.capacity ?? 0;
+                {filteredSessions.map(session => {
+                  const { specialist, actividad, space } = getSessionDetails(session);
+                  const enrolledCount = session.personIds.length;
+                  const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
                   const isFull = capacity > 0 && enrolledCount >= capacity;
                   return (
                     <li 
-                      key={cls.id}
-                      onClick={() => setSelectedClassForStudents(cls)}
+                      key={session.id}
+                      onClick={() => setSelectedSessionForStudents(session)}
                       className={cn(
                         "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/30 dark:bg-white/10 border-white/20 hover:bg-white/50 dark:hover:bg-white/20 hover:shadow-md cursor-pointer",
                         isFull && "bg-pink-500/20 border-pink-500/30"
                       )}
                     >
                       <div className="flex-1 space-y-1">
-                        <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Clase'}</p>
+                        <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Sesión'}</p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
                           <span className="flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{specialist?.name || 'N/A'}</span>
                           <span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3" />{space?.name || 'N/A'}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-primary">{formatTime(cls.time)}</p>
+                        <p className="font-bold text-primary">{formatTime(session.time)}</p>
                         <p className={cn(
                             "text-sm", 
                             isFull ? "font-semibold text-pink-600 dark:text-pink-400" : "text-slate-600 dark:text-slate-400"
@@ -275,22 +271,22 @@ export default function Dashboard() {
               </ul>
             ) : (
               <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
-                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No se encontraron clases</h3>
+                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No se encontraron sesiones</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</p>
               </div>
             )
           ) : (
             <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
-                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No hay clases hoy</h3>
+                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No hay sesiones hoy</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400">¡Día libre! Disfruta del descanso.</p>
             </div>
           )}
         </CardContent>
       </Card>
-      {selectedClassForStudents && (
+      {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
-            yogaClass={selectedClassForStudents}
-            onClose={() => setSelectedClassForStudents(null)}
+            session={selectedSessionForStudents}
+            onClose={() => setSelectedSessionForStudents(null)}
           />
       )}
     </div>

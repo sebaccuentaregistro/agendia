@@ -21,7 +21,7 @@ const formSchema = z.object({
 });
 
 export default function ActividadesPage() {
-  const { actividades, addActividad, updateActividad, deleteActividad, yogaClasses, specialists } = useStudio();
+  const { actividades, addActividad, updateActividad, deleteActividad, sessions, specialists } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedActividad, setSelectedActividad] = useState<Actividad | undefined>(undefined);
@@ -81,9 +81,9 @@ export default function ActividadesPage() {
   }
 
   const getUsageCount = (actividadId: string) => {
-    const classCount = yogaClasses.filter(c => c.actividadId === actividadId).length;
+    const sessionCount = sessions.filter(c => c.actividadId === actividadId).length;
     const specialistCount = specialists.filter(s => s.actividadIds.includes(actividadId)).length;
-    return { classCount, specialistCount };
+    return { sessionCount, specialistCount };
   }
 
   return (
@@ -129,7 +129,7 @@ export default function ActividadesPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="flex-grow space-y-3 text-sm">
-                    <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300"><ClipboardList className="h-4 w-4 text-slate-500" /><span className="font-semibold text-slate-700 dark:text-slate-200">Clases:</span> {usage.classCount}</p>
+                    <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300"><ClipboardList className="h-4 w-4 text-slate-500" /><span className="font-semibold text-slate-700 dark:text-slate-200">Sesiones:</span> {usage.sessionCount}</p>
                     <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300"><Users className="h-4 w-4 text-slate-500" /><span className="font-semibold text-slate-700 dark:text-slate-200">Especialistas:</span> {usage.specialistCount}</p>
                   </CardContent>
                   <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-3">
@@ -171,7 +171,7 @@ export default function ActividadesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la actividad. Si está en uso por clases o especialistas, la eliminación será bloqueada.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la actividad. Si está en uso por sesiones o especialistas, la eliminación será bloqueada.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setActividadToDelete(null)}>Cancelar</AlertDialogCancel>

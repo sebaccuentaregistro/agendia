@@ -11,15 +11,15 @@ import { es } from 'date-fns/locale';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 
 export default function StatisticsPage() {
-  const { yogaClasses, people, actividades } = useStudio();
+  const { sessions, people, actividades } = useStudio();
 
-  const classPopularityByTime = useMemo(() => {
-    const data = yogaClasses.reduce<Record<string, number>>((acc, cls) => {
-      const time = cls.time;
+  const sessionPopularityByTime = useMemo(() => {
+    const data = sessions.reduce<Record<string, number>>((acc, session) => {
+      const time = session.time;
       if (!acc[time]) {
         acc[time] = 0;
       }
-      acc[time] += cls.personIds.length;
+      acc[time] += session.personIds.length;
       return acc;
     }, {});
 
@@ -29,7 +29,7 @@ export default function StatisticsPage() {
         personas: people,
       }))
       .sort((a, b) => a.time.localeCompare(b.time));
-  }, [yogaClasses]);
+  }, [sessions]);
 
   const monthlyNewMembers = useMemo(() => {
     const now = new Date();
@@ -56,8 +56,8 @@ export default function StatisticsPage() {
   }, [people]);
 
   const activityPopularity = useMemo(() => {
-    const popularity: Record<string, number> = yogaClasses.reduce((acc, cls) => {
-      acc[cls.actividadId] = (acc[cls.actividadId] || 0) + cls.personIds.length;
+    const popularity: Record<string, number> = sessions.reduce((acc, session) => {
+      acc[session.actividadId] = (acc[session.actividadId] || 0) + session.personIds.length;
       return acc;
     }, {} as Record<string, number>);
 
@@ -71,7 +71,7 @@ export default function StatisticsPage() {
       })
       .filter(item => item.value > 0)
       .sort((a, b) => b.value - a.value);
-  }, [yogaClasses, actividades]);
+  }, [sessions, actividades]);
 
   const chartConfig = useMemo(() => {
     const config: any = {
@@ -121,7 +121,7 @@ export default function StatisticsPage() {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <BarChart data={classPopularityByTime} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+              <BarChart data={sessionPopularityByTime} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid vertical={false} />
                 <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} />
                 <YAxis />
