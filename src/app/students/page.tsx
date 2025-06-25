@@ -44,11 +44,20 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
   const [specialistFilter, setSpecialistFilter] = useState('all');
 
   const filteredClasses = useMemo(() => {
-    return yogaClasses.filter(cls => 
-      (actividadFilter === 'all' || cls.actividadId === actividadFilter) &&
-      (specialistFilter === 'all' || cls.instructorId === specialistFilter)
-    ).sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
-  }, [yogaClasses, actividadFilter, specialistFilter, actividades, specialists]);
+    return yogaClasses
+      .filter(cls => 
+        (actividadFilter === 'all' || cls.actividadId === actividadFilter) &&
+        (specialistFilter === 'all' || cls.instructorId === specialistFilter)
+      )
+      .map(cls => ({
+        ...cls,
+        specialist: specialists.find(i => i.id === cls.instructorId),
+        actividad: actividades.find(a => a.id === cls.actividadId),
+        space: spaces.find(s => s.id === cls.spaceId),
+      }))
+      .sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+  }, [yogaClasses, actividadFilter, specialistFilter, actividades, specialists, spaces]);
+
 
   function onSubmit(data: { classIds: string[] }) {
     enrollPersonInClasses(person.id, data.classIds);
@@ -98,9 +107,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                 <ScrollArea className="h-72 rounded-md border p-4">
                   <div className="space-y-4">
                     {filteredClasses.map((item) => {
-                      const specialist = specialists.find(i => i.id === item.instructorId);
-                      const actividad = actividades.find(a => a.id === item.actividadId);
-                      const space = spaces.find(s => s.id === item.spaceId);
+                      const { specialist, actividad, space } = item;
                       if (!actividad || !specialist || !space) return null;
                       const isEnrolledInForm = form.watch('classIds').includes(item.id);
                       const isFull = item.personIds.length >= space.capacity;
