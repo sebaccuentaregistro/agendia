@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -29,6 +29,7 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { exportToCsv } from '@/lib/utils';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -223,11 +224,46 @@ export default function StudentsPage() {
     return `${formattedHour}:${minute} ${ampm}`;
   };
 
+  const handleExportPeople = () => {
+    const headers = {
+        name: 'Nombre',
+        phone: 'Teléfono',
+        membershipType: 'Membresía',
+        paymentStatus: 'Estado de Pago',
+        joinDate: 'Fecha de Inscripción',
+        nextPaymentDate: 'Próximo Pago'
+    };
+    const dataToExport = processedPeople.map(p => ({
+        ...p,
+        nextPaymentDate: p.nextPaymentDate || ''
+    }));
+    exportToCsv('personas.csv', dataToExport, headers);
+  };
+  
+  const handleExportHistory = () => {
+      if (!personForHistory) return;
+      const personPayments = payments
+          .filter(p => p.personId === personForHistory.id)
+          .sort((a,b) => b.date.getTime() - a.date.getTime())
+          .map(p => ({ date: p.date }));
+
+      if (personPayments.length === 0) return;
+
+      const headers = {
+          date: 'Fecha de Pago'
+      };
+      exportToCsv(`historial_pagos_${personForHistory.name.replace(/\s/g, '_')}.csv`, personPayments, headers);
+  };
+
   return (
     <div>
       <PageHeader title="Personas">
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
           <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-64"/>
+          <Button variant="outline" onClick={handleExportPeople}>
+            <FileDown className="mr-2 h-4 w-4" />
+            Exportar
+          </Button>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedPerson(undefined); }}>
             <DialogTrigger asChild><Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Persona</Button></DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
@@ -395,11 +431,22 @@ export default function StudentsPage() {
         <SheetContent>
             <SheetHeader>
                 <SheetTitle>Historial de Pagos: {personForHistory?.name}</SheetTitle>
-                <SheetDescription>
-                Aquí se muestra un registro de todas las fechas de pago para esta persona.
-                </SheetDescription>
+                <div className="flex items-center justify-between pt-2">
+                  <SheetDescription>
+                    Registro de todas las fechas de pago.
+                  </SheetDescription>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleExportHistory}
+                    disabled={!personForHistory || payments.filter(p => p.personId === personForHistory.id).length === 0}
+                  >
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Exportar
+                  </Button>
+                </div>
             </SheetHeader>
-            <ScrollArea className="h-[calc(100%-4rem)] pr-4 mt-4">
+            <ScrollArea className="h-[calc(100%-6rem)] pr-4 mt-4">
               <div className="space-y-2">
                 {personForHistory && payments.filter(p => p.personId === personForHistory.id).length > 0 ? (
                     payments

@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -17,7 +17,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { cn, exportToCsv } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 
@@ -157,73 +157,105 @@ export default function SchedulePage() {
     });
   }, [yogaClasses]);
 
+  const handleExportSchedule = () => {
+    const headers = {
+        actividad: 'Actividad',
+        especialista: 'Especialista',
+        espacio: 'Espacio',
+        dia: 'Día',
+        hora: 'Hora',
+        inscritos: 'Inscritos',
+        capacidad: 'Capacidad'
+    };
+    const dataToExport = sortedClasses.map(cls => {
+        const { specialist, actividad, space } = getClassDetails(cls);
+        return {
+            actividad: actividad?.name || 'N/A',
+            especialista: specialist?.name || 'N/A',
+            espacio: space?.name || 'N/A',
+            dia: cls.dayOfWeek,
+            hora: cls.time,
+            inscritos: cls.personIds.length,
+            capacidad: space?.capacity || 0
+        }
+    });
+
+    exportToCsv('horarios.csv', dataToExport, headers);
+  };
+
 
   return (
     <div>
       <PageHeader title="Gestión de Horarios">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd}>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Añadir Horario
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{selectedClass ? 'Editar Clase' : 'Programar Nueva Clase'}</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="actividadId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Actividad</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una actividad" /></SelectTrigger></FormControl>
-                      <SelectContent>{availableActividades.map((a) => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}</SelectContent>
-                    </Select><FormMessage />
-                  </FormItem>
-                )}/>
-                <FormField control={form.control} name="instructorId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Especialista</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un especialista" /></SelectTrigger></FormControl>
-                      <SelectContent>{availableSpecialists.map((i) => (<SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>))}</SelectContent>
-                    </Select><FormMessage />
-                  </FormItem>
-                )}/>
-                <FormField control={form.control} name="spaceId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Espacio</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un espacio" /></SelectTrigger></FormControl>
-                      <SelectContent>{spaces.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name} ({s.capacity} pers.)</SelectItem>))}</SelectContent>
-                    </Select><FormMessage />
-                  </FormItem>
-                )}/>
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField control={form.control} name="dayOfWeek" render={({ field }) => (
+        <div className="flex items-center gap-2">
+           <Button onClick={handleExportSchedule} variant="outline">
+              <FileDown className="mr-2 h-4 w-4" />
+              Exportar
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Añadir Horario
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{selectedClass ? 'Editar Clase' : 'Programar Nueva Clase'}</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField control={form.control} name="actividadId" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Día</FormLabel>
+                      <FormLabel>Actividad</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                        <SelectContent>{['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day) => (<SelectItem key={day} value={day}>{day}</SelectItem>))}</SelectContent>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una actividad" /></SelectTrigger></FormControl>
+                        <SelectContent>{availableActividades.map((a) => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}</SelectContent>
                       </Select><FormMessage />
                     </FormItem>
                   )}/>
-                  <FormField control={form.control} name="time" render={({ field }) => (
+                  <FormField control={form.control} name="instructorId" render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Hora</FormLabel>
-                      <FormControl><Input type="time" {...field} /></FormControl>
-                      <FormMessage />
+                      <FormLabel>Especialista</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un especialista" /></SelectTrigger></FormControl>
+                        <SelectContent>{availableSpecialists.map((i) => (<SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>))}</SelectContent>
+                      </Select><FormMessage />
                     </FormItem>
                   )}/>
-                </div>
-                <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                  <FormField control={form.control} name="spaceId" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Espacio</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un espacio" /></SelectTrigger></FormControl>
+                        <SelectContent>{spaces.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name} ({s.capacity} pers.)</SelectItem>))}</SelectContent>
+                      </Select><FormMessage />
+                    </FormItem>
+                  )}/>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField control={form.control} name="dayOfWeek" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Día</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                          <SelectContent>{['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((day) => (<SelectItem key={day} value={day}>{day}</SelectItem>))}</SelectContent>
+                        </Select><FormMessage />
+                      </FormItem>
+                    )}/>
+                    <FormField control={form.control} name="time" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Hora</FormLabel>
+                        <FormControl><Input type="time" {...field} /></FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}/>
+                  </div>
+                  <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </PageHeader>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">

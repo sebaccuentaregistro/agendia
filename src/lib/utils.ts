@@ -13,21 +13,8 @@ export function getNextPaymentDate(person: Person): Date | null {
     return null;
   }
 
-  // The next due date is always the next occurrence of the join day of the month,
-  // calculated from the month of the last payment.
-  // This correctly handles advance and late payments, anchoring the billing cycle
-  // to the original join day.
-
-  // 1. Get the date of the last payment.
   const lastPayment = person.lastPaymentDate;
-  
-  // 2. Get the original day of the month for billing (e.g., the 15th).
   const joinDay = person.joinDate.getDate();
-
-  // 3. Determine the anchor due date in the same month as the last payment,
-  //    and reset the time to midnight for accurate comparisons.
-  //    e.g., if last payment was August 10th and join day is 15th, this will be August 15th.
-  //    e.g., if last payment was August 20th and join day is 15th, this will be August 15th.
   const baseDueDate = set(lastPayment, { 
     date: joinDay,
     hours: 0,
@@ -36,11 +23,15 @@ export function getNextPaymentDate(person: Person): Date | null {
     milliseconds: 0 
   });
   
-  // 4. The next payment is due one month after this base date.
-  //    This works whether the payment was early or late.
-  //    e.g., Paid Aug 10 -> base is Aug 15 -> next is Sep 15.
-  //    e.g., Paid Aug 20 -> base is Aug 15 -> next is Sep 15.
-  return addMonths(baseDueDate, 1);
+  // If payment was made on or after the due day, the next payment is one month after.
+  // If payment was made before the due day, the due date is in the same month.
+  if (lastPayment.getDate() >= joinDay) {
+    return addMonths(baseDueDate, 1);
+  } else {
+    // This case handles payments made in advance, before the due day of the month.
+    // The next due date should be in the current payment's month if not yet passed.
+    return baseDueDate;
+  }
 }
 
 // This function checks if a person's payment is up-to-date.
@@ -51,12 +42,74 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'A
 
   const nextDueDate = getNextPaymentDate(person);
   if (!nextDueDate) {
-    return 'Al día'; // Should not happen for 'Mensual' members
+    return 'Al día';
   }
   
   const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-
-  // A person is considered 'Atrasado' (overdue) if today is strictly after their next due date.
-  // If today is the due date, they are still 'Al día'.
   return isAfter(today, nextDueDate) ? 'Atrasado' : 'Al día';
+}
+
+
+/**
+ * Exports an array of objects to a CSV file.
+ * @param filename - The desired name for the CSV file.
+ * @param data - An array of objects to export.
+ * @param headers - An object mapping data keys to user-friendly column headers.
+ */
+export function exportToCsv(filename: string, data: Record<string, any>[], headers: Record<string, string>) {
+  if (!data || data.length === 0) {
+    console.warn("No data provided to export.");
+    return;
+  }
+
+  const separator = ',';
+  const headerKeys = Object.keys(headers);
+  const headerValues = Object.values(headers);
+
+  const csvRows = [
+    headerValues.join(separator),
+    ...data.map(row =>
+      headerKeys
+        .map(key => {
+          let cell = row[key] === null || row[key] === undefined ? '' : row[key];
+
+          if (cell instanceof Date) {
+            // Consistently format dates, e.g., "15/07/2024, 10:00:00"
+            cell = cell.toLocaleString('es-ES', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+            });
+          }
+
+          let cellString = String(cell);
+          // Escape double quotes by doubling them
+          cellString = cellString.replace(/"/g, '""');
+          
+          // If the cell contains a comma, a newline, or a double quote, wrap it in double quotes
+          if (cellString.search(/("|,|\n)/g) >= 0) {
+            cellString = `"${cellString}"`;
+          }
+          return cellString;
+        })
+        .join(separator)
+    ),
+  ];
+  
+  const csvContent = csvRows.join('\n');
+
+  // Add BOM for Excel compatibility with UTF-8
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  
+  if (link.download !== undefined) {
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
 }
