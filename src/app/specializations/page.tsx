@@ -157,7 +157,7 @@ export default function ActividadesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la actividad.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la actividad. Si está en uso por clases o especialistas, la eliminación será bloqueada.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setActividadToDelete(null)}>Cancelar</AlertDialogCancel>

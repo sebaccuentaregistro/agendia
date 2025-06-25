@@ -267,7 +267,7 @@ export default function SpecialistsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente al especialista.
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al especialista. Si está asignado a alguna clase, la eliminación será bloqueada.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

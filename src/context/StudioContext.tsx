@@ -296,6 +296,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteYogaClass = (id: string) => {
+    const classToDelete = yogaClasses.find(c => c.id === id);
+    if (classToDelete && classToDelete.personIds.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Clase con Inscritos',
+        description: `No se puede eliminar. Hay ${classToDelete.personIds.length} persona(s) inscrita(s). Mueve o desinscribe a las personas primero.`,
+        duration: 6000,
+      });
+      return;
+    }
     setYogaClasses(prev => prev.filter(c => c.id !== id));
   };
 

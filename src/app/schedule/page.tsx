@@ -286,7 +286,7 @@ export default function SchedulePage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la clase.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la clase. Si hay personas inscritas, la eliminación será bloqueada para proteger tus datos.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setClassToDelete(null)}>Cancelar</AlertDialogCancel>
