@@ -93,7 +93,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                   <div className="space-y-4">
                     {filteredClasses.map((item) => {
                       const specialist = specialists.find(i => i.id === item.instructorId);
-                      constividad = actividades.find(a => a.id === item.actividadId);
+                      const actividad = actividades.find(a => a.id === item.actividadId);
                       const space = spaces.find(s => s.id === item.spaceId);
                       if (!actividad || !specialist || !space) return null;
                       const isEnrolledInForm = form.watch('classIds').includes(item.id);
