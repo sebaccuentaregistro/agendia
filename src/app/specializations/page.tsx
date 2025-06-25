@@ -3,8 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Pencil, PlusCircle, Trash2, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useEffect } from 'react';
@@ -15,8 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Actividad } from '@/types';
 import { useStudio } from '@/context/StudioContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
@@ -102,42 +100,35 @@ export default function ActividadesPage() {
       
       {isMounted ? (
         actividades.length > 0 ? (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre de Actividad</TableHead>
-                  <TableHead>Uso</TableHead>
-                  <TableHead><span className="sr-only">Acciones</span></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {actividades.map((actividad) => {
-                  const usage = getUsageCount(actividad.id);
-                  return (
-                    <TableRow key={actividad.id}>
-                      <TableCell className="font-medium">{actividad.name}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {usage.classCount} clases / {usage.specialistCount} especialistas
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Alternar menú</span></Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEdit(actividad)}>Editar</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(actividad)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </Card>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {actividades.map((actividad) => {
+              const usage = getUsageCount(actividad.id);
+              return (
+                <Card key={actividad.id} className="flex flex-col">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-3">
+                      <Star className="h-6 w-6 text-primary" />
+                      <span>{actividad.name}</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-grow space-y-2 text-sm text-muted-foreground">
+                    <p><span className="font-semibold text-card-foreground">Clases:</span> {usage.classCount}</p>
+                    <p><span className="font-semibold text-card-foreground">Especialistas:</span> {usage.specialistCount}</p>
+                  </CardContent>
+                  <CardFooter className="flex justify-end gap-2 border-t bg-muted/50 p-3">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(actividad)}>
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Editar</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(actividad)}>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Eliminar</span>
+                    </Button>
+                  </CardFooter>
+                </Card>
+              );
+            })}
+          </div>
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
             <CardHeader>
@@ -150,7 +141,9 @@ export default function ActividadesPage() {
           </Card>
         )
       ) : (
-        <Card><Skeleton className="h-64 w-full" /></Card>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-lg" />)}
+        </div>
       )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
