@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -38,6 +39,9 @@ export default function StatisticsPage() {
     }).reverse();
 
     const memberCounts = people.reduce<Record<string, number>>((acc, person) => {
+      if (!(person.joinDate instanceof Date) || isNaN(person.joinDate.getTime())) {
+        return acc; 
+      }
       const monthKey = format(person.joinDate, 'yyyy-MM');
       if (monthLabels.includes(monthKey)) {
         acc[monthKey] = (acc[monthKey] || 0) + 1;
@@ -47,7 +51,7 @@ export default function StatisticsPage() {
 
     return monthLabels.map(monthKey => ({
       month: format(new Date(`${monthKey}-02`), 'MMM yy', { locale: es }), // Using day 02 to avoid timezone issues
-      'Nuevas Personas': memberCounts[monthKey] || 0,
+      nuevasPersonas: memberCounts[monthKey] || 0,
     }));
   }, [people]);
 
@@ -56,7 +60,7 @@ export default function StatisticsPage() {
       label: "Personas",
       color: "hsl(var(--chart-1))",
     },
-    'Nuevas Personas': {
+    nuevasPersonas: {
       label: "Nuevas Personas",
       color: "hsl(var(--chart-2))",
     }
@@ -112,11 +116,12 @@ export default function StatisticsPage() {
                 <Legend />
                 <Line
                   type="monotone"
-                  dataKey="Nuevas Personas"
-                  stroke="var(--color-Nuevas Personas)"
+                  dataKey="nuevasPersonas"
+                  stroke="var(--color-nuevasPersonas)"
                   strokeWidth={2}
-                  dot={{ r: 4, fill: "var(--color-Nuevas Personas)" }}
+                  dot={{ r: 4, fill: "var(--color-nuevasPersonas)" }}
                   activeDot={{ r: 6 }}
+                  name="Nuevas Personas"
                 />
               </LineChart>
             </ChartContainer>
