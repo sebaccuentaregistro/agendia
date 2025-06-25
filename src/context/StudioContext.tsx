@@ -12,6 +12,7 @@ import {
   spaces as initialSpaces
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
+import { set, isBefore, subMonths } from 'date-fns';
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -49,18 +50,17 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
         const item = window.localStorage.getItem(key);
         if (!item) return defaultValue;
 
+        const parsed = JSON.parse(item);
+        
         // Special handling for dates
-        if (key === 'yoga-people' || key === 'yoga-payments') {
-            const parsed = JSON.parse(item);
-            if (key === 'yoga-people') {
-                return parsed.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) }));
-            }
-            if (key === 'yoga-payments') {
-                return parsed.map((p: any) => ({ ...p, date: new Date(p.date) }));
-            }
+        if (key === 'yoga-people') {
+          return parsed.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) }));
+        }
+        if (key === 'yoga-payments') {
+            return parsed.map((p: any) => ({ ...p, date: new Date(p.date) }));
         }
         
-        return JSON.parse(item);
+        return parsed;
     } catch (error) {
         console.warn(`Error reading localStorage key “${key}”:`, error);
         return defaultValue;
@@ -71,12 +71,12 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
 export function StudioProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   
-  const [actividades, setActividades] = useState<Actividad[]>(initialActividades);
-  const [specialists, setSpecialists] = useState<Specialist[]>(initialSpecialists);
-  const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
-  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(initialYogaClasses);
-  const [people, setPeople] = useState<Person[]>(() => initialPeople.map(p => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) })));
-  const [payments, setPayments] = useState<Payment[]>(() => initialPayments.map(p => ({ ...p, date: new Date(p.date) })));
+  const [actividades, setActividades] = useState<Actividad[]>([]);
+  const [specialists, setSpecialists] = useState<Specialist[]>([]);
+  const [spaces, setSpaces] = useState<Space[]>([]);
+  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load from localStorage on client-side mount to avoid hydration errors
@@ -106,10 +106,26 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setActividades(prev => prev.map(a => a.id === updated.id ? updated : a));
   };
   const deleteActividad = (id: string) => {
-    if (yogaClasses.some(c => c.actividadId === id) || specialists.some(s => s.actividadIds.includes(id))) {
-      toast({ variant: "destructive", title: "Error", description: "No se puede eliminar una actividad en uso." });
+    const isUsedInClass = yogaClasses.some(c => c.actividadId === id);
+    if (isUsedInClass) {
+      toast({
+        variant: "destructive",
+        title: "Actividad en Uso",
+        description: "Esta actividad está siendo utilizada en clases programadas. Debe eliminar o modificar esas clases primero.",
+      });
       return;
     }
+
+    const isAssignedToSpecialist = specialists.some(s => s.actividadIds.includes(id));
+    if (isAssignedToSpecialist) {
+      toast({
+        variant: "destructive",
+        title: "Actividad Asignada",
+        description: "Esta actividad está asignada a uno o más especialistas. Debe quitarla de sus perfiles antes de eliminarla.",
+      });
+      return;
+    }
+
     setActividades(prev => prev.filter(a => a.id !== id));
   };
 
@@ -251,5 +267,3 @@ export function useStudio() {
   }
   return context;
 }
-
-    
