@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
-import { set, isBefore, subMonths } from "date-fns";
+import { set, isBefore, subMonths, addMonths } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -34,4 +34,24 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'A
   const dueDateDay = set(mostRecentDueDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
   
   return isBefore(lastPaymentDay, dueDateDay) ? 'Atrasado' : 'Al día';
+}
+
+export function getNextPaymentDate(person: Person, referenceDate: Date): Date | null {
+  if (person.membershipType === 'Diario') {
+    return null;
+  }
+
+  const today = referenceDate;
+  const joinDay = person.joinDate.getDate();
+  
+  // Calculate potential due date in the current month
+  let thisMonthDueDate = set(today, { date: joinDay });
+
+  if (isBefore(today, thisMonthDueDate)) {
+    // If today is before this month's due date, then that's the next payment date.
+    return thisMonthDueDate;
+  } else {
+    // Otherwise, the next payment date is next month.
+    return addMonths(thisMonthDueDate, 1);
+  }
 }

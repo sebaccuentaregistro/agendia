@@ -16,7 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useStudio } from '@/context/StudioContext';
-import { getStudentPaymentStatus, cn } from '@/lib/utils';
+import { getStudentPaymentStatus, getNextPaymentDate, cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useSearchParams } from 'next/navigation';
@@ -147,7 +147,11 @@ export default function StudentsPage() {
     if (!isMounted) return [];
     const filter = searchParams.get('filter');
     const now = new Date();
-    let peopleList = people.map(p => ({ ...p, paymentStatus: getStudentPaymentStatus(p, now) }));
+    let peopleList = people.map(p => ({ 
+        ...p, 
+        paymentStatus: getStudentPaymentStatus(p, now),
+        nextPaymentDate: getNextPaymentDate(p, now)
+    }));
     if (filter === 'overdue') { peopleList = peopleList.filter(p => p.paymentStatus === 'Atrasado'); }
     if (searchTerm.trim() !== '') { peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())); }
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
@@ -286,6 +290,12 @@ export default function StudentsPage() {
                                     <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inscripción</div>
                                     <div>{format(person.joinDate, 'dd/MM/yyyy')}</div>
                                 </div>
+                                {person.nextPaymentDate && (
+                                  <div>
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Próximo Pago</div>
+                                    <div>{format(person.nextPaymentDate, 'dd/MM/yyyy')}</div>
+                                  </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
