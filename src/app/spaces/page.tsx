@@ -15,6 +15,7 @@ import { Space } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -130,7 +131,13 @@ export default function SpacesPage() {
                 </CardHeader>
                 <CardContent className="flex-grow space-y-3 text-sm">
                   <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300"><Users className="h-4 w-4 text-slate-500" /> <span className="font-semibold text-slate-700 dark:text-slate-200">Capacidad:</span> {space.capacity} personas</p>
-                  <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300"><Warehouse className="h-4 w-4 text-slate-500" /> <span className="font-semibold text-slate-700 dark:text-slate-200">Clases Programadas:</span> {getUsageCount(space.id)}</p>
+                  <Link href={`/schedule?spaceId=${space.id}`} className="transition-opacity hover:opacity-75">
+                    <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                      <Warehouse className="h-4 w-4 text-slate-500" />
+                      <span className="font-semibold text-slate-700 dark:text-slate-200 underline-offset-4 hover:underline">Clases Programadas:</span>
+                      {getUsageCount(space.id)}
+                    </p>
+                  </Link>
                 </CardContent>
                 <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-3">
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(space)}>

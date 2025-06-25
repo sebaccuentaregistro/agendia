@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useSearchParams } from 'next/navigation';
 
 const formSchema = z.object({
   instructorId: z.string({ required_error: 'Debes seleccionar un especialista.' }).min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -125,12 +126,21 @@ export default function SchedulePage() {
     dayOfWeek: 'all',
     timeOfDay: 'all',
   });
-
-  useEffect(() => { setIsMounted(true); }, []);
+  const searchParams = useSearchParams();
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
+  
+  useEffect(() => { setIsMounted(true); }, []);
+  
+  useEffect(() => {
+    if (!isMounted) return;
+    const spaceIdFromQuery = searchParams.get('spaceId');
+    if (spaceIdFromQuery && spaces.some(s => s.id === spaceIdFromQuery)) {
+      handleFilterChange('spaceId', spaceIdFromQuery);
+    }
+  }, [searchParams, isMounted, spaces]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -343,8 +353,12 @@ export default function SchedulePage() {
           </Dialog>
       
       <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-6">
-        <CardHeader className="p-0 mb-4">
+        <CardHeader className="p-0 mb-4 flex-row items-center justify-between">
           <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-100">Filtrar Horarios</CardTitle>
+          <Button variant="outline" size="sm" onClick={handleExportSchedule} className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-lg">
+            <FileDown className="mr-2 h-4 w-4"/>
+            Exportar
+          </Button>
         </CardHeader>
         <CardContent className="p-0">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
