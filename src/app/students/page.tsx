@@ -38,12 +38,10 @@ const formSchema = z.object({
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
   const { yogaClasses, specialists, actividades, enrollPersonInClasses, spaces } = useStudio();
-  const enrolledIn = useMemo(() => yogaClasses.filter(cls => cls.personIds.includes(person.id)).map(cls => cls.id), [yogaClasses, person.id]);
-  const form = useForm<{ classIds: string[] }>({ defaultValues: { classIds: enrolledIn } });
+  const form = useForm<{ classIds: string[] }>({ defaultValues: { classIds: yogaClasses.filter(cls => cls.personIds.includes(person.id)).map(cls => cls.id) } });
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
 
-  // No useMemo here to ensure data is always fresh from the context on every render.
   const filteredClasses = yogaClasses
       .filter(cls => 
         (actividadFilter === 'all' || cls.actividadId === actividadFilter) &&
