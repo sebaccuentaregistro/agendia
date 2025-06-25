@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const menuItems = [
   { href: "/dashboard", label: "Inicio", icon: LayoutGrid },
-  { href: "/schedule", label: "Horario", icon: Calendar },
+  { href: "/schedule", label: "Horarios", icon: Calendar },
   { href: "/students", label: "Personas", icon: Users },
   { href: "/instructors", label: "Especialistas", icon: ClipboardList },
   { href: "/specializations", label: "Actividades", icon: Star },

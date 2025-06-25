@@ -29,7 +29,7 @@ export default function Dashboard() {
   const hasOverdue = overdueCount > 0;
 
   const navItems = [
-    { href: "/schedule", label: "Horario", icon: Calendar, count: yogaClasses.length },
+    { href: "/schedule", label: "Horarios", icon: Calendar, count: yogaClasses.length },
     { href: "/students", label: "Personas", icon: Users, count: people.length },
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
     { href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
