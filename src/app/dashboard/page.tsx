@@ -15,7 +15,6 @@ const navItems = [
   { href: "/instructors", label: "Especialistas", icon: ClipboardList, description: "Gestiona los perfiles de los instructores." },
   { href: "/specializations", label: "Actividades", icon: Star, description: "Define los tipos de clases que ofreces." },
   { href: "/spaces", label: "Espacios", icon: Warehouse, description: "Administra los salones y áreas físicas." },
-  { href: "/assistant", label: "Asistente IA", icon: Bot, description: "Crea horarios óptimos con inteligencia artificial." },
 ];
 
 export default function Dashboard() {

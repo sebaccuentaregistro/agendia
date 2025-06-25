@@ -13,7 +13,6 @@ const menuItems = [
   { href: "/instructors", label: "Especialistas", icon: ClipboardList },
   { href: "/specializations", label: "Actividades", icon: Star },
   { href: "/spaces", label: "Espacios", icon: Warehouse },
-  { href: "/assistant", label: "Asistente IA", icon: Bot },
 ];
 
 function NavLink({ href, label, icon: Icon, isSheet, currentPath }: { href: string, label: string, icon: React.ElementType, isSheet: boolean, currentPath: string }) {
