@@ -286,11 +286,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteYogaClass = (id: string) => {
-    const classToDelete = yogaClasses.find(c => c.id === id);
-    if(classToDelete?.personIds.length > 0){
-        toast({ variant: "destructive", title: "Error", description: "No se puede eliminar una clase con personas inscritas." });
-        return;
-    }
     setYogaClasses(prev => prev.filter(c => c.id !== id));
   };
 
