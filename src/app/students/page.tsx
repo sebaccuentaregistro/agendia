@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -354,10 +353,11 @@ export default function StudentsPage() {
                                         {enrolledClasses.map(cls => {
                                             const actividad = actividades.find(a => a.id === cls.actividadId);
                                             const especialista = specialists.find(s => s.id === cls.instructorId);
+                                            const espacio = spaces.find(s => s.id === cls.spaceId);
                                             return (
                                                 <div key={cls.id} className="text-sm">
                                                     <p className="font-semibold text-slate-700 dark:text-slate-200">{actividad?.name || 'N/A'}</p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{cls.dayOfWeek}, {formatTime(cls.time)} &bull; {especialista?.name || 'Sin especialista'}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{cls.dayOfWeek}, {formatTime(cls.time)} &bull; {especialista?.name || 'Sin especialista'} &bull; {espacio?.name || 'Sin espacio'}</p>
                                                 </div>
                                             );
                                         })}
