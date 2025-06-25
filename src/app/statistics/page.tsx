@@ -103,7 +103,8 @@ export default function StatisticsPage() {
         textAnchor="middle"
         dominantBaseline="central"
       >
-        {name}
+        <tspan x={x} dy="-0.5em">{name}</tspan>
+        <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(0)}%)`}</tspan>
       </text>
     );
   };
