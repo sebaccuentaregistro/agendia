@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
+import { differenceInDays } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -12,24 +13,12 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'A
   }
   
   // Logic for 'Mensual'
-  const now = new Date(referenceDate);
-  now.setHours(0, 0, 0, 0); // Normalize to start of day
+  const lastPayment = new Date(person.lastPaymentDate);
+  const today = new Date(referenceDate);
+  
+  // Calculates the number of full days between the two dates.
+  const daysSinceLastPayment = differenceInDays(today, lastPayment);
 
-  const lastPaymentDate = new Date(person.lastPaymentDate);
-  lastPaymentDate.setHours(0, 0, 0, 0); // Normalize
-
-  const joinDate = new Date(person.joinDate);
-  const dueDayOfMonth = joinDate.getDate();
-
-  // Determine the most recent due date that has passed
-  let lastDueDate = new Date(now.getFullYear(), now.getMonth(), dueDayOfMonth);
-  lastDueDate.setHours(0,0,0,0);
-
-  if (now.getDate() < dueDayOfMonth) {
-    // If today is before this month's due date, the last due date was last month.
-    lastDueDate.setMonth(lastDueDate.getMonth() - 1);
-  }
-
-  // If the last payment was made before the last due date, they are overdue.
-  return lastPaymentDate < lastDueDate ? 'Atrasado' : 'Al día';
+  // If more than 30 days have passed, the payment is overdue.
+  return daysSinceLastPayment > 30 ? 'Atrasado' : 'Al día';
 }
