@@ -1,13 +1,12 @@
 'use client';
 
-import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown } from 'lucide-react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
-import { Person, YogaClass } from '@/types';
+import type { YogaClass } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -70,7 +69,7 @@ function EnrollPeopleDialog({ yogaClass, onClose }: { yogaClass: YogaClass; onCl
                         control={form.control}
                         name="personIds"
                         render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0 py-2">
+                          <FormItem key={person.id} className="flex flex-row items-center space-x-3 space-y-0 py-2">
                             <FormControl>
                               <Checkbox
                                 checked={field.value?.includes(person.id)}
@@ -284,20 +283,8 @@ export default function SchedulePage() {
 
 
   return (
-    <div>
-      <PageHeader title="Gestión de Horarios">
-        <div className="flex items-center gap-2">
-           <Button onClick={handleExportSchedule} variant="outline">
-              <FileDown className="mr-2 h-4 w-4" />
-              Exportar
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAdd}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Añadir Horario
-              </Button>
-            </DialogTrigger>
+    <div className="space-y-8">
+       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{selectedClass ? 'Editar Clase' : 'Programar Nueva Clase'}</DialogTitle>
@@ -354,24 +341,22 @@ export default function SchedulePage() {
               </Form>
             </DialogContent>
           </Dialog>
-        </div>
-      </PageHeader>
       
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-base font-medium">Filtrar Horarios</CardTitle>
+      <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-6">
+        <CardHeader className="p-0 mb-4">
+          <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-100">Filtrar Horarios</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <CardContent className="p-0">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <Select value={filters.dayOfWeek} onValueChange={(value) => handleFilterChange('dayOfWeek', value)}>
-              <SelectTrigger><SelectValue placeholder="Día de la semana" /></SelectTrigger>
+              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Día de la semana" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los días</SelectItem>
                 {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-              <SelectTrigger><SelectValue placeholder="Momento del día" /></SelectTrigger>
+              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Momento del día" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todo el día</SelectItem>
                 <SelectItem value="Mañana">Mañana</SelectItem>
@@ -380,21 +365,21 @@ export default function SchedulePage() {
               </SelectContent>
             </Select>
             <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-              <SelectTrigger><SelectValue placeholder="Especialista" /></SelectTrigger>
+              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Especialista" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los especialistas</SelectItem>
                 {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-              <SelectTrigger><SelectValue placeholder="Actividad" /></SelectTrigger>
+              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Actividad" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las actividades</SelectItem>
                 {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-              <SelectTrigger><SelectValue placeholder="Espacio" /></SelectTrigger>
+              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Espacio" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los espacios</SelectItem>
                 {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
@@ -404,7 +389,7 @@ export default function SchedulePage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
         {isMounted ? (
           sortedClasses.length > 0 ? (
             filteredClasses.length > 0 ? (
@@ -417,27 +402,50 @@ export default function SchedulePage() {
                 const isFull = availableSpots <= 0;
 
                 return (
-                  <Card key={cls.id} className={cn("flex flex-col transition-colors", isFull && "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800")}>
-                    <CardHeader className={cn("flex flex-row items-center justify-between p-4 border-b", isFull && "border-pink-200 dark:border-pink-800")}>
-                      <CardTitle className="text-lg font-bold">{classTitle}</CardTitle>
-                      <div className={cn('text-sm font-semibold px-2 py-1 rounded-full', isFull ? 'bg-pink-100 text-pink-800' : 'bg-green-100 text-green-800' )}>
+                  <Card 
+                    key={cls.id} 
+                    className={cn(
+                      "flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 border-white/20 shadow-lg",
+                      "bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl"
+                    )}
+                  >
+                    <CardHeader className="flex flex-row items-start justify-between p-4">
+                      <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{classTitle}</CardTitle>
+                      <div className={cn(
+                          'text-xs font-bold px-3 py-1 rounded-full text-white', 
+                          isFull 
+                            ? 'bg-gradient-to-r from-rose-500 to-pink-600' 
+                            : 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                        )}>
                         {isFull ? 'Clase Llena' : `${availableSpots} Lugares`}
                       </div>
                     </CardHeader>
-                    <CardContent className="flex-grow p-4 space-y-2">
-                      <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Día y Hora:</span> {cls.dayOfWeek}, {formatTime(cls.time)}</p>
-                      <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Especialista:</span> {specialist?.name}</p>
-                      <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Espacio:</span> {space?.name}</p>
-                      <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{capacity}</p>
+                    <CardContent className="flex-grow p-4 pt-0 space-y-3 text-sm">
+                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                        <Clock className="h-4 w-4 text-slate-500" />
+                        <span>{cls.dayOfWeek}, {formatTime(cls.time)}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                        <User className="h-4 w-4 text-slate-500" />
+                        <span>{specialist?.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                        <MapPin className="h-4 w-4 text-slate-500" />
+                        <span>{space?.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                        <Users className="h-4 w-4 text-slate-500" />
+                        <span>{enrolledCount}/{capacity} Inscritos</span>
+                      </div>
                     </CardContent>
-                    <CardFooter className={cn("flex items-center justify-between bg-muted/50 p-3 border-t", isFull && "border-pink-200 dark:border-pink-800")}>
-                      <Button variant="outline" className="h-auto px-3 py-1 text-sm" onClick={() => setClassToManage(cls)}>
-                        <Users className="mr-2 h-4 w-4" />
-                        Inscribir Personas
+                    <CardFooter className="p-4 flex items-center justify-between gap-2">
+                      <Button className="w-full flex-1 h-12 text-base font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all" onClick={() => setClassToManage(cls)}>
+                        <UserPlus className="mr-2 h-5 w-5" />
+                        Inscribir
                       </Button>
-                      <div className="flex items-center">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(cls)}><Pencil className="h-4 w-4" /><span className="sr-only">Editar</span></Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(cls)}><Trash2 className="h-4 w-4" /><span className="sr-only">Eliminar</span></Button>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => handleEdit(cls)}><Pencil className="h-5 w-5 text-slate-600" /><span className="sr-only">Editar</span></Button>
+                        <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => openDeleteDialog(cls)}><Trash2 className="h-5 w-5 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
                       </div>
                     </CardFooter>
                   </Card>
@@ -445,29 +453,33 @@ export default function SchedulePage() {
               })
             ) : (
                 <div className="col-span-1 md:col-span-2 xl:col-span-3">
-                    <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+                    <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 backdrop-blur-lg rounded-2xl border-white/20">
                     <CardHeader>
-                        <CardTitle>No se encontraron clases</CardTitle>
-                        <CardDescription>Prueba a cambiar o limpiar los filtros.</CardDescription>
+                        <CardTitle className="text-slate-700 dark:text-slate-200">No se encontraron clases</CardTitle>
+                        <CardDescription className="text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</CardDescription>
                     </CardHeader>
                     </Card>
               </div>
             )
           ) : (
             <div className="col-span-1 md:col-span-2 xl:col-span-3">
-               <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+               <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 backdrop-blur-lg rounded-2xl border-white/20">
                   <CardHeader>
-                    <CardTitle>No Hay Clases Programadas</CardTitle>
-                    <CardDescription>Empieza a organizar tu estudio añadiendo tu primera clase.</CardDescription>
+                    <CardTitle className="text-slate-700 dark:text-slate-200">No Hay Clases Programadas</CardTitle>
+                    <CardDescription className="text-slate-500 dark:text-slate-400">Empieza a organizar tu estudio añadiendo tu primera clase.</CardDescription>
                   </CardHeader>
                   <CardContent>
-                     <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Horario</Button>
+                     <DialogTrigger asChild>
+                       <Button onClick={handleAdd} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all">
+                          <PlusCircle className="mr-2 h-4 w-4" />Añadir Horario
+                       </Button>
+                     </DialogTrigger>
                   </CardContent>
                 </Card>
             </div>
           )
         ) : (
-          [...Array(6)].map((_, i) => <Skeleton key={i} className="h-60 w-full" />)
+          [...Array(6)].map((_, i) => <Skeleton key={i} className="h-[22rem] w-full bg-white/30 rounded-2xl" />)
         )}
       </div>
       
