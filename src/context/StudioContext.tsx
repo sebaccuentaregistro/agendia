@@ -12,7 +12,7 @@ import {
   spaces as initialSpaces
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-import { getStudentPaymentStatus } from '@/lib/utils';
+import * as Utils from '@/lib/utils';
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -211,7 +211,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const person = people.find(p => p.id === personId);
     if (!person) return;
 
-    const paymentStatus = getStudentPaymentStatus(person, new Date());
+    const paymentStatus = Utils.getStudentPaymentStatus(person, new Date());
     if (paymentStatus === 'Al día') {
       toast({
         variant: "destructive",
