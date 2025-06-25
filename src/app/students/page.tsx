@@ -316,23 +316,21 @@ export default function StudentsPage() {
                                     Clases Inscritas ({enrolledClasses.length})
                                 </h4>
                                 {enrolledClasses.length > 0 ? (
-                                    <ScrollArea className="h-32 rounded-md border p-2">
-                                        <div className="space-y-3">
-                                            {enrolledClasses.map(cls => {
-                                                const actividad = actividades.find(a => a.id === cls.actividadId);
-                                                const specialist = specialists.find(s => s.id === cls.instructorId);
-                                                const space = spaces.find(s => s.id === cls.spaceId);
-                                                return (
-                                                    <div key={cls.id} className="text-sm">
-                                                        <p className="font-semibold text-card-foreground">{actividad?.name || 'N/A'}</p>
-                                                        <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
-                                                        <p className="text-xs text-muted-foreground">{cls.dayOfWeek}, {formatTime(cls.time)}</p>
-                                                        <p className="text-xs text-muted-foreground">{space?.name} ({cls.personIds.length}/{space?.capacity || '?'})</p>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </ScrollArea>
+                                    <div className="space-y-3 rounded-md border p-2">
+                                        {enrolledClasses.map(cls => {
+                                            const actividad = actividades.find(a => a.id === cls.actividadId);
+                                            const specialist = specialists.find(s => s.id === cls.instructorId);
+                                            const space = spaces.find(s => s.id === cls.spaceId);
+                                            return (
+                                                <div key={cls.id} className="text-sm">
+                                                    <p className="font-semibold text-card-foreground">{actividad?.name || 'N/A'}</p>
+                                                    <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
+                                                    <p className="text-xs text-muted-foreground">{cls.dayOfWeek}, {formatTime(cls.time)}</p>
+                                                    <p className="text-xs text-muted-foreground">{space?.name} ({cls.personIds.length}/{space?.capacity || '?'})</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 ) : (
                                     <div className="flex flex-grow items-center justify-center rounded-md border border-dashed">
                                         <p className="text-sm text-muted-foreground">No está inscrito en clases.</p>
