@@ -91,36 +91,36 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-7">
           <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
-                "group flex flex-col items-center justify-center p-3 transition-colors hover:shadow-lg aspect-square text-center",
+                "group flex flex-col items-center justify-center p-2 transition-colors hover:shadow-lg aspect-square text-center",
                 hasOverdue ? "hover:border-destructive" : "hover:border-green-500"
             )}>
                 <div className={cn(
-                    "flex h-10 w-10 mb-1.5 flex-shrink-0 items-center justify-center rounded-full",
+                    "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
                     hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
                 )}>
-                    {hasOverdue ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
+                    {hasOverdue ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
                 </div>
                 <CardTitle className={cn(
-                    "text-sm font-semibold",
+                    "text-xs font-semibold",
                     hasOverdue ? "text-destructive" : "text-green-600"
                 )}>
                     Atrasados
                 </CardTitle>
-                <p className="text-xl font-bold">{overdueCount}</p>
+                <p className="text-lg font-bold">{overdueCount}</p>
             </Card>
           </Link>
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-              <Card className="group flex flex-col items-center justify-center p-3 transition-colors hover:border-primary hover:shadow-lg aspect-square text-center">
-                  <div className="flex h-10 w-10 mb-1.5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <item.icon className="h-6 w-6" />
+              <Card className="group flex flex-col items-center justify-center p-2 transition-colors hover:border-primary hover:shadow-lg aspect-square text-center">
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <item.icon className="h-5 w-5" />
                   </div>
-                  <CardTitle className="text-sm font-semibold text-card-foreground">{item.label}</CardTitle>
+                  <CardTitle className="text-xs font-semibold text-card-foreground">{item.label}</CardTitle>
                   {item.count !== null && (
-                    <p className="text-xl font-bold text-muted-foreground">{item.count}</p>
+                    <p className="text-lg font-bold text-muted-foreground">{item.count}</p>
                   )}
               </Card>
           </Link>
