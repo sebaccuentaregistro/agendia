@@ -43,21 +43,34 @@ interface StudioContextType {
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
 // Helper function to safely parse JSON from localStorage
-const loadFromLocalStorage = (key: string, defaultValue: any[]) => {
-  if (typeof window === 'undefined') return defaultValue;
-  try {
-    const item = window.localStorage.getItem(key);
-    return item ? JSON.parse(item) : defaultValue;
-  } catch (error) {
-    console.warn(`Error reading localStorage key “${key}”:`, error);
-    return defaultValue;
-  }
+const loadFromLocalStorage = (key: string, defaultValue: any) => {
+    if (typeof window === 'undefined') return defaultValue;
+    try {
+        const item = window.localStorage.getItem(key);
+        if (!item) return defaultValue;
+
+        // Special handling for dates
+        if (key === 'yoga-people' || key === 'yoga-payments') {
+            const parsed = JSON.parse(item);
+            if (key === 'yoga-people') {
+                return parsed.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) }));
+            }
+            if (key === 'yoga-payments') {
+                return parsed.map((p: any) => ({ ...p, date: new Date(p.date) }));
+            }
+        }
+        
+        return JSON.parse(item);
+    } catch (error) {
+        console.warn(`Error reading localStorage key “${key}”:`, error);
+        return defaultValue;
+    }
 };
+
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   
-  // Initialize with default data. This runs on server and client's first render.
   const [actividades, setActividades] = useState<Actividad[]>(initialActividades);
   const [specialists, setSpecialists] = useState<Specialist[]>(initialSpecialists);
   const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
@@ -72,12 +85,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpecialists(loadFromLocalStorage('yoga-specialists', initialSpecialists));
     setSpaces(loadFromLocalStorage('yoga-spaces', initialSpaces));
     setYogaClasses(loadFromLocalStorage('yoga-classes', initialYogaClasses));
-
-    const storedPeople = loadFromLocalStorage('yoga-people', initialPeople);
-    setPeople(storedPeople.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) })));
-
-    const storedPayments = loadFromLocalStorage('yoga-payments', initialPayments);
-    setPayments(storedPayments.map((p: any) => ({ ...p, date: new Date(p.date) })));
+    setPeople(loadFromLocalStorage('yoga-people', initialPeople.map(p => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) }))));
+    setPayments(loadFromLocalStorage('yoga-payments', initialPayments.map(p => ({ ...p, date: new Date(p.date) }))));
     
     setIsInitialized(true); // Mark as initialized
   }, []);
@@ -177,21 +186,33 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addYogaClass = (yogaClass: Omit<YogaClass, 'id' | 'personIds'>) => {
-    const conflict = yogaClasses.some(c => c.dayOfWeek === yogaClass.dayOfWeek && c.time === yogaClass.time && (c.instructorId === yogaClass.instructorId || c.spaceId === yogaClass.spaceId));
-    if (conflict) {
-      toast({ variant: "destructive", title: "Conflicto de Horario", description: "El especialista o el espacio ya están ocupados a esa hora." });
+    const specialistConflict = yogaClasses.some(c => c.dayOfWeek === yogaClass.dayOfWeek && c.time === yogaClass.time && c.instructorId === yogaClass.instructorId);
+    if (specialistConflict) {
+      toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este especialista ya tiene otra clase programada a la misma hora." });
+      return;
+    }
+    const spaceConflict = yogaClasses.some(c => c.dayOfWeek === yogaClass.dayOfWeek && c.time === yogaClass.time && c.spaceId === yogaClass.spaceId);
+    if (spaceConflict) {
+      toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este espacio ya está en uso a esa hora." });
       return;
     }
     setYogaClasses(prev => [...prev, { ...yogaClass, id: `class-${Date.now()}`, personIds: [] }]);
   };
+
   const updateYogaClass = (updated: YogaClass) => {
-    const conflict = yogaClasses.some(c => c.id !== updated.id && c.dayOfWeek === updated.dayOfWeek && c.time === updated.time && (c.instructorId === updated.instructorId || c.spaceId === updated.spaceId));
-    if (conflict) {
-      toast({ variant: "destructive", title: "Conflicto de Horario", description: "El especialista o el espacio ya están ocupados a esa hora." });
+    const specialistConflict = yogaClasses.some(c => c.id !== updated.id && c.dayOfWeek === updated.dayOfWeek && c.time === updated.time && c.instructorId === updated.instructorId);
+    if (specialistConflict) {
+      toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este especialista ya tiene otra clase programada a la misma hora." });
+      return;
+    }
+    const spaceConflict = yogaClasses.some(c => c.id !== updated.id && c.dayOfWeek === updated.dayOfWeek && c.time === updated.time && c.spaceId === updated.spaceId);
+    if (spaceConflict) {
+      toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este espacio ya está en uso a esa hora." });
       return;
     }
     setYogaClasses(prev => prev.map(c => c.id === updated.id ? updated : c));
   };
+
   const deleteYogaClass = (id: string) => {
     const classToDelete = yogaClasses.find(c => c.id === id);
     if(classToDelete?.personIds.length > 0){
