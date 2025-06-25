@@ -43,8 +43,8 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
 
-  const filteredClasses = useMemo(() => {
-    return yogaClasses
+  // No useMemo here to ensure data is always fresh from the context on every render.
+  const filteredClasses = yogaClasses
       .filter(cls => 
         (actividadFilter === 'all' || cls.actividadId === actividadFilter) &&
         (specialistFilter === 'all' || cls.instructorId === specialistFilter)
@@ -56,7 +56,6 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
         space: spaces.find(s => s.id === cls.spaceId),
       }))
       .sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
-  }, [yogaClasses, actividadFilter, specialistFilter, actividades, specialists, spaces]);
 
 
   function onSubmit(data: { classIds: string[] }) {
