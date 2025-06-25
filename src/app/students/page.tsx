@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -287,12 +286,6 @@ export default function StudentsPage() {
                                     <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inscripción</div>
                                     <div>{format(person.joinDate, 'dd/MM/yyyy')}</div>
                                 </div>
-                                {person.membershipType === 'Mensual' && (
-                                    <div>
-                                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Último Pago</div>
-                                        <div>{format(person.lastPaymentDate, 'dd/MM/yyyy')}</div>
-                                    </div>
-                                )}
                             </div>
                         </CardContent>
                     </Card>
