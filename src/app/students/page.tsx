@@ -26,8 +26,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { Card } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
@@ -228,66 +227,96 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      <Card>
-        {!isMounted ? <Skeleton className="w-full h-96" /> : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nombre</TableHead>
-                <TableHead className="hidden md:table-cell">Teléfono</TableHead>
-                <TableHead>Membresía</TableHead>
-                <TableHead>Estado Pago</TableHead>
-                <TableHead className="hidden md:table-cell">Inscripción</TableHead>
-                <TableHead><span className="sr-only">Acciones</span></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {processedPeople.length > 0 ? processedPeople.map((person) => {
+      {!isMounted ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+        </div>
+      ) : processedPeople.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {processedPeople.map((person) => {
                 const hasPayments = payments.some(p => p.personId === person.id);
                 return (
-                  <TableRow key={person.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-9 w-9"><AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/><AvatarFallback>{person.name.charAt(0)}</AvatarFallback></Avatar>
-                        <span className="truncate">{person.name}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                        <div className="flex items-center gap-2 text-muted-foreground">
-                            <span>{person.phone}</span>
-                            <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                                <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                            </a>
-                        </div>
-                    </TableCell>
-                    <TableCell>{person.membershipType}</TableCell>
-                    <TableCell>{getPaymentStatusBadge(person.paymentStatus)}</TableCell>
-                    <TableCell className="hidden md:table-cell">{format(person.joinDate, 'dd/MM/yyyy')}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild><Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Alternar menú</span></Button></DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>Asignar a Clases</DropdownMenuItem>
-                          {person.membershipType === 'Mensual' && (<>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => recordPayment(person.id)}><CreditCard className="mr-2 h-4 w-4" />Registrar Pago</DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}><Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago</DropdownMenuItem>
-                          </>)}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                    <Card key={person.id} className="flex flex-col">
+                        <CardHeader className="flex flex-row items-start gap-4 p-4">
+                            <Avatar className="h-16 w-16">
+                                <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
+                                <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-grow">
+                                <h3 className="text-lg font-bold">{person.name}</h3>
+                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                    <span>{person.phone}</span>
+                                    <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
+                                        <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                                    </a>
+                                </div>
+                            </div>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        <span className="sr-only">Alternar menú</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>Asignar a Clases</DropdownMenuItem>
+                                    {person.membershipType === 'Mensual' && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => recordPayment(person.id)}><CreditCard className="mr-2 h-4 w-4" />Registrar Pago</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}><Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago</DropdownMenuItem>
+                                    </>
+                                    )}
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </CardHeader>
+                        <CardContent className="space-y-4 p-4 pt-0">
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                                <div>
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estado</div>
+                                    <div>{getPaymentStatusBadge(person.paymentStatus)}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Membresía</div>
+                                    <div>{person.membershipType}</div>
+                                </div>
+                                <div>
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inscripción</div>
+                                    <div>{format(person.joinDate, 'dd/MM/yyyy')}</div>
+                                </div>
+                                {person.membershipType === 'Mensual' && (
+                                    <div>
+                                        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Último Pago</div>
+                                        <div>{format(person.lastPaymentDate, 'dd/MM/yyyy')}</div>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                 )
-              }) : (
-                <TableRow><TableCell colSpan={6} className="h-24 text-center">No se encontraron personas.</TableCell></TableRow>
-              )}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
+            })}
+        </div>
+      ) : (
+          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+            <CardHeader>
+              <CardTitle>{searchTerm ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+              <CardDescription>
+                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza añadiendo tu primera persona."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+               {!searchTerm && (
+                 <Button onClick={handleAdd}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Añadir Persona
+                  </Button>
+               )}
+            </CardContent>
+          </Card>
+      )}
       
       {personToEnroll && (<EnrollDialog person={personToEnroll} onOpenChange={(open) => !open && setPersonToEnroll(null)}/>)}
 
