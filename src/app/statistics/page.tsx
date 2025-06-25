@@ -99,7 +99,7 @@ export default function StatisticsPage() {
       <text
         x={x}
         y={y}
-        className="text-[11px] font-semibold fill-primary-foreground"
+        className="text-[11px] font-semibold fill-background"
         textAnchor="middle"
         dominantBaseline="central"
       >
@@ -115,9 +115,9 @@ export default function StatisticsPage() {
         title="Estadísticas del Estudio"
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <Card>
+        <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
           <CardHeader>
-            <CardTitle>Popularidad por Horario</CardTitle>
+            <CardTitle className="text-slate-800 dark:text-slate-100">Popularidad por Horario</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -135,9 +135,9 @@ export default function StatisticsPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
           <CardHeader>
-            <CardTitle>Nuevas Personas por Mes</CardTitle>
+            <CardTitle className="text-slate-800 dark:text-slate-100">Nuevas Personas por Mes</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -163,9 +163,9 @@ export default function StatisticsPage() {
           </CardContent>
         </Card>
 
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
           <CardHeader>
-            <CardTitle>Popularidad de Actividades</CardTitle>
+            <CardTitle className="text-slate-800 dark:text-slate-100">Popularidad de Actividades</CardTitle>
           </CardHeader>
           <CardContent>
             {activityPopularity.length > 0 ? (
@@ -194,7 +194,7 @@ export default function StatisticsPage() {
                 </PieChart>
               </ChartContainer>
             ) : (
-              <div className="flex h-[300px] w-full items-center justify-center text-center text-muted-foreground">
+              <div className="flex h-[300px] w-full items-center justify-center text-center text-slate-500 dark:text-slate-400">
                 <p>No hay datos de inscripciones para mostrar el gráfico.</p>
               </div>
             )}

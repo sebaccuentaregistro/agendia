@@ -21,8 +21,8 @@ function NavLink({ href, label, icon: Icon, isSheet, currentPath }: { href: stri
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary hover:bg-accent",
-        currentPath === href && "bg-accent text-primary"
+        "flex items-center gap-3 rounded-lg px-3 py-2 text-slate-700 dark:text-slate-200 transition-all hover:text-primary hover:bg-white/50 dark:hover:bg-white/20",
+        currentPath === href && "bg-white/60 dark:bg-white/20 text-primary"
       )}
     >
       <Icon className="h-4 w-4" />
@@ -38,8 +38,8 @@ export default function AppSidebar({ isSheet = false }: { isSheet?: boolean }) {
 
   return (
     <>
-      <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
-        <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
+      <div className="flex h-14 items-center border-b border-white/20 px-4 lg:h-[60px] lg:px-6">
+        <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-slate-800 dark:text-white">
           <HeartPulse className="h-6 w-6 text-primary" />
           <span>Agendia</span>
         </Link>

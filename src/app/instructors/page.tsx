@@ -107,7 +107,7 @@ export default function SpecialistsPage() {
               placeholder="Buscar por nombre..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-64"
+              className="w-full md:w-64 bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"
           />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
@@ -197,7 +197,7 @@ export default function SpecialistsPage() {
       {filteredSpecialists.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredSpecialists.map((specialist) => (
-            <Card key={specialist.id} className="flex flex-col">
+            <Card key={specialist.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
               <CardContent className="p-6 flex-grow">
                 <div className="flex items-start gap-4">
                   <Avatar className="h-16 w-16 flex-shrink-0">
@@ -205,8 +205,8 @@ export default function SpecialistsPage() {
                     <AvatarFallback>{specialist.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-grow">
-                    <h3 className="text-xl font-bold">{specialist.name}</h3>
-                    <div className="flex items-center gap-2 text-muted-foreground">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{specialist.name}</h3>
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                         <span>{specialist.phone}</span>
                         <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
                             <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
@@ -217,25 +217,25 @@ export default function SpecialistsPage() {
                 </div>
                 
                 <div className="mt-6">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Actividades</h4>
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actividades</h4>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {getActividadNames(specialist.actividadIds).length > 0 ? (
                       getActividadNames(specialist.actividadIds).map(name => (
                         <Badge key={name} variant="secondary">{name}</Badge>
                       ))
                     ) : (
-                      <p className="text-sm text-muted-foreground">Sin actividades asignadas</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-400">Sin actividades asignadas</p>
                     )}
                   </div>
                 </div>
               </CardContent>
               
-              <CardFooter className="flex justify-end gap-2 p-3 border-t">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(specialist)}>
+              <CardFooter className="flex justify-end gap-2 p-3 border-t border-white/20">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(specialist)}>
                     <Pencil className="h-4 w-4" />
                     <span className="sr-only">Editar</span>
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(specialist)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(specialist)}>
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Eliminar</span>
                 </Button>
@@ -244,10 +244,10 @@ export default function SpecialistsPage() {
           ))}
         </div>
         ) : (
-          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle>{searchTerm ? "No se encontraron especialistas" : "No Hay Especialistas"}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-slate-800 dark:text-slate-100">{searchTerm ? "No se encontraron especialistas" : "No Hay Especialistas"}</CardTitle>
+              <CardDescription className="text-slate-600 dark:text-slate-400">
                 {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a organizar tu estudio añadiendo tu primer especialista."}
               </CardDescription>
             </CardHeader>

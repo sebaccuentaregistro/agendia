@@ -170,7 +170,7 @@ export default function StudentsPage() {
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual' }});
 
   const getPaymentStatusBadge = (status: 'Al día' | 'Atrasado') => {
-    if (status === 'Al día') return <Badge variant="secondary" className="bg-green-100 text-green-800">Al día</Badge>;
+    if (status === 'Al día') return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 border-green-700/50">Al día</Badge>;
     return <Badge variant="destructive">Atrasado</Badge>;
   };
 
@@ -251,7 +251,7 @@ export default function StudentsPage() {
     <div>
       <PageHeader title="Personas">
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
-          <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-64"/>
+          <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-64 bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"/>
           <Button variant="outline" onClick={handleExportPeople}>
             <FileDown className="mr-2 h-4 w-4" />
             Exportar
@@ -282,7 +282,7 @@ export default function StudentsPage() {
       
       {!isMounted ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[28rem] w-full bg-white/30 rounded-2xl" />)}
         </div>
       ) : processedPeople.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -290,15 +290,15 @@ export default function StudentsPage() {
                 const hasPayments = payments.some(p => p.personId === person.id);
                 const enrolledClasses = yogaClasses.filter(cls => cls.personIds.includes(person.id)).sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
                 return (
-                    <Card key={person.id} className="flex flex-col">
+                    <Card key={person.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
                         <CardHeader className="flex flex-row items-start gap-4 p-4">
                             <Avatar className="h-16 w-16">
                                 <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
                                 <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div className="flex-grow">
-                                <h3 className="text-lg font-bold">{person.name}</h3>
-                                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{person.name}</h3>
+                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-sm">
                                     <span>{person.phone}</span>
                                     <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
                                         <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
@@ -307,7 +307,7 @@ export default function StudentsPage() {
                             </div>
                              <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0">
+                                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50">
                                         <MoreHorizontal className="h-4 w-4" />
                                         <span className="sr-only">Alternar menú</span>
                                     </Button>
@@ -329,53 +329,49 @@ export default function StudentsPage() {
                         </CardHeader>
                         <CardContent className="flex flex-col flex-grow space-y-4 p-4 pt-0">
                             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <div>
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estado</div>
+                                <div className="text-slate-700 dark:text-slate-200">
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Estado</div>
                                     <div>{getPaymentStatusBadge(person.paymentStatus)}</div>
                                 </div>
-                                <div>
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Membresía</div>
+                                <div className="text-slate-700 dark:text-slate-200">
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Membresía</div>
                                     <div>{person.membershipType}</div>
                                 </div>
-                                <div>
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Inscripción</div>
+                                <div className="text-slate-700 dark:text-slate-200">
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Inscripción</div>
                                     <div>{format(person.joinDate, 'dd/MM/yyyy')}</div>
                                 </div>
                                 {person.nextPaymentDate && (
-                                  <div>
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Próximo Pago</div>
+                                  <div className="text-slate-700 dark:text-slate-200">
+                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Próximo Pago</div>
                                     <div>{format(person.nextPaymentDate, 'dd/MM/yyyy')}</div>
                                   </div>
                                 )}
                             </div>
                             <div className="space-y-2 flex-grow flex flex-col">
-                                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                     Horarios inscriptos ({enrolledClasses.length})
                                 </h4>
                                 {enrolledClasses.length > 0 ? (
-                                    <div className="flex-grow space-y-3 rounded-md border p-2">
+                                    <div className="flex-grow space-y-3 rounded-lg border border-white/20 p-2 bg-white/10 backdrop-blur-sm">
                                         {enrolledClasses.map(cls => {
                                             const actividad = actividades.find(a => a.id === cls.actividadId);
-                                            const specialist = specialists.find(s => s.id === cls.instructorId);
-                                            const space = spaces.find(s => s.id === cls.spaceId);
                                             return (
                                                 <div key={cls.id} className="text-sm">
-                                                    <p className="font-semibold text-card-foreground">{actividad?.name || 'N/A'}</p>
-                                                    <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
-                                                    <p className="text-xs text-muted-foreground">{cls.dayOfWeek}, {formatTime(cls.time)}</p>
-                                                    <p className="text-xs text-muted-foreground">{space?.name} ({cls.personIds.length}/{space?.capacity || '?'})</p>
+                                                    <p className="font-semibold text-slate-700 dark:text-slate-200">{actividad?.name || 'N/A'}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{cls.dayOfWeek}, {formatTime(cls.time)}</p>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 ) : (
-                                    <div className="flex flex-grow items-center justify-center rounded-md border border-dashed">
-                                        <p className="text-sm text-muted-foreground">Sin horarios inscriptos.</p>
+                                    <div className="flex flex-grow items-center justify-center rounded-lg border border-dashed border-white/30">
+                                        <p className="text-sm text-slate-500 dark:text-slate-400">Sin horarios.</p>
                                     </div>
                                 )}
                             </div>
                         </CardContent>
-                        <CardFooter className="p-4 border-t">
+                        <CardFooter className="p-4 border-t border-white/20">
                             <Button className="w-full" variant="outline" onClick={() => setPersonToEnroll(person)}>
                                 <CalendarPlus className="mr-2 h-4 w-4" />
                                 Asignar Horario
@@ -386,10 +382,10 @@ export default function StudentsPage() {
             })}
         </div>
       ) : (
-          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle>{searchTerm ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-slate-800 dark:text-slate-100">{searchTerm ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+              <CardDescription className="text-slate-600 dark:text-slate-400">
                 {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza añadiendo tu primera persona."}
               </CardDescription>
             </CardHeader>

@@ -42,26 +42,28 @@ export default function AssistantPage() {
         title="Asistente de IA para Horarios"
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
-        <Card>
+        <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
           <CardHeader>
-            <CardTitle>Generar Horario</CardTitle>
+            <CardTitle className="text-slate-800 dark:text-slate-100">Generar Horario</CardTitle>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="availability">Disponibilidad de Especialistas</Label>
+                <Label htmlFor="availability" className="text-slate-700 dark:text-slate-300">Disponibilidad de Especialistas</Label>
                 <Textarea
                   id="availability"
                   placeholder="Ej: Elena Santos: L-V 9-12, David Miller: M,J 18-21..."
                   rows={4}
+                  className="bg-white/50 dark:bg-zinc-800/50"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="preferences">Preferencias de Personas</Label>
+                <Label htmlFor="preferences" className="text-slate-700 dark:text-slate-300">Preferencias de Personas</Label>
                 <Textarea
                   id="preferences"
                   placeholder="Ej: Mayoría prefiere clases de Vinyasa por la mañana. Yin Yoga es popular por la noche..."
                   rows={4}
+                  className="bg-white/50 dark:bg-zinc-800/50"
                 />
               </div>
             </CardContent>
@@ -75,35 +77,39 @@ export default function AssistantPage() {
         </Card>
         
         <div className="space-y-8">
-           <Card>
+           <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Bot className="h-5 w-5" /> Horario Sugerido</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><Bot className="h-5 w-5" /> Horario Sugerido</CardTitle>
             </CardHeader>
             <CardContent>
-              {isLoading && <Skeleton className="h-32 w-full" />}
+              {isLoading && <Skeleton className="h-32 w-full bg-white/30 rounded-xl" />}
               {!isLoading && result && (
-                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{result.schedule}</p>
+                <p className="whitespace-pre-wrap text-sm text-slate-600 dark:text-slate-300">{result.schedule}</p>
               )}
               {!isLoading && !result && (
-                <p className="text-center text-sm text-muted-foreground py-10">
-                  La sugerencia de horario aparecerá aquí.
-                </p>
+                <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    La sugerencia de horario aparecerá aquí.
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
-           <Card>
+           <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><BarChart className="h-5 w-5" /> Razonamiento</CardTitle>
+              <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><BarChart className="h-5 w-5" /> Razonamiento</CardTitle>
             </CardHeader>
             <CardContent>
-               {isLoading && <Skeleton className="h-24 w-full" />}
+               {isLoading && <Skeleton className="h-24 w-full bg-white/30 rounded-xl" />}
                {!isLoading && result && (
-                <p className="text-sm text-muted-foreground">{result.reasoning}</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300">{result.reasoning}</p>
               )}
                {!isLoading && !result && (
-                <p className="text-center text-sm text-muted-foreground py-8">
-                  La explicación de la IA aparecerá aquí.
-                </p>
+                <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-8 text-center bg-white/20 backdrop-blur-sm">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    La explicación de la IA aparecerá aquí.
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>

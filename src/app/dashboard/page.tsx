@@ -87,11 +87,11 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-3 gap-2 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-3 gap-4 md:grid-cols-4 lg:grid-cols-7">
           <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
-                "group flex flex-col items-center justify-center p-2 transition-colors hover:shadow-lg aspect-square text-center",
-                hasOverdue ? "hover:border-destructive" : "hover:border-green-500"
+                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                hasOverdue ? "hover:!border-destructive" : "hover:!border-green-500"
             )}>
                 <div className={cn(
                     "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
@@ -105,31 +105,31 @@ export default function Dashboard() {
                 )}>
                     Atrasados
                 </CardTitle>
-                <p className="text-lg font-bold">{overdueCount}</p>
+                <p className="text-lg font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
             </Card>
           </Link>
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-              <Card className="group flex flex-col items-center justify-center p-2 transition-colors hover:border-primary hover:shadow-lg aspect-square text-center">
+              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <item.icon className="h-5 w-5" />
                   </div>
-                  <CardTitle className="text-xs font-semibold text-card-foreground">{item.label}</CardTitle>
+                  <CardTitle className="text-xs font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                   {item.count !== null && (
-                    <p className="text-lg font-bold text-muted-foreground">{item.count}</p>
+                    <p className="text-lg font-bold text-slate-600 dark:text-slate-400">{item.count}</p>
                   )}
               </Card>
           </Link>
           ))}
       </div>
 
-      <Card className="flex flex-col">
+      <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg">Clases de Hoy - {todayName}</CardTitle>
+            <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Clases de Hoy - {todayName}</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
+                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
                   <SelectValue placeholder="Especialista" />
                 </SelectTrigger>
                 <SelectContent>
@@ -138,7 +138,7 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
               <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
+                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
                   <SelectValue placeholder="Actividad" />
                 </SelectTrigger>
                 <SelectContent>
@@ -147,7 +147,7 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
               <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
+                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
                   <SelectValue placeholder="Espacio" />
                 </SelectTrigger>
                 <SelectContent>
@@ -156,7 +156,7 @@ export default function Dashboard() {
                 </SelectContent>
               </Select>
               <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
+                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
                   <SelectValue placeholder="Horario" />
                 </SelectTrigger>
                 <SelectContent>
@@ -182,13 +182,13 @@ export default function Dashboard() {
                     <li 
                       key={cls.id}
                       className={cn(
-                        "flex items-center gap-4 rounded-lg border p-3 transition-colors",
-                        isFull && "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800"
+                        "flex items-center gap-4 rounded-xl border p-3 transition-colors bg-white/30 dark:bg-white/10 border-white/20",
+                        isFull && "bg-pink-500/20 border-pink-500/30"
                       )}
                     >
                       <div className="flex-1 space-y-1">
-                        <p className="font-semibold">{actividad?.name || 'Clase'}</p>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                        <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Clase'}</p>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
                           <span className="flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{specialist?.name || 'N/A'}</span>
                           <span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3" />{space?.name || 'N/A'}</span>
                         </div>
@@ -197,7 +197,7 @@ export default function Dashboard() {
                         <p className="font-bold text-primary">{formatTime(cls.time)}</p>
                         <p className={cn(
                             "text-sm", 
-                            isFull ? "font-semibold text-pink-600" : "text-muted-foreground"
+                            isFull ? "font-semibold text-pink-600 dark:text-pink-400" : "text-slate-600 dark:text-slate-400"
                           )}>
                           {enrolledCount}/{capacity} inscritos
                         </p>
@@ -207,15 +207,15 @@ export default function Dashboard() {
                 })}
               </ul>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center rounded-md border-2 border-dashed p-10 text-center">
-                <h3 className="text-lg font-semibold">No se encontraron clases</h3>
-                <p className="text-sm text-muted-foreground">Prueba a cambiar o limpiar los filtros.</p>
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
+                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No se encontraron clases</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</p>
               </div>
             )
           ) : (
-            <div className="flex h-full flex-col items-center justify-center rounded-md border-2 border-dashed p-10 text-center">
-                <h3 className="text-lg font-semibold">No hay clases hoy</h3>
-                <p className="text-sm text-muted-foreground">¡Día libre! Disfruta del descanso.</p>
+            <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
+                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No hay clases hoy</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">¡Día libre! Disfruta del descanso.</p>
             </div>
           )}
         </CardContent>
