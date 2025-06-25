@@ -16,7 +16,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useStudio } from '@/context/StudioContext';
-import { getStudentPaymentStatus, getNextPaymentDate, cn } from '@/lib/utils';
+import * as Utils from '@/lib/utils';
 import { format } from 'date-fns';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useSearchParams } from 'next/navigation';
@@ -99,7 +99,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
                       return (
                         <FormField key={item.id} control={form.control} name="classIds" render={({ field }) => (
-                          <FormItem className={cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", isFull && !isEnrolledInForm ? "bg-muted/50 opacity-50" : "hover:bg-muted/50")}>
+                          <FormItem className={Utils.cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", isFull && !isEnrolledInForm ? "bg-muted/50 opacity-50" : "hover:bg-muted/50")}>
                             <FormControl>
                               <Checkbox checked={field.value?.includes(item.id)} disabled={isFull && !isEnrolledInForm} onCheckedChange={(checked) => {
                                 const currentValues = field.value || [];
@@ -107,7 +107,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                               }}/>
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel className={cn("font-normal", isFull && !isEnrolledInForm && "cursor-not-allowed")}>{actividad.name}</FormLabel>
+                              <FormLabel className={Utils.cn("font-normal", isFull && !isEnrolledInForm && "cursor-not-allowed")}>{actividad.name}</FormLabel>
                               <div className="text-xs text-muted-foreground"><p>{specialist?.name}</p><p>{item.dayOfWeek} {formatTime(item.time)}</p><p>{space?.name} ({item.personIds.length}/{space.capacity})</p></div>
                               {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">Clase llena</p>}
                             </div>
@@ -149,8 +149,8 @@ export default function StudentsPage() {
     const now = new Date();
     let peopleList = people.map(p => ({ 
         ...p, 
-        paymentStatus: getStudentPaymentStatus(p, now),
-        nextPaymentDate: getNextPaymentDate(p, now)
+        paymentStatus: Utils.getStudentPaymentStatus(p, now),
+        nextPaymentDate: Utils.getNextPaymentDate(p, now)
     }));
     if (filter === 'overdue') { peopleList = peopleList.filter(p => p.paymentStatus === 'Atrasado'); }
     if (searchTerm.trim() !== '') { peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())); }
