@@ -130,7 +130,7 @@ export default function Dashboard() {
       <Card className="flex flex-col">
         <CardHeader>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle>Clases de Hoy - {todayName}</CardTitle>
+            <CardTitle className="text-lg">Clases de Hoy - {todayName}</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
                 <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
