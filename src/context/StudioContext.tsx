@@ -54,7 +54,7 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
         
         // Special handling for dates
         if (key === 'yoga-people') {
-          return parsed.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) }));
+          return parsed.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: p.lastPaymentDate ? new Date(p.lastPaymentDate) : new Date(p.joinDate) }));
         }
         if (key === 'yoga-payments') {
             return parsed.map((p: any) => ({ ...p, date: new Date(p.date) }));
@@ -85,9 +85,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpecialists(loadFromLocalStorage('yoga-specialists', initialSpecialists));
     setSpaces(loadFromLocalStorage('yoga-spaces', initialSpaces));
     setYogaClasses(loadFromLocalStorage('yoga-classes', initialYogaClasses));
-    setPeople(loadFromLocalStorage('yoga-people', initialPeople.map(p => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) }))));
-    setPayments(loadFromLocalStorage('yoga-payments', initialPayments.map(p => ({ ...p, date: new Date(p.date) }))));
-    
+    setPeople(loadFromLocalStorage('yoga-people', initialPeople));
+    setPayments(loadFromLocalStorage('yoga-payments', initialPayments));
     setIsInitialized(true); // Mark as initialized
   }, []);
 
@@ -137,7 +136,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
   const deleteSpecialist = (id: string) => {
     if (yogaClasses.some(c => c.instructorId === id)) {
-      toast({ variant: "destructive", title: "Error", description: "No se puede eliminar un especialista asignado a clases." });
+      toast({ variant: "destructive", title: "Especialista en Uso", description: "Este especialista está asignado a clases. Debe reasignar o eliminar esas clases primero." });
       return;
     }
     setSpecialists(prev => prev.filter(s => s.id !== id));
@@ -195,7 +194,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
   const deleteSpace = (id: string) => {
     if (yogaClasses.some(c => c.spaceId === id)) {
-      toast({ variant: "destructive", title: "Error", description: "No se puede eliminar un espacio en uso." });
+      toast({ variant: "destructive", title: "Espacio en Uso", description: "No se puede eliminar un espacio con clases programadas. Debe reasignar o eliminar esas clases primero." });
       return;
     }
     setSpaces(prev => prev.filter(s => s.id !== id));
@@ -267,5 +266,3 @@ export function useStudio() {
   }
   return context;
 }
-
-    
