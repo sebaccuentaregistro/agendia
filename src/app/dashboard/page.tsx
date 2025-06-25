@@ -3,14 +3,79 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
-import type { YogaClass } from '@/types';
+import type { YogaClass, Person } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { WhatsAppIcon } from '@/components/whatsapp-icon';
+
+// Helper function to render student cards inside the sheet
+function EnrolledStudentsSheet({ yogaClass, onClose }: { yogaClass: YogaClass; onClose: () => void }) {
+  const { people, actividades, specialists, spaces } = useStudio();
+
+  const enrolledPeople = useMemo(() => {
+    return people.filter(p => yogaClass.personIds.includes(p.id));
+  }, [people, yogaClass]);
+
+  const classDetails = useMemo(() => {
+    const specialist = specialists.find((i) => i.id === yogaClass.instructorId);
+    const actividad = actividades.find((s) => s.id === yogaClass.actividadId);
+    const space = spaces.find((s) => s.id === yogaClass.spaceId);
+    return { specialist, actividad, space };
+  }, [yogaClass, specialists, actividades, spaces]);
+
+  const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
+
+  return (
+    <Sheet open={!!yogaClass} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent className="w-full sm:max-w-md">
+        <SheetHeader>
+          <SheetTitle>Inscritos en {classDetails.actividad?.name || 'Clase'}</SheetTitle>
+          <SheetDescription>
+            {yogaClass.dayOfWeek} a las {yogaClass.time} en {classDetails.space?.name || 'N/A'}.
+            <br/>
+            {enrolledPeople.length} de {classDetails.space?.capacity || 0} personas inscritas.
+          </SheetDescription>
+        </SheetHeader>
+        <div className="mt-4 space-y-4 h-[calc(100%-8rem)] overflow-y-auto pr-4">
+          {enrolledPeople.length > 0 ? (
+            enrolledPeople.map(person => (
+              <Card key={person.id} className="p-3 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border-white/20">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-12 w-12">
+                      <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
+                      <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="font-semibold text-slate-800 dark:text-slate-100">{person.name}</p>
+                    <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <span>{person.phone}</span>
+                       <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
+                          <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                          <span className="sr-only">Enviar WhatsApp a {person.name}</span>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))
+          ) : (
+            <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-white/30">
+                <p className="text-sm text-slate-500 dark:text-slate-400">No hay personas inscritas.</p>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 
 export default function Dashboard() {
   const { yogaClasses, specialists, actividades, spaces, people } = useStudio();
@@ -20,6 +85,7 @@ export default function Dashboard() {
     specialistId: 'all',
     timeOfDay: 'all', // Mañana, Tarde, Noche
   });
+  const [selectedClassForStudents, setSelectedClassForStudents] = useState<YogaClass | null>(null);
 
   const overdueCount = useMemo(() => {
     const now = new Date();
@@ -181,8 +247,9 @@ export default function Dashboard() {
                   return (
                     <li 
                       key={cls.id}
+                      onClick={() => setSelectedClassForStudents(cls)}
                       className={cn(
-                        "flex items-center gap-4 rounded-xl border p-3 transition-colors bg-white/30 dark:bg-white/10 border-white/20",
+                        "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/30 dark:bg-white/10 border-white/20 hover:bg-white/50 dark:hover:bg-white/20 hover:shadow-md cursor-pointer",
                         isFull && "bg-pink-500/20 border-pink-500/30"
                       )}
                     >
@@ -220,6 +287,12 @@ export default function Dashboard() {
           )}
         </CardContent>
       </Card>
+      {selectedClassForStudents && (
+         <EnrolledStudentsSheet 
+            yogaClass={selectedClassForStudents}
+            onClose={() => setSelectedClassForStudents(null)}
+          />
+      )}
     </div>
   );
 }
