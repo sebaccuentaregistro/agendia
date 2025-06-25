@@ -1,41 +1,13 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
-import { set, isBefore, subMonths, addMonths } from "date-fns";
+import { set, isBefore, addMonths, isAfter } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
-  if (person.membershipType === 'Diario') {
-    return 'Al día';
-  }
-
-  // Logic for 'Mensual'
-  const today = referenceDate;
-  const lastPayment = person.lastPaymentDate;
-  const joinDay = person.joinDate.getDate();
-
-  // Determine the due date for the current month.
-  let currentMonthDueDate = set(today, { date: joinDay });
-
-  let mostRecentDueDate;
-  if (isBefore(today, currentMonthDueDate)) {
-    // If we haven't reached this month's due date yet, the last due date was last month.
-    mostRecentDueDate = subMonths(currentMonthDueDate, 1);
-  } else {
-    // Otherwise, the due date for this month is the most recent one.
-    mostRecentDueDate = currentMonthDueDate;
-  }
-  
-  // A person is overdue if their last payment was before their most recent due date.
-  const lastPaymentDay = set(lastPayment, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-  const dueDateDay = set(mostRecentDueDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-  
-  return isBefore(lastPaymentDay, dueDateDay) ? 'Atrasado' : 'Al día';
-}
-
+// This function determines the next billing date based on the last payment.
 export function getNextPaymentDate(person: Person): Date | null {
   if (person.membershipType === 'Diario') {
     return null;
@@ -44,18 +16,41 @@ export function getNextPaymentDate(person: Person): Date | null {
   const lastPayment = person.lastPaymentDate;
   const joinDay = person.joinDate.getDate();
 
-  // The potential due date in the same month as the last payment.
-  const potentialDueDateInMonthOfLastPayment = set(lastPayment, { date: joinDay });
-  
-  // If the last payment was made on or after the due date for that month, the next payment is next month.
-  // We compare just the dates, ignoring time.
+  // Determine the due date for the month of the last payment.
+  // We reset time to midnight to ensure date-only comparisons are accurate.
+  const dueDateInLastPaymentMonth = set(lastPayment, { 
+    date: joinDay,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
+    milliseconds: 0 
+  });
+
   const lastPaymentDay = set(lastPayment, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
 
-  if (isBefore(lastPaymentDay, potentialDueDateInMonthOfLastPayment)) {
-    // Example: Joined on 15th. Last paid June 10th. Next payment is June 15th.
-    return potentialDueDateInMonthOfLastPayment;
-  } else {
-    // Example: Joined on 15th. Last paid June 15th (or June 20th). Next payment is July 15th.
-    return addMonths(potentialDueDateInMonthOfLastPayment, 1);
+  // If the last payment was made before the due date in that month, the next due date is that very date.
+  if (isBefore(lastPaymentDay, dueDateInLastPaymentMonth)) {
+    return dueDateInLastPaymentMonth;
   }
+  
+  // Otherwise, the next due date is the same day but in the following month.
+  return addMonths(dueDateInLastPaymentMonth, 1);
+}
+
+// This function checks if a person's payment is up-to-date.
+export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
+  if (person.membershipType === 'Diario') {
+    return 'Al día';
+  }
+
+  const nextDueDate = getNextPaymentDate(person);
+  if (!nextDueDate) {
+    return 'Al día'; // Should not happen for 'Mensual' members
+  }
+  
+  const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+
+  // A person is considered 'Atrasado' (overdue) if today is strictly after their next due date.
+  // If today is the due date, they are still 'Al día'.
+  return isAfter(today, nextDueDate) ? 'Atrasado' : 'Al día';
 }
