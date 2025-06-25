@@ -31,9 +31,52 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, onSes
   };
 
   return (
-    <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4 overflow-x-auto">
+    <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
+      {/* Mobile View: Vertical list, hidden on md and up */}
+      <div className="md:hidden space-y-6">
+        {daysOfWeek.map(day => {
+          const sessionsForDay = sessions
+            .filter(s => s.dayOfWeek === day)
+            .sort((a, b) => a.time.localeCompare(b.time));
+
+          if (sessionsForDay.length === 0) return null;
+
+          return (
+            <div key={day}>
+              <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3 sticky top-0 bg-background/80 py-2">{day}</h3>
+              <div className="space-y-3">
+                {sessionsForDay.map(session => {
+                  const { specialist, actividad } = getSessionDetails(session);
+                  return (
+                    <Card
+                      key={session.id}
+                      onClick={() => onSessionClick(session)}
+                      className="p-3 cursor-pointer bg-white/50 dark:bg-white/10 hover:bg-white/70 dark:hover:bg-white/20 transition-colors"
+                    >
+                      <div className="flex justify-between items-center gap-4">
+                        <div className="flex-1">
+                          <p className="font-bold text-primary">{actividad?.name || 'Sesión'}</p>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">{specialist?.name || 'N/A'}</p>
+                        </div>
+                        <p className="font-semibold text-sm text-slate-700 dark:text-slate-300">{session.time}</p>
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+        {sessions.length === 0 && (
+             <div className="text-center text-slate-500 dark:text-slate-400 py-10">
+                <p>No hay sesiones para mostrar con los filtros actuales.</p>
+            </div>
+        )}
+      </div>
+
+      {/* Desktop View: Grid, hidden on smaller screens */}
+      <div className="hidden md:block overflow-x-auto">
         <div className="grid grid-cols-[auto_repeat(7,minmax(120px,1fr))] gap-1 min-w-[900px]">
-            {/* Header Row */}
             <div className="sticky left-0 bg-background/80 dark:bg-zinc-900/80 z-10 text-center font-bold text-slate-700 dark:text-slate-300 p-2"></div>
             {daysOfWeek.map(day => (
                 <div key={day} className="text-center font-bold text-slate-700 dark:text-slate-300 p-2 text-sm md:text-base">
@@ -41,7 +84,6 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, onSes
                 </div>
             ))}
 
-            {/* Time Slots and Sessions */}
             {timeSlots.map(time => (
                 <React.Fragment key={time}>
                     <div className="sticky left-0 bg-background/80 dark:bg-zinc-900/80 z-10 text-right font-semibold text-slate-500 dark:text-slate-400 p-2 text-xs pr-4 border-r border-slate-200 dark:border-slate-700">
@@ -74,6 +116,7 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, onSes
                 </React.Fragment>
             ))}
         </div>
+      </div>
     </Card>
   );
 }
