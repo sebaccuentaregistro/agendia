@@ -313,10 +313,10 @@ export default function StudentsPage() {
                             </div>
                             <div className="space-y-2 flex-grow flex flex-col">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Horarios inscritos ({enrolledClasses.length})
+                                    Horarios inscriptos ({enrolledClasses.length})
                                 </h4>
                                 {enrolledClasses.length > 0 ? (
-                                    <div className="space-y-3 rounded-md border p-2">
+                                    <div className="flex-grow space-y-3 rounded-md border p-2">
                                         {enrolledClasses.map(cls => {
                                             const actividad = actividades.find(a => a.id === cls.actividadId);
                                             const specialist = specialists.find(s => s.id === cls.instructorId);
@@ -333,7 +333,7 @@ export default function StudentsPage() {
                                     </div>
                                 ) : (
                                     <div className="flex flex-grow items-center justify-center rounded-md border border-dashed">
-                                        <p className="text-sm text-muted-foreground">No está inscrito en clases.</p>
+                                        <p className="text-sm text-muted-foreground">Sin horarios inscriptos.</p>
                                     </div>
                                 )}
                             </div>
