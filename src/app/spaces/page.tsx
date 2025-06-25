@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, PlusCircle, Trash2, Warehouse } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -29,6 +28,16 @@ export default function SpacesPage() {
   const [selectedSpace, setSelectedSpace] = useState<Space | undefined>(undefined);
   const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredSpaces = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return spaces;
+    }
+    return spaces.filter(space =>
+      space.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [spaces, searchTerm]);
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -79,31 +88,39 @@ export default function SpacesPage() {
   return (
     <div>
       <PageHeader title="Espacios">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Espacio</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{selectedSpace ? 'Editar Espacio' : 'Añadir Nuevo Espacio'}</DialogTitle></DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <FormField control={form.control} name="capacity" render={({ field }) => (
-                  <FormItem><FormLabel>Capacidad</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+          <Input
+            placeholder="Buscar por nombre..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full md:w-64"
+          />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Espacio</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{selectedSpace ? 'Editar Espacio' : 'Añadir Nuevo Espacio'}</DialogTitle></DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                    <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="capacity" render={({ field }) => (
+                    <FormItem><FormLabel>Capacidad</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </PageHeader>
 
       {isMounted ? (
-        spaces.length > 0 ? (
+        filteredSpaces.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {spaces.map((space) => (
+            {filteredSpaces.map((space) => (
               <Card key={space.id} className="flex flex-col">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-3">
@@ -131,11 +148,15 @@ export default function SpacesPage() {
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
             <CardHeader>
-              <CardTitle>No Hay Espacios</CardTitle>
-              <CardDescription>Empieza a organizar tu estudio añadiendo tu primer espacio.</CardDescription>
+              <CardTitle>{searchTerm ? "No se encontraron espacios" : "No Hay Espacios"}</CardTitle>
+              <CardDescription>
+                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a organizar tu estudio añadiendo tu primer espacio."}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Espacio</Button>
+               {!searchTerm && (
+                <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Espacio</Button>
+               )}
             </CardContent>
           </Card>
         )

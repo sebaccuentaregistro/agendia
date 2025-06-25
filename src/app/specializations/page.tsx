@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -6,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, PlusCircle, Trash2, Star } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -28,6 +27,16 @@ export default function ActividadesPage() {
   const [selectedActividad, setSelectedActividad] = useState<Actividad | undefined>(undefined);
   const [actividadToDelete, setActividadToDelete] = useState<Actividad | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredActividades = useMemo(() => {
+    if (!searchTerm.trim()) {
+      return actividades;
+    }
+    return actividades.filter(actividad =>
+      actividad.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [actividades, searchTerm]);
 
   useEffect(() => { setIsMounted(true); }, []);
 
@@ -80,28 +89,36 @@ export default function ActividadesPage() {
   return (
     <div>
       <PageHeader title="Actividades">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Actividad</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>{selectedActividad ? 'Editar Actividad' : 'Añadir Nueva Actividad'}</DialogTitle></DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+            <Input
+              placeholder="Buscar por nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full md:w-64"
+            />
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Actividad</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>{selectedActividad ? 'Editar Actividad' : 'Añadir Nueva Actividad'}</DialogTitle></DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                    <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </PageHeader>
       
       {isMounted ? (
-        actividades.length > 0 ? (
+        filteredActividades.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {actividades.map((actividad) => {
+            {filteredActividades.map((actividad) => {
               const usage = getUsageCount(actividad.id);
               return (
                 <Card key={actividad.id} className="flex flex-col">
@@ -132,11 +149,15 @@ export default function ActividadesPage() {
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
             <CardHeader>
-              <CardTitle>No Hay Actividades</CardTitle>
-              <CardDescription>Empieza a definir los servicios que ofreces añadiendo tu primera actividad.</CardDescription>
+              <CardTitle>{searchTerm ? "No se encontraron actividades" : "No Hay Actividades"}</CardTitle>
+              <CardDescription>
+                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a definir los servicios que ofreces añadiendo tu primera actividad."}
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Actividad</Button>
+               {!searchTerm && (
+                <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Actividad</Button>
+               )}
             </CardContent>
           </Card>
         )
