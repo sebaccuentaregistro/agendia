@@ -1,13 +1,15 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardDescription, CardContent, CardHeader } from '@/components/ui/card';
-import { Calendar, Users, ClipboardList, Star, Warehouse, Bot, User as UserIcon, DoorOpen } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
 import type { YogaClass } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getStudentPaymentStatus } from '@/lib/utils';
 
 const navItems = [
   { href: "/schedule", label: "Horario", icon: Calendar, description: "Gestiona y visualiza las clases programadas." },
@@ -18,13 +20,18 @@ const navItems = [
 ];
 
 export default function Dashboard() {
-  const { yogaClasses, specialists, actividades, spaces } = useStudio();
+  const { yogaClasses, specialists, actividades, spaces, people } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
     specialistId: 'all',
     timeOfDay: 'all', // Mañana, Tarde, Noche
   });
+
+  const overdueCount = useMemo(() => {
+    const now = new Date();
+    return people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
+  }, [people]);
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -83,6 +90,23 @@ export default function Dashboard() {
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Navegación Rápida</h2>
         <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <Link href="/students?filter=overdue" className="block transition-transform hover:-translate-y-1">
+              <Card className="group flex h-full flex-col justify-between p-6 transition-colors hover:border-destructive hover:shadow-lg">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                        <AlertTriangle className="h-6 w-6" />
+                    </div>
+                    <div className="flex-1">
+                        <CardTitle className="text-lg font-bold">Atrasados</CardTitle>
+                        <CardDescription className="mt-1">
+                          {overdueCount > 0 
+                            ? `${overdueCount} persona${overdueCount === 1 ? '' : 's'} con pagos pendientes.` 
+                            : 'No hay personas con pagos atrasados.'}
+                        </CardDescription>
+                    </div>
+                  </div>
+              </Card>
+            </Link>
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} className="block transition-transform hover:-translate-y-1">
                 <Card className="group flex h-full flex-col justify-between p-6 transition-colors hover:border-primary hover:shadow-lg">
@@ -108,7 +132,7 @@ export default function Dashboard() {
             <div className="flex flex-wrap items-center gap-2">
               <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
                 <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
-                  {filters.specialistId === 'all' ? 'Especialista' : <SelectValue />}
+                  <SelectValue placeholder="Especialista" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
@@ -117,7 +141,7 @@ export default function Dashboard() {
               </Select>
               <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
                 <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
-                  {filters.actividadId === 'all' ? 'Actividad' : <SelectValue />}
+                  <SelectValue placeholder="Actividad" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
@@ -126,7 +150,7 @@ export default function Dashboard() {
               </Select>
               <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
                 <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
-                  {filters.spaceId === 'all' ? 'Espacio' : <SelectValue />}
+                  <SelectValue placeholder="Espacio" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
@@ -135,7 +159,7 @@ export default function Dashboard() {
               </Select>
               <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
                 <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
-                  {filters.timeOfDay === 'all' ? 'Horario' : <SelectValue />}
+                  <SelectValue placeholder="Horario" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todo el Día</SelectItem>
