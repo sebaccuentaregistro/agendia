@@ -1,8 +1,7 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
-import { Card, CardTitle, CardDescription, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
@@ -10,14 +9,6 @@ import { useMemo, useState } from 'react';
 import type { YogaClass } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
-
-const navItems = [
-  { href: "/schedule", label: "Horario", icon: Calendar, description: "Gestiona y visualiza las clases programadas." },
-  { href: "/students", label: "Personas", icon: Users, description: "Administra los perfiles de todos tus clientes." },
-  { href: "/instructors", label: "Especialistas", icon: ClipboardList, description: "Gestiona los perfiles de los instructores." },
-  { href: "/specializations", label: "Actividades", icon: Star, description: "Define los tipos de clases que ofreces." },
-  { href: "/spaces", label: "Espacios", icon: Warehouse, description: "Administra los salones y áreas físicas." },
-];
 
 export default function Dashboard() {
   const { yogaClasses, specialists, actividades, spaces, people } = useStudio();
@@ -32,6 +23,14 @@ export default function Dashboard() {
     const now = new Date();
     return people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
   }, [people]);
+
+  const navItems = [
+    { href: "/schedule", label: "Horario", icon: Calendar, count: yogaClasses.length },
+    { href: "/students", label: "Personas", icon: Users, count: people.length },
+    { href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
+    { href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
+    { href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
+  ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -92,17 +91,13 @@ export default function Dashboard() {
         <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             <Link href="/students?filter=overdue" className="block transition-transform hover:-translate-y-1">
               <Card className="group flex h-full flex-col justify-between p-6 transition-colors hover:border-destructive hover:shadow-lg">
-                  <div className="flex items-start gap-4">
+                  <div className="flex items-start justify-between">
+                    <div>
+                        <CardTitle className="text-lg font-bold text-destructive">Atrasados</CardTitle>
+                        <p className="text-4xl font-bold mt-2">{overdueCount}</p>
+                    </div>
                     <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
                         <AlertTriangle className="h-6 w-6" />
-                    </div>
-                    <div className="flex-1">
-                        <CardTitle className="text-lg font-bold">Atrasados</CardTitle>
-                        <CardDescription className="mt-1">
-                          {overdueCount > 0 
-                            ? `${overdueCount} persona${overdueCount === 1 ? '' : 's'} con pagos pendientes.` 
-                            : 'No hay personas con pagos atrasados.'}
-                        </CardDescription>
                     </div>
                   </div>
               </Card>
@@ -110,13 +105,13 @@ export default function Dashboard() {
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} className="block transition-transform hover:-translate-y-1">
                 <Card className="group flex h-full flex-col justify-between p-6 transition-colors hover:border-primary hover:shadow-lg">
-                    <div className="flex items-start gap-4">
+                    <div className="flex items-start justify-between">
+                      <div>
+                          <CardTitle className="text-lg font-bold">{item.label}</CardTitle>
+                          <p className="text-4xl font-bold mt-2">{item.count}</p>
+                      </div>
                       <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                           <item.icon className="h-6 w-6" />
-                      </div>
-                      <div className="flex-1">
-                          <CardTitle className="text-lg font-bold">{item.label}</CardTitle>
-                          <CardDescription className="mt-1">{item.description}</CardDescription>
                       </div>
                     </div>
                 </Card>
