@@ -3,7 +3,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -137,6 +138,7 @@ export default function StudentsPage() {
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [personToEnroll, setPersonToEnroll] = useState<Person | null>(null);
+  const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
@@ -264,6 +266,7 @@ export default function StudentsPage() {
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>Asignar a Clases</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial</DropdownMenuItem>
                                     {person.membershipType === 'Mensual' && (
                                     <>
                                         <DropdownMenuSeparator />
@@ -335,6 +338,37 @@ export default function StudentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Sheet open={!!personForHistory} onOpenChange={(open) => !open && setPersonForHistory(null)}>
+        <SheetContent>
+            <SheetHeader>
+                <SheetTitle>Historial de Pagos: {personForHistory?.name}</SheetTitle>
+                <SheetDescription>
+                Aquí se muestra un registro de todas las fechas de pago para esta persona.
+                </SheetDescription>
+            </SheetHeader>
+            <ScrollArea className="h-[calc(100%-4rem)] pr-4 mt-4">
+              <div className="space-y-2">
+                {personForHistory && payments.filter(p => p.personId === personForHistory.id).length > 0 ? (
+                    payments
+                    .filter(p => p.personId === personForHistory.id)
+                    .sort((a,b) => b.date.getTime() - a.date.getTime())
+                    .map(payment => (
+                        <div key={payment.id} className="flex justify-between items-center text-sm p-3 rounded-md bg-muted/50">
+                            <span>{format(payment.date, 'dd MMMM yyyy', { weekStartsOn: 1 })}</span>
+                            <span className="text-xs text-muted-foreground">{format(payment.date, 'HH:mm')}hs</span>
+                        </div>
+                    ))
+                ) : (
+                    <div className="text-center text-muted-foreground pt-16">
+                        <p>No hay pagos registrados.</p>
+                    </div>
+                )}
+              </div>
+            </ScrollArea>
+        </SheetContent>
+      </Sheet>
+
     </div>
   );
 }
