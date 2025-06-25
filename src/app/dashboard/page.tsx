@@ -108,28 +108,36 @@ export default function Dashboard() {
             <CardTitle>Clases de Hoy - {todayName}</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial"><SelectValue placeholder="Especialista" /></SelectTrigger>
+                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
+                  {filters.specialistId === 'all' ? 'Especialista' : <SelectValue />}
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial"><SelectValue placeholder="Actividad" /></SelectTrigger>
+                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
+                  {filters.actividadId === 'all' ? 'Actividad' : <SelectValue />}
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
                   {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial"><SelectValue placeholder="Espacio" /></SelectTrigger>
+                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
+                  {filters.spaceId === 'all' ? 'Espacio' : <SelectValue />}
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos</SelectItem>
                   {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial"><SelectValue placeholder="Horario" /></SelectTrigger>
+                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial">
+                  {filters.timeOfDay === 'all' ? 'Horario' : <SelectValue />}
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todo el Día</SelectItem>
                   <SelectItem value="Mañana">Mañana</SelectItem>
