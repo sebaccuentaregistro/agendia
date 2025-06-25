@@ -234,7 +234,7 @@ export default function StudentsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
-                <TableHead className="hidden lg:table-cell">Teléfono</TableHead>
+                <TableHead className="hidden md:table-cell">Teléfono</TableHead>
                 <TableHead>Membresía</TableHead>
                 <TableHead>Estado Pago</TableHead>
                 <TableHead className="hidden md:table-cell">Inscripción</TableHead>
@@ -252,7 +252,7 @@ export default function StudentsPage() {
                         <span className="truncate">{person.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell className="hidden md:table-cell">
                         <div className="flex items-center gap-2 text-muted-foreground">
                             <span>{person.phone}</span>
                             <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
