@@ -313,7 +313,7 @@ export default function StudentsPage() {
                             </div>
                             <div className="space-y-2 flex-grow flex flex-col">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                                    Clases Inscritas ({enrolledClasses.length})
+                                    Horarios inscritos ({enrolledClasses.length})
                                 </h4>
                                 {enrolledClasses.length > 0 ? (
                                     <div className="space-y-3 rounded-md border p-2">
