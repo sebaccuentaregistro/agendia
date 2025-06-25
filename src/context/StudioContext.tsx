@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -98,11 +99,21 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces, isInitialized]);
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
+    if (actividades.some(a => a.name.trim().toLowerCase() === actividad.name.trim().toLowerCase())) {
+        toast({ variant: "destructive", title: "Actividad Duplicada", description: "Ya existe una actividad con este nombre." });
+        return;
+    }
     setActividades(prev => [...prev, { ...actividad, id: `act-${Date.now()}` }]);
   };
+
   const updateActividad = (updated: Actividad) => {
+    if (actividades.some(a => a.id !== updated.id && a.name.trim().toLowerCase() === updated.name.trim().toLowerCase())) {
+        toast({ variant: "destructive", title: "Nombre Duplicado", description: "Ya existe otra actividad con este nombre." });
+        return;
+    }
     setActividades(prev => prev.map(a => a.id === updated.id ? updated : a));
   };
+
   const deleteActividad = (id: string) => {
     const isUsedInClass = yogaClasses.some(c => c.actividadId === id);
     if (isUsedInClass) {
@@ -128,11 +139,38 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addSpecialist = (specialist: Omit<Specialist, 'id' | 'avatar'>) => {
+    if (specialists.some(s => s.phone.trim() === specialist.phone.trim())) {
+        toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe un especialista con este número de teléfono." });
+        return;
+    }
     setSpecialists(prev => [...prev, { ...specialist, id: `spc-${Date.now()}`, avatar: `https://placehold.co/100x100.png` }]);
   };
+
   const updateSpecialist = (updated: Specialist) => {
+    if (specialists.some(s => s.id !== updated.id && s.phone.trim() === updated.phone.trim())) {
+        toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe otro especialista con este número de teléfono." });
+        return;
+    }
+    
+    const originalSpecialist = specialists.find(s => s.id === updated.id);
+    if (originalSpecialist) {
+        const removedActividadIds = originalSpecialist.actividadIds.filter(id => !updated.actividadIds.includes(id));
+        const orphanedClasses = yogaClasses.filter(c => c.instructorId === updated.id && removedActividadIds.includes(c.actividadId));
+        
+        if (orphanedClasses.length > 0) {
+            toast({
+                variant: "destructive",
+                title: "Clases Inconsistentes",
+                description: `No se puede quitar la especialidad. Este especialista todavía tiene ${orphanedClasses.length} clase(s) programada(s) de este tipo. Reasigna o elimina esas clases primero.`,
+                duration: 6000,
+            });
+            return;
+        }
+    }
+
     setSpecialists(prev => prev.map(s => s.id === updated.id ? updated : s));
   };
+
   const deleteSpecialist = (id: string) => {
     if (yogaClasses.some(c => c.instructorId === id)) {
       toast({ variant: "destructive", title: "Especialista en Uso", description: "Este especialista está asignado a clases. Debe reasignar o eliminar esas clases primero." });
@@ -142,6 +180,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addPerson = (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => {
+    if (people.some(p => p.phone.trim() === person.phone.trim())) {
+        toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe una persona con este número de teléfono." });
+        return;
+    }
     const now = new Date();
     const newPerson: Person = { ...person, id: `person-${Date.now()}`, avatar: `https://placehold.co/100x100.png`, joinDate: now, lastPaymentDate: now };
     setPeople(prev => [newPerson, ...prev]);
@@ -150,9 +192,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       setPayments(prev => [newPayment, ...prev]);
     }
   };
+
   const updatePerson = (updated: Person) => {
+    if (people.some(p => p.id !== updated.id && p.phone.trim() === updated.phone.trim())) {
+        toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe otra persona con este número de teléfono." });
+        return;
+    }
     setPeople(prev => prev.map(p => p.id === updated.id ? updated : p));
   };
+
   const deletePerson = (id: string) => {
     setPeople(prev => prev.filter(p => p.id !== id));
     setYogaClasses(prev => prev.map(c => ({ ...c, personIds: c.personIds.filter(pid => pid !== id) })));
@@ -181,9 +229,18 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addSpace = (space: Omit<Space, 'id'>) => {
+    if (spaces.some(s => s.name.trim().toLowerCase() === space.name.trim().toLowerCase())) {
+        toast({ variant: "destructive", title: "Espacio Duplicado", description: "Ya existe un espacio con este nombre." });
+        return;
+    }
     setSpaces(prev => [...prev, { ...space, id: `space-${Date.now()}` }]);
   };
+
   const updateSpace = (updated: Space) => {
+    if (spaces.some(s => s.id !== updated.id && s.name.trim().toLowerCase() === updated.name.trim().toLowerCase())) {
+        toast({ variant: "destructive", title: "Nombre Duplicado", description: "Ya existe otro espacio con este nombre." });
+        return;
+    }
     const classesAffected = yogaClasses.filter(c => c.spaceId === updated.id && c.personIds.length > updated.capacity);
     if (classesAffected.length > 0) {
       toast({ variant: "destructive", title: "Error", description: "La nueva capacidad es menor que los inscritos en una clase." });
@@ -191,6 +248,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
     setSpaces(prev => prev.map(s => s.id === updated.id ? updated : s));
   };
+
   const deleteSpace = (id: string) => {
     if (yogaClasses.some(c => c.spaceId === id)) {
       toast({ variant: "destructive", title: "Espacio en Uso", description: "No se puede eliminar un espacio con clases programadas. Debe reasignar o eliminar esas clases primero." });
