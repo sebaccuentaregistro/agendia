@@ -133,7 +133,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 }
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, yogaClasses, specialists, actividades, spaces } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -204,6 +204,15 @@ export default function StudentsPage() {
   
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
+  const formatTime = (time: string) => {
+    if (!time || !time.includes(':')) return 'N/A';
+    const [hour, minute] = time.split(':');
+    const hourNum = parseInt(hour, 10);
+    const ampm = hourNum >= 12 ? 'PM' : 'AM';
+    const formattedHour = hourNum % 12 === 0 ? 12 : hourNum % 12;
+    return `${formattedHour}:${minute} ${ampm}`;
+  };
+
   return (
     <div>
       <PageHeader title="Personas" description="Administrar los perfiles de todas las personas/clientes.">
@@ -235,12 +244,13 @@ export default function StudentsPage() {
       
       {!isMounted ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-48 w-full" />)}
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-64 w-full" />)}
         </div>
       ) : processedPeople.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {processedPeople.map((person) => {
                 const hasPayments = payments.some(p => p.personId === person.id);
+                const enrolledClasses = yogaClasses.filter(cls => cls.personIds.includes(person.id)).sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
                 return (
                     <Card key={person.id} className="flex flex-col">
                         <CardHeader className="flex flex-row items-start gap-4 p-4">
@@ -280,7 +290,7 @@ export default function StudentsPage() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </CardHeader>
-                        <CardContent className="space-y-4 p-4 pt-0">
+                        <CardContent className="flex flex-col flex-grow space-y-4 p-4 pt-0">
                             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <div>
                                     <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Estado</div>
@@ -299,6 +309,34 @@ export default function StudentsPage() {
                                     <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Próximo Pago</div>
                                     <div>{format(person.nextPaymentDate, 'dd/MM/yyyy')}</div>
                                   </div>
+                                )}
+                            </div>
+                            <div className="space-y-2 flex-grow flex flex-col">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Clases Inscritas ({enrolledClasses.length})
+                                </h4>
+                                {enrolledClasses.length > 0 ? (
+                                    <ScrollArea className="h-32 rounded-md border p-2">
+                                        <div className="space-y-3">
+                                            {enrolledClasses.map(cls => {
+                                                const actividad = actividades.find(a => a.id === cls.actividadId);
+                                                const specialist = specialists.find(s => s.id === cls.instructorId);
+                                                const space = spaces.find(s => s.id === cls.spaceId);
+                                                return (
+                                                    <div key={cls.id} className="text-sm">
+                                                        <p className="font-semibold text-card-foreground">{actividad?.name || 'N/A'}</p>
+                                                        <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
+                                                        <p className="text-xs text-muted-foreground">{cls.dayOfWeek}, {formatTime(cls.time)}</p>
+                                                        <p className="text-xs text-muted-foreground">{space?.name} ({cls.personIds.length}/{space?.capacity || '?'})</p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </ScrollArea>
+                                ) : (
+                                    <div className="flex flex-grow items-center justify-center rounded-md border border-dashed">
+                                        <p className="text-sm text-muted-foreground">No está inscrito en clases.</p>
+                                    </div>
                                 )}
                             </div>
                         </CardContent>
