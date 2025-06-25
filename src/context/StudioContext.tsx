@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -238,13 +237,19 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const enrollPersonInClasses = (personId: string, newClassIds: string[]) => {
+    // Ensure the list of class IDs is unique to prevent duplicate enrollments from a faulty source.
+    const uniqueNewClassIds = [...new Set(newClassIds)];
+
     let classesToUpdate = [...yogaClasses];
-    // Un-enroll from all classes first
-    classesToUpdate = classesToUpdate.map(c => ({...c, personIds: c.personIds.filter(id => id !== personId)}));
-    // Enroll in new classes
-    for (const classId of newClassIds) {
+    // Un-enroll from all classes first to handle removals cleanly
+    classesToUpdate = classesToUpdate.map(c => ({...c, personIds: c.personIds.filter(pid => pid !== personId)}));
+    
+    // Enroll in the new, unique list of classes
+    for (const classId of uniqueNewClassIds) {
       const classIndex = classesToUpdate.findIndex(c => c.id === classId);
       if (classIndex !== -1) {
+        // Because we wiped the person from all classes first, we can safely push.
+        // The check for uniqueness in `uniqueNewClassIds` prevents adding them to the same class twice in this loop.
         classesToUpdate[classIndex].personIds.push(personId);
       }
     }
