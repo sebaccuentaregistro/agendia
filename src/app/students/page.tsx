@@ -143,7 +143,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 }
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, yogaClasses, especialistas, actividades, spaces } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, yogaClasses, specialists, actividades, spaces } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -353,7 +353,7 @@ export default function StudentsPage() {
                                     <div className="flex-grow space-y-3 rounded-lg border border-white/20 p-2 bg-white/10 backdrop-blur-sm">
                                         {enrolledClasses.map(cls => {
                                             const actividad = actividades.find(a => a.id === cls.actividadId);
-                                            const especialista = especialistas.find(s => s.id === cls.instructorId);
+                                            const especialista = specialists.find(s => s.id === cls.instructorId);
                                             return (
                                                 <div key={cls.id} className="text-sm">
                                                     <p className="font-semibold text-slate-700 dark:text-slate-200">{actividad?.name || 'N/A'}</p>
