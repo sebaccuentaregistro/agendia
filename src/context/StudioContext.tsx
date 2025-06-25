@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -56,26 +57,38 @@ const loadFromLocalStorage = (key: string, defaultValue: any[]) => {
 export function StudioProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   
-  const [actividades, setActividades] = useState<Actividad[]>(() => loadFromLocalStorage('yoga-actividades', initialActividades));
-  const [specialists, setSpecialists] = useState<Specialist[]>(() => loadFromLocalStorage('yoga-specialists', initialSpecialists));
-  const [spaces, setSpaces] = useState<Space[]>(() => loadFromLocalStorage('yoga-spaces', initialSpaces));
-  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(() => loadFromLocalStorage('yoga-classes', initialYogaClasses));
-  
-  const [people, setPeople] = useState<Person[]>(() => {
-    const stored = loadFromLocalStorage('yoga-people', initialPeople);
-    return stored.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) }));
-  });
-  const [payments, setPayments] = useState<Payment[]>(() => {
-    const stored = loadFromLocalStorage('yoga-payments', initialPayments);
-    return stored.map((p: any) => ({ ...p, date: new Date(p.date) }));
-  });
+  // Initialize with default data. This runs on server and client's first render.
+  const [actividades, setActividades] = useState<Actividad[]>(initialActividades);
+  const [specialists, setSpecialists] = useState<Specialist[]>(initialSpecialists);
+  const [spaces, setSpaces] = useState<Space[]>(initialSpaces);
+  const [yogaClasses, setYogaClasses] = useState<YogaClass[]>(initialYogaClasses);
+  const [people, setPeople] = useState<Person[]>(() => initialPeople.map(p => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) })));
+  const [payments, setPayments] = useState<Payment[]>(() => initialPayments.map(p => ({ ...p, date: new Date(p.date) })));
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  useEffect(() => { localStorage.setItem('yoga-actividades', JSON.stringify(actividades)); }, [actividades]);
-  useEffect(() => { localStorage.setItem('yoga-specialists', JSON.stringify(specialists)); }, [specialists]);
-  useEffect(() => { localStorage.setItem('yoga-people', JSON.stringify(people)); }, [people]);
-  useEffect(() => { localStorage.setItem('yoga-classes', JSON.stringify(yogaClasses)); }, [yogaClasses]);
-  useEffect(() => { localStorage.setItem('yoga-payments', JSON.stringify(payments)); }, [payments]);
-  useEffect(() => { localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces]);
+  // Load from localStorage on client-side mount to avoid hydration errors
+  useEffect(() => {
+    setActividades(loadFromLocalStorage('yoga-actividades', initialActividades));
+    setSpecialists(loadFromLocalStorage('yoga-specialists', initialSpecialists));
+    setSpaces(loadFromLocalStorage('yoga-spaces', initialSpaces));
+    setYogaClasses(loadFromLocalStorage('yoga-classes', initialYogaClasses));
+
+    const storedPeople = loadFromLocalStorage('yoga-people', initialPeople);
+    setPeople(storedPeople.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) })));
+
+    const storedPayments = loadFromLocalStorage('yoga-payments', initialPayments);
+    setPayments(storedPayments.map((p: any) => ({ ...p, date: new Date(p.date) })));
+    
+    setIsInitialized(true); // Mark as initialized
+  }, []);
+
+  // Persist to localStorage whenever data changes, but only after initialization
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-actividades', JSON.stringify(actividades)); }, [actividades, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-specialists', JSON.stringify(specialists)); }, [specialists, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-people', JSON.stringify(people)); }, [people, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-classes', JSON.stringify(yogaClasses)); }, [yogaClasses, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-payments', JSON.stringify(payments)); }, [payments, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces, isInitialized]);
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
     setActividades(prev => [...prev, { ...actividad, id: `act-${Date.now()}` }]);
