@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserP
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
-import type { Session } from '@/types';
+import type { Session, Person } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +22,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSearchParams } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PageHeader } from '@/components/page-header';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { WhatsAppIcon } from '@/components/whatsapp-icon';
+
 
 const formSchema = z.object({
   instructorId: z.string({ required_error: 'Debes seleccionar un especialista.' }).min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -114,6 +118,71 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
   );
 }
 
+const formatTime = (time: string) => {
+    if (!time || !time.includes(':')) return 'N/A';
+    return time;
+};
+
+// Helper component to show enrolled people, similar to the one in dashboard
+function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: () => void; }) {
+  const { people, actividades, spaces } = useStudio();
+
+  const enrolledPeople = useMemo(() => {
+    return people.filter(p => session.personIds.includes(p.id));
+  }, [people, session]);
+
+  const actividad = useMemo(() => {
+    return actividades.find((s) => s.id === session.actividadId);
+  }, [session, actividades]);
+  
+  const space = useMemo(() => {
+    return spaces.find((s) => s.id === session.spaceId);
+  }, [session, spaces]);
+
+  const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
+
+  return (
+    <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Inscritos en {actividad?.name || 'Sesión'}</SheetTitle>
+          <SheetDescription>
+            {session.dayOfWeek} a las {formatTime(session.time)} en {space?.name || 'N/A'}.
+            <br/>
+            {enrolledPeople.length} de {session.sessionType === 'Individual' ? 1 : space?.capacity || 0} personas inscritas.
+          </SheetDescription>
+        </SheetHeader>
+        <ScrollArea className="mt-4 h-[calc(100%-8rem)] pr-4">
+          {enrolledPeople.length > 0 ? (
+            <div className="space-y-4">
+              {enrolledPeople.map(person => (
+                <Card key={person.id} className="p-3 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border-white/20">
+                  <div className="flex items-center gap-4">
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-slate-100">{person.name}</p>
+                      <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                        <span>{person.phone}</span>
+                        <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
+                            <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                            <span className="sr-only">Enviar WhatsApp a {person.name}</span>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-white/30">
+                <p className="text-sm text-slate-500 dark:text-slate-400">No hay personas inscritas.</p>
+            </div>
+          )}
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 export default function SchedulePage() {
   const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -121,6 +190,7 @@ export default function SchedulePage() {
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [sessionToManage, setSessionToManage] = useState<Session | null>(null);
+  const [sessionForRoster, setSessionForRoster] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [filters, setFilters] = useState({
     specialistId: 'all',
@@ -232,11 +302,6 @@ export default function SchedulePage() {
     setIsDialogOpen(false);
     setSelectedSession(undefined);
   }
-
-  const formatTime = (time: string) => {
-    if (!time || !time.includes(':')) return 'N/A';
-    return time;
-  };
   
   const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
     if (!time) return 'Tarde';
@@ -482,9 +547,12 @@ export default function SchedulePage() {
                         <MapPin className="h-4 w-4 text-slate-500" />
                         <span>{space?.name}</span>
                       </div>
-                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                        {isIndividual ? <User className="h-4 w-4 text-slate-500" /> : <Users className="h-4 w-4 text-slate-500" />}
-                        <span>{enrolledCount}/{capacity} Inscritos</span>
+                      <div 
+                        onClick={() => setSessionForRoster(session)}
+                        className="flex items-center gap-3 text-slate-600 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
+                      >
+                        {isIndividual ? <User className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" /> : <Users className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" />}
+                        <span className="underline-offset-4 group-hover:underline">{enrolledCount}/{capacity} Inscritos</span>
                       </div>
                     </CardContent>
                     <CardFooter className="p-4 flex items-center justify-between gap-2">
@@ -544,6 +612,7 @@ export default function SchedulePage() {
       </AlertDialog>
 
       {sessionToManage && <EnrollPeopleDialog session={sessionToManage} onClose={() => setSessionToManage(null)} />}
+      {sessionForRoster && <EnrolledPeopleSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
     </div>
   );
 }
