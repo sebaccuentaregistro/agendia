@@ -29,7 +29,7 @@ export default function AppHeader() {
 
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
           <HeartPulse className="h-6 w-6 text-primary" />
-          <span>YogaFlow</span>
+          <span>Agendia</span>
         </Link>
       </div>
       

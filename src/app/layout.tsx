@@ -7,7 +7,7 @@ import { StudioProvider } from '@/context/StudioContext';
 import AppHeader from '@/components/layout/app-header';
 
 export const metadata: Metadata = {
-  title: 'YogaFlow Manager',
+  title: 'Agendia',
   description: 'Gestiona tu centro de bienestar de forma sencilla y eficiente.',
 };
 
