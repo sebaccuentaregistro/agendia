@@ -40,15 +40,11 @@ export default function AssistantPage() {
     <div>
       <PageHeader
         title="Asistente de IA para Horarios"
-        description="Crea horarios óptimos basados en la disponibilidad y preferencias."
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Generar Horario</CardTitle>
-            <CardDescription>
-              Proporciona los detalles para que la IA genere una sugerencia de horario.
-            </CardDescription>
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">

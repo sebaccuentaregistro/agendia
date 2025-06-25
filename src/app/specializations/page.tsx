@@ -81,7 +81,7 @@ export default function ActividadesPage() {
 
   return (
     <div>
-      <PageHeader title="Actividades" description="Definir los tipos de clases que se ofrecen.">
+      <PageHeader title="Actividades">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Actividad</Button>

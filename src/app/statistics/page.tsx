@@ -113,15 +113,11 @@ export default function StatisticsPage() {
     <div className="space-y-8">
       <PageHeader
         title="Estadísticas del Estudio"
-        description="Visualiza el rendimiento y las tendencias de tu centro."
       />
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Popularidad por Horario</CardTitle>
-            <CardDescription>
-              Número total de personas inscritas por cada horario de clase.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -142,9 +138,6 @@ export default function StatisticsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Nuevas Personas por Mes</CardTitle>
-            <CardDescription>
-              Tendencia de nuevas inscripciones en los últimos 12 meses.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -173,9 +166,6 @@ export default function StatisticsPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Popularidad de Actividades</CardTitle>
-            <CardDescription>
-              Distribución de inscripciones totales por tipo de actividad.
-            </CardDescription>
           </CardHeader>
           <CardContent>
             {activityPopularity.length > 0 ? (

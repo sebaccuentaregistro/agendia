@@ -160,7 +160,7 @@ export default function SchedulePage() {
 
   return (
     <div>
-      <PageHeader title="Gestión de Horarios" description="Gestionar y visualizar el horario de clases de forma intuitiva.">
+      <PageHeader title="Gestión de Horarios">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}>

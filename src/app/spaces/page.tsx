@@ -80,7 +80,7 @@ export default function SpacesPage() {
 
   return (
     <div>
-      <PageHeader title="Espacios" description="Gestionar los salones o áreas físicas donde se imparten las clases.">
+      <PageHeader title="Espacios">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Espacio</Button>

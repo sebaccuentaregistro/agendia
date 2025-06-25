@@ -215,7 +215,7 @@ export default function StudentsPage() {
 
   return (
     <div>
-      <PageHeader title="Personas" description="Administrar los perfiles de todas las personas/clientes.">
+      <PageHeader title="Personas">
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
           <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-64"/>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedPerson(undefined); }}>
