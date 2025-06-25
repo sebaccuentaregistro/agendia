@@ -290,8 +290,29 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const enrollPersonInClasses = (personId: string, newClassIds: string[]) => {
-    // Ensure the list of class IDs is unique to prevent duplicate enrollments from a faulty source.
     const uniqueNewClassIds = [...new Set(newClassIds)];
+
+    // Before any modifications, check for capacity on newly added classes
+    for (const classId of uniqueNewClassIds) {
+        const classToEnroll = yogaClasses.find(c => c.id === classId);
+        if (!classToEnroll) continue; 
+        
+        const isAlreadyEnrolled = classToEnroll.personIds.includes(personId);
+        // Only check capacity if the person is not already in the class
+        if (!isAlreadyEnrolled) {
+            const space = spaces.find(s => s.id === classToEnroll.spaceId);
+            if (space && classToEnroll.personIds.length >= space.capacity) {
+                const actividad = actividades.find(a => a.id === classToEnroll.actividadId);
+                toast({
+                    variant: "destructive",
+                    title: "Clase Llena",
+                    description: `No se puede inscribir en "${actividad?.name}". La clase ha alcanzado su capacidad máxima.`,
+                    duration: 5000,
+                });
+                return; // Abort the entire operation
+            }
+        }
+    }
 
     let classesToUpdate = [...yogaClasses];
     // Un-enroll from all classes first to handle removals cleanly
@@ -301,8 +322,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     for (const classId of uniqueNewClassIds) {
       const classIndex = classesToUpdate.findIndex(c => c.id === classId);
       if (classIndex !== -1) {
-        // Because we wiped the person from all classes first, we can safely push.
-        // The check for uniqueness in `uniqueNewClassIds` prevents adding them to the same class twice in this loop.
         classesToUpdate[classIndex].personIds.push(personId);
       }
     }
