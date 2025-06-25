@@ -238,8 +238,8 @@ export default function SchedulePage() {
               const isFull = availableSpots <= 0;
 
               return (
-                <Card key={cls.id} className="flex flex-col">
-                  <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
+                <Card key={cls.id} className={cn("flex flex-col transition-colors", isFull && "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800")}>
+                  <CardHeader className={cn("flex flex-row items-center justify-between p-4 border-b", isFull && "border-pink-200 dark:border-pink-800")}>
                     <CardTitle className="text-lg font-bold">{classTitle}</CardTitle>
                     <div className={cn('text-sm font-semibold px-2 py-1 rounded-full', isFull ? 'bg-pink-100 text-pink-800' : 'bg-green-100 text-green-800' )}>
                       {isFull ? 'Clase Llena' : `${availableSpots} Lugares`}
@@ -251,7 +251,7 @@ export default function SchedulePage() {
                     <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Espacio:</span> {space?.name}</p>
                     <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{capacity}</p>
                   </CardContent>
-                  <CardFooter className="flex items-center justify-between bg-muted/50 p-3">
+                  <CardFooter className={cn("flex items-center justify-between bg-muted/50 p-3 border-t", isFull && "border-pink-200 dark:border-pink-800")}>
                     <Button variant="link" className="h-auto p-0 text-sm" onClick={() => setViewingRoster(cls)}>
                       <Users className="mr-2 h-4 w-4" />
                       Ver Personas
