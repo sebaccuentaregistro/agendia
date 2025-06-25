@@ -36,11 +36,11 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Inscritos en {sessionDetails.actividad?.name || 'Sesión'}</SheetTitle>
+          <SheetTitle>Inscriptos en {sessionDetails.actividad?.name || 'Sesión'}</SheetTitle>
           <SheetDescription>
             {session.dayOfWeek} a las {session.time} en {sessionDetails.space?.name || 'N/A'}.
             <br/>
-            {enrolledPeople.length} de {sessionDetails.space?.capacity || 0} personas inscritas.
+            {enrolledPeople.length} de {sessionDetails.space?.capacity || 0} personas inscriptas.
           </SheetDescription>
         </SheetHeader>
         <div className="mt-4 space-y-4 h-[calc(100%-8rem)] overflow-y-auto pr-4">
@@ -63,7 +63,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
             ))
           ) : (
             <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-white/30">
-                <p className="text-sm text-slate-500 dark:text-slate-400">No hay personas inscritas.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">No hay personas inscriptas.</p>
             </div>
           )}
         </div>
@@ -262,7 +262,7 @@ export default function Dashboard() {
                             "text-sm", 
                             isFull ? "font-semibold text-pink-600 dark:text-pink-400" : "text-slate-600 dark:text-slate-400"
                           )}>
-                          {enrolledCount}/{capacity} inscritos
+                          {enrolledCount}/{capacity} inscriptos
                         </p>
                       </div>
                     </li>

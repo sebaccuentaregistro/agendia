@@ -145,11 +145,11 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Inscritos en {actividad?.name || 'Sesión'}</SheetTitle>
+          <SheetTitle>Inscriptos en {actividad?.name || 'Sesión'}</SheetTitle>
           <SheetDescription>
             {session.dayOfWeek} a las {formatTime(session.time)} en {space?.name || 'N/A'}.
             <br/>
-            {enrolledPeople.length} de {session.sessionType === 'Individual' ? 1 : space?.capacity || 0} personas inscritas.
+            {enrolledPeople.length} de {session.sessionType === 'Individual' ? 1 : space?.capacity || 0} personas inscriptas.
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="mt-4 h-[calc(100%-8rem)] pr-4">
@@ -174,7 +174,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
             </div>
           ) : (
             <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-white/30">
-                <p className="text-sm text-slate-500 dark:text-slate-400">No hay personas inscritas.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">No hay personas inscriptas.</p>
             </div>
           )}
         </ScrollArea>
@@ -342,7 +342,7 @@ export default function SchedulePage() {
         dia: 'Día',
         hora: 'Hora',
         tipo: 'Tipo',
-        inscritos: 'Inscritos',
+        inscriptos: 'Inscriptos',
         capacidad: 'Capacidad'
     };
     const dataToExport = filteredSessions.map(session => {
@@ -354,7 +354,7 @@ export default function SchedulePage() {
             dia: session.dayOfWeek,
             hora: session.time,
             tipo: session.sessionType,
-            inscritos: session.personIds.length,
+            inscriptos: session.personIds.length,
             capacidad: session.sessionType === 'Individual' ? 1 : (space?.capacity || 0)
         }
     });
@@ -552,7 +552,7 @@ export default function SchedulePage() {
                         className="flex items-center gap-3 text-slate-600 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
                       >
                         {isIndividual ? <User className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" /> : <Users className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" />}
-                        <span className="underline-offset-4 group-hover:underline">{enrolledCount}/{capacity} Inscritos</span>
+                        <span className="underline-offset-4 group-hover:underline">{enrolledCount}/{capacity} Inscriptos</span>
                       </div>
                     </CardContent>
                     <CardFooter className="p-4 flex items-center justify-between gap-2">
@@ -602,7 +602,7 @@ export default function SchedulePage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente la sesión. Si hay personas inscritas, la eliminación será bloqueada para proteger tus datos.</AlertDialogDescriptionAlert>
+            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente la sesión. Si hay personas inscriptas, la eliminación será bloqueada para proteger tus datos.</AlertDialogDescriptionAlert>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSessionToDelete(null)}>Cancelar</AlertDialogCancel>

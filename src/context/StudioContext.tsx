@@ -244,7 +244,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
     const sessionsAffected = sessions.filter(c => c.spaceId === updated.id && c.personIds.length > updated.capacity);
     if (sessionsAffected.length > 0) {
-      toast({ variant: "destructive", title: "Error de Capacidad", description: "La nueva capacidad es menor que los inscritos en una o más sesiones. Reasigna personas antes de cambiar la capacidad." });
+      toast({ variant: "destructive", title: "Error de Capacidad", description: "La nueva capacidad es menor que los inscriptos en una o más sesiones. Reasigna personas antes de cambiar la capacidad." });
       return;
     }
     setSpaces(prev => prev.map(s => s.id === updated.id ? updated : s));
@@ -291,8 +291,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     if (sessionToDelete && sessionToDelete.personIds.length > 0) {
       toast({
         variant: 'destructive',
-        title: 'Sesión con Inscritos',
-        description: `No se puede eliminar. Hay ${sessionToDelete.personIds.length} persona(s) inscrita(s). Mueve o desinscribe a las personas primero.`,
+        title: 'Sesión con Inscriptos',
+        description: `No se puede eliminar. Hay ${sessionToDelete.personIds.length} persona(s) inscripta(s). Mueve o desinscribe a las personas primero.`,
         duration: 6000,
       });
       return;
