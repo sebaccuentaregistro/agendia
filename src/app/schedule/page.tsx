@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -24,6 +24,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PageHeader } from '@/components/page-header';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
 
 
 const formSchema = z.object({
@@ -501,103 +503,125 @@ export default function SchedulePage() {
           </div>
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
-        {isMounted ? (
-          sessions.length > 0 ? (
-            filteredSessions.length > 0 ? (
-                filteredSessions.map((session) => {
-                const { specialist, actividad, space } = getSessionDetails(session);
-                const isIndividual = session.sessionType === 'Individual';
-                const capacity = isIndividual ? 1 : space?.capacity || 0;
-                const enrolledCount = session.personIds?.length || 0;
-                const availableSpots = capacity - enrolledCount;
-                const sessionTitle = `${actividad?.name || 'Sesión'}`;
-                const isFull = availableSpots <= 0;
-
-                return (
-                  <Card 
-                    key={session.id} 
-                    className={cn(
-                      "flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 border-white/20 shadow-lg",
-                      "bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl"
-                    )}
-                  >
-                    <CardHeader className="flex flex-row items-start justify-between p-4">
-                      <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{sessionTitle}</CardTitle>
-                      <div className={cn(
-                          'text-xs font-bold px-3 py-1 rounded-full text-white', 
-                          isFull 
-                            ? 'bg-gradient-to-r from-rose-500 to-pink-600' 
-                            : 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                        )}>
-                        {isIndividual ? 'Individual' : (isFull ? 'Llena' : `${availableSpots} Lugares`)}
-                      </div>
-                    </CardHeader>
-                    <CardContent className="flex-grow p-4 pt-0 space-y-3 text-sm">
-                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                        <Clock className="h-4 w-4 text-slate-500" />
-                        <span>{session.dayOfWeek}, {formatTime(session.time)}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                        <User className="h-4 w-4 text-slate-500" />
-                        <span>{specialist?.name}</span>
-                      </div>
-                      <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                        <MapPin className="h-4 w-4 text-slate-500" />
-                        <span>{space?.name}</span>
-                      </div>
-                      <div 
-                        onClick={() => setSessionForRoster(session)}
-                        className="flex items-center gap-3 text-slate-600 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
-                      >
-                        {isIndividual ? <User className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" /> : <Users className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" />}
-                        <span className="underline-offset-4 group-hover:underline">{enrolledCount}/{capacity} Inscriptos</span>
-                      </div>
-                    </CardContent>
-                    <CardFooter className="p-4 flex items-center justify-between gap-2">
-                      <Button className="w-full flex-1 h-12 text-base font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all" onClick={() => setSessionToManage(session)}>
-                        <UserPlus className="mr-2 h-5 w-5" />
-                        Inscribir
-                      </Button>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => handleEdit(session)}><Pencil className="h-5 w-5 text-slate-600" /><span className="sr-only">Editar</span></Button>
-                        <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => openDeleteDialog(session)}><Trash2 className="h-5 w-5 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
-                      </div>
-                    </CardFooter>
-                  </Card>
-                );
-              })
-            ) : (
-                <div className="col-span-1 md:col-span-2 xl:col-span-3">
-                    <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 backdrop-blur-lg rounded-2xl border-white/20">
-                    <CardHeader>
-                        <CardTitle className="text-slate-700 dark:text-slate-200">No se encontraron sesiones</CardTitle>
-                        <CardDescription className="text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</CardDescription>
-                    </CardHeader>
-                    </Card>
-              </div>
-            )
-          ) : (
-            <div className="col-span-1 md:col-span-2 xl:col-span-3">
-               <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 backdrop-blur-lg rounded-2xl border-white/20">
-                  <CardHeader>
-                    <CardTitle className="text-slate-700 dark:text-slate-200">No Hay Sesiones Programadas</CardTitle>
-                    <CardDescription className="text-slate-500 dark:text-slate-400">Empieza a organizar tu estudio añadiendo tu primera sesión.</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <Button onClick={handleAdd} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all">
-                        <PlusCircle className="mr-2 h-4 w-4" />Añadir Sesión
-                    </Button>
-                  </CardContent>
-                </Card>
-            </div>
-          )
-        ) : (
-          [...Array(6)].map((_, i) => <Skeleton key={i} className="h-[22rem] w-full bg-white/30 rounded-2xl" />)
-        )}
-      </div>
       
+      <Tabs defaultValue="cards" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-4 md:w-[300px]">
+            <TabsTrigger value="cards"><LayoutGrid className="mr-2 h-4 w-4" />Tarjetas</TabsTrigger>
+            <TabsTrigger value="calendar"><CalendarDays className="mr-2 h-4 w-4" />Calendario</TabsTrigger>
+        </TabsList>
+        <TabsContent value="cards">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+              {isMounted ? (
+                sessions.length > 0 ? (
+                  filteredSessions.length > 0 ? (
+                      filteredSessions.map((session) => {
+                      const { specialist, actividad, space } = getSessionDetails(session);
+                      const isIndividual = session.sessionType === 'Individual';
+                      const capacity = isIndividual ? 1 : space?.capacity || 0;
+                      const enrolledCount = session.personIds?.length || 0;
+                      const availableSpots = capacity - enrolledCount;
+                      const sessionTitle = `${actividad?.name || 'Sesión'}`;
+                      const isFull = availableSpots <= 0;
+
+                      return (
+                        <Card 
+                          key={session.id} 
+                          className={cn(
+                            "flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 border-white/20 shadow-lg",
+                            "bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl"
+                          )}
+                        >
+                          <CardHeader className="flex flex-row items-start justify-between p-4">
+                            <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{sessionTitle}</CardTitle>
+                            <div className={cn(
+                                'text-xs font-bold px-3 py-1 rounded-full text-white', 
+                                isFull 
+                                  ? 'bg-gradient-to-r from-rose-500 to-pink-600' 
+                                  : 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                              )}>
+                              {isIndividual ? 'Individual' : (isFull ? 'Llena' : `${availableSpots} Lugares`)}
+                            </div>
+                          </CardHeader>
+                          <CardContent className="flex-grow p-4 pt-0 space-y-3 text-sm">
+                            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                              <Clock className="h-4 w-4 text-slate-500" />
+                              <span>{session.dayOfWeek}, {formatTime(session.time)}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                              <User className="h-4 w-4 text-slate-500" />
+                              <span>{specialist?.name}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
+                              <MapPin className="h-4 w-4 text-slate-500" />
+                              <span>{space?.name}</span>
+                            </div>
+                            <div 
+                              onClick={() => setSessionForRoster(session)}
+                              className="flex items-center gap-3 text-slate-600 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
+                            >
+                              {isIndividual ? <User className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" /> : <Users className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" />}
+                              <span className="underline-offset-4 group-hover:underline">{enrolledCount}/{capacity} Inscriptos</span>
+                            </div>
+                          </CardContent>
+                          <CardFooter className="p-4 flex items-center justify-between gap-2">
+                            <Button className="w-full flex-1 h-12 text-base font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all" onClick={() => setSessionToManage(session)}>
+                              <UserPlus className="mr-2 h-5 w-5" />
+                              Inscribir
+                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => handleEdit(session)}><Pencil className="h-5 w-5 text-slate-600" /><span className="sr-only">Editar</span></Button>
+                              <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => openDeleteDialog(session)}><Trash2 className="h-5 w-5 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
+                            </div>
+                          </CardFooter>
+                        </Card>
+                      );
+                    })
+                  ) : (
+                      <div className="col-span-1 md:col-span-2 xl:col-span-3">
+                          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 backdrop-blur-lg rounded-2xl border-white/20">
+                          <CardHeader>
+                              <CardTitle className="text-slate-700 dark:text-slate-200">No se encontraron sesiones</CardTitle>
+                              <CardDescription className="text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</CardDescription>
+                          </CardHeader>
+                          </Card>
+                    </div>
+                  )
+                ) : (
+                  <div className="col-span-1 md:col-span-2 xl:col-span-3">
+                     <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 backdrop-blur-lg rounded-2xl border-white/20">
+                        <CardHeader>
+                          <CardTitle className="text-slate-700 dark:text-slate-200">No Hay Sesiones Programadas</CardTitle>
+                          <CardDescription className="text-slate-500 dark:text-slate-400">Empieza a organizar tu estudio añadiendo tu primera sesión.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <Button onClick={handleAdd} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all">
+                              <PlusCircle className="mr-2 h-4 w-4" />Añadir Sesión
+                          </Button>
+                        </CardContent>
+                      </Card>
+                  </div>
+                )
+              ) : (
+                [...Array(6)].map((_, i) => <Skeleton key={i} className="h-[22rem] w-full bg-white/30 rounded-2xl" />)
+              )}
+            </div>
+        </TabsContent>
+        <TabsContent value="calendar">
+          {isMounted ? (
+            <ScheduleCalendarView 
+                sessions={filteredSessions}
+                specialists={specialists}
+                actividades={actividades}
+                spaces={spaces}
+                onSessionClick={setSessionForRoster}
+            />
+          ) : (
+              <Skeleton className="h-[500px] w-full bg-white/30 rounded-2xl" />
+          )}
+        </TabsContent>
+      </Tabs>
+
+
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
