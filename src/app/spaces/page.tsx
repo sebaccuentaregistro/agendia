@@ -3,11 +3,10 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2, Warehouse } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Pencil, PlusCircle, Trash2, Warehouse } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,9 +14,8 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Space } from '@/types';
 import { useStudio } from '@/context/StudioContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -104,39 +102,32 @@ export default function SpacesPage() {
 
       {isMounted ? (
         spaces.length > 0 ? (
-          <Card>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Capacidad</TableHead>
-                  <TableHead>Clases Programadas</TableHead>
-                  <TableHead><span className="sr-only">Acciones</span></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {spaces.map((space) => (
-                  <TableRow key={space.id}>
-                    <TableCell className="font-medium">{space.name}</TableCell>
-                    <TableCell>{space.capacity} personas</TableCell>
-                    <TableCell>{getUsageCount(space.id)}</TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button aria-haspopup="true" size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /><span className="sr-only">Alternar menú</span></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEdit(space)}>Editar</DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(space)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {spaces.map((space) => (
+              <Card key={space.id} className="flex flex-col">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                    <Warehouse className="h-6 w-6 text-primary" />
+                    <span>{space.name}</span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="flex-grow space-y-2 text-sm text-muted-foreground">
+                  <p><span className="font-semibold text-card-foreground">Capacidad:</span> {space.capacity} personas</p>
+                  <p><span className="font-semibold text-card-foreground">Clases Programadas:</span> {getUsageCount(space.id)}</p>
+                </CardContent>
+                <CardFooter className="flex justify-end gap-2 border-t bg-muted/50 p-3">
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(space)}>
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Editar</span>
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(space)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Eliminar</span>
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
             <CardHeader>
@@ -149,7 +140,9 @@ export default function SpacesPage() {
           </Card>
         )
       ) : (
-        <Card><Skeleton className="h-64 w-full" /></Card>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-lg" />)}
+        </div>
       )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
