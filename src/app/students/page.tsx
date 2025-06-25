@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -26,7 +26,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
@@ -288,7 +288,6 @@ export default function StudentsPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>Asignar a Clases</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                     {person.membershipType === 'Mensual' && (
                                     <>
@@ -350,6 +349,12 @@ export default function StudentsPage() {
                                 )}
                             </div>
                         </CardContent>
+                        <CardFooter className="p-4 border-t">
+                            <Button className="w-full" variant="outline" onClick={() => setPersonToEnroll(person)}>
+                                <CalendarPlus className="mr-2 h-4 w-4" />
+                                Asignar Horario
+                            </Button>
+                        </CardFooter>
                     </Card>
                 )
             })}
