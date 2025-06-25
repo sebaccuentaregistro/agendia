@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import type { Specialist } from '@/types';
 import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo } from 'react';
@@ -199,20 +198,14 @@ export default function SpecialistsPage() {
           {filteredSpecialists.map((specialist) => (
             <Card key={specialist.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
               <CardContent className="p-6 flex-grow">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-16 w-16 flex-shrink-0">
-                    <AvatarImage src={specialist.avatar} alt={specialist.name} data-ai-hint="person photo"/>
-                    <AvatarFallback>{specialist.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-grow">
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{specialist.name}</h3>
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <span>{specialist.phone}</span>
-                        <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
-                            <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                            <span className="sr-only">Enviar WhatsApp a {specialist.name}</span>
-                        </a>
-                    </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{specialist.name}</h3>
+                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                      <span>{specialist.phone}</span>
+                      <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
+                          <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                          <span className="sr-only">Enviar WhatsApp a {specialist.name}</span>
+                      </a>
                   </div>
                 </div>
                 

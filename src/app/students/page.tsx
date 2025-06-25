@@ -7,7 +7,6 @@ import type { Person } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -292,10 +291,6 @@ export default function StudentsPage() {
                 return (
                     <Card key={person.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
                         <CardHeader className="flex flex-row items-start gap-4 p-4">
-                            <Avatar className="h-16 w-16">
-                                <AvatarImage src={person.avatar} alt={person.name} data-ai-hint="person photo"/>
-                                <AvatarFallback>{person.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
                             <div className="flex-grow">
                                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{person.name}</h3>
                                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-sm">
