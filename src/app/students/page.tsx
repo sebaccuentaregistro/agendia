@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -266,7 +267,7 @@ export default function StudentsPage() {
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setPersonToEnroll(person)}>Asignar a Clases</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                     {person.membershipType === 'Mensual' && (
                                     <>
                                         <DropdownMenuSeparator />
@@ -354,9 +355,8 @@ export default function StudentsPage() {
                     .filter(p => p.personId === personForHistory.id)
                     .sort((a,b) => b.date.getTime() - a.date.getTime())
                     .map(payment => (
-                        <div key={payment.id} className="flex justify-between items-center text-sm p-3 rounded-md bg-muted/50">
+                        <div key={payment.id} className="text-sm p-3 rounded-md bg-muted/50">
                             <span>{format(payment.date, 'dd MMMM yyyy', { weekStartsOn: 1 })}</span>
-                            <span className="text-xs text-muted-foreground">{format(payment.date, 'HH:mm')}hs</span>
                         </div>
                     ))
                 ) : (
