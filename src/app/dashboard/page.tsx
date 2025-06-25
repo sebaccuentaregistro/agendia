@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -88,53 +89,50 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Panel de Control" description="Un resumen de la actividad de tu estudio." />
+      <PageHeader title="Inicio" />
       
-      <div>
-        <h2 className="text-xl font-semibold tracking-tight">Navegación Rápida</h2>
-        <div className="mt-4 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            <Link href="/students?filter=overdue" className="block transition-transform hover:-translate-y-1">
-              <Card className={cn(
-                  "group flex h-full flex-col justify-between p-6 transition-colors hover:shadow-lg",
-                  hasOverdue ? "hover:border-destructive" : "hover:border-green-500"
-              )}>
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Link href="/students?filter=overdue" className="block transition-transform hover:-translate-y-1">
+            <Card className={cn(
+                "group flex h-full flex-col justify-between p-6 transition-colors hover:shadow-lg",
+                hasOverdue ? "hover:border-destructive" : "hover:border-green-500"
+            )}>
+                <div className="flex items-start justify-between">
+                  <div>
+                      <CardTitle className={cn(
+                        "text-lg font-bold",
+                        hasOverdue ? "text-destructive" : "text-green-600"
+                      )}>
+                        Atrasados
+                      </CardTitle>
+                      <p className="text-4xl font-bold mt-2">{overdueCount}</p>
+                  </div>
+                  <div className={cn(
+                    "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg",
+                    hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
+                  )}>
+                      {hasOverdue ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
+                  </div>
+                </div>
+            </Card>
+          </Link>
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href} className="block transition-transform hover:-translate-y-1">
+              <Card className="group flex h-full flex-col justify-between p-6 transition-colors hover:border-primary hover:shadow-lg">
                   <div className="flex items-start justify-between">
                     <div>
-                        <CardTitle className={cn(
-                          "text-lg font-bold",
-                          hasOverdue ? "text-destructive" : "text-green-600"
-                        )}>
-                          Atrasados
-                        </CardTitle>
-                        <p className="text-4xl font-bold mt-2">{overdueCount}</p>
+                        <CardTitle className="text-lg font-bold">{item.label}</CardTitle>
+                        {item.count !== null && (
+                          <p className="text-4xl font-bold mt-2">{item.count}</p>
+                        )}
                     </div>
-                    <div className={cn(
-                      "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg",
-                      hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
-                    )}>
-                        {hasOverdue ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <item.icon className="h-6 w-6" />
                     </div>
                   </div>
               </Card>
-            </Link>
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href} className="block transition-transform hover:-translate-y-1">
-                <Card className="group flex h-full flex-col justify-between p-6 transition-colors hover:border-primary hover:shadow-lg">
-                    <div className="flex items-start justify-between">
-                      <div>
-                          <CardTitle className="text-lg font-bold">{item.label}</CardTitle>
-                          {item.count !== null && (
-                            <p className="text-4xl font-bold mt-2">{item.count}</p>
-                          )}
-                      </div>
-                      <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                          <item.icon className="h-6 w-6" />
-                      </div>
-                    </div>
-                </Card>
-            </Link>
-            ))}
-        </div>
+          </Link>
+          ))}
       </div>
 
       <Card className="flex flex-col">
