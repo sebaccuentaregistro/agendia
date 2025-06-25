@@ -1,10 +1,11 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PlusCircle, Trash2, Pencil, Users, FileDown } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
 import { Person, YogaClass } from '@/types';
@@ -119,8 +120,19 @@ export default function SchedulePage() {
   const [classToDelete, setClassToDelete] = useState<YogaClass | null>(null);
   const [classToManage, setClassToManage] = useState<YogaClass | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [filters, setFilters] = useState({
+    specialistId: 'all',
+    actividadId: 'all',
+    spaceId: 'all',
+    dayOfWeek: 'all',
+    timeOfDay: 'all',
+  });
 
   useEffect(() => { setIsMounted(true); }, []);
+
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -218,8 +230,8 @@ export default function SchedulePage() {
     return `${formattedHour}:${minute} ${ampm}`;
   };
   
-  const getTimeOfDay = (time: string): string => {
-    if (!time) return '';
+  const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
+    if (!time) return 'Tarde';
     const hour = parseInt(time.split(':')[0], 10);
     if (hour < 12) return 'Mañana';
     if (hour < 18) return 'Tarde';
@@ -234,6 +246,20 @@ export default function SchedulePage() {
         return a.time.localeCompare(b.time);
     });
   }, [yogaClasses]);
+  
+  const filteredClasses = useMemo(() => {
+    return sortedClasses.filter(cls => {
+        const timeOfDay = getTimeOfDay(cls.time);
+        return (
+            (filters.actividadId === 'all' || cls.actividadId === filters.actividadId) &&
+            (filters.spaceId === 'all' || cls.spaceId === filters.spaceId) &&
+            (filters.specialistId === 'all' || cls.instructorId === filters.specialistId) &&
+            (filters.dayOfWeek === 'all' || cls.dayOfWeek === filters.dayOfWeek) &&
+            (filters.timeOfDay === 'all' || timeOfDay === filters.timeOfDay)
+        );
+    });
+  }, [sortedClasses, filters]);
+
 
   const handleExportSchedule = () => {
     const headers = {
@@ -245,7 +271,7 @@ export default function SchedulePage() {
         inscritos: 'Inscritos',
         capacidad: 'Capacidad'
     };
-    const dataToExport = sortedClasses.map(cls => {
+    const dataToExport = filteredClasses.map(cls => {
         const { specialist, actividad, space } = getClassDetails(cls);
         return {
             actividad: actividad?.name || 'N/A',
@@ -335,45 +361,103 @@ export default function SchedulePage() {
           </Dialog>
         </div>
       </PageHeader>
+      
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle className="text-base font-medium">Filtrar Horarios</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+            <Select value={filters.dayOfWeek} onValueChange={(value) => handleFilterChange('dayOfWeek', value)}>
+              <SelectTrigger><SelectValue placeholder="Día de la semana" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los días</SelectItem>
+                {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
+              <SelectTrigger><SelectValue placeholder="Momento del día" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todo el día</SelectItem>
+                <SelectItem value="Mañana">Mañana</SelectItem>
+                <SelectItem value="Tarde">Tarde</SelectItem>
+                <SelectItem value="Noche">Noche</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
+              <SelectTrigger><SelectValue placeholder="Especialista" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los especialistas</SelectItem>
+                {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
+              <SelectTrigger><SelectValue placeholder="Actividad" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las actividades</SelectItem>
+                {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
+              <SelectTrigger><SelectValue placeholder="Espacio" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los espacios</SelectItem>
+                {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {isMounted ? (
           sortedClasses.length > 0 ? (
-            sortedClasses.map((cls) => {
-              const { specialist, actividad, space } = getClassDetails(cls);
-              const capacity = space?.capacity || 0;
-              const enrolledCount = cls.personIds?.length || 0;
-              const availableSpots = capacity - enrolledCount;
-              const classTitle = `${actividad?.name || 'Clase'} ${getTimeOfDay(cls.time)}`;
-              const isFull = availableSpots <= 0;
+            filteredClasses.length > 0 ? (
+                filteredClasses.map((cls) => {
+                const { specialist, actividad, space } = getClassDetails(cls);
+                const capacity = space?.capacity || 0;
+                const enrolledCount = cls.personIds?.length || 0;
+                const availableSpots = capacity - enrolledCount;
+                const classTitle = `${actividad?.name || 'Clase'}`;
+                const isFull = availableSpots <= 0;
 
-              return (
-                <Card key={cls.id} className={cn("flex flex-col transition-colors", isFull && "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800")}>
-                  <CardHeader className={cn("flex flex-row items-center justify-between p-4 border-b", isFull && "border-pink-200 dark:border-pink-800")}>
-                    <CardTitle className="text-lg font-bold">{classTitle}</CardTitle>
-                    <div className={cn('text-sm font-semibold px-2 py-1 rounded-full', isFull ? 'bg-pink-100 text-pink-800' : 'bg-green-100 text-green-800' )}>
-                      {isFull ? 'Clase Llena' : `${availableSpots} Lugares`}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex-grow p-4 space-y-2">
-                    <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Día y Hora:</span> {cls.dayOfWeek}, {formatTime(cls.time)}</p>
-                    <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Especialista:</span> {specialist?.name}</p>
-                    <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Espacio:</span> {space?.name}</p>
-                    <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{capacity}</p>
-                  </CardContent>
-                  <CardFooter className={cn("flex items-center justify-between bg-muted/50 p-3 border-t", isFull && "border-pink-200 dark:border-pink-800")}>
-                    <Button variant="outline" className="h-auto px-3 py-1 text-sm" onClick={() => setClassToManage(cls)}>
-                      <Users className="mr-2 h-4 w-4" />
-                      Inscribir Personas
-                    </Button>
-                    <div className="flex items-center">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(cls)}><Pencil className="h-4 w-4" /><span className="sr-only">Editar</span></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(cls)}><Trash2 className="h-4 w-4" /><span className="sr-only">Eliminar</span></Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              );
-            })
+                return (
+                  <Card key={cls.id} className={cn("flex flex-col transition-colors", isFull && "bg-pink-50 border-pink-200 dark:bg-pink-950/30 dark:border-pink-800")}>
+                    <CardHeader className={cn("flex flex-row items-center justify-between p-4 border-b", isFull && "border-pink-200 dark:border-pink-800")}>
+                      <CardTitle className="text-lg font-bold">{classTitle}</CardTitle>
+                      <div className={cn('text-sm font-semibold px-2 py-1 rounded-full', isFull ? 'bg-pink-100 text-pink-800' : 'bg-green-100 text-green-800' )}>
+                        {isFull ? 'Clase Llena' : `${availableSpots} Lugares`}
+                      </div>
+                    </CardHeader>
+                    <CardContent className="flex-grow p-4 space-y-2">
+                      <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Día y Hora:</span> {cls.dayOfWeek}, {formatTime(cls.time)}</p>
+                      <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Especialista:</span> {specialist?.name}</p>
+                      <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Espacio:</span> {space?.name}</p>
+                      <p className="text-sm text-muted-foreground"><span className="font-semibold text-card-foreground">Inscritos:</span> {enrolledCount}/{capacity}</p>
+                    </CardContent>
+                    <CardFooter className={cn("flex items-center justify-between bg-muted/50 p-3 border-t", isFull && "border-pink-200 dark:border-pink-800")}>
+                      <Button variant="outline" className="h-auto px-3 py-1 text-sm" onClick={() => setClassToManage(cls)}>
+                        <Users className="mr-2 h-4 w-4" />
+                        Inscribir Personas
+                      </Button>
+                      <div className="flex items-center">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(cls)}><Pencil className="h-4 w-4" /><span className="sr-only">Editar</span></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(cls)}><Trash2 className="h-4 w-4" /><span className="sr-only">Eliminar</span></Button>
+                      </div>
+                    </CardFooter>
+                  </Card>
+                );
+              })
+            ) : (
+                <div className="col-span-1 md:col-span-2 xl:col-span-3">
+                    <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
+                    <CardHeader>
+                        <CardTitle>No se encontraron clases</CardTitle>
+                        <CardDescription>Prueba a cambiar o limpiar los filtros.</CardDescription>
+                    </CardHeader>
+                    </Card>
+              </div>
+            )
           ) : (
             <div className="col-span-1 md:col-span-2 xl:col-span-3">
                <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center">
