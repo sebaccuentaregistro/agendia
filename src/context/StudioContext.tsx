@@ -210,16 +210,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const person = people.find(p => p.id === personId);
     if (!person) return;
 
-    const paymentStatus = Utils.getStudentPaymentStatus(person, new Date());
-    if (paymentStatus === 'Al día') {
-      toast({
-        variant: "destructive",
-        title: "Pago no requerido",
-        description: `${person.name} ya se encuentra al día con sus pagos.`,
-      });
-      return;
-    }
-
+    // Restriction removed to allow advance payments. The logic in `getNextPaymentDate`
+    // now correctly handles advancing the due date.
+    
     const now = new Date();
     setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: now } : p));
     setPayments(prev => [...prev, { id: `pay-${Date.now()}`, personId, date: now }]);

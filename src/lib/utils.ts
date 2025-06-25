@@ -13,28 +13,34 @@ export function getNextPaymentDate(person: Person): Date | null {
     return null;
   }
 
+  // The next due date is always the next occurrence of the join day of the month,
+  // calculated from the month of the last payment.
+  // This correctly handles advance and late payments, anchoring the billing cycle
+  // to the original join day.
+
+  // 1. Get the date of the last payment.
   const lastPayment = person.lastPaymentDate;
+  
+  // 2. Get the original day of the month for billing (e.g., the 15th).
   const joinDay = person.joinDate.getDate();
 
-  // Determine the due date for the month of the last payment.
-  // We reset time to midnight to ensure date-only comparisons are accurate.
-  const dueDateInLastPaymentMonth = set(lastPayment, { 
+  // 3. Determine the anchor due date in the same month as the last payment,
+  //    and reset the time to midnight for accurate comparisons.
+  //    e.g., if last payment was August 10th and join day is 15th, this will be August 15th.
+  //    e.g., if last payment was August 20th and join day is 15th, this will be August 15th.
+  const baseDueDate = set(lastPayment, { 
     date: joinDay,
     hours: 0,
     minutes: 0,
     seconds: 0,
     milliseconds: 0 
   });
-
-  const lastPaymentDay = set(lastPayment, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-
-  // If the last payment was made before the due date in that month, the next due date is that very date.
-  if (isBefore(lastPaymentDay, dueDateInLastPaymentMonth)) {
-    return dueDateInLastPaymentMonth;
-  }
   
-  // Otherwise, the next due date is the same day but in the following month.
-  return addMonths(dueDateInLastPaymentMonth, 1);
+  // 4. The next payment is due one month after this base date.
+  //    This works whether the payment was early or late.
+  //    e.g., Paid Aug 10 -> base is Aug 15 -> next is Sep 15.
+  //    e.g., Paid Aug 20 -> base is Aug 15 -> next is Sep 15.
+  return addMonths(baseDueDate, 1);
 }
 
 // This function checks if a person's payment is up-to-date.
