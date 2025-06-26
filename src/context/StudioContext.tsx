@@ -42,7 +42,7 @@ interface StudioContextType {
   deleteSession: (sessionId: string) => void;
   enrollPersonInSessions: (personId: string, sessionIds: string[]) => void;
   enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
-  saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[]) => void;
+  saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
   addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
 }
 
@@ -390,7 +390,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     toast({ title: "Inscripciones actualizadas" });
   };
 
-  const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[]) => {
+  const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
     const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
     setAttendance(prev => {
         const existingRecordIndex = prev.findIndex(
@@ -403,6 +403,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                 ...updatedAttendance[existingRecordIndex],
                 presentIds,
                 absentIds,
+                justifiedAbsenceIds,
             };
             return updatedAttendance;
         } else {
@@ -412,6 +413,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                 date: todayStr,
                 presentIds,
                 absentIds,
+                justifiedAbsenceIds,
             };
             return [...prev, newRecord];
         }
@@ -469,6 +471,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                 date: dateStr,
                 presentIds: [],
                 absentIds: [],
+                justifiedAbsenceIds: [],
                 oneTimeAttendees: [personId],
             };
             return [...prev, newRecord];

@@ -33,7 +33,7 @@ export type Session = {
 };
 
 export type Payment = {
-  id: string;
+  id:string;
   personId: string;
   date: Date;
 };
@@ -50,5 +50,6 @@ export type SessionAttendance = {
   date: string; // YYYY-MM-DD
   presentIds: string[];
   absentIds: string[];
+  justifiedAbsenceIds?: string[];
   oneTimeAttendees?: string[]; // People added just for this day for a specific reason (e.g., recovery)
 };

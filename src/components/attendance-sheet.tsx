@@ -1,8 +1,5 @@
 'use client';
 
-import * as z from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -13,28 +10,21 @@ import {
   SheetFooter,
   SheetClose,
 } from '@/components/ui/sheet';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from '@/components/ui/form';
-import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStudio } from '@/context/StudioContext';
 import type { Session } from '@/types';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
+import { CheckCircle2, XCircle, CalendarClock, User, Users } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Tooltip, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
-const FormSchema = z.object({
-  presentIds: z.array(z.string()),
-});
+type AttendanceStatus = 'present' | 'absent' | 'justified';
 
 export function AttendanceSheet({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, actividades, saveAttendance, attendance } = useStudio();
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
-
+  
   const allPersonIdsForToday = useMemo(() => {
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
@@ -47,97 +37,111 @@ export function AttendanceSheet({ session, onClose }: { session: Session; onClos
       .filter(p => allPersonIdsForToday.includes(p.id))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [people, allPersonIdsForToday]);
-
-  const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
-    defaultValues: {
-      presentIds: allPersonIdsForToday,
-    },
-  });
   
-  const watchedPresentIds = form.watch('presentIds');
+  const [statuses, setStatuses] = useState<Record<string, AttendanceStatus>>(() => {
+    const initialStatuses: Record<string, AttendanceStatus> = {};
+    const record = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+    
+    allPersonIdsForToday.forEach(personId => {
+        if(record?.absentIds.includes(personId)) {
+            initialStatuses[personId] = 'absent';
+        } else if (record?.justifiedAbsenceIds?.includes(personId)) {
+            initialStatuses[personId] = 'justified';
+        } else {
+            initialStatuses[personId] = 'present';
+        }
+    });
+    return initialStatuses;
+  });
 
-  function onSubmit(data: z.infer<typeof FormSchema>) {
-    const absentIds = allPersonIdsForToday.filter(id => !data.presentIds.includes(id));
-    saveAttendance(session.id, data.presentIds, absentIds);
+  function onSubmit() {
+    const presentIds = Object.keys(statuses).filter(id => statuses[id] === 'present');
+    const absentIds = Object.keys(statuses).filter(id => statuses[id] === 'absent');
+    const justifiedAbsenceIds = Object.keys(statuses).filter(id => statuses[id] === 'justified');
+    saveAttendance(session.id, presentIds, absentIds, justifiedAbsenceIds);
     onClose();
   }
   
-  const handleSelectAll = (select: boolean) => {
-    if (select) {
-        form.setValue('presentIds', allPersonIdsForToday);
-    } else {
-        form.setValue('presentIds', []);
-    }
+  const handleStatusChange = (personId: string, status: AttendanceStatus) => {
+    setStatuses(prev => ({ ...prev, [personId]: status }));
   };
+  
+  const attendanceCounts = useMemo(() => {
+    return Object.values(statuses).reduce((acc, status) => {
+        acc[status] = (acc[status] || 0) + 1;
+        return acc;
+    }, {} as Record<AttendanceStatus, number>);
+  }, [statuses]);
 
   const actividad = actividades.find(a => a.id === session.actividadId);
 
   return (
     <Sheet open onOpenChange={open => !open && onClose()}>
-      <SheetContent>
+      <SheetContent className="flex flex-col">
         <SheetHeader>
           <SheetTitle>Pasar Lista: {actividad?.name}</SheetTitle>
           <SheetDescription>
-            Desmarca las personas ausentes. Por defecto, todas están marcadas como presentes.
-            <br/>
-            Asistencia: {watchedPresentIds.length} / {allPersonIdsForToday.length}
+            Selecciona el estado de cada persona. Por defecto, todas están presentes.
           </SheetDescription>
-        </SheetHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4 flex flex-col h-[calc(100%-8rem)]">
-            <div className="flex justify-between items-center pr-6">
-                <FormLabel>Personas Inscriptas</FormLabel>
-                <div className="space-x-2">
-                    <Button type="button" variant="link" size="sm" className="p-0 h-auto" onClick={() => handleSelectAll(true)}>Todos</Button>
-                    <Button type="button" variant="link" size="sm" className="p-0 h-auto" onClick={() => handleSelectAll(false)}>Ninguno</Button>
-                </div>
+           <div className="flex items-center justify-around text-sm pt-2 text-muted-foreground">
+                <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> Total: {allPersonIdsForToday.length}</span>
+                <span className="flex items-center gap-1.5 text-green-600"><CheckCircle2 className="h-4 w-4" /> Presentes: {attendanceCounts.present || 0}</span>
+                <span className="flex items-center gap-1.5 text-destructive"><XCircle className="h-4 w-4" /> Ausentes: {attendanceCounts.absent || 0}</span>
+                <span className="flex items-center gap-1.5 text-yellow-600"><CalendarClock className="h-4 w-4" /> Justif.: {attendanceCounts.justified || 0}</span>
             </div>
-            <ScrollArea className="flex-grow rounded-md border">
-              <div className="p-4">
-                {enrolledPeople.length > 0 ? (
-                  enrolledPeople.map(person => (
-                    <FormField
-                      key={person.id}
-                      control={form.control}
-                      name="presentIds"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 py-2">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value?.includes(person.id)}
-                              onCheckedChange={checked => {
-                                const currentValues = field.value || [];
-                                return checked
-                                  ? field.onChange([...currentValues, person.id])
-                                  : field.onChange(
-                                      currentValues.filter(value => value !== person.id)
-                                    );
-                              }}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal">{person.name}</FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  ))
-                ) : (
-                  <p className="text-center text-sm text-muted-foreground py-10">
-                    No hay personas inscriptas en esta sesión.
-                  </p>
-                )}
-              </div>
-            </ScrollArea>
-            <SheetFooter>
-                <SheetClose asChild>
-                    <Button type="button" variant="outline">
-                        Cancelar
-                    </Button>
-                </SheetClose>
-                <Button type="submit">Guardar Asistencia</Button>
-            </SheetFooter>
-          </form>
-        </Form>
+        </SheetHeader>
+        
+        <ScrollArea className="flex-grow my-4">
+          <div className="space-y-2 pr-4">
+            {enrolledPeople.length > 0 ? (
+              enrolledPeople.map(person => (
+                <div key={person.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
+                  <p className="font-medium">{person.name}</p>
+                  <div className="flex items-center gap-1">
+                    <TooltipProvider delayDuration={100}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className={cn("h-8 w-8", statuses[person.id] === 'present' && "bg-green-100 text-green-700 hover:bg-green-200")} onClick={() => handleStatusChange(person.id, 'present')}>
+                                    <CheckCircle2 className="h-5 w-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Presente</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className={cn("h-8 w-8", statuses[person.id] === 'absent' && "bg-red-100 text-red-700 hover:bg-red-200")} onClick={() => handleStatusChange(person.id, 'absent')}>
+                                    <XCircle className="h-5 w-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Ausente</p></TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button variant="ghost" size="icon" className={cn("h-8 w-8", statuses[person.id] === 'justified' && "bg-yellow-100 text-yellow-700 hover:bg-yellow-200")} onClick={() => handleStatusChange(person.id, 'justified')}>
+                                    <CalendarClock className="h-5 w-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent><p>Ausencia Justificada</p></TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-sm text-muted-foreground py-10">
+                No hay personas inscriptas en esta sesión.
+              </p>
+            )}
+          </div>
+        </ScrollArea>
+        <SheetFooter>
+            <SheetClose asChild>
+                <Button type="button" variant="outline">
+                    Cancelar
+                </Button>
+            </SheetClose>
+            <Button onClick={onSubmit}>Guardar Asistencia</Button>
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

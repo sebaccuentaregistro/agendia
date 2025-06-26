@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -150,12 +150,16 @@ function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: 
   const history = useMemo(() => {
     if (!person) return [];
     
-    const personHistory: { date: string, sessionId: string, status: 'present' | 'absent' }[] = [];
+    type HistoryEntry = { date: string, sessionId: string, status: 'present' | 'absent' | 'justified' };
+    const personHistory: HistoryEntry[] = [];
+    
     attendance.forEach(record => {
       if (record.presentIds.includes(person.id)) {
         personHistory.push({ date: record.date, sessionId: record.sessionId, status: 'present' });
       } else if (record.absentIds.includes(person.id)) {
         personHistory.push({ date: record.date, sessionId: record.sessionId, status: 'absent' });
+      } else if (record.justifiedAbsenceIds?.includes(person.id)) {
+        personHistory.push({ date: record.date, sessionId: record.sessionId, status: 'justified' });
       }
     });
 
@@ -178,7 +182,7 @@ function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: 
       const dataToExport = history.map(h => ({
           date: h.date,
           activity: h.actividadName,
-          status: h.status === 'present' ? 'Presente' : 'Ausente'
+          status: h.status === 'present' ? 'Presente' : (h.status === 'absent' ? 'Ausente' : 'Justificada')
       }));
 
       if (dataToExport.length === 0) return;
@@ -190,6 +194,35 @@ function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: 
       };
       exportToCsv(`historial_asistencia_${person.name.replace(/\s/g, '_')}.csv`, dataToExport, headers);
   }
+
+  const getStatusBadge = (status: 'present' | 'absent' | 'justified') => {
+    switch(status) {
+      case 'present':
+        return (
+          <div className="flex items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-4 w-4" />
+            <span>Presente</span>
+          </div>
+        );
+      case 'absent':
+        return (
+          <div className="flex items-center gap-2 text-destructive">
+            <XCircle className="h-4 w-4" />
+            <span>Ausente</span>
+          </div>
+        );
+      case 'justified':
+        return (
+           <div className="flex items-center gap-2 text-yellow-600">
+            <CalendarClock className="h-4 w-4" />
+            <span>Justificada</span>
+          </div>
+        )
+      default:
+        return null;
+    }
+  }
+
 
   return (
     <Sheet open={!!person} onOpenChange={(open) => !open && onClose()}>
@@ -218,17 +251,7 @@ function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: 
                     <p className="font-semibold">{entry.actividadName}</p>
                     <p className="text-xs text-muted-foreground">{format(entry.dateObj, 'dd MMMM yyyy')}</p>
                   </div>
-                  {entry.status === 'present' ? (
-                    <div className="flex items-center gap-2 text-green-600">
-                      <CheckCircle2 className="h-4 w-4" />
-                      <span>Presente</span>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 text-destructive">
-                      <XCircle className="h-4 w-4" />
-                      <span>Ausente</span>
-                    </div>
-                  )}
+                  {getStatusBadge(entry.status)}
                 </div>
               ))
             ) : (
