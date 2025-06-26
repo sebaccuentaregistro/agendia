@@ -83,7 +83,7 @@ export function AttendanceSheet({ session, onClose }: { session: Session; onClos
           <SheetDescription>
             Selecciona el estado de cada persona. Por defecto, todas están presentes.
           </SheetDescription>
-           <div className="flex items-center justify-around text-sm pt-2 text-muted-foreground">
+           <div className="hidden sm:flex items-center justify-around text-sm pt-2 text-muted-foreground flex-wrap gap-x-4 gap-y-2">
                 <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> Total: {allPersonIdsForToday.length}</span>
                 <span className="flex items-center gap-1.5 text-green-600"><CheckCircle2 className="h-4 w-4" /> Presentes: {attendanceCounts.present || 0}</span>
                 <span className="flex items-center gap-1.5 text-destructive"><XCircle className="h-4 w-4" /> Ausentes: {attendanceCounts.absent || 0}</span>
