@@ -51,6 +51,7 @@ const oneTimeAttendeeSchema = z.object({
 function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, addOneTimeAttendee, actividades, attendance } = useStudio();
   const actividad = actividades.find(a => a.id === session.actividadId);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
     resolver: zodResolver(oneTimeAttendeeSchema),
@@ -69,20 +70,25 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
     people.forEach(p => balances[p.id] = 0);
 
     attendance.forEach(record => {
+      // Only consider past or today's records for balance calculation
       if (record.date <= todayStr) {
+        // Justified absences add to the balance
         record.justifiedAbsenceIds?.forEach(personId => {
           if (balances[personId] !== undefined) balances[personId]++;
         });
+        // One-time attendances (recoveries) subtract from the balance
         record.oneTimeAttendees?.forEach(personId => {
           if (balances[personId] !== undefined) balances[personId]--;
         });
       }
     });
     
+    // Filter for people with a positive balance (pending recoveries)
     return people
       .filter(person => balances[person.id] > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [people, attendance]);
+
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
     addOneTimeAttendee(session.id, values.personId, values.date);
@@ -114,14 +120,11 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                                     </FormControl>
                                     <SelectContent>
                                         {eligiblePeople.length > 0 ? (
-                                          <SelectGroup>
-                                            <SelectLabel>Con recupero pendiente</SelectLabel>
-                                            {eligiblePeople.map(person => (
-                                              <SelectItem key={person.id} value={person.id}>
-                                                {person.name}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectGroup>
+                                          eligiblePeople.map(person => (
+                                            <SelectItem key={person.id} value={person.id}>
+                                              {person.name}
+                                            </SelectItem>
+                                          ))
                                         ) : (
                                           <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
@@ -137,7 +140,7 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                         render={({ field }) => (
                             <FormItem className="flex flex-col">
                                 <FormLabel>Fecha de la clase</FormLabel>
-                                <Popover>
+                                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
                                     <PopoverTrigger asChild>
                                         <FormControl>
                                             <Button
@@ -157,7 +160,10 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                                         <Calendar
                                             mode="single"
                                             selected={field.value}
-                                            onSelect={field.onChange}
+                                            onSelect={(date) => {
+                                                field.onChange(date);
+                                                setIsCalendarOpen(false);
+                                            }}
                                             disabled={(date) => {
                                                 const isPast = date < new Date(new Date().setDate(new Date().getDate() - 1));
                                                 const isWrongDay = date.getDay() !== sessionDayNumber;
