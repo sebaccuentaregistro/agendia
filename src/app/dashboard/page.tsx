@@ -162,12 +162,12 @@ export default function Dashboard() {
                     {hasOverdue ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
                 </div>
                 <CardTitle className={cn(
-                    "text-xs font-semibold",
+                    "text-sm font-semibold",
                     hasOverdue ? "text-destructive" : "text-green-600"
                 )}>
                     Atrasados
                 </CardTitle>
-                <p className="text-lg font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
             </Card>
           </Link>
           {navItems.map((item) => (
@@ -176,9 +176,9 @@ export default function Dashboard() {
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <item.icon className="h-5 w-5" />
                   </div>
-                  <CardTitle className="text-xs font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                   {item.count !== null && (
-                    <p className="text-lg font-bold text-slate-600 dark:text-slate-400">{item.count}</p>
+                    <p className="text-xl font-bold text-slate-600 dark:text-slate-400">{item.count}</p>
                   )}
               </Card>
           </Link>
