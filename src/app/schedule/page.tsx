@@ -29,11 +29,11 @@ import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
 
 
 const formSchema = z.object({
-  instructorId: z.string({ required_error: 'Debes seleccionar un especialista.' }).min(1, { message: 'Debes seleccionar un especialista.' }),
-  actividadId: z.string({ required_error: 'Debes seleccionar una actividad.' }).min(1, { message: 'Debes seleccionar una actividad.' }),
-  spaceId: z.string({ required_error: 'Debes seleccionar un espacio.' }).min(1, { message: 'Debes seleccionar un espacio.' }),
+  instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
+  actividadId: z.string().min(1, { message: 'Debes seleccionar una actividad.' }),
+  spaceId: z.string().min(1, { message: 'Debes seleccionar un espacio.' }),
   dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
-  time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
+  time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
   sessionType: z.enum(['Grupal', 'Individual']),
 });
 
