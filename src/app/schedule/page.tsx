@@ -56,39 +56,29 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
     resolver: zodResolver(oneTimeAttendeeSchema),
   });
 
-  const { eligiblePeople, otherPeople } = useMemo(() => {
+  const eligiblePeople = useMemo(() => {
     const balances: Record<string, number> = {};
     const todayStr = format(new Date(), 'yyyy-MM-dd');
 
     people.forEach(p => balances[p.id] = 0);
 
     attendance.forEach(record => {
+      // We only consider past or present records for calculating balance
       if (record.date <= todayStr) {
+        // A justified absence becomes a "credit"
         record.justifiedAbsenceIds?.forEach(personId => {
           if (balances[personId] !== undefined) balances[personId]++;
         });
+        // A one-time attendance (make-up class) consumes a "credit"
         record.oneTimeAttendees?.forEach(personId => {
           if (balances[personId] !== undefined) balances[personId]--;
         });
       }
     });
     
-    const eligible: Person[] = [];
-    const others: Person[] = [];
-
-    people.forEach(person => {
-      if (balances[person.id] > 0) {
-        eligible.push(person);
-      } else {
-        others.push(person);
-      }
-    });
-
-    const sortByName = (a: Person, b: Person) => a.name.localeCompare(b.name);
-    eligible.sort(sortByName);
-    others.sort(sortByName);
-
-    return { eligiblePeople: eligible, otherPeople: others };
+    return people
+      .filter(person => balances[person.id] > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [people, attendance]);
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
@@ -120,7 +110,7 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {eligiblePeople.length > 0 && (
+                                        {eligiblePeople.length > 0 ? (
                                           <SelectGroup>
                                             <SelectLabel>Con recupero pendiente</SelectLabel>
                                             {eligiblePeople.map(person => (
@@ -129,20 +119,8 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                                               </SelectItem>
                                             ))}
                                           </SelectGroup>
-                                        )}
-                                        {otherPeople.length > 0 && eligiblePeople.length > 0 && <SelectSeparator />}
-                                        {otherPeople.length > 0 && (
-                                          <SelectGroup>
-                                            <SelectLabel>Todas las personas</SelectLabel>
-                                            {otherPeople.map(person => (
-                                              <SelectItem key={person.id} value={person.id}>
-                                                {person.name}
-                                              </SelectItem>
-                                            ))}
-                                          </SelectGroup>
-                                        )}
-                                        {eligiblePeople.length === 0 && otherPeople.length === 0 && (
-                                          <div className="p-4 text-center text-sm text-muted-foreground">No hay personas en el sistema.</div>
+                                        ) : (
+                                          <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
                                     </SelectContent>
                                 </Select>
