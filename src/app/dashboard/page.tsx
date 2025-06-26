@@ -205,61 +205,58 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
           <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
-                "group flex flex-col items-center justify-center p-4 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
                 hasOverdue ? "hover:!border-destructive" : "hover:!border-green-500"
             )}>
                 <div className={cn(
-                    "flex h-12 w-12 mb-2 flex-shrink-0 items-center justify-center rounded-full",
+                    "flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full",
                     hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
                 )}>
-                    {hasOverdue ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
+                    {hasOverdue ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
                 </div>
-                <CardTitle className={cn("text-base font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                <CardTitle className={cn("text-sm font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
                     Atrasados
                 </CardTitle>
-                <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
             </Card>
           </Link>
           <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
-                "group flex flex-col items-center justify-center p-4 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
                 hasPendingRecovery ? "hover:!border-yellow-500" : "hover:!border-green-500"
             )}>
                 <div className={cn(
-                    "flex h-12 w-12 mb-2 flex-shrink-0 items-center justify-center rounded-full",
+                    "flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full",
                     hasPendingRecovery ? "bg-yellow-100 text-yellow-600" : "bg-green-100 text-green-600"
                 )}>
-                    <CalendarClock className="h-6 w-6" />
+                    <CalendarClock className="h-5 w-5" />
                 </div>
-                <CardTitle className={cn("text-base font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                <CardTitle className={cn("text-sm font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
                     Recuperos
                 </CardTitle>
-                <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
+                <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
             </Card>
           </Link>
           <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
-                "group flex flex-col items-center justify-center p-4 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
                 hasOnVacation ? "hover:!border-blue-500" : "hover:!border-green-500"
             )}>
                 <div className={cn(
-                    "flex h-12 w-12 mb-2 flex-shrink-0 items-center justify-center rounded-full",
+                    "flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full",
                     hasOnVacation ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
                 )}>
-                    <Plane className="h-6 w-6" />
+                    <Plane className="h-5 w-5" />
                 </div>
-                <CardTitle className={cn("text-base font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                <CardTitle className={cn("text-sm font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
                     En Vacaciones
                 </CardTitle>
-                <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+                <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
             </Card>
           </Link>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
               <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
@@ -268,7 +265,7 @@ export default function Dashboard() {
                   </div>
                   <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                   {item.count !== null && (
-                    <p className="text-xl font-bold text-slate-600 dark:text-slate-400">{item.count}</p>
+                    <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                   )}
               </Card>
           </Link>
