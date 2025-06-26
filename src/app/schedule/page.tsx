@@ -27,6 +27,7 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
 import { AttendanceSheet } from '@/components/attendance-sheet';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const formSchema = z.object({
@@ -366,6 +367,12 @@ export default function SchedulePage() {
     exportToCsv('horarios.csv', dataToExport, headers);
   };
 
+  const now = new Date();
+  const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
+  const appDayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+  const todayName = dayMap[now.getDay()];
+  const todayIndex = appDayOrder.indexOf(todayName);
+
 
   return (
     <div className="space-y-8">
@@ -537,6 +544,28 @@ export default function SchedulePage() {
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
                       const isFull = availableSpots <= 0;
 
+                      const sessionIndex = appDayOrder.indexOf(session.dayOfWeek);
+                      const isFutureDay = sessionIndex > todayIndex;
+                      const isToday = sessionIndex === todayIndex;
+
+                      let isAttendanceAllowed = true;
+                      let tooltipMessage = "Pasar Lista";
+
+                      if (isFutureDay) {
+                          isAttendanceAllowed = false;
+                          tooltipMessage = "No se puede pasar lista para una clase futura.";
+                      } else if (isToday) {
+                          const [hour, minute] = session.time.split(':').map(Number);
+                          const sessionStartTime = new Date();
+                          sessionStartTime.setHours(hour, minute, 0, 0);
+                          const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
+                          if (now < attendanceWindowStart) {
+                              isAttendanceAllowed = false;
+                              tooltipMessage = "La asistencia se habilita 20 minutos antes de la clase.";
+                          }
+                      }
+
+
                       return (
                         <Card 
                           key={session.id} 
@@ -578,10 +607,21 @@ export default function SchedulePage() {
                             </div>
                           </CardContent>
                           <CardFooter className="p-3 flex items-center justify-between gap-2 border-t border-white/20">
-                             <Button variant="outline" className="w-full flex-1" onClick={() => setSessionForAttendance(session)}>
-                                <ClipboardCheck className="mr-2 h-4 w-4"/>
-                                Pasar Lista
-                             </Button>
+                             <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span tabIndex={0} className="w-full flex-1">
+                                      <Button variant="outline" className="w-full" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                          <ClipboardCheck className="mr-2 h-4 w-4"/>
+                                          Pasar Lista
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{tooltipMessage}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             <Button className="flex-1" onClick={() => setSessionToManage(session)}>
                               <UserPlus className="mr-2 h-4 w-4" />
                               Inscribir

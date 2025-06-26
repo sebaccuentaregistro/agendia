@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Helper function to render student cards inside the sheet
 function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
@@ -243,6 +244,15 @@ export default function Dashboard() {
                   const enrolledCount = session.personIds.length;
                   const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
                   const isFull = capacity > 0 && enrolledCount >= capacity;
+
+                  const now = new Date();
+                  const [hour, minute] = session.time.split(':').map(Number);
+                  const sessionStartTime = new Date();
+                  sessionStartTime.setHours(hour, minute, 0, 0);
+                  const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
+                  const isAttendanceAllowed = now >= attendanceWindowStart;
+                  const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes de la clase.";
+
                   return (
                     <li 
                       key={session.id}
@@ -268,10 +278,21 @@ export default function Dashboard() {
                               {enrolledCount}/{capacity} inscriptos
                             </p>
                           </div>
-                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => setSessionForAttendance(session)}>
-                            <ClipboardCheck className="h-5 w-5" />
-                            <span className="sr-only">Pasar Lista</span>
-                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span tabIndex={0}>
+                                  <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                    <ClipboardCheck className="h-5 w-5" />
+                                    <span className="sr-only">Pasar Lista</span>
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>{tooltipMessage}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                       </div>
                     </li>
                   );
