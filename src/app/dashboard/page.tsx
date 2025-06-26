@@ -3,13 +3,12 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
-import type { Session, Person } from '@/types';
+import type { Session } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -114,8 +113,25 @@ export default function Dashboard() {
     return people.filter(p => isPersonOnVacation(p, now)).length;
   }, [people, isPersonOnVacation]);
 
+  const pendingRecoveryCount = useMemo(() => {
+    const balances: Record<string, number> = {};
+    people.forEach(p => (balances[p.id] = 0));
+
+    attendance.forEach(record => {
+      record.justifiedAbsenceIds?.forEach(personId => {
+        if (balances[personId] !== undefined) balances[personId]++;
+      });
+      record.oneTimeAttendees?.forEach(personId => {
+        if (balances[personId] !== undefined) balances[personId]--;
+      });
+    });
+
+    return Object.values(balances).filter(balance => balance > 0).length;
+  }, [people, attendance]);
+
   const hasOverdue = overdueCount > 0;
   const hasOnVacation = onVacationCount > 0;
+  const hasPendingRecovery = pendingRecoveryCount > 0;
 
   const navItems = [
     { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
@@ -189,51 +205,65 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
           <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
-                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                "group flex flex-col items-center justify-center p-4 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
                 hasOverdue ? "hover:!border-destructive" : "hover:!border-green-500"
             )}>
                 <div className={cn(
-                    "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                    "flex h-12 w-12 mb-2 flex-shrink-0 items-center justify-center rounded-full",
                     hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
                 )}>
-                    {hasOverdue ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
+                    {hasOverdue ? <AlertTriangle className="h-6 w-6" /> : <CheckCircle2 className="h-6 w-6" />}
                 </div>
-                <CardTitle className={cn(
-                    "text-sm font-semibold",
-                    hasOverdue ? "text-destructive" : "text-green-600"
-                )}>
+                <CardTitle className={cn("text-base font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
                     Atrasados
                 </CardTitle>
-                <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+            </Card>
+          </Link>
+          <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
+            <Card className={cn(
+                "group flex flex-col items-center justify-center p-4 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                hasPendingRecovery ? "hover:!border-yellow-500" : "hover:!border-green-500"
+            )}>
+                <div className={cn(
+                    "flex h-12 w-12 mb-2 flex-shrink-0 items-center justify-center rounded-full",
+                    hasPendingRecovery ? "bg-yellow-100 text-yellow-600" : "bg-green-100 text-green-600"
+                )}>
+                    <CalendarClock className="h-6 w-6" />
+                </div>
+                <CardTitle className={cn("text-base font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                    Recuperos
+                </CardTitle>
+                <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
             </Card>
           </Link>
           <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
-                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                "group flex flex-col items-center justify-center p-4 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
                 hasOnVacation ? "hover:!border-blue-500" : "hover:!border-green-500"
             )}>
                 <div className={cn(
-                    "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                    "flex h-12 w-12 mb-2 flex-shrink-0 items-center justify-center rounded-full",
                     hasOnVacation ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
                 )}>
-                    <Plane className="h-5 w-5" />
+                    <Plane className="h-6 w-6" />
                 </div>
-                <CardTitle className={cn(
-                    "text-sm font-semibold",
-                    hasOnVacation ? "text-blue-600" : "text-green-600"
-                )}>
+                <CardTitle className={cn("text-base font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
                     En Vacaciones
                 </CardTitle>
-                <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+                <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
             </Card>
           </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
           {navItems.map((item) => (
             <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
               <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <div className="flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <item.icon className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>

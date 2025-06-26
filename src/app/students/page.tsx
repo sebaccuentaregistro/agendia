@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Person, Session } from '@/types';
+import type { Person } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -17,7 +17,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useStudio } from '@/context/StudioContext';
 import * as Utils from '@/lib/utils';
-import { format, addDays } from 'date-fns';
+import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useSearchParams } from 'next/navigation';
@@ -40,7 +40,7 @@ const formSchema = z.object({
 });
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
-  const { sessions, specialists, actividades, enrollPersonInSessions, spaces, isPersonOnVacation } = useStudio();
+  const { people, sessions, specialists, actividades, enrollPersonInSessions, spaces, isPersonOnVacation } = useStudio();
   const form = useForm<{ sessionIds: string[] }>({ defaultValues: { sessionIds: sessions.filter(session => session.personIds.includes(person.id)).map(session => session.id) } });
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
@@ -338,7 +338,7 @@ function VacationDialog({ person, onClose }: { person: Person; onClose: () => vo
 
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -357,17 +357,31 @@ export default function StudentsPage() {
     if (!isMounted) return [];
     const filter = searchParams.get('filter');
     const now = new Date();
+
+    const recoveryBalances: Record<string, number> = {};
+    people.forEach(p => (recoveryBalances[p.id] = 0));
+    attendance.forEach(record => {
+      record.justifiedAbsenceIds?.forEach(personId => {
+        if (recoveryBalances[personId] !== undefined) recoveryBalances[personId]++;
+      });
+      record.oneTimeAttendees?.forEach(personId => {
+        if (recoveryBalances[personId] !== undefined) recoveryBalances[personId]--;
+      });
+    });
     
     let peopleList = people.map(p => ({ 
         ...p, 
         paymentStatus: Utils.getStudentPaymentStatus(p, now),
-        nextPaymentDate: Utils.getNextPaymentDate(p)
+        nextPaymentDate: Utils.getNextPaymentDate(p),
+        recoveryBalance: recoveryBalances[p.id] > 0 ? recoveryBalances[p.id] : 0,
     }));
     
     if (filter === 'overdue') {
       peopleList = peopleList.filter(p => p.paymentStatus === 'Atrasado');
     } else if (filter === 'on-vacation') {
       peopleList = peopleList.filter(p => isPersonOnVacation(p, now));
+    } else if (filter === 'pending-recovery') {
+      peopleList = peopleList.filter(p => p.recoveryBalance > 0);
     }
 
     if (searchTerm.trim() !== '') {
@@ -375,7 +389,7 @@ export default function StudentsPage() {
     }
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, searchParams, searchTerm, isMounted, isPersonOnVacation]);
+  }, [people, searchParams, searchTerm, isMounted, isPersonOnVacation, attendance]);
 
   const emptyState = useMemo(() => {
     const filter = searchParams.get('filter');
@@ -396,6 +410,12 @@ export default function StudentsPage() {
         title: "Nadie está de vacaciones",
         description: "Actualmente no hay personas registradas en período de vacaciones."
       }
+    }
+    if (filter === 'pending-recovery') {
+        return {
+            title: "Nadie tiene recuperos pendientes",
+            description: "¡Todo en orden! No hay clases para recuperar."
+        }
     }
     return {
       title: "No Hay Personas",
@@ -565,7 +585,7 @@ export default function StudentsPage() {
                         <CardContent className="flex flex-col flex-grow space-y-4 p-4 pt-0">
                             <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                 <div className="text-slate-700 dark:text-slate-200">
-                                    <div>{getPaymentStatusBadge(person.paymentStatus)}</div>
+                                    <div>{getPaymentStatusBadge((person as any).paymentStatus)}</div>
                                 </div>
                                 <div className="text-slate-700 dark:text-slate-200">
                                     <div>{person.membershipType}</div>
@@ -574,13 +594,19 @@ export default function StudentsPage() {
                                     <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Inscripción</div>
                                     <div>{format(person.joinDate, 'dd/MM/yyyy')}</div>
                                 </div>
-                                {person.nextPaymentDate && (
+                                {(person as any).nextPaymentDate && (
                                   <div className="text-slate-700 dark:text-slate-200">
                                     <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Próximo Pago</div>
-                                    <div>{format(person.nextPaymentDate, 'dd/MM/yyyy')}</div>
+                                    <div>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</div>
                                   </div>
                                 )}
                             </div>
+                            {(person as any).recoveryBalance > 0 && (
+                                <div className="flex items-center gap-2 text-sm text-yellow-600 dark:text-yellow-400 font-semibold p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                                    <CalendarClock className="h-4 w-4" />
+                                    <span>{(person as any).recoveryBalance} recupero(s) pendiente(s)</span>
+                                </div>
+                            )}
                             <div className="space-y-2 flex flex-col flex-grow">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                     Horarios inscriptos ({enrolledSessions.length})

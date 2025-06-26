@@ -65,25 +65,17 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
 
   const eligiblePeople = useMemo(() => {
     const balances: Record<string, number> = {};
-    const todayStr = format(new Date(), 'yyyy-MM-dd');
-
-    people.forEach(p => balances[p.id] = 0);
+    people.forEach(p => (balances[p.id] = 0));
 
     attendance.forEach(record => {
-      // Only consider past or today's records for balance calculation
-      if (record.date <= todayStr) {
-        // Justified absences add to the balance
-        record.justifiedAbsenceIds?.forEach(personId => {
-          if (balances[personId] !== undefined) balances[personId]++;
-        });
-        // One-time attendances (recoveries) subtract from the balance
-        record.oneTimeAttendees?.forEach(personId => {
-          if (balances[personId] !== undefined) balances[personId]--;
-        });
-      }
+      record.justifiedAbsenceIds?.forEach(personId => {
+        if (balances[personId] !== undefined) balances[personId]++;
+      });
+      record.oneTimeAttendees?.forEach(personId => {
+        if (balances[personId] !== undefined) balances[personId]--;
+      });
     });
-    
-    // Filter for people with a positive balance (pending recoveries)
+
     return people
       .filter(person => balances[person.id] > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
