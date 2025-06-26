@@ -56,7 +56,12 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
         actividad: actividades.find(a => a.id === session.actividadId),
         space: spaces.find(s => s.id === session.spaceId),
       }))
-      .sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+      .sort((a, b) => {
+        const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
+        if (dayComparison !== 0) return dayComparison;
+        return a.time.localeCompare(b.time);
+      });
 
 
   function onSubmit(data: { sessionIds: string[] }) {
@@ -133,7 +138,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                               </div>
                               {isPermanentlyFull && !isEnrolledInForm && (
                                 <p className="text-xs font-semibold text-amber-600 dark:text-amber-500">
-                                  {isIndividual ? 'Ocupado permanentemente' : 'Plazas fijas completas.'}
+                                  {isIndividual ? 'Sesión individual ocupada' : 'Plazas fijas completas.'}
                                 </p>
                               )}
                             </div>
