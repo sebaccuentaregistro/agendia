@@ -105,28 +105,37 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                     {filteredSessions.map((item) => {
                       const { specialist, actividad, space } = item;
                       if (!actividad || !specialist || !space) return null;
+                      
                       const isEnrolledInForm = form.watch('sessionIds').includes(item.id);
                       const isIndividual = item.sessionType === 'Individual';
                       const capacity = isIndividual ? 1 : space.capacity;
-                      const isFull = item.personIds.length >= capacity;
+                      const isPermanentlyFull = item.personIds.length >= capacity;
 
                       return (
                         <FormField key={item.id} control={form.control} name="sessionIds" render={({ field }) => (
-                          <FormItem className={Utils.cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", isFull && !isEnrolledInForm ? "bg-muted/50 opacity-50" : "hover:bg-muted/50")}>
+                          <FormItem className={Utils.cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", isPermanentlyFull && !isEnrolledInForm ? "bg-muted/50 opacity-70" : "hover:bg-muted/50")}>
                             <FormControl>
-                              <Checkbox checked={field.value?.includes(item.id)} disabled={isFull && !isEnrolledInForm} onCheckedChange={(checked) => {
-                                const currentValues = field.value || [];
-                                return checked ? field.onChange([...currentValues, item.id]) : field.onChange(currentValues.filter((value) => value !== item.id));
-                              }}/>
+                              <Checkbox
+                                checked={field.value?.includes(item.id)}
+                                disabled={isPermanentlyFull && !isEnrolledInForm}
+                                onCheckedChange={(checked) => {
+                                  const currentValues = field.value || [];
+                                  return checked ? field.onChange([...currentValues, item.id]) : field.onChange(currentValues.filter((value) => value !== item.id));
+                                }}
+                              />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel className={Utils.cn("font-normal", isFull && !isEnrolledInForm && "cursor-not-allowed")}>{actividad.name}</FormLabel>
+                              <FormLabel className={Utils.cn("font-normal", isPermanentlyFull && !isEnrolledInForm && "cursor-not-allowed")}>{actividad.name}</FormLabel>
                               <div className="text-xs text-muted-foreground">
                                 <p>{specialist?.name}</p>
                                 <p>{item.dayOfWeek} {formatTime(item.time)}</p>
                                 <p><span className="font-medium">Espacio:</span> {space?.name} ({item.personIds.length}/{capacity}) {isIndividual && `(Individual)`}</p>
                               </div>
-                              {isFull && !isEnrolledInForm && <p className="text-xs text-destructive">{isIndividual ? 'Ocupado' : 'Sesión llena'}</p>}
+                              {isPermanentlyFull && !isEnrolledInForm && (
+                                <p className="text-xs font-semibold text-amber-600 dark:text-amber-500">
+                                  {isIndividual ? 'Ocupado permanentemente' : 'Plazas fijas completas.'}
+                                </p>
+                              )}
                             </div>
                           </FormItem>
                         )}/>
