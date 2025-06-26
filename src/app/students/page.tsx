@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -144,14 +144,114 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
   );
 }
 
+function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: () => void }) {
+  const { attendance, sessions, actividades } = useStudio();
+
+  const history = useMemo(() => {
+    if (!person) return [];
+    
+    const personHistory: { date: string, sessionId: string, status: 'present' | 'absent' }[] = [];
+    attendance.forEach(record => {
+      if (record.presentIds.includes(person.id)) {
+        personHistory.push({ date: record.date, sessionId: record.sessionId, status: 'present' });
+      } else if (record.absentIds.includes(person.id)) {
+        personHistory.push({ date: record.date, sessionId: record.sessionId, status: 'absent' });
+      }
+    });
+
+    return personHistory
+      .map(entry => {
+        const session = sessions.find(s => s.id === entry.sessionId);
+        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+        const dateObj = new Date(`${entry.date}T12:00:00Z`); // Avoid timezone issues
+        return {
+          ...entry,
+          dateObj,
+          actividadName: actividad?.name || 'Clase eliminada',
+        };
+      })
+      .sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+  }, [person, attendance, sessions, actividades]);
+  
+  const handleExportAttendance = () => {
+    if (!person) return;
+      const dataToExport = history.map(h => ({
+          date: h.date,
+          activity: h.actividadName,
+          status: h.status === 'present' ? 'Presente' : 'Ausente'
+      }));
+
+      if (dataToExport.length === 0) return;
+
+      const headers = {
+          date: 'Fecha',
+          activity: 'Actividad',
+          status: 'Estado'
+      };
+      exportToCsv(`historial_asistencia_${person.name.replace(/\s/g, '_')}.csv`, dataToExport, headers);
+  }
+
+  return (
+    <Sheet open={!!person} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Historial de Asistencia: {person?.name}</SheetTitle>
+          <div className="flex items-center justify-between pt-2">
+            <SheetDescription>Registro de todas las asistencias.</SheetDescription>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportAttendance}
+                disabled={history.length === 0}
+            >
+                <FileDown className="mr-2 h-4 w-4" />
+                Exportar
+            </Button>
+          </div>
+        </SheetHeader>
+        <ScrollArea className="h-[calc(100%-8rem)] pr-4 mt-4">
+          <div className="space-y-2">
+            {history.length > 0 ? (
+              history.map((entry, index) => (
+                <div key={index} className="flex items-center justify-between text-sm p-3 rounded-md bg-muted/50">
+                  <div>
+                    <p className="font-semibold">{entry.actividadName}</p>
+                    <p className="text-xs text-muted-foreground">{format(entry.dateObj, 'dd MMMM yyyy')}</p>
+                  </div>
+                  {entry.status === 'present' ? (
+                    <div className="flex items-center gap-2 text-green-600">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>Presente</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-destructive">
+                      <XCircle className="h-4 w-4" />
+                      <span>Ausente</span>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground pt-16">
+                <p>No hay registros de asistencia.</p>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, attendance } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [personToEnroll, setPersonToEnroll] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
+  const [personForAttendance, setPersonForAttendance] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
@@ -316,6 +416,7 @@ export default function StudentsPage() {
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPersonForAttendance(person)}><ClipboardCheck className="mr-2 h-4 w-4" />Ver Historial de Asistencia</DropdownMenuItem>
                                     {person.membershipType === 'Mensual' && (
                                     <>
                                         <DropdownMenuSeparator />
@@ -456,6 +557,9 @@ export default function StudentsPage() {
         </SheetContent>
       </Sheet>
 
+      {personForAttendance && (<AttendanceHistorySheet person={personForAttendance} onClose={() => setPersonForAttendance(null)}/>)}
     </div>
   );
 }
+
+    
