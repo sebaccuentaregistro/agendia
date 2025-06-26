@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
@@ -109,7 +109,13 @@ export default function Dashboard() {
     return people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
   }, [people]);
 
+  const onVacationCount = useMemo(() => {
+    const now = new Date();
+    return people.filter(p => isPersonOnVacation(p, now)).length;
+  }, [people, isPersonOnVacation]);
+
   const hasOverdue = overdueCount > 0;
+  const hasOnVacation = onVacationCount > 0;
 
   const navItems = [
     { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
@@ -183,7 +189,7 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
-      <div className="grid grid-cols-3 gap-4 md:grid-cols-4 lg:grid-cols-7">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
           <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
             <Card className={cn(
                 "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
@@ -202,6 +208,26 @@ export default function Dashboard() {
                     Atrasados
                 </CardTitle>
                 <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+            </Card>
+          </Link>
+          <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
+            <Card className={cn(
+                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                hasOnVacation ? "hover:!border-blue-500" : "hover:!border-green-500"
+            )}>
+                <div className={cn(
+                    "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                    hasOnVacation ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                )}>
+                    <Plane className="h-5 w-5" />
+                </div>
+                <CardTitle className={cn(
+                    "text-sm font-semibold",
+                    hasOnVacation ? "text-blue-600" : "text-green-600"
+                )}>
+                    En Vacaciones
+                </CardTitle>
+                <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
             </Card>
           </Link>
           {navItems.map((item) => (

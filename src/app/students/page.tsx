@@ -40,7 +40,7 @@ const formSchema = z.object({
 });
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
-  const { sessions, specialists, actividades, enrollPersonInSessions, spaces } = useStudio();
+  const { sessions, specialists, actividades, enrollPersonInSessions, spaces, isPersonOnVacation } = useStudio();
   const form = useForm<{ sessionIds: string[] }>({ defaultValues: { sessionIds: sessions.filter(session => session.personIds.includes(person.id)).map(session => session.id) } });
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
@@ -50,12 +50,26 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
         (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
         (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
-      .map(session => ({
-        ...session,
-        specialist: specialists.find(i => i.id === session.instructorId),
-        actividad: actividades.find(a => a.id === session.actividadId),
-        space: spaces.find(s => s.id === session.spaceId),
-      }))
+      .map(session => {
+        const space = spaces.find(s => s.id === session.spaceId);
+        const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+        
+        // Count people not on vacation
+        const activeEnrolledCount = session.personIds.filter(pid => {
+            const p = people.find(p => p.id === pid);
+            return p && !isPersonOnVacation(p, new Date()); // simplified check for today
+        }).length;
+        
+        return {
+            ...session,
+            specialist: specialists.find(i => i.id === session.instructorId),
+            actividad: actividades.find(a => a.id === session.actividadId),
+            space,
+            isPermanentlyFull: activeEnrolledCount >= capacity,
+            activeEnrolledCount,
+            capacity,
+        };
+    })
       .sort((a, b) => {
         const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
         const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
@@ -108,21 +122,19 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                 <ScrollArea className="h-72 rounded-md border p-4">
                   <div className="space-y-4">
                     {filteredSessions.map((item) => {
-                      const { specialist, actividad, space } = item;
+                      const { specialist, actividad, space, isPermanentlyFull, activeEnrolledCount, capacity } = item;
                       if (!actividad || !specialist || !space) return null;
                       
                       const isEnrolledInForm = form.watch('sessionIds').includes(item.id);
-                      const isIndividual = item.sessionType === 'Individual';
-                      const capacity = isIndividual ? 1 : space.capacity;
-                      const isPermanentlyFull = item.personIds.length >= capacity;
+                      const isDisabled = isPermanentlyFull && !isEnrolledInForm;
 
                       return (
                         <FormField key={item.id} control={form.control} name="sessionIds" render={({ field }) => (
-                          <FormItem className={Utils.cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", isPermanentlyFull && !isEnrolledInForm ? "bg-muted/50 opacity-70" : "hover:bg-muted/50")}>
+                          <FormItem className={Utils.cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", isDisabled ? "bg-muted/50 opacity-70" : "hover:bg-muted/50")}>
                             <FormControl>
                               <Checkbox
                                 checked={field.value?.includes(item.id)}
-                                disabled={isPermanentlyFull && !isEnrolledInForm}
+                                disabled={isDisabled}
                                 onCheckedChange={(checked) => {
                                   const currentValues = field.value || [];
                                   return checked ? field.onChange([...currentValues, item.id]) : field.onChange(currentValues.filter((value) => value !== item.id));
@@ -130,15 +142,15 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                               />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel className={Utils.cn("font-normal", isPermanentlyFull && !isEnrolledInForm && "cursor-not-allowed")}>{actividad.name}</FormLabel>
+                              <FormLabel className={Utils.cn("font-normal", isDisabled && "cursor-not-allowed")}>{actividad.name}</FormLabel>
                               <div className="text-xs text-muted-foreground">
                                 <p>{specialist?.name}</p>
                                 <p>{item.dayOfWeek} {formatTime(item.time)}</p>
-                                <p><span className="font-medium">Espacio:</span> {space?.name} ({item.personIds.length}/{capacity}) {isIndividual && `(Individual)`}</p>
+                                <p><span className="font-medium">Espacio:</span> {space?.name} ({activeEnrolledCount}/{capacity})</p>
                               </div>
-                              {isPermanentlyFull && !isEnrolledInForm && (
+                               {isDisabled && (
                                 <p className="text-xs font-semibold text-amber-600 dark:text-amber-500">
-                                  {isIndividual ? 'Sesión individual ocupada' : 'Plazas fijas completas.'}
+                                  {item.sessionType === 'Individual' ? 'Sesión individual ocupada' : 'Plazas fijas completas.'}
                                 </p>
                               )}
                             </div>
@@ -326,7 +338,7 @@ function VacationDialog({ person, onClose }: { person: Person; onClose: () => vo
 
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -345,15 +357,51 @@ export default function StudentsPage() {
     if (!isMounted) return [];
     const filter = searchParams.get('filter');
     const now = new Date();
+    
     let peopleList = people.map(p => ({ 
         ...p, 
         paymentStatus: Utils.getStudentPaymentStatus(p, now),
         nextPaymentDate: Utils.getNextPaymentDate(p)
     }));
-    if (filter === 'overdue') { peopleList = peopleList.filter(p => p.paymentStatus === 'Atrasado'); }
-    if (searchTerm.trim() !== '') { peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())); }
+    
+    if (filter === 'overdue') {
+      peopleList = peopleList.filter(p => p.paymentStatus === 'Atrasado');
+    } else if (filter === 'on-vacation') {
+      peopleList = peopleList.filter(p => isPersonOnVacation(p, now));
+    }
+
+    if (searchTerm.trim() !== '') {
+      peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    }
+    
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, searchParams, searchTerm, isMounted]);
+  }, [people, searchParams, searchTerm, isMounted, isPersonOnVacation]);
+
+  const emptyState = useMemo(() => {
+    const filter = searchParams.get('filter');
+    if (searchTerm) {
+      return {
+        title: "No se encontraron personas",
+        description: "Intenta con otro nombre o limpia la búsqueda."
+      }
+    }
+    if (filter === 'overdue') {
+      return {
+        title: "Nadie tiene pagos atrasados",
+        description: "¡Excelente! Todas las personas están al día con sus pagos."
+      }
+    }
+    if (filter === 'on-vacation') {
+      return {
+        title: "Nadie está de vacaciones",
+        description: "Actualmente no hay personas registradas en período de vacaciones."
+      }
+    }
+    return {
+      title: "No Hay Personas",
+      description: "Empieza añadiendo tu primera persona."
+    }
+  }, [searchTerm, searchParams]);
 
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual' }});
 
@@ -594,13 +642,13 @@ export default function StudentsPage() {
       ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle className="text-slate-800 dark:text-slate-100">{searchTerm ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+              <CardTitle className="text-slate-800 dark:text-slate-100">{emptyState.title}</CardTitle>
               <CardDescription className="text-slate-600 dark:text-slate-400">
-                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza añadiendo tu primera persona."}
+                {emptyState.description}
               </CardDescription>
             </CardHeader>
             <CardContent>
-               {!searchTerm && (
+               {(!searchTerm && !searchParams.get('filter')) && (
                  <Button onClick={handleAdd}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Persona
