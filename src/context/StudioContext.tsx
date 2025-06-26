@@ -321,38 +321,50 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const enrollPersonInSessions = (personId: string, newSessionIds: string[]) => {
     const uniqueNewSessionIds = [...new Set(newSessionIds)];
 
-    for (const sessionId of uniqueNewSessionIds) {
-        const sessionToEnroll = sessions.find(c => c.id === sessionId);
-        if (!sessionToEnroll) continue; 
-        
-        const isAlreadyEnrolled = sessionToEnroll.personIds.includes(personId);
-        if (isAlreadyEnrolled) continue;
-
-        const space = spaces.find(s => s.id === sessionToEnroll.spaceId);
-        const capacity = sessionToEnroll.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
-        
-        if (sessionToEnroll.personIds.length >= capacity) {
-            const actividad = actividades.find(a => a.id === sessionToEnroll.actividadId);
-            toast({
-                variant: "destructive",
-                title: sessionToEnroll.sessionType === 'Individual' ? "Sesión Individual Ocupada" : "Sesión Llena",
-                description: `No se puede inscribir en "${actividad?.name}". La sesión ha alcanzado su capacidad máxima.`,
-                duration: 5000,
-            });
-            return; // Abort the entire operation
-        }
-    }
-
-    let sessionsToUpdate = [...sessions];
-    sessionsToUpdate = sessionsToUpdate.map(c => ({...c, personIds: c.personIds.filter(pid => pid !== personId)}));
-    
-    for (const sessionId of uniqueNewSessionIds) {
-      const sessionIndex = sessionsToUpdate.findIndex(c => c.id === sessionId);
-      if (sessionIndex !== -1) {
-        sessionsToUpdate[sessionIndex].personIds.push(personId);
+    // 1. Pre-flight check for capacity on all selected sessions
+    const overbookedSession = uniqueNewSessionIds.find(sessionId => {
+      const sessionToEnroll = sessions.find(c => c.id === sessionId);
+      if (!sessionToEnroll || sessionToEnroll.personIds.includes(personId)) {
+        return false; // Not overbooked if already in it
       }
+      const space = spaces.find(s => s.id === sessionToEnroll.spaceId);
+      const capacity = sessionToEnroll.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+      return sessionToEnroll.personIds.length >= capacity;
+    });
+
+    if (overbookedSession) {
+      const sessionDetails = sessions.find(s => s.id === overbookedSession);
+      const actividad = actividades.find(a => a.id === sessionDetails?.actividadId);
+      toast({
+          variant: "destructive",
+          title: sessionDetails?.sessionType === 'Individual' ? "Sesión Individual Ocupada" : "Sesión Llena",
+          description: `No se puede inscribir en "${actividad?.name || 'una sesión'}". La sesión ha alcanzado su capacidad máxima.`,
+          duration: 5000,
+      });
+      return; // Abort the entire operation
     }
-    setSessions(sessionsToUpdate);
+
+    // 2. Immutable update
+    setSessions(prevSessions => {
+      const newSessionIdSet = new Set(uniqueNewSessionIds);
+
+      return prevSessions.map(session => {
+        const isEnrolled = session.personIds.includes(personId);
+        const shouldBeEnrolled = newSessionIdSet.has(session.id);
+
+        if (isEnrolled && !shouldBeEnrolled) {
+          // Remove person from this session
+          return { ...session, personIds: session.personIds.filter(id => id !== personId) };
+        }
+        if (!isEnrolled && shouldBeEnrolled) {
+          // Add person to this session
+          return { ...session, personIds: [...session.personIds, personId] };
+        }
+        // No change needed for this session regarding this person
+        return session;
+      });
+    });
+
     toast({ title: "Inscripciones Actualizadas" });
   };
 
