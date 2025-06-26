@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
@@ -446,12 +447,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     const attendanceRecord = attendance.find(a => a.sessionId === sessionId && a.date === dateStr);
     const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-    
-    // For now, capacity check is simple: regulars + one-timers. A future improvement would be to subtract justified absences.
-    const currentEnrollment = session.personIds.length + oneTimeAttendees.length;
-    const capacity = session.sessionType === 'Individual' ? 1 : space.capacity;
 
-    if (currentEnrollment >= capacity) {
+    const activeRegularsOnDate = session.personIds.filter(pid => {
+        const person = people.find(p => p.id === pid);
+        return person && !isPersonOnVacation(person, date);
+    });
+
+    const currentEnrollmentOnDate = activeRegularsOnDate.length + oneTimeAttendees.length;
+    const capacity = session.sessionType === 'Individual' ? 1 : space.capacity;
+    
+    if (currentEnrollmentOnDate >= capacity) {
         toast({
             variant: "destructive",
             title: "Sesión Completa",
