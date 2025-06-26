@@ -409,7 +409,13 @@ export default function SchedulePage() {
                             <FormLabel>Actividad</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Selecciona una actividad" /></SelectTrigger></FormControl>
-                                <SelectContent>{availableActividades.map((a) => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))}</SelectContent>
+                                <SelectContent>
+                                    {availableActividades.length > 0 ? (
+                                        availableActividades.map((a) => (<SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>))
+                                    ) : (
+                                        <SelectItem value="no-options" disabled>No hay actividades para este especialista</SelectItem>
+                                    )}
+                                </SelectContent>
                             </Select><FormMessage />
                             </FormItem>
                         )}/>
@@ -418,7 +424,13 @@ export default function SchedulePage() {
                             <FormLabel>Especialista</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un especialista" /></SelectTrigger></FormControl>
-                                <SelectContent>{availableSpecialists.map((i) => (<SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>))}</SelectContent>
+                                <SelectContent>
+                                    {availableSpecialists.length > 0 ? (
+                                        availableSpecialists.map((i) => (<SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>))
+                                    ) : (
+                                        <SelectItem value="no-options" disabled>No hay especialistas para esta actividad</SelectItem>
+                                    )}
+                                </SelectContent>
                             </Select><FormMessage />
                             </FormItem>
                         )}/>
