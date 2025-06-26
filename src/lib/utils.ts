@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
-import { set, isBefore, addMonths, isAfter } from "date-fns";
+import { set, isBefore, addMonths, isAfter, differenceInDays, addDays } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -15,23 +15,35 @@ export function getNextPaymentDate(person: Person): Date | null {
 
   const lastPayment = person.lastPaymentDate;
   const joinDay = person.joinDate.getDate();
-  const baseDueDate = set(lastPayment, { 
+  let dueDate = set(lastPayment, {
     date: joinDay,
     hours: 0,
     minutes: 0,
     seconds: 0,
-    milliseconds: 0 
+    milliseconds: 0,
   });
-  
+
   // If payment was made on or after the due day, the next payment is one month after.
   // If payment was made before the due day, the due date is in the same month.
   if (lastPayment.getDate() >= joinDay) {
-    return addMonths(baseDueDate, 1);
-  } else {
-    // This case handles payments made in advance, before the due day of the month.
-    // The next due date should be in the current payment's month if not yet passed.
-    return baseDueDate;
+    dueDate = addMonths(dueDate, 1);
   }
+
+  // Adjust for vacations that overlap with the calculated due date
+  const vacations = person.vacationPeriods?.sort((a,b) => a.startDate.getTime() - b.startDate.getTime()) || [];
+  for (const vacation of vacations) {
+    const vacationStart = set(vacation.startDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+    const vacationEnd = set(vacation.endDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+
+    // Check if the due date falls within this vacation period.
+    // The range is inclusive: [vacationStart, vacationEnd]
+    if (dueDate >= vacationStart && dueDate <= vacationEnd) {
+      const vacationDuration = differenceInDays(vacationEnd, vacationStart) + 1;
+      dueDate = addDays(dueDate, vacationDuration);
+    }
+  }
+
+  return dueDate;
 }
 
 // This function checks if a person's payment is up-to-date.

@@ -22,15 +22,23 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 type AttendanceStatus = 'present' | 'absent' | 'justified';
 
 export function AttendanceSheet({ session, onClose }: { session: Session; onClose: () => void }) {
-  const { people, actividades, saveAttendance, attendance } = useStudio();
+  const { people, actividades, saveAttendance, attendance, isPersonOnVacation } = useStudio();
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const today = useMemo(() => new Date(), []);
   
   const allPersonIdsForToday = useMemo(() => {
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
-    const allEnrolledIds = [...new Set([...session.personIds, ...oneTimeIds])];
+    
+    // Filter out people on vacation from their regular spot
+    const regularIds = session.personIds.filter(pid => {
+        const person = people.find(p => p.id === pid);
+        return person && !isPersonOnVacation(person, today);
+    });
+
+    const allEnrolledIds = [...new Set([...regularIds, ...oneTimeIds])];
     return allEnrolledIds;
-  }, [session, attendance, todayStr]);
+  }, [session, attendance, todayStr, people, isPersonOnVacation, today]);
 
   const enrolledPeople = useMemo(() => {
     return people
@@ -129,7 +137,7 @@ export function AttendanceSheet({ session, onClose }: { session: Session; onClos
               ))
             ) : (
               <p className="text-center text-sm text-muted-foreground py-10">
-                No hay personas inscriptas en esta sesión.
+                No hay personas inscriptas en esta sesión para hoy.
               </p>
             )}
           </div>

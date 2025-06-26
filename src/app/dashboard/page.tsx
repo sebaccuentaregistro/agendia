@@ -22,19 +22,26 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Helper function to render student cards inside the sheet
 function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
-  const { people, actividades, specialists, spaces, attendance } = useStudio();
+  const { people, actividades, specialists, spaces, attendance, isPersonOnVacation } = useStudio();
   
   const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const today = useMemo(() => new Date(), []);
 
   const enrolledPeople = useMemo(() => {
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
-    const allEnrolledIds = [...new Set([...session.personIds, ...oneTimeIds])];
+    
+    const regularIds = session.personIds.filter(pid => {
+        const person = people.find(p => p.id === pid);
+        return person && !isPersonOnVacation(person, today);
+    });
+    
+    const allEnrolledIds = [...new Set([...regularIds, ...oneTimeIds])];
     
     return people
       .filter(p => allEnrolledIds.includes(p.id))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [people, session, attendance, todayStr]);
+  }, [people, session, attendance, todayStr, isPersonOnVacation, today]);
 
   const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
@@ -87,7 +94,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 
 
 export default function Dashboard() {
-  const { sessions, specialists, actividades, spaces, people, attendance } = useStudio();
+  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -136,9 +143,13 @@ export default function Dashboard() {
       .map(session => {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        const activeRegulars = session.personIds.filter(pid => {
+            const person = people.find(p => p.id === pid);
+            return person && !isPersonOnVacation(person, today);
+        });
         return {
           ...session,
-          enrolledCount: session.personIds.length + oneTimeAttendees.length,
+          enrolledCount: activeRegulars.length + oneTimeAttendees.length,
         };
       })
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -154,7 +165,7 @@ export default function Dashboard() {
     });
 
     return { todaysSessions, filteredSessions: filtered, todayName };
-  }, [sessions, filters, attendance]);
+  }, [sessions, filters, attendance, people, isPersonOnVacation]);
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);

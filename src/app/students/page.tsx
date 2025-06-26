@@ -4,10 +4,10 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,8 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useStudio } from '@/context/StudioContext';
 import * as Utils from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useSearchParams } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -29,6 +30,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { exportToCsv } from '@/lib/utils';
+import type { DateRange } from 'react-day-picker';
+import { Calendar } from '@/components/ui/calendar';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -266,8 +269,50 @@ function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: 
   );
 }
 
+function VacationDialog({ person, onClose }: { person: Person; onClose: () => void; }) {
+  const { addVacationPeriod } = useStudio();
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
+
+  const handleSubmit = () => {
+    if (person && date?.from && date?.to) {
+      addVacationPeriod(person.id, date.from, date.to);
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Registrar Vacaciones para {person.name}</DialogTitle>
+          <DialogDescription>
+            Selecciona el período. Durante este tiempo, los pagos se pausarán y no aparecerá en las listas de asistencia.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2 py-4 justify-center">
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={new Date()}
+            selected={date}
+            onSelect={setDate}
+            numberOfMonths={1}
+            locale={es}
+            disabled={{ before: new Date() }}
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSubmit} disabled={!date?.from || !date?.to}>Guardar Período</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, attendance } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -275,6 +320,7 @@ export default function StudentsPage() {
   const [personToEnroll, setPersonToEnroll] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [personForAttendance, setPersonForAttendance] = useState<Person | null>(null);
+  const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
@@ -410,13 +456,14 @@ export default function StudentsPage() {
       
       {!isMounted ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[28rem] w-full bg-white/30 rounded-2xl" />)}
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[32rem] w-full bg-white/30 rounded-2xl" />)}
         </div>
       ) : processedPeople.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {processedPeople.map((person) => {
                 const hasPayments = payments.some(p => p.personId === person.id);
                 const enrolledSessions = sessions.filter(session => session.personIds.includes(person.id)).sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+                const sortedVacations = person.vacationPeriods?.sort((a,b) => a.startDate.getTime() - b.startDate.getTime()) || [];
                 return (
                     <Card key={person.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
                         <CardHeader className="flex flex-row items-start gap-4 p-4">
@@ -438,6 +485,7 @@ export default function StudentsPage() {
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setPersonForAttendance(person)}><ClipboardCheck className="mr-2 h-4 w-4" />Ver Historial de Asistencia</DropdownMenuItem>
                                     {person.membershipType === 'Mensual' && (
@@ -471,7 +519,7 @@ export default function StudentsPage() {
                                   </div>
                                 )}
                             </div>
-                            <div className="space-y-2 flex-grow flex flex-col">
+                            <div className="space-y-2 flex flex-col flex-grow">
                                 <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                                     Horarios inscriptos ({enrolledSessions.length})
                                 </h4>
@@ -490,8 +538,31 @@ export default function StudentsPage() {
                                         })}
                                     </div>
                                 ) : (
-                                    <div className="flex flex-grow items-center justify-center rounded-lg border border-dashed border-white/30">
+                                    <div className="flex flex-grow items-center justify-center rounded-lg border border-dashed border-white/30 h-10">
                                         <p className="text-sm text-slate-500 dark:text-slate-400">Sin horarios.</p>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-2">
+                                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                    Períodos de Vacaciones ({sortedVacations.length})
+                                </h4>
+                                {sortedVacations.length > 0 ? (
+                                    <div className="space-y-2 rounded-lg border border-white/20 p-2 bg-white/10 backdrop-blur-sm">
+                                        {sortedVacations.map(vac => (
+                                            <div key={vac.id} className="flex items-center justify-between text-sm">
+                                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                                    {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
+                                                </span>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeVacationPeriod(person.id, vac.id)}>
+                                                    <Trash2 className="h-3 w-3 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-center rounded-lg border border-dashed border-white/30 h-10">
+                                        <p className="text-xs text-slate-500 dark:text-slate-400">Sin vacaciones registradas.</p>
                                     </div>
                                 )}
                             </div>
@@ -526,6 +597,7 @@ export default function StudentsPage() {
       )}
       
       {personToEnroll && (<EnrollDialog person={personToEnroll} onOpenChange={(open) => !open && setPersonToEnroll(null)}/>)}
+      {personForVacation && <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />}
 
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -584,5 +656,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
-    

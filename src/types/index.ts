@@ -11,6 +11,12 @@ export type Specialist = {
   avatar: string;
 };
 
+export type VacationPeriod = {
+  id: string;
+  startDate: Date;
+  endDate: Date;
+};
+
 export type Person = {
   id: string;
   name: string;
@@ -19,6 +25,7 @@ export type Person = {
   membershipType: 'Mensual' | 'Diario';
   lastPaymentDate: Date;
   avatar: string;
+  vacationPeriods?: VacationPeriod[];
 };
 
 export type Session = {

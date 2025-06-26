@@ -13,7 +13,7 @@ import {
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import * as Utils from '@/lib/utils';
-import { format as formatDate } from 'date-fns';
+import { format as formatDate, set } from 'date-fns';
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -29,7 +29,7 @@ interface StudioContextType {
   addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
   updateSpecialist: (specialist: Specialist) => void;
   deleteSpecialist: (specialistId: string) => void;
-  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => void;
+  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => void;
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
   recordPayment: (personId: string) => void;
@@ -44,6 +44,9 @@ interface StudioContextType {
   enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
   saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
   addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
+  addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
+  removeVacationPeriod: (personId: string, vacationId: string) => void;
+  isPersonOnVacation: (person: Person, date: Date) => boolean;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -59,7 +62,16 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
         
         // Special handling for dates
         if (key === 'yoga-people') {
-          return parsed.map((p: any) => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: p.lastPaymentDate ? new Date(p.lastPaymentDate) : new Date(p.joinDate) }));
+          return parsed.map((p: any) => ({
+             ...p,
+             joinDate: new Date(p.joinDate),
+             lastPaymentDate: p.lastPaymentDate ? new Date(p.lastPaymentDate) : new Date(p.joinDate),
+             vacationPeriods: p.vacationPeriods?.map((v: any) => ({
+                 ...v,
+                 startDate: new Date(v.startDate),
+                 endDate: new Date(v.endDate),
+             })) || []
+            }));
         }
         if (key === 'yoga-payments') {
             return parsed.map((p: any) => ({ ...p, date: new Date(p.date) }));
@@ -187,13 +199,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpecialists(prev => prev.filter(s => s.id !== id));
   };
 
-  const addPerson = (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate'>) => {
+  const addPerson = (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     if (people.some(p => p.phone.trim() === person.phone.trim())) {
         toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe una persona con este número de teléfono." });
         return;
     }
     const now = new Date();
-    const newPerson: Person = { ...person, id: `person-${Date.now()}`, avatar: `https://placehold.co/100x100.png`, joinDate: now, lastPaymentDate: now };
+    const newPerson: Person = { ...person, id: `person-${Date.now()}`, avatar: `https://placehold.co/100x100.png`, joinDate: now, lastPaymentDate: now, vacationPeriods: [] };
     setPeople(prev => [newPerson, ...prev]);
     if (newPerson.membershipType === 'Mensual') {
       const newPayment: Payment = { id: `pay-${Date.now()}`, personId: newPerson.id, date: now };
@@ -481,8 +493,42 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     toast({ title: "Asistente Puntual Añadido", description: "La persona ha sido añadida a la sesión para la fecha seleccionada." });
   };
 
+  const isPersonOnVacation = (person: Person, date: Date): boolean => {
+    if (!person.vacationPeriods) return false;
+    const checkDate = set(date, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+    
+    return person.vacationPeriods.some(period => {
+        const startDate = set(period.startDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+        const endDate = set(period.endDate, { hours: 23, minutes: 59, seconds: 59, milliseconds: 999 });
+        return checkDate >= startDate && checkDate <= endDate;
+    });
+  };
+
+  const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
+    setPeople(prev => prev.map(p => {
+        if (p.id === personId) {
+            const newVacation = { id: `vac-${Date.now()}`, startDate, endDate };
+            const updatedVacations = [...(p.vacationPeriods || []), newVacation];
+            return { ...p, vacationPeriods: updatedVacations };
+        }
+        return p;
+    }));
+    toast({ title: "Vacaciones Registradas", description: "El período de vacaciones ha sido añadido." });
+  };
+
+  const removeVacationPeriod = (personId: string, vacationId: string) => {
+    setPeople(prev => prev.map(p => {
+        if (p.id === personId) {
+            const updatedVacations = p.vacationPeriods?.filter(v => v.id !== vacationId) || [];
+            return { ...p, vacationPeriods: updatedVacations };
+        }
+        return p;
+    }));
+    toast({ title: "Vacaciones Eliminadas", description: "El período de vacaciones ha sido eliminado." });
+  };
+
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addVacationPeriod, removeVacationPeriod, isPersonOnVacation }}>
       {children}
     </StudioContext.Provider>
   );
