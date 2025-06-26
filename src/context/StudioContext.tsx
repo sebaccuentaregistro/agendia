@@ -290,6 +290,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este espacio ya está en uso a esa hora." });
       return;
     }
+    const space = spaces.find(s => s.id === updated.spaceId);
+    const capacity = updated.sessionType === 'Individual' ? 1 : (space?.capacity ?? 0);
+    if (updated.personIds.length > capacity) {
+      toast({
+        variant: "destructive",
+        title: "Capacidad Excedida",
+        description: `No se puede guardar el cambio. Hay ${updated.personIds.length} personas inscriptas y la nueva capacidad es de ${capacity}.`,
+        duration: 6000
+      });
+      return;
+    }
     setSessions(prev => prev.map(c => c.id === updated.id ? updated : c));
   };
 
