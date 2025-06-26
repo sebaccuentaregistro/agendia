@@ -56,6 +56,12 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
     resolver: zodResolver(oneTimeAttendeeSchema),
   });
 
+  const dayMap: { [key in Session['dayOfWeek']]: number } = useMemo(() => ({
+    'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6,
+  }), []);
+
+  const sessionDayNumber = dayMap[session.dayOfWeek];
+
   const eligiblePeople = useMemo(() => {
     const balances: Record<string, number> = {};
     const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -63,13 +69,10 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
     people.forEach(p => balances[p.id] = 0);
 
     attendance.forEach(record => {
-      // We only consider past or present records for calculating balance
       if (record.date <= todayStr) {
-        // A justified absence becomes a "credit"
         record.justifiedAbsenceIds?.forEach(personId => {
           if (balances[personId] !== undefined) balances[personId]++;
         });
-        // A one-time attendance (make-up class) consumes a "credit"
         record.oneTimeAttendees?.forEach(personId => {
           if (balances[personId] !== undefined) balances[personId]--;
         });
@@ -155,7 +158,11 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                                             mode="single"
                                             selected={field.value}
                                             onSelect={field.onChange}
-                                            disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1)) }
+                                            disabled={(date) => {
+                                                const isPast = date < new Date(new Date().setDate(new Date().getDate() - 1));
+                                                const isWrongDay = date.getDay() !== sessionDayNumber;
+                                                return isPast || isWrongDay;
+                                            }}
                                             initialFocus
                                         />
                                     </PopoverContent>
