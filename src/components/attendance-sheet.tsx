@@ -17,7 +17,7 @@ import { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { CheckCircle2, XCircle, CalendarClock, User, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Tooltip, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 type AttendanceStatus = 'present' | 'absent' | 'justified';
 
