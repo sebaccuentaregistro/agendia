@@ -1,17 +1,19 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { Actividad, Specialist, Person, Session, Payment, Space } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance } from '@/types';
 import { 
   actividades as initialActividades, 
   specialists as initialSpecialists,
   people as initialPeople,
   sessions as initialSessions,
   payments as initialPayments,
-  spaces as initialSpaces
+  spaces as initialSpaces,
+  attendance as initialAttendance
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import * as Utils from '@/lib/utils';
+import { format as formatDate } from 'date-fns';
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -20,6 +22,7 @@ interface StudioContextType {
   sessions: Session[];
   payments: Payment[];
   spaces: Space[];
+  attendance: SessionAttendance[];
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
   updateActividad: (actividad: Actividad) => void;
   deleteActividad: (actividadId: string) => void;
@@ -39,6 +42,7 @@ interface StudioContextType {
   deleteSession: (sessionId: string) => void;
   enrollPersonInSessions: (personId: string, sessionIds: string[]) => void;
   enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
+  saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[]) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -77,6 +81,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [sessions, setSessions] = useState<Session[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load from localStorage on client-side mount to avoid hydration errors
@@ -87,6 +92,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSessions(loadFromLocalStorage('yoga-sessions', initialSessions));
     setPeople(loadFromLocalStorage('yoga-people', initialPeople));
     setPayments(loadFromLocalStorage('yoga-payments', initialPayments));
+    setAttendance(loadFromLocalStorage('yoga-attendance', initialAttendance));
     setIsInitialized(true); // Mark as initialized
   }, []);
 
@@ -97,6 +103,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-sessions', JSON.stringify(sessions)); }, [sessions, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-payments', JSON.stringify(payments)); }, [payments, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-attendance', JSON.stringify(attendance)); }, [attendance, isInitialized]);
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
     if (actividades.some(a => a.name.trim().toLowerCase() === actividad.name.trim().toLowerCase())) {
@@ -364,8 +371,37 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     toast({ title: "Inscripciones actualizadas" });
   };
 
+  const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[]) => {
+    const todayStr = formatDate(new Date(), 'yyyy-MM-dd');
+    setAttendance(prev => {
+        const existingRecordIndex = prev.findIndex(
+            record => record.sessionId === sessionId && record.date === todayStr
+        );
+
+        if (existingRecordIndex > -1) {
+            const updatedAttendance = [...prev];
+            updatedAttendance[existingRecordIndex] = {
+                ...updatedAttendance[existingRecordIndex],
+                presentIds,
+                absentIds,
+            };
+            return updatedAttendance;
+        } else {
+            const newRecord: SessionAttendance = {
+                id: `att-${Date.now()}`,
+                sessionId,
+                date: todayStr,
+                presentIds,
+                absentIds,
+            };
+            return [...prev, newRecord];
+        }
+    });
+    toast({ title: "Asistencia Guardada", description: "Se ha registrado la asistencia para la sesión." });
+  };
+
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance }}>
       {children}
     </StudioContext.Provider>
   );

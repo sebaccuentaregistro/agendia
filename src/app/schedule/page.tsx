@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -26,6 +26,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
+import { AttendanceSheet } from '@/components/attendance-sheet';
 
 
 const formSchema = z.object({
@@ -193,6 +194,7 @@ export default function SchedulePage() {
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [sessionToManage, setSessionToManage] = useState<Session | null>(null);
   const [sessionForRoster, setSessionForRoster] = useState<Session | null>(null);
+  const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [filters, setFilters] = useState({
     specialistId: 'all',
@@ -575,14 +577,18 @@ export default function SchedulePage() {
                               <span className="underline-offset-4 group-hover:underline">{enrolledCount}/{capacity} Inscriptos</span>
                             </div>
                           </CardContent>
-                          <CardFooter className="p-4 flex items-center justify-between gap-2">
-                            <Button className="w-full flex-1 h-12 text-base font-semibold bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-lg shadow-md hover:shadow-lg hover:from-violet-600 hover:to-purple-700 transition-all" onClick={() => setSessionToManage(session)}>
-                              <UserPlus className="mr-2 h-5 w-5" />
+                          <CardFooter className="p-3 flex items-center justify-between gap-2 border-t border-white/20">
+                             <Button variant="outline" className="w-full flex-1" onClick={() => setSessionForAttendance(session)}>
+                                <ClipboardCheck className="mr-2 h-4 w-4"/>
+                                Pasar Lista
+                             </Button>
+                            <Button className="flex-1" onClick={() => setSessionToManage(session)}>
+                              <UserPlus className="mr-2 h-4 w-4" />
                               Inscribir
                             </Button>
-                            <div className="flex items-center gap-2">
-                              <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => handleEdit(session)}><Pencil className="h-5 w-5 text-slate-600" /><span className="sr-only">Editar</span></Button>
-                              <Button variant="outline" size="icon" className="h-12 w-12 bg-white/50 dark:bg-zinc-800/50 border-slate-300/50 rounded-lg hover:bg-white/80" onClick={() => openDeleteDialog(session)}><Trash2 className="h-5 w-5 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => handleEdit(session)}><Pencil className="h-4 w-4 text-slate-600" /><span className="sr-only">Editar</span></Button>
+                              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openDeleteDialog(session)}><Trash2 className="h-4 w-4 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
                             </div>
                           </CardFooter>
                         </Card>
@@ -649,6 +655,7 @@ export default function SchedulePage() {
 
       {sessionToManage && <EnrollPeopleDialog session={sessionToManage} onClose={() => setSessionToManage(null)} />}
       {sessionForRoster && <EnrolledPeopleSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
+      {sessionForAttendance && <AttendanceSheet session={sessionForAttendance} onClose={() => setSessionForAttendance(null)} />}
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import type { Person, Specialist, Actividad, Session, Payment, Space } from '@/types';
+import type { Person, Specialist, Actividad, Session, Payment, Space, SessionAttendance } from '@/types';
 
 // Use a fixed reference date to make initial data deterministic
 const refDate = new Date('2024-07-15T10:00:00Z');
@@ -92,3 +92,5 @@ export const payments: Payment[] = [
   { id: 'pay-19', personId: 'stu-17', date: daysAgo(6) },
   { id: 'pay-20', personId: 'stu-18', date: daysAgo(10) },
 ];
+
+export const attendance: SessionAttendance[] = [];

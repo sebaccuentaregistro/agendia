@@ -43,3 +43,11 @@ export type Space = {
   name: string;
   capacity: number;
 };
+
+export type SessionAttendance = {
+  id: string;
+  sessionId: string;
+  date: string; // YYYY-MM-DD
+  presentIds: string[];
+  absentIds: string[];
+};

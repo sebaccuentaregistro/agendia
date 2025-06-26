@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2 } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
@@ -14,6 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import { Button } from '@/components/ui/button';
+import { AttendanceSheet } from '@/components/attendance-sheet';
 
 // Helper function to render student cards inside the sheet
 function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
@@ -82,6 +84,7 @@ export default function Dashboard() {
     timeOfDay: 'all', // Mañana, Tarde, Noche
   });
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
+  const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
   const overdueCount = useMemo(() => {
     const now = new Date();
@@ -243,27 +246,32 @@ export default function Dashboard() {
                   return (
                     <li 
                       key={session.id}
-                      onClick={() => setSelectedSessionForStudents(session)}
                       className={cn(
-                        "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/30 dark:bg-white/10 border-white/20 hover:bg-white/50 dark:hover:bg-white/20 hover:shadow-md cursor-pointer",
+                        "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/30 dark:bg-white/10 border-white/20 hover:bg-white/50 dark:hover:bg-white/20 hover:shadow-md",
                         isFull && "bg-pink-500/20 border-pink-500/30"
                       )}
                     >
-                      <div className="flex-1 space-y-1">
+                      <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
                         <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Sesión'}</p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
                           <span className="flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{specialist?.name || 'N/A'}</span>
                           <span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3" />{space?.name || 'N/A'}</span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-bold text-primary">{formatTime(session.time)}</p>
-                        <p className={cn(
-                            "text-sm", 
-                            isFull ? "font-semibold text-pink-600 dark:text-pink-400" : "text-slate-600 dark:text-slate-400"
-                          )}>
-                          {enrolledCount}/{capacity} inscriptos
-                        </p>
+                      <div className="flex items-center gap-2 text-right">
+                          <div>
+                            <p className="font-bold text-primary">{formatTime(session.time)}</p>
+                            <p className={cn(
+                                "text-sm", 
+                                isFull ? "font-semibold text-pink-600 dark:text-pink-400" : "text-slate-600 dark:text-slate-400"
+                              )}>
+                              {enrolledCount}/{capacity} inscriptos
+                            </p>
+                          </div>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => setSessionForAttendance(session)}>
+                            <ClipboardCheck className="h-5 w-5" />
+                            <span className="sr-only">Pasar Lista</span>
+                          </Button>
                       </div>
                     </li>
                   );
@@ -288,6 +296,12 @@ export default function Dashboard() {
             session={selectedSessionForStudents}
             onClose={() => setSelectedSessionForStudents(null)}
           />
+      )}
+      {sessionForAttendance && (
+        <AttendanceSheet
+          session={sessionForAttendance}
+          onClose={() => setSessionForAttendance(null)}
+        />
       )}
     </div>
   );
