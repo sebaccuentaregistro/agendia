@@ -13,7 +13,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select';
 import { cn, exportToCsv } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -49,20 +49,53 @@ const oneTimeAttendeeSchema = z.object({
 });
 
 function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
-  const { people, addOneTimeAttendee, actividades } = useStudio();
+  const { people, addOneTimeAttendee, actividades, attendance } = useStudio();
   const actividad = actividades.find(a => a.id === session.actividadId);
 
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
     resolver: zodResolver(oneTimeAttendeeSchema),
   });
 
+  const { eligiblePeople, otherPeople } = useMemo(() => {
+    const balances: Record<string, number> = {};
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+
+    people.forEach(p => balances[p.id] = 0);
+
+    attendance.forEach(record => {
+      if (record.date <= todayStr) {
+        record.justifiedAbsenceIds?.forEach(personId => {
+          if (balances[personId] !== undefined) balances[personId]++;
+        });
+        record.oneTimeAttendees?.forEach(personId => {
+          if (balances[personId] !== undefined) balances[personId]--;
+        });
+      }
+    });
+    
+    const eligible: Person[] = [];
+    const others: Person[] = [];
+
+    people.forEach(person => {
+      if (balances[person.id] > 0) {
+        eligible.push(person);
+      } else {
+        others.push(person);
+      }
+    });
+
+    const sortByName = (a: Person, b: Person) => a.name.localeCompare(b.name);
+    eligible.sort(sortByName);
+    others.sort(sortByName);
+
+    return { eligiblePeople: eligible, otherPeople: others };
+  }, [people, attendance]);
+
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
     addOneTimeAttendee(session.id, values.personId, values.date);
     onClose();
   }
   
-  const sortedPeople = [...people].sort((a, b) => a.name.localeCompare(b.name));
-
   return (
     <Dialog open onOpenChange={onClose}>
         <DialogContent>
@@ -87,11 +120,30 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {sortedPeople.map(person => (
-                                            <SelectItem key={person.id} value={person.id}>
+                                        {eligiblePeople.length > 0 && (
+                                          <SelectGroup>
+                                            <SelectLabel>Con recupero pendiente</SelectLabel>
+                                            {eligiblePeople.map(person => (
+                                              <SelectItem key={person.id} value={person.id}>
                                                 {person.name}
-                                            </SelectItem>
-                                        ))}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectGroup>
+                                        )}
+                                        {otherPeople.length > 0 && eligiblePeople.length > 0 && <SelectSeparator />}
+                                        {otherPeople.length > 0 && (
+                                          <SelectGroup>
+                                            <SelectLabel>Todas las personas</SelectLabel>
+                                            {otherPeople.map(person => (
+                                              <SelectItem key={person.id} value={person.id}>
+                                                {person.name}
+                                              </SelectItem>
+                                            ))}
+                                          </SelectGroup>
+                                        )}
+                                        {eligiblePeople.length === 0 && otherPeople.length === 0 && (
+                                          <div className="p-4 text-center text-sm text-muted-foreground">No hay personas en el sistema.</div>
+                                        )}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
