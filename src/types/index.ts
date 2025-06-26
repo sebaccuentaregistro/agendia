@@ -50,4 +50,5 @@ export type SessionAttendance = {
   date: string; // YYYY-MM-DD
   presentIds: string[];
   absentIds: string[];
+  oneTimeAttendees?: string[]; // People added just for this day for a specific reason (e.g., recovery)
 };

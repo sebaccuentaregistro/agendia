@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -28,7 +28,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
 import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -38,6 +42,109 @@ const formSchema = z.object({
   time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
   sessionType: z.enum(['Grupal', 'Individual']),
 });
+
+const oneTimeAttendeeSchema = z.object({
+    personId: z.string().min(1, { message: 'Debes seleccionar una persona.' }),
+    date: z.date({ required_error: 'Debes seleccionar una fecha.' }),
+});
+
+function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
+  const { people, addOneTimeAttendee, actividades } = useStudio();
+  const actividad = actividades.find(a => a.id === session.actividadId);
+
+  const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
+    resolver: zodResolver(oneTimeAttendeeSchema),
+  });
+
+  function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
+    addOneTimeAttendee(session.id, values.personId, values.date);
+    onClose();
+  }
+  
+  const sortedPeople = [...people].sort((a, b) => a.name.localeCompare(b.name));
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Añadir Asistente Puntual</DialogTitle>
+                <DialogDescription>
+                    Inscribe a una persona en la sesión de "{actividad?.name}" solo para una fecha específica.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="personId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Persona</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecciona una persona" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {sortedPeople.map(person => (
+                                            <SelectItem key={person.id} value={person.id}>
+                                                {person.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="date"
+                        render={({ field }) => (
+                            <FormItem className="flex flex-col">
+                                <FormLabel>Fecha de la clase</FormLabel>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <FormControl>
+                                            <Button
+                                                variant={"outline"}
+                                                className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                            >
+                                                {field.value ? (
+                                                    format(field.value, "PPP", { locale: es })
+                                                ) : (
+                                                    <span>Selecciona una fecha</span>
+                                                )}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </FormControl>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto p-0" align="start">
+                                        <Calendar
+                                            mode="single"
+                                            selected={field.value}
+                                            onSelect={field.onChange}
+                                            disabled={(date) => date < new Date(new Date().setDate(new Date().getDate() - 1)) }
+                                            initialFocus
+                                        />
+                                    </PopoverContent>
+                                </Popover>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+                        <Button type="submit">Añadir Asistente</Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
   const { people, spaces, enrollPeopleInClass, actividades } = useStudio();
@@ -196,6 +303,7 @@ export default function SchedulePage() {
   const [sessionToManage, setSessionToManage] = useState<Session | null>(null);
   const [sessionForRoster, setSessionForRoster] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
+  const [sessionForPuntual, setSessionForPuntual] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [filters, setFilters] = useState({
     specialistId: 'all',
@@ -610,8 +718,8 @@ export default function SchedulePage() {
                              <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <span tabIndex={0} className="w-full flex-1">
-                                      <Button variant="outline" className="w-full" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                    <span tabIndex={0}>
+                                      <Button variant="outline" className="flex-1" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
                                           <ClipboardCheck className="mr-2 h-4 w-4"/>
                                           Pasar Lista
                                       </Button>
@@ -622,10 +730,22 @@ export default function SchedulePage() {
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                            <Button className="flex-1" onClick={() => setSessionToManage(session)}>
-                              <UserPlus className="mr-2 h-4 w-4" />
-                              Inscribir
-                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button className="flex-1">
+                                        <UserPlus className="mr-2 h-4 w-4" />
+                                        Inscribir
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => setSessionToManage(session)}>
+                                        <Users className="mr-2 h-4 w-4" /> Inscripción Fija / Semanal
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setSessionForPuntual(session)}>
+                                        <CalendarDays className="mr-2 h-4 w-4" /> Inscripción Puntual / Recupero
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             <div className="flex items-center gap-1">
                               <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => handleEdit(session)}><Pencil className="h-4 w-4 text-slate-600" /><span className="sr-only">Editar</span></Button>
                               <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openDeleteDialog(session)}><Trash2 className="h-4 w-4 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
@@ -694,6 +814,7 @@ export default function SchedulePage() {
       </AlertDialog>
 
       {sessionToManage && <EnrollPeopleDialog session={sessionToManage} onClose={() => setSessionToManage(null)} />}
+      {sessionForPuntual && <OneTimeAttendeeDialog session={sessionForPuntual} onClose={() => setSessionForPuntual(null)} />}
       {sessionForRoster && <EnrolledPeopleSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
       {sessionForAttendance && <AttendanceSheet session={sessionForAttendance} onClose={() => setSessionForAttendance(null)} />}
     </div>

@@ -43,6 +43,7 @@ interface StudioContextType {
   enrollPersonInSessions: (personId: string, sessionIds: string[]) => void;
   enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
   saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[]) => void;
+  addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -321,11 +322,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const enrollPersonInSessions = (personId: string, newSessionIds: string[]) => {
     const uniqueNewSessionIds = [...new Set(newSessionIds)];
 
-    // 1. Pre-flight check for capacity on all selected sessions
     const overbookedSession = uniqueNewSessionIds.find(sessionId => {
       const sessionToEnroll = sessions.find(c => c.id === sessionId);
       if (!sessionToEnroll || sessionToEnroll.personIds.includes(personId)) {
-        return false; // Not overbooked if already in it
+        return false; 
       }
       const space = spaces.find(s => s.id === sessionToEnroll.spaceId);
       const capacity = sessionToEnroll.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
@@ -341,10 +341,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           description: `No se puede inscribir en "${actividad?.name || 'una sesión'}". La sesión ha alcanzado su capacidad máxima.`,
           duration: 5000,
       });
-      return; // Abort the entire operation
+      return; 
     }
 
-    // 2. Immutable update
     setSessions(prevSessions => {
       const newSessionIdSet = new Set(uniqueNewSessionIds);
 
@@ -353,14 +352,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         const shouldBeEnrolled = newSessionIdSet.has(session.id);
 
         if (isEnrolled && !shouldBeEnrolled) {
-          // Remove person from this session
           return { ...session, personIds: session.personIds.filter(id => id !== personId) };
         }
         if (!isEnrolled && shouldBeEnrolled) {
-          // Add person to this session
           return { ...session, personIds: [...session.personIds, personId] };
         }
-        // No change needed for this session regarding this person
         return session;
       });
     });
@@ -422,9 +418,68 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     });
     toast({ title: "Asistencia Guardada", description: "Se ha registrado la asistencia para la sesión." });
   };
+  
+  const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session || !personId || !date) {
+        toast({ variant: "destructive", title: "Datos incompletos" });
+        return;
+    };
+    const space = spaces.find(s => s.id === session.spaceId);
+    if (!space) return;
+
+    const dateStr = formatDate(date, 'yyyy-MM-dd');
+
+    const attendanceRecord = attendance.find(a => a.sessionId === sessionId && a.date === dateStr);
+    const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+    
+    // For now, capacity check is simple: regulars + one-timers. A future improvement would be to subtract justified absences.
+    const currentEnrollment = session.personIds.length + oneTimeAttendees.length;
+    const capacity = session.sessionType === 'Individual' ? 1 : space.capacity;
+
+    if (currentEnrollment >= capacity) {
+        toast({
+            variant: "destructive",
+            title: "Sesión Completa",
+            description: "No hay cupo disponible en esta sesión para la fecha seleccionada."
+        });
+        return;
+    }
+    
+    if (session.personIds.includes(personId) || oneTimeAttendees.includes(personId)) {
+      toast({
+            variant: "destructive",
+            title: "Persona ya inscripta",
+            description: "Esta persona ya figura en esta sesión para la fecha seleccionada."
+        });
+        return;
+    }
+
+    setAttendance(prev => {
+        const existingRecordIndex = prev.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
+        if (existingRecordIndex > -1) {
+            const updatedAttendance = [...prev];
+            const record = updatedAttendance[existingRecordIndex];
+            record.oneTimeAttendees = [...(record.oneTimeAttendees || []), personId];
+            return updatedAttendance;
+        } else {
+            const newRecord: SessionAttendance = {
+                id: `att-${Date.now()}`,
+                sessionId,
+                date: dateStr,
+                presentIds: [],
+                absentIds: [],
+                oneTimeAttendees: [personId],
+            };
+            return [...prev, newRecord];
+        }
+    });
+    
+    toast({ title: "Asistente Puntual Añadido", description: "La persona ha sido añadida a la sesión para la fecha seleccionada." });
+  };
 
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee }}>
       {children}
     </StudioContext.Provider>
   );

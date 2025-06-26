@@ -25,38 +25,47 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStudio } from '@/context/StudioContext';
 import type { Session } from '@/types';
 import { useMemo } from 'react';
+import { format } from 'date-fns';
 
 const FormSchema = z.object({
   presentIds: z.array(z.string()),
 });
 
 export function AttendanceSheet({ session, onClose }: { session: Session; onClose: () => void }) {
-  const { people, actividades, saveAttendance } = useStudio();
+  const { people, actividades, saveAttendance, attendance } = useStudio();
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+
+  const allPersonIdsForToday = useMemo(() => {
+    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+    const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
+    const allEnrolledIds = [...new Set([...session.personIds, ...oneTimeIds])];
+    return allEnrolledIds;
+  }, [session, attendance, todayStr]);
 
   const enrolledPeople = useMemo(() => {
     return people
-      .filter(p => session.personIds.includes(p.id))
+      .filter(p => allPersonIdsForToday.includes(p.id))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [people, session.personIds]);
+  }, [people, allPersonIdsForToday]);
 
   const form = useForm<z.infer<typeof FormSchema>>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      presentIds: session.personIds,
+      presentIds: allPersonIdsForToday,
     },
   });
   
   const watchedPresentIds = form.watch('presentIds');
 
   function onSubmit(data: z.infer<typeof FormSchema>) {
-    const absentIds = session.personIds.filter(id => !data.presentIds.includes(id));
+    const absentIds = allPersonIdsForToday.filter(id => !data.presentIds.includes(id));
     saveAttendance(session.id, data.presentIds, absentIds);
     onClose();
   }
   
   const handleSelectAll = (select: boolean) => {
     if (select) {
-        form.setValue('presentIds', session.personIds);
+        form.setValue('presentIds', allPersonIdsForToday);
     } else {
         form.setValue('presentIds', []);
     }
@@ -72,7 +81,7 @@ export function AttendanceSheet({ session, onClose }: { session: Session; onClos
           <SheetDescription>
             Desmarca las personas ausentes. Por defecto, todas están marcadas como presentes.
             <br/>
-            Asistencia: {watchedPresentIds.length} / {session.personIds.length}
+            Asistencia: {watchedPresentIds.length} / {allPersonIdsForToday.length}
           </SheetDescription>
         </SheetHeader>
         <Form {...form}>

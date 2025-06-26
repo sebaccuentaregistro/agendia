@@ -17,14 +17,24 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { format } from 'date-fns';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Helper function to render student cards inside the sheet
 function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
-  const { people, actividades, specialists, spaces } = useStudio();
+  const { people, actividades, specialists, spaces, attendance } = useStudio();
+  
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const enrolledPeople = useMemo(() => {
-    return people.filter(p => session.personIds.includes(p.id));
-  }, [people, session]);
+    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+    const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
+    const allEnrolledIds = [...new Set([...session.personIds, ...oneTimeIds])];
+    
+    return people
+      .filter(p => allEnrolledIds.includes(p.id))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [people, session, attendance, todayStr]);
 
   const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
@@ -46,7 +56,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
             {enrolledPeople.length} de {sessionDetails.space?.capacity || 0} personas inscriptas.
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-4 space-y-4 h-[calc(100%-8rem)] overflow-y-auto pr-4">
+        <ScrollArea className="mt-4 space-y-4 h-[calc(100%-8rem)] pr-4">
           {enrolledPeople.length > 0 ? (
             enrolledPeople.map(person => (
               <Card key={person.id} className="p-3 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border-white/20">
@@ -69,7 +79,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
                 <p className="text-sm text-slate-500 dark:text-slate-400">No hay personas inscriptas.</p>
             </div>
           )}
-        </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   )
@@ -77,7 +87,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 
 
 export default function Dashboard() {
-  const { sessions, specialists, actividades, spaces, people } = useStudio();
+  const { sessions, specialists, actividades, spaces, people, attendance } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -111,6 +121,7 @@ export default function Dashboard() {
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const today = new Date();
     const todayName = dayMap[today.getDay()];
+    const todayStr = format(today, 'yyyy-MM-dd');
 
     const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
         if (!time) return 'Tarde';
@@ -122,6 +133,14 @@ export default function Dashboard() {
 
     const todaysSessions = sessions
       .filter(session => session.dayOfWeek === todayName)
+      .map(session => {
+        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        return {
+          ...session,
+          enrolledCount: session.personIds.length + oneTimeAttendees.length,
+        };
+      })
       .sort((a, b) => a.time.localeCompare(b.time));
 
     const filtered = todaysSessions.filter(session => {
@@ -135,7 +154,7 @@ export default function Dashboard() {
     });
 
     return { todaysSessions, filteredSessions: filtered, todayName };
-  }, [sessions, filters]);
+  }, [sessions, filters, attendance]);
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
@@ -241,7 +260,7 @@ export default function Dashboard() {
               <ul className="space-y-4">
                 {filteredSessions.map(session => {
                   const { specialist, actividad, space } = getSessionDetails(session);
-                  const enrolledCount = session.personIds.length;
+                  const enrolledCount = (session as any).enrolledCount;
                   const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
                   const isFull = capacity > 0 && enrolledCount >= capacity;
 
