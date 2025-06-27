@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, MoreHorizontal, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -28,11 +28,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
 import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Textarea } from '@/components/ui/textarea';
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -47,6 +48,89 @@ const oneTimeAttendeeSchema = z.object({
     personId: z.string().min(1, { message: 'Debes seleccionar una persona.' }),
     date: z.date({ required_error: 'Debes seleccionar una fecha.' }),
 });
+
+function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
+  const { people, isPersonOnVacation, actividades, attendance } = useStudio();
+  const [message, setMessage] = useState('');
+
+  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+  const today = useMemo(() => new Date(), []);
+  
+  const attendeesToNotify = useMemo(() => {
+    // Regular attendees not on vacation today
+    const regularAttendees = session.personIds
+      .map(pid => people.find(p => p.id === pid))
+      .filter((p): p is Person => !!p && !isPersonOnVacation(p, today));
+
+    // One-time attendees for today
+    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+    const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
+    const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
+
+    // Combine and remove duplicates
+    const allAttendeesMap = new Map<string, Person>();
+    regularAttendees.forEach(p => allAttendeesMap.set(p.id, p));
+    oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, p));
+
+    return Array.from(allAttendeesMap.values()).sort((a,b) => a.name.localeCompare(b.name));
+  }, [session, people, isPersonOnVacation, today, attendance, todayStr]);
+
+  const actividad = actividades.find(a => a.id === session.actividadId);
+
+  const handleCopyToClipboard = () => {
+    navigator.clipboard.writeText(message);
+    // You might want to show a toast notification here
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Notificar Asistentes</DialogTitle>
+          <DialogDescription>
+            Clase: {actividad?.name} - {session.dayOfWeek} {session.time}.
+            Se notificará a {attendeesToNotify.length} persona(s).
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <Textarea
+            placeholder="Escribe tu mensaje aquí... Ej: La clase de hoy se cancela."
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={4}
+          />
+          <Button variant="outline" size="sm" onClick={handleCopyToClipboard} className="w-full">
+            Copiar Mensaje al Portapapeles
+          </Button>
+          <ScrollArea className="h-48 rounded-md border p-2">
+            <div className="space-y-2">
+              {attendeesToNotify.map(person => (
+                <div key={person.id} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
+                  <span>{person.name}</span>
+                  <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700">
+                    <a
+                      href={`https://wa.me/${person.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <WhatsAppIcon />
+                    </a>
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {attendeesToNotify.length === 0 && (
+                <div className="text-center p-4 text-muted-foreground">No hay asistentes para notificar.</div>
+            )}
+          </ScrollArea>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, addOneTimeAttendee, actividades, attendance } = useStudio();
@@ -339,6 +423,7 @@ export default function SchedulePage() {
   const [sessionForRoster, setSessionForRoster] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [sessionForPuntual, setSessionForPuntual] = useState<Session | null>(null);
+  const [sessionToNotify, setSessionToNotify] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [filters, setFilters] = useState({
     specialistId: 'all',
@@ -781,10 +866,29 @@ export default function SchedulePage() {
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                            <div className="flex items-center gap-1">
-                              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => handleEdit(session)}><Pencil className="h-4 w-4 text-slate-600" /><span className="sr-only">Editar</span></Button>
-                              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => openDeleteDialog(session)}><Trash2 className="h-4 w-4 text-rose-500" /><span className="sr-only">Eliminar</span></Button>
-                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
+                                        <MoreHorizontal className="h-4 w-4 text-slate-600" />
+                                        <span className="sr-only">Más opciones</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onSelect={() => handleEdit(session)}>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Editar Sesión
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => setSessionToNotify(session)}>
+                                        <Send className="mr-2 h-4 w-4" />
+                                        Notificar Asistentes
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onSelect={() => openDeleteDialog(session)} className="text-destructive focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        Eliminar Sesión
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                           </CardFooter>
                         </Card>
                       );
@@ -852,6 +956,7 @@ export default function SchedulePage() {
       {sessionForPuntual && <OneTimeAttendeeDialog session={sessionForPuntual} onClose={() => setSessionForPuntual(null)} />}
       {sessionForRoster && <EnrolledPeopleSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
       {sessionForAttendance && <AttendanceSheet session={sessionForAttendance} onClose={() => setSessionForAttendance(null)} />}
+      {sessionToNotify && <NotifyAttendeesDialog session={sessionToNotify} onClose={() => setSessionToNotify(null)} />}
     </div>
   );
 }
