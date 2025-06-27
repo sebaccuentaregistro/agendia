@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
@@ -18,6 +18,7 @@ import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 function WaitlistNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -181,9 +182,12 @@ export default function Dashboard() {
   const hasOnVacation = onVacationCount > 0;
   const hasPendingRecovery = pendingRecoveryCount > 0;
 
-  const navItems = [
+  const mainCards = [
     { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
     { href: "/students", label: "Personas", icon: Users, count: people.length },
+  ];
+  
+  const groupedCards = [
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
     { href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
     { href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
@@ -307,7 +311,7 @@ export default function Dashboard() {
                 <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
             </Card>
           </Link>
-          {navItems.map((item) => (
+          {mainCards.map((item) => (
             <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
               <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
                   <div className="flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -320,6 +324,28 @@ export default function Dashboard() {
               </Card>
           </Link>
           ))}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div className="transition-transform hover:-translate-y-1 cursor-pointer">
+                <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                    <div className="flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Settings className="h-5 w-5" />
+                    </div>
+                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                </Card>
+              </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {groupedCards.map((item) => (
+                <DropdownMenuItem key={item.href} asChild>
+                  <Link href={item.href} className="flex items-center gap-2">
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </Link>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
       </div>
 
       <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
