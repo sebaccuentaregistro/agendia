@@ -574,54 +574,56 @@ export default function StudentsPage() {
                 const sortedVacations = person.vacationPeriods?.sort((a,b) => a.startDate.getTime() - b.startDate.getTime()) || [];
                 return (
                     <Card key={person.id} className="flex flex-col rounded-2xl shadow-lg overflow-hidden border border-slate-200/60 dark:border-zinc-700/60 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card">
-                        <CardHeader className="flex flex-row items-start justify-between p-4">
-                            <div className="flex-grow">
-                                <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{person.name}</h3>
-                                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-sm">
-                                    <span>{person.phone}</span>
-                                    <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                                        <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                                    </a>
+                        <div className="p-4 bg-gradient-to-br from-primary to-fuchsia-600 text-primary-foreground">
+                            <div className="flex flex-row items-start justify-between">
+                                <div className="flex-grow">
+                                    <h3 className="text-lg font-bold text-white">{person.name}</h3>
+                                    <div className="flex items-center gap-2 text-white/80 text-sm">
+                                        <span>{person.phone}</span>
+                                        <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
+                                            <WhatsAppIcon className="text-white hover:text-white/80 transition-colors" />
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        <span className="sr-only">Alternar menú</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setPersonForAttendance(person)}><ClipboardCheck className="mr-2 h-4 w-4" />Ver Historial de Asistencia</DropdownMenuItem>
-                                    {person.membershipType === 'Mensual' && (
-                                    <>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button aria-haspopup="true" size="icon" variant="ghost" className="h-8 w-8 flex-shrink-0 text-white hover:bg-black/20">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            <span className="sr-only">Alternar menú</span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setPersonForAttendance(person)}><ClipboardCheck className="mr-2 h-4 w-4" />Ver Historial de Asistencia</DropdownMenuItem>
+                                        {person.membershipType === 'Mensual' && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => recordPayment(person.id)}><CreditCard className="mr-2 h-4 w-4" />Registrar Pago</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}><Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago</DropdownMenuItem>
+                                        </>
+                                        )}
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={() => recordPayment(person.id)}><CreditCard className="mr-2 h-4 w-4" />Registrar Pago</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}><Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago</DropdownMenuItem>
-                                    </>
+                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                            <div className="mt-4">
+                                <div className="mb-3">{getPaymentStatusBadge((person as any).paymentStatus)}</div>
+                                <h4 className="text-2xl font-bold">{person.membershipType}</h4>
+                                <div className="flex justify-between mt-2 text-xs opacity-80 uppercase font-semibold">
+                                    <div>
+                                        <p>Inscripción</p>
+                                        <p>{format(person.joinDate, 'dd/MM/yyyy')}</p>
+                                    </div>
+                                    {(person as any).nextPaymentDate && (
+                                    <div className="text-right">
+                                        <p>Próximo Pago</p>
+                                        <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
+                                    </div>
                                     )}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </CardHeader>
-                        <div className="p-4 bg-primary/90 text-primary-foreground">
-                            <div className="mb-3">{getPaymentStatusBadge((person as any).paymentStatus)}</div>
-                            <h4 className="text-2xl font-bold">{person.membershipType}</h4>
-                            <div className="flex justify-between mt-2 text-xs opacity-80 uppercase font-semibold">
-                                <div>
-                                    <p>Inscripción</p>
-                                    <p>{format(person.joinDate, 'dd/MM/yyyy')}</p>
                                 </div>
-                                {(person as any).nextPaymentDate && (
-                                  <div className="text-right">
-                                    <p>Próximo Pago</p>
-                                    <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
-                                  </div>
-                                )}
                             </div>
                         </div>
                         <CardContent className="flex flex-col flex-grow space-y-4 p-4">
