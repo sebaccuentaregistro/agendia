@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
@@ -18,6 +18,54 @@ import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+function WaitlistNotifications() {
+    const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
+    const waitlistNotifications = useMemo(() => notifications.filter(n => n.type === 'waitlist'), [notifications]);
+
+    if (waitlistNotifications.length === 0) return null;
+
+    return (
+        <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
+                    <Info className="h-5 w-5 text-blue-500" />
+                    Oportunidades de Lista de Espera
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                {waitlistNotifications.map(notification => {
+                    const session = sessions.find(s => s.id === notification.sessionId);
+                    const person = people.find(p => p.id === notification.personId);
+                    const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+
+                    if (!session || !person || !actividad) {
+                        // This notification is stale, we can offer to dismiss it
+                        return (
+                            <div key={notification.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                                <p className="text-muted-foreground">Esta notificación ya no es válida.</p>
+                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 text-sm">
+                            <p className="flex-grow text-slate-700 dark:text-slate-200">
+                                ¡Cupo liberado en <span className="font-semibold">{actividad.name}</span> ({session.dayOfWeek} {session.time})! ¿Deseas inscribir a <span className="font-semibold">{person.name}</span>?
+                            </p>
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                <Button size="sm" onClick={() => enrollFromWaitlist(notification.id, session.id, person.id)}>Inscribir</Button>
+                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </CardContent>
+        </Card>
+    );
+}
+
 
 // Helper function to render student cards inside the sheet
 function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
@@ -205,6 +253,8 @@ export default function Dashboard() {
     <div className="space-y-8">
       <PageHeader title="Inicio" />
       
+      <WaitlistNotifications />
+
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
           <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
             <Card className={cn(

@@ -37,6 +37,7 @@ export type Session = {
   time: string; // Format "HH:mm"
   sessionType: 'Grupal' | 'Individual';
   personIds: string[];
+  waitlistPersonIds?: string[];
 };
 
 export type Payment = {
@@ -59,4 +60,12 @@ export type SessionAttendance = {
   absentIds: string[];
   justifiedAbsenceIds?: string[];
   oneTimeAttendees?: string[]; // People added just for this day for a specific reason (e.g., recovery)
+};
+
+export type AppNotification = {
+  id: string;
+  type: 'waitlist';
+  sessionId: string;
+  personId: string; // The person from the waitlist to be enrolled
+  createdAt: string; // ISO string
 };

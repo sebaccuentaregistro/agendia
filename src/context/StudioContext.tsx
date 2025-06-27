@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification } from '@/types';
 import { 
   actividades as initialActividades, 
   specialists as initialSpecialists,
@@ -10,7 +10,8 @@ import {
   sessions as initialSessions,
   payments as initialPayments,
   spaces as initialSpaces,
-  attendance as initialAttendance
+  attendance as initialAttendance,
+  notifications as initialNotifications
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import * as Utils from '@/lib/utils';
@@ -24,6 +25,7 @@ interface StudioContextType {
   payments: Payment[];
   spaces: Space[];
   attendance: SessionAttendance[];
+  notifications: AppNotification[];
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
   updateActividad: (actividad: Actividad) => void;
   deleteActividad: (actividadId: string) => void;
@@ -38,7 +40,7 @@ interface StudioContextType {
   addSpace: (space: Omit<Space, 'id'>) => void;
   updateSpace: (space: Space) => void;
   deleteSpace: (spaceId: string) => void;
-  addSession: (session: Omit<Session, 'id' | 'personIds'>) => void;
+  addSession: (session: Omit<Session, 'id' | 'personIds' | 'waitlistPersonIds'>) => void;
   updateSession: (session: Session) => void;
   deleteSession: (sessionId: string) => void;
   enrollPersonInSessions: (personId: string, sessionIds: string[]) => void;
@@ -48,6 +50,9 @@ interface StudioContextType {
   addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
   removeVacationPeriod: (personId: string, vacationId: string) => void;
   isPersonOnVacation: (person: Person, date: Date) => boolean;
+  addToWaitlist: (sessionId: string, personId: string) => void;
+  enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => void;
+  dismissNotification: (notificationId: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -96,6 +101,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [people, setPeople] = useState<Person[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Load from localStorage on client-side mount to avoid hydration errors
@@ -107,6 +113,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setPeople(loadFromLocalStorage('yoga-people', initialPeople));
     setPayments(loadFromLocalStorage('yoga-payments', initialPayments));
     setAttendance(loadFromLocalStorage('yoga-attendance', initialAttendance));
+    setNotifications(loadFromLocalStorage('yoga-notifications', initialNotifications));
     setIsInitialized(true); // Mark as initialized
   }, []);
 
@@ -118,6 +125,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-payments', JSON.stringify(payments)); }, [payments, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-attendance', JSON.stringify(attendance)); }, [attendance, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-notifications', JSON.stringify(notifications)); }, [notifications, isInitialized]);
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
     if (actividades.some(a => a.name.trim().toLowerCase() === actividad.name.trim().toLowerCase())) {
@@ -224,7 +232,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const deletePerson = (id: string) => {
     setPeople(prev => prev.filter(p => p.id !== id));
-    setSessions(prev => prev.map(c => ({ ...c, personIds: c.personIds.filter(pid => pid !== id) })));
+    setSessions(prev => prev.map(c => ({ 
+      ...c, 
+      personIds: c.personIds.filter(pid => pid !== id),
+      waitlistPersonIds: c.waitlistPersonIds?.filter(pid => pid !== id) || []
+    })));
     setPayments(prev => prev.filter(p => p.personId !== id));
   };
 
@@ -279,7 +291,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpaces(prev => prev.filter(s => s.id !== id));
   };
 
-  const addSession = (session: Omit<Session, 'id' | 'personIds'>) => {
+  const addSession = (session: Omit<Session, 'id' | 'personIds' | 'waitlistPersonIds'>) => {
     const specialistConflict = sessions.some(c => c.dayOfWeek === session.dayOfWeek && c.time === session.time && c.instructorId === session.instructorId);
     if (specialistConflict) {
       toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este especialista ya tiene otra sesión programada a la misma hora." });
@@ -290,7 +302,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       toast({ variant: "destructive", title: "Conflicto de Horario", description: "Este espacio ya está en uso a esa hora." });
       return;
     }
-    setSessions(prev => [...prev, { ...session, id: `session-${Date.now()}`, personIds: [] }]);
+    setSessions(prev => [...prev, { ...session, id: `session-${Date.now()}`, personIds: [], waitlistPersonIds: [] }]);
   };
 
   const updateSession = (updated: Session) => {
@@ -330,11 +342,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       return;
     }
     setSessions(prev => prev.filter(c => c.id !== id));
+    setNotifications(prev => prev.filter(n => n.sessionId !== id));
   };
 
   const enrollPersonInSessions = (personId: string, newSessionIds: string[]) => {
     const uniqueNewSessionIds = [...new Set(newSessionIds)];
 
+    // Check for overbooking first
     const overbookedSession = uniqueNewSessionIds.find(sessionId => {
       const sessionToEnroll = sessions.find(c => c.id === sessionId);
       if (!sessionToEnroll || sessionToEnroll.personIds.includes(personId)) {
@@ -356,7 +370,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       });
       return; 
     }
-
+    
+    // Process enrollments and un-enrollments
+    const previousSessions = sessions.filter(s => s.personIds.includes(personId));
     setSessions(prevSessions => {
       const newSessionIdSet = new Set(uniqueNewSessionIds);
 
@@ -372,6 +388,28 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
         return session;
       });
+    });
+
+    // Check for freed spots and generate notifications
+    previousSessions.forEach(oldSession => {
+      if (!uniqueNewSessionIds.includes(oldSession.id)) { // The person was unenrolled
+        if (oldSession.waitlistPersonIds && oldSession.waitlistPersonIds.length > 0) {
+          const nextPersonId = oldSession.waitlistPersonIds[0];
+          // Check if a notification for this spot already exists
+          const notificationExists = notifications.some(n => n.sessionId === oldSession.id);
+          if (!notificationExists) {
+            const newNotification: AppNotification = {
+              id: `notif-${Date.now()}`,
+              type: 'waitlist',
+              sessionId: oldSession.id,
+              personId: nextPersonId,
+              createdAt: new Date().toISOString()
+            };
+            setNotifications(prev => [newNotification, ...prev]);
+            toast({ title: '¡Cupo Liberado!', description: `Se ha notificado una oportunidad para la lista de espera.` });
+          }
+        }
+      }
     });
 
     toast({ title: "Inscripciones Actualizadas" });
@@ -532,8 +570,59 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     toast({ title: "Vacaciones Eliminadas", description: "El período de vacaciones ha sido eliminado." });
   };
 
+  const addToWaitlist = (sessionId: string, personId: string) => {
+    setSessions(prev =>
+      prev.map(s => {
+        if (s.id === sessionId) {
+          if (s.personIds.includes(personId) || s.waitlistPersonIds?.includes(personId)) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Esta persona ya está inscripta o en la lista de espera.' });
+            return s;
+          }
+          const updatedWaitlist = [...(s.waitlistPersonIds || []), personId];
+          toast({ title: 'Añadido a la lista de espera' });
+          return { ...s, waitlistPersonIds: updatedWaitlist };
+        }
+        return s;
+      })
+    );
+  };
+
+  const dismissNotification = (notificationId: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+  };
+
+  const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    const space = spaces.find(s => s.id === session?.spaceId);
+    if (!session || !space) return;
+
+    const capacity = session.sessionType === 'Individual' ? 1 : space.capacity;
+    if (session.personIds.length >= capacity) {
+      toast({ variant: 'destructive', title: 'La sesión se ha llenado', description: 'Alguien más ocupó el lugar. Se descarta la notificación.' });
+      dismissNotification(notificationId);
+      return;
+    }
+
+    setSessions(prev =>
+      prev.map(s => {
+        if (s.id === sessionId) {
+          return {
+            ...s,
+            personIds: [...s.personIds, personId],
+            waitlistPersonIds: s.waitlistPersonIds?.filter(id => id !== personId) || [],
+          };
+        }
+        return s;
+      })
+    );
+    
+    const person = people.find(p => p.id === personId);
+    toast({ title: '¡Éxito!', description: `${person?.name || 'La persona'} ha sido inscripta en la sesión.` });
+    dismissNotification(notificationId);
+  };
+
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addVacationPeriod, removeVacationPeriod, isPersonOnVacation }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification }}>
       {children}
     </StudioContext.Provider>
   );

@@ -40,7 +40,7 @@ const formSchema = z.object({
 });
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
-  const { people, sessions, specialists, actividades, enrollPersonInSessions, spaces, isPersonOnVacation } = useStudio();
+  const { people, sessions, specialists, actividades, enrollPersonInSessions, spaces, isPersonOnVacation, addToWaitlist } = useStudio();
   const form = useForm<{ sessionIds: string[] }>({ defaultValues: { sessionIds: sessions.filter(session => session.personIds.includes(person.id)).map(session => session.id) } });
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
@@ -126,15 +126,44 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                       if (!actividad || !specialist || !space) return null;
                       
                       const isEnrolledInForm = form.watch('sessionIds').includes(item.id);
-                      const isDisabled = isPermanentlyFull && !isEnrolledInForm;
+                      const isOnWaitlist = item.waitlistPersonIds?.includes(person.id);
 
+                      if (isPermanentlyFull && !isEnrolledInForm) {
+                        return (
+                          <div key={item.id} className={Utils.cn("flex flex-row items-center space-x-3 space-y-0 rounded-md p-3 transition-colors bg-muted/50 opacity-80")}>
+                            <div className="flex-grow space-y-1 leading-none">
+                              <span className="font-normal text-muted-foreground">{actividad.name}</span>
+                              <div className="text-xs text-muted-foreground">
+                                <p>{specialist?.name}</p>
+                                <p>{item.dayOfWeek} {formatTime(item.time)}</p>
+                                <p><span className="font-medium">Espacio:</span> {space?.name} ({activeEnrolledCount}/{capacity})</p>
+                              </div>
+                              <p className="text-xs font-semibold text-amber-600 dark:text-amber-500">
+                                {item.sessionType === 'Individual' ? 'Sesión individual ocupada' : 'Plazas fijas completas.'}
+                              </p>
+                            </div>
+                            {isOnWaitlist ? (
+                                <Badge variant="secondary">En espera</Badge>
+                            ) : (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => addToWaitlist(item.id, person.id)}
+                                >
+                                    Anotar en espera
+                                </Button>
+                            )}
+                          </div>
+                        )
+                      }
+                      
                       return (
                         <FormField key={item.id} control={form.control} name="sessionIds" render={({ field }) => (
-                          <FormItem className={Utils.cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors", isDisabled ? "bg-muted/50 opacity-70" : "hover:bg-muted/50")}>
+                          <FormItem className={Utils.cn("flex flex-row items-start space-x-3 space-y-0 rounded-md p-3 transition-colors hover:bg-muted/50")}>
                             <FormControl>
                               <Checkbox
                                 checked={field.value?.includes(item.id)}
-                                disabled={isDisabled}
                                 onCheckedChange={(checked) => {
                                   const currentValues = field.value || [];
                                   return checked ? field.onChange([...currentValues, item.id]) : field.onChange(currentValues.filter((value) => value !== item.id));
@@ -142,17 +171,12 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                               />
                             </FormControl>
                             <div className="space-y-1 leading-none">
-                              <FormLabel className={Utils.cn("font-normal", isDisabled && "cursor-not-allowed")}>{actividad.name}</FormLabel>
+                              <FormLabel className="font-normal">{actividad.name}</FormLabel>
                               <div className="text-xs text-muted-foreground">
                                 <p>{specialist?.name}</p>
                                 <p>{item.dayOfWeek} {formatTime(item.time)}</p>
                                 <p><span className="font-medium">Espacio:</span> {space?.name} ({activeEnrolledCount}/{capacity})</p>
                               </div>
-                               {isDisabled && (
-                                <p className="text-xs font-semibold text-amber-600 dark:text-amber-500">
-                                  {item.sessionType === 'Individual' ? 'Sesión individual ocupada' : 'Plazas fijas completas.'}
-                                </p>
-                              )}
                             </div>
                           </FormItem>
                         )}/>

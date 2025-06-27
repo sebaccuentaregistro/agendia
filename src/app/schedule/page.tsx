@@ -34,6 +34,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -771,6 +772,7 @@ export default function SchedulePage() {
                       const availableSpots = capacity - enrolledCount;
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
                       const isFull = availableSpots <= 0;
+                      const waitlistCount = session.waitlistPersonIds?.length || 0;
 
                       const sessionIndex = appDayOrder.indexOf(session.dayOfWeek);
                       const isFutureDay = sessionIndex > todayIndex;
@@ -804,13 +806,21 @@ export default function SchedulePage() {
                         >
                           <CardHeader className="flex flex-row items-start justify-between p-4">
                             <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{sessionTitle}</CardTitle>
-                            <div className={cn(
-                                'text-xs font-bold px-3 py-1 rounded-full text-white', 
-                                isFull 
-                                  ? 'bg-gradient-to-r from-rose-500 to-pink-600' 
-                                  : 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                              )}>
-                              {isIndividual ? 'Individual' : (isFull ? 'Llena' : `${availableSpots} Lugares`)}
+                            <div className="flex items-center gap-2">
+                                {waitlistCount > 0 && (
+                                    <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-700 dark:text-amber-400 bg-amber-500/10">
+                                        <Users className="mr-1 h-3 w-3" />
+                                        {waitlistCount} en espera
+                                    </Badge>
+                                )}
+                                <div className={cn(
+                                    'text-xs font-bold px-3 py-1 rounded-full text-white', 
+                                    isFull 
+                                      ? 'bg-gradient-to-r from-rose-500 to-pink-600' 
+                                      : 'bg-gradient-to-r from-emerald-400 to-teal-500'
+                                  )}>
+                                  {isIndividual ? 'Individual' : (isFull ? 'Llena' : `${availableSpots} Lugares`)}
+                                </div>
                             </div>
                           </CardHeader>
                           <CardContent className="flex-grow p-4 pt-0 space-y-3 text-sm">
