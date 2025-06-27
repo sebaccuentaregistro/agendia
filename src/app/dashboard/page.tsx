@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
@@ -18,7 +18,6 @@ import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 function WaitlistNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -151,6 +150,7 @@ export default function Dashboard() {
   });
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
+  const [dashboardView, setDashboardView] = useState<'main' | 'management'>('main');
 
   const overdueCount = useMemo(() => {
     const now = new Date();
@@ -256,95 +256,112 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <WaitlistNotifications />
-
+      
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
-          <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
-            <Card className={cn(
-                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
-                hasOverdue ? "hover:!border-destructive" : "hover:!border-green-500"
-            )}>
-                <div className={cn(
-                    "flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                    hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
-                )}>
-                    {hasOverdue ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
-                </div>
-                <CardTitle className={cn("text-xl font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
-                    Atrasados
-                </CardTitle>
-                <p className="text-4xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
-            </Card>
-          </Link>
-          <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
-            <Card className={cn(
-                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
-                hasPendingRecovery ? "hover:!border-yellow-500" : "hover:!border-green-500"
-            )}>
-                <div className={cn(
-                    "flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                    hasPendingRecovery ? "bg-yellow-100 text-yellow-600" : "bg-green-100 text-green-600"
-                )}>
-                    <CalendarClock className="h-5 w-5" />
-                </div>
-                <CardTitle className={cn("text-xl font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
-                    Recuperos
-                </CardTitle>
-                <p className="text-4xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
-            </Card>
-          </Link>
-          <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
-            <Card className={cn(
-                "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
-                hasOnVacation ? "hover:!border-blue-500" : "hover:!border-green-500"
-            )}>
-                <div className={cn(
-                    "flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                    hasOnVacation ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
-                )}>
-                    <Plane className="h-5 w-5" />
-                </div>
-                <CardTitle className={cn("text-xl font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
-                    En Vacaciones
-                </CardTitle>
-                <p className="text-4xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
-            </Card>
-          </Link>
-          {mainCards.map((item) => (
-            <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
-                  <div className="flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <item.icon className="h-5 w-5" />
+        {dashboardView === 'main' ? (
+          <>
+            <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
+              <Card className={cn(
+                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                  hasOverdue ? "hover:!border-destructive" : "hover:!border-green-500"
+              )}>
+                  <div className={cn(
+                      "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                      hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
+                  )}>
+                      <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
-                  {item.count !== null && (
-                    <p className="text-4xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
-                  )}
+                  <CardTitle className={cn("text-lg font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                      Atrasados
+                  </CardTitle>
+                  <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
               </Card>
-          </Link>
-          ))}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <div className="transition-transform hover:-translate-y-1 cursor-pointer">
+            </Link>
+            <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
+              <Card className={cn(
+                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                  hasPendingRecovery ? "hover:!border-yellow-500" : "hover:!border-green-500"
+              )}>
+                  <div className={cn(
+                      "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                      hasPendingRecovery ? "bg-yellow-100 text-yellow-600" : "bg-green-100 text-green-600"
+                  )}>
+                      <CalendarClock className="h-4 w-4" />
+                  </div>
+                  <CardTitle className={cn("text-lg font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                      Recuperos
+                  </CardTitle>
+                  <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
+              </Card>
+            </Link>
+            <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
+              <Card className={cn(
+                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                  hasOnVacation ? "hover:!border-blue-500" : "hover:!border-green-500"
+              )}>
+                  <div className={cn(
+                      "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                      hasOnVacation ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                  )}>
+                      <Plane className="h-4 w-4" />
+                  </div>
+                  <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                      En Vacaciones
+                  </CardTitle>
+                  <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+              </Card>
+            </Link>
+            {mainCards.map((item) => (
+              <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
                 <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
-                    <div className="flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <Settings className="h-5 w-5" />
+                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
-                    <p className="text-4xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                    <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    {item.count !== null && (
+                      <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                    )}
                 </Card>
-              </div>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {groupedCards.map((item) => (
-                <DropdownMenuItem key={item.href} asChild>
-                  <Link href={item.href} className="flex items-center gap-2">
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.label}</span>
-                  </Link>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </Link>
+            ))}
+            <div onClick={() => setDashboardView('management')} className="transition-transform hover:-translate-y-1 cursor-pointer">
+              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <Settings className="h-4 w-4" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                  <p className="text-3xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+              </Card>
+            </div>
+          </>
+        ) : (
+          <>
+            <div onClick={() => setDashboardView('main')} className="transition-transform hover:-translate-y-1 cursor-pointer">
+              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <ArrowLeft className="h-4 w-4" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">Volver</CardTitle>
+                  <p className="text-3xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+              </Card>
+            </div>
+            {groupedCards.map((item) => (
+              <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
+                <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <item.icon className="h-4 w-4" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    {item.count !== null ? (
+                      <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                    ) : (
+                      <p className="text-3xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                    )}
+                </Card>
+              </Link>
+            ))}
+          </>
+        )}
       </div>
 
       <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
