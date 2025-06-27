@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import type { Session } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
@@ -18,6 +18,7 @@ import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 function WaitlistNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -139,31 +140,20 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
   )
 }
 
-
-export default function Dashboard() {
+function DashboardPageContent() {
   const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
     specialistId: 'all',
-    timeOfDay: 'all', // Mañana, Tarde, Noche
+    timeOfDay: 'all',
   });
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
-  const [dashboardView, setDashboardView] = useState<'main' | 'management'>('main');
 
-  useEffect(() => {
-    const handleHashChange = () => {
-      setDashboardView(window.location.hash === '#management' ? 'management' : 'main');
-    };
-    
-    window.addEventListener('hashchange', handleHashChange);
-    handleHashChange(); // Initial check for page load
-    
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
-  }, []);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const dashboardView = searchParams.get('view') === 'management' ? 'management' : 'main';
 
 
   const overdueCount = useMemo(() => {
@@ -338,7 +328,7 @@ export default function Dashboard() {
                 </Card>
               </Link>
             ))}
-            <div onClick={() => (window.location.hash = 'management')} className="transition-transform hover:-translate-y-1 cursor-pointer">
+            <div onClick={() => router.push('/dashboard?view=management')} className="transition-transform hover:-translate-y-1 cursor-pointer">
               <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Settings className="h-4 w-4" />
@@ -508,5 +498,16 @@ export default function Dashboard() {
         />
       )}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  // useSearchParams causes de-optimization to client-side rendering.
+  // We wrap the component in a Suspense boundary to avoid this.
+  // This is a pattern recommended by the Next.js team.
+  return (
+    <React.Suspense fallback={<div>Cargando...</div>}>
+      <DashboardPageContent />
+    </React.Suspense>
   );
 }
