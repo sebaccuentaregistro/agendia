@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -32,6 +32,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { exportToCsv } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -450,8 +452,8 @@ export default function StudentsPage() {
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual' }});
 
   const getPaymentStatusBadge = (status: 'Al día' | 'Atrasado') => {
-    if (status === 'Al día') return <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 border-green-700/50">Al día</Badge>;
-    return <Badge variant="destructive">Atrasado</Badge>;
+    if (status === 'Al día') return <Badge className="bg-white/90 text-green-700 hover:bg-white/90 font-bold border-green-200"><CheckCircle2 className="h-4 w-4 mr-1.5" />Al día</Badge>;
+    return <Badge variant="destructive" className="font-bold border-destructive/50"><XCircle className="h-4 w-4 mr-1.5" />Atrasado</Badge>;
   };
 
   function handleEdit(person: Person) {
@@ -565,14 +567,14 @@ export default function StudentsPage() {
             {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[32rem] w-full bg-white/30 rounded-2xl" />)}
         </div>
       ) : processedPeople.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {processedPeople.map((person) => {
                 const hasPayments = payments.some(p => p.personId === person.id);
                 const enrolledSessions = sessions.filter(session => session.personIds.includes(person.id)).sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
                 const sortedVacations = person.vacationPeriods?.sort((a,b) => a.startDate.getTime() - b.startDate.getTime()) || [];
                 return (
-                    <Card key={person.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-                        <CardHeader className="flex flex-row items-start gap-4 p-4">
+                    <Card key={person.id} className="flex flex-col rounded-2xl shadow-lg overflow-hidden border border-slate-200/60 dark:border-zinc-700/60 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card">
+                        <CardHeader className="flex flex-row items-start justify-between p-4">
                             <div className="flex-grow">
                                 <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100">{person.name}</h3>
                                 <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 text-sm">
@@ -606,25 +608,23 @@ export default function StudentsPage() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </CardHeader>
-                        <CardContent className="flex flex-col flex-grow space-y-4 p-4 pt-0">
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                                <div className="text-slate-700 dark:text-slate-200">
-                                    <div>{getPaymentStatusBadge((person as any).paymentStatus)}</div>
-                                </div>
-                                <div className="text-slate-700 dark:text-slate-200">
-                                    <div>{person.membershipType}</div>
-                                </div>
-                                <div className="text-slate-700 dark:text-slate-200">
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Inscripción</div>
-                                    <div>{format(person.joinDate, 'dd/MM/yyyy')}</div>
+                        <div className="p-4 bg-primary/90 text-primary-foreground">
+                            <div className="mb-3">{getPaymentStatusBadge((person as any).paymentStatus)}</div>
+                            <h4 className="text-2xl font-bold">{person.membershipType}</h4>
+                            <div className="flex justify-between mt-2 text-xs opacity-80 uppercase font-semibold">
+                                <div>
+                                    <p>Inscripción</p>
+                                    <p>{format(person.joinDate, 'dd/MM/yyyy')}</p>
                                 </div>
                                 {(person as any).nextPaymentDate && (
-                                  <div className="text-slate-700 dark:text-slate-200">
-                                    <div className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Próximo Pago</div>
-                                    <div>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</div>
+                                  <div className="text-right">
+                                    <p>Próximo Pago</p>
+                                    <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
                                   </div>
                                 )}
                             </div>
+                        </div>
+                        <CardContent className="flex flex-col flex-grow space-y-4 p-4">
                             {(person as any).recoveryBalance > 0 && (
                                 <div className="flex items-center gap-2 text-sm text-yellow-600 dark:text-yellow-400 font-semibold p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20">
                                     <CalendarClock className="h-4 w-4" />
@@ -632,38 +632,60 @@ export default function StudentsPage() {
                                 </div>
                             )}
                             <div className="space-y-2 flex flex-col flex-grow">
-                                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                    Horarios inscriptos ({enrolledSessions.length})
-                                </h4>
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-sm font-semibold text-foreground">
+                                      Horarios inscriptos
+                                  </h4>
+                                  <Badge variant="secondary" className="rounded-full bg-primary/20 text-primary font-bold">{enrolledSessions.length}</Badge>
+                                </div>
                                 {enrolledSessions.length > 0 ? (
-                                    <div className="flex-grow space-y-3 rounded-lg border border-white/20 p-2 bg-white/10 backdrop-blur-sm">
+                                    <div className="flex-grow space-y-3">
                                         {enrolledSessions.map(session => {
                                             const actividad = actividades.find(a => a.id === session.actividadId);
                                             const specialist = specialists.find(s => s.id === session.instructorId);
                                             const space = spaces.find(s => s.id === session.spaceId);
                                             return (
-                                                <div key={session.id} className="text-sm">
-                                                    <p className="font-semibold text-slate-700 dark:text-slate-200">{actividad?.name || 'N/A'}</p>
-                                                    <p className="text-xs text-slate-500 dark:text-slate-400">{session.dayOfWeek}, {formatTime(session.time)} &bull; {specialist?.name || 'Sin especialista'} &bull; {space?.name || 'Sin espacio'}</p>
+                                                <div key={session.id} className="text-sm p-3 rounded-lg border border-slate-200 dark:border-zinc-700 bg-background/50">
+                                                    <p className="font-bold text-primary">{actividad?.name || 'N/A'}</p>
+                                                    <div className="flex justify-between items-center text-xs text-muted-foreground mt-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <Clock className="h-3 w-3"/>
+                                                            <span>{session.dayOfWeek}, {formatTime(session.time)}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                           <Users className="h-3 w-3"/>
+                                                           <span>{specialist?.name || 'Sin especialista'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <MapPin className="h-3 w-3"/>
+                                                            <span>{space?.name || 'Sin espacio'}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
                                 ) : (
-                                    <div className="flex flex-grow items-center justify-center rounded-lg border border-dashed border-white/30 h-10">
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">Sin horarios.</p>
+                                    <div className="flex flex-grow items-center justify-center rounded-lg border border-dashed border-slate-200 dark:border-zinc-700 h-24">
+                                        <div className="text-center text-muted-foreground">
+                                          <CalendarIcon className="mx-auto h-8 w-8 opacity-50"/>
+                                          <p className="text-sm mt-1">Sin horarios inscriptos.</p>
+                                        </div>
                                     </div>
                                 )}
                             </div>
                             <div className="space-y-2">
-                                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                                    Períodos de Vacaciones ({sortedVacations.length})
-                                </h4>
+                                <div className="flex justify-between items-center">
+                                  <h4 className="text-sm font-semibold text-foreground">
+                                      Períodos de Vacaciones
+                                  </h4>
+                                  <Badge variant="secondary" className="rounded-full bg-primary/20 text-primary font-bold">{sortedVacations.length}</Badge>
+                                </div>
                                 {sortedVacations.length > 0 ? (
-                                    <div className="space-y-2 rounded-lg border border-white/20 p-2 bg-white/10 backdrop-blur-sm">
+                                    <div className="space-y-2">
                                         {sortedVacations.map(vac => (
-                                            <div key={vac.id} className="flex items-center justify-between text-sm">
-                                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                            <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200">
+                                                <span className="font-medium">
                                                     {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
                                                 </span>
                                                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeVacationPeriod(person.id, vac.id)}>
@@ -673,14 +695,14 @@ export default function StudentsPage() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="flex items-center justify-center rounded-lg border border-dashed border-white/30 h-10">
-                                        <p className="text-xs text-slate-500 dark:text-slate-400">Sin vacaciones registradas.</p>
+                                    <div className="flex items-center justify-center rounded-lg h-10">
+                                        <p className="text-sm text-muted-foreground">Sin vacaciones registradas.</p>
                                     </div>
                                 )}
                             </div>
                         </CardContent>
-                        <CardFooter className="p-4 border-t border-white/20">
-                            <Button className="w-full" variant="outline" onClick={() => setPersonToEnroll(person)}>
+                        <CardFooter className="p-4 border-t border-slate-100 dark:border-zinc-700/80 mt-auto">
+                            <Button className="w-full bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95 font-bold" onClick={() => setPersonToEnroll(person)}>
                                 <CalendarPlus className="mr-2 h-4 w-4" />
                                 Asignar Sesión
                             </Button>
