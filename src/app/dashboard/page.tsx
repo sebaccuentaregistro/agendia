@@ -1,10 +1,11 @@
 
 'use client';
 
+import React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
@@ -328,7 +329,7 @@ function DashboardPageContent() {
                 </Card>
               </Link>
             ))}
-            <div onClick={() => router.push('/dashboard?view=management')} className="transition-transform hover:-translate-y-1 cursor-pointer">
+            <Link href="/dashboard?view=management" className="transition-transform hover:-translate-y-1">
               <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Settings className="h-4 w-4" />
@@ -336,7 +337,7 @@ function DashboardPageContent() {
                   <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
                    <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
               </Card>
-            </div>
+            </Link>
           </>
         ) : (
           <>
