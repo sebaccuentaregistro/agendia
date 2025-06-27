@@ -255,8 +255,6 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <PageHeader title="Inicio" />
-      
       <WaitlistNotifications />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
@@ -271,10 +269,10 @@ export default function Dashboard() {
                 )}>
                     {hasOverdue ? <AlertTriangle className="h-5 w-5" /> : <CheckCircle2 className="h-5 w-5" />}
                 </div>
-                <CardTitle className={cn("text-base font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                <CardTitle className={cn("text-xl font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
                     Atrasados
                 </CardTitle>
-                <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                <p className="text-4xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
             </Card>
           </Link>
           <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
@@ -288,10 +286,10 @@ export default function Dashboard() {
                 )}>
                     <CalendarClock className="h-5 w-5" />
                 </div>
-                <CardTitle className={cn("text-base font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                <CardTitle className={cn("text-xl font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
                     Recuperos
                 </CardTitle>
-                <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
+                <p className="text-4xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
             </Card>
           </Link>
           <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
@@ -305,10 +303,10 @@ export default function Dashboard() {
                 )}>
                     <Plane className="h-5 w-5" />
                 </div>
-                <CardTitle className={cn("text-base font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                <CardTitle className={cn("text-xl font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
                     En Vacaciones
                 </CardTitle>
-                <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+                <p className="text-4xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
             </Card>
           </Link>
           {mainCards.map((item) => (
@@ -317,9 +315,9 @@ export default function Dashboard() {
                   <div className="flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <item.icon className="h-5 w-5" />
                   </div>
-                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                  <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                   {item.count !== null && (
-                    <p className="text-3xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                    <p className="text-4xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                   )}
               </Card>
           </Link>
@@ -331,7 +329,8 @@ export default function Dashboard() {
                     <div className="flex h-10 w-10 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <Settings className="h-5 w-5" />
                     </div>
-                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                    <p className="text-4xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
                 </Card>
               </div>
             </DropdownMenuTrigger>
