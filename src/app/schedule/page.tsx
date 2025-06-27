@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, MoreHorizontal, Send } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -795,63 +795,71 @@ export default function SchedulePage() {
                           }
                       }
 
-
                       return (
                         <Card 
                           key={session.id} 
                           className={cn(
-                            "flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 border-white/20 shadow-lg",
-                            "bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl"
+                            "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden"
                           )}
                         >
-                          <CardHeader className="flex flex-row items-start justify-between p-4">
-                            <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{sessionTitle}</CardTitle>
+                          <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
+                            <CardTitle className="text-lg font-bold text-primary">{sessionTitle}</CardTitle>
                             <div className="flex items-center gap-2">
+                              {isIndividual ? (
+                                <div className="flex items-center gap-1.5 rounded-full bg-pink-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
+                                  INDIVIDUAL
+                                  <Star className="h-3 w-3" />
+                                </div>
+                              ) : (
+                                <div className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm", isFull ? 'bg-red-500': 'bg-green-500')}>
+                                  {isFull ? 'LLENO' : `${availableSpots} LUGARES`}
+                                </div>
+                              )}
+                            </div>
+                          </CardHeader>
+                          <CardContent className="flex-grow p-4 pt-2 space-y-4">
+                            <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
+                              <div className="flex items-center gap-3">
+                                <Clock className="h-4 w-4 text-slate-500" />
+                                <span>{session.dayOfWeek}, {formatTime(session.time)}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <User className="h-4 w-4 text-slate-500" />
+                                <span>{specialist?.name}</span>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <MapPin className="h-4 w-4 text-slate-500" />
+                                <span>{space?.name}</span>
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                                <Users className="h-4 w-4" />
+                                <span onClick={() => setSessionForRoster(session)} className="cursor-pointer hover:underline">
+                                    {enrolledCount}/{capacity} inscriptos
+                                </span>
                                 {waitlistCount > 0 && (
-                                    <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-700 dark:text-amber-400 bg-amber-500/10">
-                                        <Users className="mr-1 h-3 w-3" />
+                                    <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-700 dark:text-amber-400 bg-amber-500/10 text-xs">
                                         {waitlistCount} en espera
                                     </Badge>
                                 )}
-                                <div className={cn(
-                                    'text-xs font-bold px-3 py-1 rounded-full text-white', 
-                                    isFull 
-                                      ? 'bg-gradient-to-r from-rose-500 to-pink-600' 
-                                      : 'bg-gradient-to-r from-emerald-400 to-teal-500'
-                                  )}>
-                                  {isIndividual ? 'Individual' : (isFull ? 'Llena' : `${availableSpots} Lugares`)}
-                                </div>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="flex-grow p-4 pt-0 space-y-3 text-sm">
-                            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                              <Clock className="h-4 w-4 text-slate-500" />
-                              <span>{session.dayOfWeek}, {formatTime(session.time)}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                              <User className="h-4 w-4 text-slate-500" />
-                              <span>{specialist?.name}</span>
-                            </div>
-                            <div className="flex items-center gap-3 text-slate-600 dark:text-slate-300">
-                              <MapPin className="h-4 w-4 text-slate-500" />
-                              <span>{space?.name}</span>
-                            </div>
-                            <div 
-                              onClick={() => setSessionForRoster(session)}
-                              className="flex items-center gap-3 text-slate-600 dark:text-slate-300 cursor-pointer hover:text-primary transition-colors group"
-                            >
-                              {isIndividual ? <User className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" /> : <Users className="h-4 w-4 text-slate-500 group-hover:text-primary transition-colors" />}
-                              <span className="underline-offset-4 group-hover:underline">{enrolledCount}/{capacity} Inscriptos</span>
+                              </div>
+                              <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
+                                <div
+                                  className={cn("h-2 rounded-full", isFull ? "bg-pink-500" : "bg-green-500")}
+                                  style={{ width: `${capacity > 0 ? (enrolledCount / capacity) * 100 : 0}%` }}
+                                />
+                              </div>
                             </div>
                           </CardContent>
-                          <CardFooter className="p-3 flex items-center justify-between gap-2 border-t border-white/20">
+                          <CardFooter className="grid grid-cols-2 gap-4 p-4 mt-auto border-t border-slate-100 dark:border-zinc-700/80">
                              <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <span tabIndex={0}>
-                                      <Button variant="outline" className="flex-1" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                    <span tabIndex={0} className="w-full">
+                                      <Button variant="outline" className="w-full font-semibold border-slate-300 dark:border-zinc-600" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
                                           <ClipboardCheck className="mr-2 h-4 w-4"/>
-                                          Pasar Lista
+                                          Asistencia
                                       </Button>
                                     </span>
                                   </TooltipTrigger>
@@ -862,28 +870,19 @@ export default function SchedulePage() {
                               </TooltipProvider>
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button className="flex-1">
+                                    <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95">
                                         <UserPlus className="mr-2 h-4 w-4" />
                                         Inscribir
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent>
                                     <DropdownMenuItem onClick={() => setSessionToManage(session)}>
-                                        <Users className="mr-2 h-4 w-4" /> Inscripción Fija / Semanal
+                                        <Users className="mr-2 h-4 w-4" /> Inscripción Fija
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setSessionForPuntual(session)}>
-                                        <CalendarDays className="mr-2 h-4 w-4" /> Inscripción Puntual / Recupero
+                                        <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
                                     </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
-                                        <MoreHorizontal className="h-4 w-4 text-slate-600" />
-                                        <span className="sr-only">Más opciones</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
+                                    <DropdownMenuSeparator />
                                     <DropdownMenuItem onSelect={() => handleEdit(session)}>
                                         <Pencil className="mr-2 h-4 w-4" />
                                         Editar Sesión
