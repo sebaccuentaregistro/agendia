@@ -18,6 +18,7 @@ import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { AISuggestionCard } from '@/components/ai-suggestion-card';
 
 // Helper function to render student cards inside the sheet
 function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
@@ -204,6 +205,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       <PageHeader title="Inicio" />
+
+      <AISuggestionCard />
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
           <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
