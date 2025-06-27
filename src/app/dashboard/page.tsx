@@ -1,3 +1,4 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -6,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import type { Session } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
@@ -151,6 +152,20 @@ export default function Dashboard() {
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [dashboardView, setDashboardView] = useState<'main' | 'management'>('main');
 
+  useEffect(() => {
+    const handleHashChange = () => {
+      setDashboardView(window.location.hash === '#management' ? 'management' : 'main');
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    handleHashChange(); // Initial check for page load
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
+
   const overdueCount = useMemo(() => {
     const now = new Date();
     return people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
@@ -270,7 +285,7 @@ export default function Dashboard() {
                   )}>
                       <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-base font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                  <CardTitle className={cn("text-sm font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
                       Atrasados
                   </CardTitle>
                   <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
@@ -287,7 +302,7 @@ export default function Dashboard() {
                   )}>
                       <CalendarClock className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-base font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-sm font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
                       Recuperos
                   </CardTitle>
                   <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
@@ -304,7 +319,7 @@ export default function Dashboard() {
                   )}>
                       <Plane className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-base font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-sm font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
                       Vacaciones
                   </CardTitle>
                   <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
@@ -316,19 +331,19 @@ export default function Dashboard() {
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null && (
                       <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     )}
                 </Card>
               </Link>
             ))}
-            <div onClick={() => setDashboardView('management')} className="transition-transform hover:-translate-y-1 cursor-pointer">
+            <div onClick={() => (window.location.hash = 'management')} className="transition-transform hover:-translate-y-1 cursor-pointer">
               <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Settings className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
                    <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
               </Card>
             </div>
@@ -341,7 +356,7 @@ export default function Dashboard() {
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null ? (
                       <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     ) : (
