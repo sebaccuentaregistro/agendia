@@ -1,4 +1,3 @@
-
 'use client';
 
 import { PageHeader } from '@/components/page-header';
@@ -187,7 +186,7 @@ export default function Dashboard() {
     { href: "/students", label: "Personas", icon: Users, count: people.length },
   ];
   
-  const groupedCards = [
+  const managementCards = [
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
     { href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
     { href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
@@ -274,7 +273,7 @@ export default function Dashboard() {
                   <CardTitle className={cn("text-base font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
                       Atrasados
                   </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
               </Card>
             </Link>
             <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
@@ -291,7 +290,7 @@ export default function Dashboard() {
                   <CardTitle className={cn("text-base font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
                       Recuperos
                   </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
+                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
               </Card>
             </Link>
             <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
@@ -308,7 +307,7 @@ export default function Dashboard() {
                   <CardTitle className={cn("text-base font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
                       Vacaciones
                   </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
               </Card>
             </Link>
             {mainCards.map((item) => (
@@ -319,7 +318,7 @@ export default function Dashboard() {
                     </div>
                     <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null && (
-                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                      <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     )}
                 </Card>
               </Link>
@@ -330,13 +329,13 @@ export default function Dashboard() {
                       <Settings className="h-4 w-4" />
                   </div>
                   <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
-                  <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                   <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
               </Card>
             </div>
           </>
         ) : (
           <>
-            {groupedCards.map((item) => (
+            {managementCards.map((item) => (
               <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
                 <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -344,9 +343,9 @@ export default function Dashboard() {
                     </div>
                     <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null ? (
-                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                      <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     ) : (
-                      <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                      <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
                     )}
                 </Card>
               </Link>
@@ -355,129 +354,132 @@ export default function Dashboard() {
         )}
       </div>
 
-      <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
-        <CardHeader>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
-                  <SelectValue placeholder="Especialista" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Especialista</SelectItem>
-                  {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
-                  <SelectValue placeholder="Actividad" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Actividades</SelectItem>
-                  {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
-                  <SelectValue placeholder="Espacio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Espacios</SelectItem>
-                  {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
-                  <SelectValue placeholder="Horario" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todo el Día</SelectItem>
-                  <SelectItem value="Mañana">Mañana</SelectItem>
-                  <SelectItem value="Tarde">Tarde</SelectItem>
-                  <SelectItem value="Noche">Noche</SelectItem>
-                </SelectContent>
-              </Select>
+      {dashboardView === 'main' && (
+        <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
+          <CardHeader>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
+                    <SelectValue placeholder="Especialista" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Especialista</SelectItem>
+                    {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
+                    <SelectValue placeholder="Actividad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Actividades</SelectItem>
+                    {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
+                    <SelectValue placeholder="Espacio" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Espacios</SelectItem>
+                    {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
+                    <SelectValue placeholder="Horario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todo el Día</SelectItem>
+                    <SelectItem value="Mañana">Mañana</SelectItem>
+                    <SelectItem value="Tarde">Tarde</SelectItem>
+                    <SelectItem value="Noche">Noche</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="flex-grow">
-          {todaysSessions.length > 0 ? (
-            filteredSessions.length > 0 ? (
-              <ul className="space-y-4">
-                {filteredSessions.map(session => {
-                  const { specialist, actividad, space } = getSessionDetails(session);
-                  const enrolledCount = (session as any).enrolledCount;
-                  const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
-                  const isFull = capacity > 0 && enrolledCount >= capacity;
+          </CardHeader>
+          <CardContent className="flex-grow">
+            {todaysSessions.length > 0 ? (
+              filteredSessions.length > 0 ? (
+                <ul className="space-y-4">
+                  {filteredSessions.map(session => {
+                    const { specialist, actividad, space } = getSessionDetails(session);
+                    const enrolledCount = (session as any).enrolledCount;
+                    const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+                    const isFull = capacity > 0 && enrolledCount >= capacity;
 
-                  const now = new Date();
-                  const [hour, minute] = session.time.split(':').map(Number);
-                  const sessionStartTime = new Date();
-                  sessionStartTime.setHours(hour, minute, 0, 0);
-                  const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
-                  const isAttendanceAllowed = now >= attendanceWindowStart;
-                  const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes de la clase.";
+                    const now = new Date();
+                    const [hour, minute] = session.time.split(':').map(Number);
+                    const sessionStartTime = new Date();
+                    sessionStartTime.setHours(hour, minute, 0, 0);
+                    const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
+                    const isAttendanceAllowed = now >= attendanceWindowStart;
+                    const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes de la clase.";
 
-                  return (
-                    <li 
-                      key={session.id}
-                      className={cn(
-                        "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/30 dark:bg-white/10 border-white/20 hover:bg-white/50 dark:hover:bg-white/20 hover:shadow-md",
-                        isFull && "bg-pink-500/20 border-pink-500/30"
-                      )}
-                    >
-                      <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
-                        <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Sesión'}</p>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
-                          <span className="flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{specialist?.name || 'N/A'}</span>
-                          <span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3" />{space?.name || 'N/A'}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 text-right">
-                          <div>
-                            <p className="font-bold text-primary">{formatTime(session.time)}</p>
-                            <p className={cn(
-                                "text-sm", 
-                                isFull ? "font-semibold text-pink-600 dark:text-pink-400" : "text-slate-600 dark:text-slate-400"
-                              )}>
-                              {enrolledCount}/{capacity} inscriptos
-                            </p>
+                    return (
+                      <li 
+                        key={session.id}
+                        className={cn(
+                          "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/30 dark:bg-white/10 border-white/20 hover:bg-white/50 dark:hover:bg-white/20 hover:shadow-md",
+                          isFull && "bg-pink-500/20 border-pink-500/30"
+                        )}
+                      >
+                        <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
+                          <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Sesión'}</p>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
+                            <span className="flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{specialist?.name || 'N/A'}</span>
+                            <span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3" />{space?.name || 'N/A'}</span>
                           </div>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span tabIndex={0}>
-                                  <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
-                                    <ClipboardCheck className="h-5 w-5" />
-                                    <span className="sr-only">Pasar Lista</span>
-                                  </Button>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>{tooltipMessage}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                        </div>
+                        <div className="flex items-center gap-2 text-right">
+                            <div>
+                              <p className="font-bold text-primary">{formatTime(session.time)}</p>
+                              <p className={cn(
+                                  "text-sm", 
+                                  isFull ? "font-semibold text-pink-600 dark:text-pink-400" : "text-slate-600 dark:text-slate-400"
+                                )}>
+                                {enrolledCount}/{capacity} inscriptos
+                              </p>
+                            </div>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span tabIndex={0}>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                      <ClipboardCheck className="h-5 w-5" />
+                                      <span className="sr-only">Pasar Lista</span>
+                                    </Button>
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>{tooltipMessage}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
+                  <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No se encontraron sesiones</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</p>
+                </div>
+              )
             ) : (
               <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
-                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No se encontraron sesiones</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</p>
+                  <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No hay sesiones hoy</h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">¡Día libre! Disfruta del descanso.</p>
               </div>
-            )
-          ) : (
-            <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
-                <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No hay sesiones hoy</h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">¡Día libre! Disfruta del descanso.</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
             session={selectedSessionForStudents}
@@ -493,5 +495,3 @@ export default function Dashboard() {
     </div>
   );
 }
-
-    
