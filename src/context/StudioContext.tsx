@@ -47,6 +47,7 @@ interface StudioContextType {
   enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
   saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
   addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
+  addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
   addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
   removeVacationPeriod: (personId: string, vacationId: string) => void;
   isPersonOnVacation: (person: Person, date: Date) => boolean;
@@ -639,6 +640,43 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     
     toast({ title: "Asistente Puntual Añadido", description: "La persona ha sido añadida a la sesión para la fecha seleccionada." });
   };
+  
+  const addJustifiedAbsence = (personId: string, sessionId: string, date: Date) => {
+    const dateStr = formatDate(date, 'yyyy-MM-dd');
+    
+    setAttendance(prev => {
+        const existingRecordIndex = prev.findIndex(
+            record => record.sessionId === sessionId && record.date === dateStr
+        );
+
+        if (existingRecordIndex > -1) {
+            const updatedAttendance = [...prev];
+            const record = { ...updatedAttendance[existingRecordIndex] };
+            
+            if (!record.justifiedAbsenceIds?.includes(personId)) {
+                record.justifiedAbsenceIds = [...(record.justifiedAbsenceIds || []), personId];
+            }
+            record.presentIds = record.presentIds.filter(id => id !== personId);
+            record.absentIds = record.absentIds.filter(id => id !== personId);
+            
+            updatedAttendance[existingRecordIndex] = record;
+            return updatedAttendance;
+        } else {
+            const newRecord: SessionAttendance = {
+                id: `att-${Date.now()}`,
+                sessionId,
+                date: dateStr,
+                presentIds: [],
+                absentIds: [],
+                justifiedAbsenceIds: [personId],
+                oneTimeAttendees: [],
+            };
+            return [...prev, newRecord];
+        }
+    });
+
+    toast({ title: "Ausencia Justificada", description: "Se ha registrado la ausencia. La persona podrá recuperar esta clase." });
+  };
 
   const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
     setPeople(prev => prev.map(p => {
@@ -715,7 +753,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, isTutorialOpen, openTutorial, closeTutorial }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, isTutorialOpen, openTutorial, closeTutorial }}>
       {children}
     </StudioContext.Provider>
   );

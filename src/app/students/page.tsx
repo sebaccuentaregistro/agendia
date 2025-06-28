@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Person } from '@/types';
+import type { Person, Session } from '@/types';
 import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -366,6 +366,139 @@ function VacationDialog({ person, onClose }: { person: Person; onClose: () => vo
   );
 }
 
+const justifyAbsenceSchema = z.object({
+  sessionId: z.string().min(1, { message: 'Debes seleccionar una sesión.' }),
+  date: z.date({ required_error: 'Debes seleccionar una fecha.' }),
+});
+
+function JustifyAbsenceDialog({ person, onClose }: { person: Person; onClose: () => void; }) {
+  const { sessions, especialistas, actividades, addJustifiedAbsence } = useStudio();
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+  const form = useForm<z.infer<typeof justifyAbsenceSchema>>({
+    resolver: zodResolver(justifyAbsenceSchema),
+  });
+
+  const watchedSessionId = form.watch('sessionId');
+
+  const enrolledSessions = useMemo(() => {
+    return sessions
+      .filter(session => session.personIds.includes(person.id))
+      .map(session => ({
+        ...session,
+        actividad: actividades.find(a => a.id === session.actividadId)?.name || 'N/A',
+        specialist: especialistas.find(s => s.id === session.instructorId)?.name || 'N/A',
+      }))
+      .sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+  }, [sessions, person.id, actividades, especialistas]);
+
+  const selectedSession = useMemo(() => {
+    return enrolledSessions.find(s => s.id === watchedSessionId);
+  }, [watchedSessionId, enrolledSessions]);
+  
+  const dayMap: { [key in Session['dayOfWeek']]: number } = useMemo(() => ({
+    'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6,
+  }), []);
+
+  const sessionDayNumber = selectedSession ? dayMap[selectedSession.dayOfWeek] : -1;
+
+  function onSubmit(values: z.infer<typeof justifyAbsenceSchema>) {
+    addJustifiedAbsence(person.id, values.sessionId, values.date);
+    onClose();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Notificar Ausencia Futura</DialogTitle>
+          <DialogDescription>
+            Registra una ausencia justificada para {person.name}. Esto le otorgará una clase para recuperar.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="sessionId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Sesión</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona la sesión a la que faltará" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {enrolledSessions.map(session => (
+                        <SelectItem key={session.id} value={session.id}>
+                          {session.actividad} ({session.dayOfWeek} {session.time})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Fecha de la Ausencia</FormLabel>
+                  <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          disabled={!watchedSessionId}
+                          className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP", { locale: es })
+                          ) : (
+                            <span>{watchedSessionId ? 'Selecciona una fecha' : 'Primero elige una sesión'}</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={(date) => {
+                            field.onChange(date);
+                            setIsCalendarOpen(false);
+                        }}
+                        disabled={(date) => {
+                            const today = new Date();
+                            today.setHours(0,0,0,0);
+                            const isPastOrToday = date < today;
+                            const isWrongDay = date.getDay() !== sessionDayNumber;
+                            return isPastOrToday || isWrongDay;
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+              <Button type="submit">Guardar Justificación</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export default function StudentsPage() {
   const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance } = useStudio();
@@ -377,6 +510,7 @@ export default function StudentsPage() {
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [personForAttendance, setPersonForAttendance] = useState<Person | null>(null);
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
+  const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
@@ -673,6 +807,7 @@ export default function StudentsPage() {
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
                                         <DropdownMenuItem onClick={() => handleEdit(person)}>Editar Detalles</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setPersonForJustification(person)}><CalendarClock className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForAttendance(person)}><ClipboardCheck className="mr-2 h-4 w-4" />Ver Historial de Asistencia</DropdownMenuItem>
@@ -781,6 +916,7 @@ export default function StudentsPage() {
       
       {personToEnroll && (<EnrollDialog person={personToEnroll} onOpenChange={(open) => !open && setPersonToEnroll(null)}/>)}
       {personForVacation && <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />}
+      {personForJustification && <JustifyAbsenceDialog person={personForJustification} onClose={() => setPersonForJustification(null)} />}
 
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -839,7 +975,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
-    
-
-    
