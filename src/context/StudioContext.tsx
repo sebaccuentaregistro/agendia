@@ -15,7 +15,7 @@ import {
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import * as Utils from '@/lib/utils';
-import { format as formatDate, set } from 'date-fns';
+import { format as formatDate, set, addMonths } from 'date-fns';
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -35,7 +35,7 @@ interface StudioContextType {
   addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => void;
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
-  recordPayment: (personId: string) => void;
+  recordPayment: (personId: string, months: number) => void;
   undoLastPayment: (personId: string) => void;
   addSpace: (space: Omit<Space, 'id'>) => void;
   updateSpace: (space: Space) => void;
@@ -84,7 +84,7 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
             }));
         }
         if (key === 'yoga-payments') {
-            return parsed.map((p: any) => ({ ...p, date: new Date(p.date) }));
+            return parsed.map((p: any) => ({ ...p, date: new Date(p.date), months: p.months || 1 }));
         }
         
         return parsed;
@@ -296,7 +296,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const newPerson: Person = { ...person, id: `person-${Date.now()}`, avatar: `https://placehold.co/100x100.png`, joinDate: now, lastPaymentDate: now, vacationPeriods: [] };
     setPeople(prev => [newPerson, ...prev]);
     if (newPerson.membershipType === 'Mensual') {
-      const newPayment: Payment = { id: `pay-${Date.now()}`, personId: newPerson.id, date: now };
+      const newPayment: Payment = { id: `pay-${Date.now()}`, personId: newPerson.id, date: now, months: 1 };
       setPayments(prev => [newPayment, ...prev]);
     }
   };
@@ -342,26 +342,37 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     toast({ title: 'Persona Eliminada', description: 'Se han eliminado todos los datos de la persona.' });
   };
 
-  const recordPayment = (personId: string) => {
+  const recordPayment = (personId: string, months: number) => {
     const person = people.find(p => p.id === personId);
-    if (!person) return;
+    if (!person || person.membershipType === 'Diario') return;
     
     const now = new Date();
-    setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: now } : p));
-    setPayments(prev => [...prev, { id: `pay-${Date.now()}`, personId, date: now }]);
-    toast({ title: "Pago Registrado", description: `Se ha registrado un nuevo pago para ${person.name}.` });
+    const newLastPaymentDate = addMonths(person.lastPaymentDate, months);
+    
+    setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: newLastPaymentDate } : p));
+    setPayments(prev => [...prev, { id: `pay-${Date.now()}`, personId, date: now, months }]);
+    toast({ title: "Pago Registrado", description: `Se ha registrado un pago por ${months} ${months > 1 ? 'meses' : 'mes'} para ${person.name}.` });
   };
 
   const undoLastPayment = (personId: string) => {
     const person = people.find(p => p.id === personId);
     if (!person) return;
-    const personPayments = payments.filter(p => p.personId === personId).sort((a,b) => b.date.getTime() - a.date.getTime());
-    if (personPayments.length > 0) {
-      setPayments(prev => prev.filter(p => p.id !== personPayments[0].id));
-      const newLastPaymentDate = personPayments.length > 1 ? personPayments[1].date : person.joinDate;
-      setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: newLastPaymentDate } : p));
-      toast({ title: "Pago Deshecho", description: `Se ha revertido el último pago para ${person.name}.` });
+
+    const personPayments = payments.filter(p => p.personId === personId).sort((a, b) => b.date.getTime() - a.date.getTime());
+    if (personPayments.length === 0) {
+      toast({ variant: "destructive", title: "Sin Pagos", description: "No hay pagos para deshacer." });
+      return;
     }
+
+    const lastPayment = personPayments[0];
+    const monthsToUndo = lastPayment.months || 1;
+    
+    const newLastPaymentDate = addMonths(person.lastPaymentDate, -monthsToUndo);
+
+    setPeople(prev => prev.map(p => p.id === personId ? { ...p, lastPaymentDate: newLastPaymentDate } : p));
+    setPayments(prev => prev.filter(p => p.id !== lastPayment.id));
+    
+    toast({ title: "Pago Deshecho", description: `Se ha revertido el último pago de ${monthsToUndo} ${monthsToUndo > 1 ? 'meses' : 'mes'} para ${person.name}.` });
   };
 
   const addSpace = (space: Omit<Space, 'id'>) => {

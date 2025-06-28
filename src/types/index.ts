@@ -45,6 +45,7 @@ export type Payment = {
   id:string;
   personId: string;
   date: Date;
+  months: number;
 };
 
 export type Space = {

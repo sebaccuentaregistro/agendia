@@ -499,6 +499,69 @@ function JustifyAbsenceDialog({ person, onClose }: { person: Person; onClose: ()
   );
 }
 
+const paymentMonthsSchema = z.object({
+  months: z.coerce.number().int().min(1, "Debe ser al menos 1 mes.").max(12, "No se pueden registrar más de 12 meses."),
+});
+
+function RecordPaymentDialog({ person, onClose }: { person: Person; onClose: () => void; }) {
+  const { recordPayment } = useStudio();
+
+  const form = useForm<z.infer<typeof paymentMonthsSchema>>({
+    resolver: zodResolver(paymentMonthsSchema),
+    defaultValues: { months: 1 },
+  });
+
+  function onSubmit(values: z.infer<typeof paymentMonthsSchema>) {
+    recordPayment(person.id, values.months);
+    onClose();
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-xs">
+        <DialogHeader>
+          <DialogTitle>Registrar Pago</DialogTitle>
+          <DialogDescription>
+            Selecciona cuántos meses de membresía quieres registrar para {person.name}.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="months"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Cantidad de Meses</FormLabel>
+                  <Select onValueChange={(val) => field.onChange(Number(val))} defaultValue={String(field.value)}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                        <SelectItem key={month} value={String(month)}>
+                          {month} {month === 1 ? 'mes' : 'meses'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+              <Button type="submit">Registrar</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 export default function StudentsPage() {
   const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance } = useStudio();
@@ -511,6 +574,7 @@ export default function StudentsPage() {
   const [personForAttendance, setPersonForAttendance] = useState<Person | null>(null);
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
+  const [personToRecordPayment, setPersonToRecordPayment] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
@@ -657,12 +721,13 @@ export default function StudentsPage() {
       const personPayments = payments
           .filter(p => p.personId === personForHistory.id)
           .sort((a,b) => b.date.getTime() - a.date.getTime())
-          .map(p => ({ date: p.date }));
+          .map(p => ({ date: p.date, months: p.months || 1 }));
 
       if (personPayments.length === 0) return;
 
       const headers = {
-          date: 'Fecha de Pago'
+          date: 'Fecha de Pago',
+          months: 'Meses Pagados'
       };
       exportToCsv(`historial_pagos_${personForHistory.name.replace(/\s/g, '_')}.csv`, personPayments, headers);
   };
@@ -858,13 +923,13 @@ export default function StudentsPage() {
                                         <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForAttendance(person)}><ClipboardCheck className="mr-2 h-4 w-4" />Ver Historial de Asistencia</DropdownMenuItem>
-                                        {person.membershipType === 'Mensual' && (
-                                        <>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => recordPayment(person.id)}><CreditCard className="mr-2 h-4 w-4" />Registrar Pago</DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}><Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago</DropdownMenuItem>
-                                        </>
-                                        )}
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => setPersonToRecordPayment(person)} disabled={person.membershipType === 'Diario'}>
+                                          <CreditCard className="mr-2 h-4 w-4" />Registrar Pago
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}>
+                                          <Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago
+                                        </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => openDeleteDialog(person)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -964,6 +1029,8 @@ export default function StudentsPage() {
       {personToEnroll && (<EnrollDialog person={personToEnroll} onOpenChange={(open) => !open && setPersonToEnroll(null)}/>)}
       {personForVacation && <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />}
       {personForJustification && <JustifyAbsenceDialog person={personForJustification} onClose={() => setPersonForJustification(null)} />}
+      {personToRecordPayment && <RecordPaymentDialog person={personToRecordPayment} onClose={() => setPersonToRecordPayment(null)} />}
+
 
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
@@ -1004,8 +1071,9 @@ export default function StudentsPage() {
                     .filter(p => p.personId === personForHistory.id)
                     .sort((a,b) => b.date.getTime() - a.date.getTime())
                     .map(payment => (
-                        <div key={payment.id} className="text-sm p-3 rounded-md bg-muted/50">
-                            <span>{format(payment.date, 'dd MMMM yyyy', { weekStartsOn: 1 })}</span>
+                        <div key={payment.id} className="flex items-center justify-between text-sm p-3 rounded-md bg-muted/50">
+                            <span>{format(payment.date, 'dd MMMM yyyy', { locale: es })}</span>
+                            {payment.months > 1 && <span className="text-xs text-muted-foreground">({payment.months} meses)</span>}
                         </div>
                     ))
                 ) : (
