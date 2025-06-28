@@ -350,17 +350,26 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteSession = (id: string) => {
-    const sessionToDelete = sessions.find(c => c.id === id);
-    if (sessionToDelete && sessionToDelete.personIds.length > 0) {
+    const sessionToDelete = sessions.find(s => s.id === id);
+    if (!sessionToDelete) return;
+
+    // Check for *actual*, existing enrolled people, not just ghost IDs
+    const existingEnrolledPeople = sessionToDelete.personIds.filter(personId => 
+        people.some(p => p.id === personId)
+    );
+
+    if (existingEnrolledPeople.length > 0) {
       toast({
         variant: 'destructive',
         title: 'Sesión con Inscriptos',
-        description: `No se puede eliminar. Hay ${sessionToDelete.personIds.length} persona(s) inscripta(s). Mueve o desinscribe a las personas primero.`,
+        description: `No se puede eliminar. Hay ${existingEnrolledPeople.length} persona(s) inscripta(s). Mueve o desinscribe a las personas primero.`,
         duration: 6000,
       });
       return;
     }
-    setSessions(prev => prev.filter(c => c.id !== id));
+    
+    // If we are here, it means there are no *real* people enrolled, so we can delete.
+    setSessions(prev => prev.filter(s => s.id !== id));
     setNotifications(prev => prev.filter(n => n.sessionId !== id));
   };
 
