@@ -64,8 +64,8 @@ export type SessionAttendance = {
 
 export type AppNotification = {
   id: string;
-  type: 'waitlist';
-  sessionId: string;
-  personId: string; // The person from the waitlist to be enrolled
+  type: 'waitlist' | 'churnRisk';
+  sessionId?: string;
+  personId: string; // The person from the waitlist or at risk
   createdAt: string; // ISO string
 };

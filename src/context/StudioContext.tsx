@@ -138,6 +138,72 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-attendance', JSON.stringify(attendance)); }, [attendance, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-notifications', JSON.stringify(notifications)); }, [notifications, isInitialized]);
+  
+  const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
+    if (!person.vacationPeriods) return false;
+    const checkDate = set(date, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+    
+    return person.vacationPeriods.some(period => {
+        const startDate = set(period.startDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+        const endDate = set(period.endDate, { hours: 23, minutes: 59, seconds: 59, milliseconds: 999 });
+        return checkDate >= startDate && checkDate <= endDate;
+    });
+  }, []);
+
+  // Effect to generate notifications for churn risk
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const today = new Date();
+    const churnNotifications: AppNotification[] = [];
+
+    people.forEach(person => {
+        if (isPersonOnVacation(person, today)) return;
+
+        const personSessions = sessions.filter(s => s.personIds.includes(person.id));
+        if (personSessions.length === 0) return;
+        
+        const existingNotification = notifications.find(n => n.type === 'churnRisk' && n.personId === person.id);
+        if (existingNotification) return;
+
+        let hasChurnRisk = false;
+
+        for (const session of personSessions) {
+            const sessionAttendanceRecords = attendance
+                .filter(a => a.sessionId === session.id)
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+            if (sessionAttendanceRecords.length < 3) continue;
+
+            const lastThreeRecords = sessionAttendanceRecords.slice(0, 3);
+            
+            const consecutiveAbsences = lastThreeRecords.every(
+                record => record.absentIds.includes(person.id)
+            );
+
+            if (consecutiveAbsences) {
+                hasChurnRisk = true;
+                break; 
+            }
+        }
+        
+        if (hasChurnRisk) {
+            churnNotifications.push({
+                id: `notif-churn-${person.id}`,
+                type: 'churnRisk',
+                personId: person.id,
+                createdAt: new Date().toISOString(),
+            });
+        }
+    });
+
+    setNotifications(prev => [
+        ...prev.filter(n => n.type !== 'churnRisk'), 
+        ...churnNotifications
+    ]);
+
+  }, [isInitialized, people, sessions, attendance, isPersonOnVacation]);
+
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
     if (actividades.some(a => a.name.trim().toLowerCase() === actividad.name.trim().toLowerCase())) {
@@ -369,7 +435,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const sessionToDelete = sessions.find(s => s.id === id);
     if (!sessionToDelete) return;
 
-    // A person is considered enrolled only if they exist in the main `people` list.
     const existingEnrolledPeople = sessionToDelete.personIds.filter(personId => 
         people.some(p => p.id === personId)
     );
@@ -384,7 +449,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       return;
     }
     
-    // If we are here, it means there are no *real* people enrolled, so we can delete.
     setSessions(prev => prev.filter(s => s.id !== id));
     setNotifications(prev => prev.filter(n => n.sessionId !== id));
   };
@@ -392,7 +456,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const enrollPersonInSessions = (personId: string, newSessionIds: string[]) => {
     const uniqueNewSessionIds = [...new Set(newSessionIds)];
 
-    // Check for overbooking first
     const overbookedSession = uniqueNewSessionIds.find(sessionId => {
       const sessionToEnroll = sessions.find(c => c.id === sessionId);
       if (!sessionToEnroll || sessionToEnroll.personIds.includes(personId)) {
@@ -415,7 +478,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       return; 
     }
     
-    // Process enrollments and un-enrollments
     const previousSessions = sessions.filter(s => s.personIds.includes(personId));
     setSessions(prevSessions => {
       const newSessionIdSet = new Set(uniqueNewSessionIds);
@@ -434,12 +496,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       });
     });
 
-    // Check for freed spots and generate notifications
     previousSessions.forEach(oldSession => {
       if (!uniqueNewSessionIds.includes(oldSession.id)) { // The person was unenrolled
         if (oldSession.waitlistPersonIds && oldSession.waitlistPersonIds.length > 0) {
           const nextPersonId = oldSession.waitlistPersonIds[0];
-          // Check if a notification for this spot already exists
           const notificationExists = notifications.some(n => n.sessionId === oldSession.id);
           if (!notificationExists) {
             const newNotification: AppNotification = {
@@ -578,17 +638,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     });
     
     toast({ title: "Asistente Puntual Añadido", description: "La persona ha sido añadida a la sesión para la fecha seleccionada." });
-  };
-
-  const isPersonOnVacation = (person: Person, date: Date): boolean => {
-    if (!person.vacationPeriods) return false;
-    const checkDate = set(date, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-    
-    return person.vacationPeriods.some(period => {
-        const startDate = set(period.startDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-        const endDate = set(period.endDate, { hours: 23, minutes: 59, seconds: 59, milliseconds: 999 });
-        return checkDate >= startDate && checkDate <= endDate;
-    });
   };
 
   const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {

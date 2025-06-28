@@ -21,47 +21,68 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
 
-function WaitlistNotifications() {
+function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
-    const waitlistNotifications = useMemo(() => notifications.filter(n => n.type === 'waitlist'), [notifications]);
+    const sortedNotifications = useMemo(() => notifications.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [notifications]);
 
-    if (waitlistNotifications.length === 0) return null;
+
+    if (sortedNotifications.length === 0) return null;
 
     return (
         <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100">
                     <Info className="h-5 w-5 text-blue-500" />
-                    Oportunidades de Lista de Espera
+                    Notificaciones Importantes
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                {waitlistNotifications.map(notification => {
-                    const session = sessions.find(s => s.id === notification.sessionId);
-                    const person = people.find(p => p.id === notification.personId);
-                    const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                {sortedNotifications.map(notification => {
+                    if (notification.type === 'waitlist' && notification.sessionId) {
+                        const session = sessions.find(s => s.id === notification.sessionId);
+                        const person = people.find(p => p.id === notification.personId);
+                        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
-                    if (!session || !person || !actividad) {
-                        // This notification is stale, we can offer to dismiss it
+                        if (!session || !person || !actividad) {
+                            return (
+                                <div key={notification.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                                    <p className="text-muted-foreground">Esta notificación ya no es válida.</p>
+                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                                </div>
+                            );
+                        }
+
                         return (
-                            <div key={notification.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                                <p className="text-muted-foreground">Esta notificación ya no es válida.</p>
-                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                            <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm">
+                                <p className="flex-grow text-blue-800 dark:text-blue-200">
+                                    ¡Cupo liberado en <span className="font-semibold">{actividad.name}</span> ({session.dayOfWeek} {session.time})! ¿Deseas inscribir a <span className="font-semibold">{person.name}</span>?
+                                </p>
+                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                    <Button size="sm" onClick={() => enrollFromWaitlist(notification.id, session.id, person.id)}>Inscribir</Button>
+                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                                </div>
                             </div>
                         );
                     }
+                    if (notification.type === 'churnRisk') {
+                        const person = people.find(p => p.id === notification.personId);
+                        if (!person) return null; // Stale notification
 
-                    return (
-                        <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/50 text-sm">
-                            <p className="flex-grow text-slate-700 dark:text-slate-200">
-                                ¡Cupo liberado en <span className="font-semibold">{actividad.name}</span> ({session.dayOfWeek} {session.time})! ¿Deseas inscribir a <span className="font-semibold">{person.name}</span>?
-                            </p>
-                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                <Button size="sm" onClick={() => enrollFromWaitlist(notification.id, session.id, person.id)}>Inscribir</Button>
-                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                        return (
+                            <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
+                                <div className="flex items-start gap-3">
+                                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                    <p className="flex-grow text-yellow-800 dark:text-yellow-200">
+                                        Riesgo de abandono: <span className="font-semibold">{person.name}</span> ha faltado a 3 clases seguidas. Considera contactarle.
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                                </div>
                             </div>
-                        </div>
-                    );
+                        );
+                    }
+                    return null;
                 })}
             </CardContent>
         </Card>
@@ -274,7 +295,7 @@ function DashboardPageContent() {
     <div className="space-y-8">
       {isInitialCheckDone && <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />}
 
-      <WaitlistNotifications />
+      <AppNotifications />
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {dashboardView === 'main' ? (
