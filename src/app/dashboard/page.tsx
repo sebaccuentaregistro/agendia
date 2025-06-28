@@ -2,10 +2,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, HelpCircle } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo } from 'react';
@@ -143,7 +142,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 }
 
 function DashboardPageContent() {
-  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation } = useStudio();
+  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -153,25 +152,17 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const [isInitialCheckDone, setIsInitialCheckDone] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
       if (!tutorialCompleted) {
-        setIsTutorialOpen(true);
+        openTutorial();
       }
       setIsInitialCheckDone(true);
     }
-  }, []);
-
-  const handleCloseTutorial = () => {
-    setIsTutorialOpen(false);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('agendia-tutorial-completed', 'true');
-    }
-  };
+  }, [openTutorial]);
 
 
   const searchParams = useSearchParams();
@@ -281,23 +272,7 @@ function DashboardPageContent() {
 
   return (
     <div className="space-y-8">
-      {isInitialCheckDone && <OnboardingTutorial isOpen={isTutorialOpen} onClose={handleCloseTutorial} />}
-
-      <div className="mb-8 flex justify-end">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="outline" size="icon" onClick={() => setIsTutorialOpen(true)}>
-                <HelpCircle className="h-5 w-5" />
-                <span className="sr-only">Mostrar tutorial</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Mostrar tutorial de bienvenida</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      {isInitialCheckDone && <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />}
 
       <WaitlistNotifications />
       

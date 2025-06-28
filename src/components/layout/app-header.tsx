@@ -1,9 +1,13 @@
+
 'use client';
 
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Heart } from 'lucide-react';
+import { Heart, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useStudio } from '@/context/StudioContext';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const navItems = [
   { href: "/dashboard", label: "Inicio" },
@@ -17,6 +21,7 @@ const navItems = [
 
 export default function AppHeader() {
   const pathname = usePathname();
+  const { openTutorial } = useStudio();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-transparent px-4 backdrop-blur-xl sm:px-6">
@@ -43,6 +48,23 @@ export default function AppHeader() {
              )
           })}
         </nav>
+      </div>
+      <div className="flex items-center">
+        {pathname === '/dashboard' && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={openTutorial} className="text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-white/10">
+                  <Info className="h-5 w-5" />
+                  <span className="sr-only">Mostrar tutorial</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Mostrar tutorial de bienvenida</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
     </header>
   );

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification } from '@/types';
 import { 
   actividades as initialActividades, 
@@ -53,6 +53,9 @@ interface StudioContextType {
   addToWaitlist: (sessionId: string, personId: string) => void;
   enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => void;
   dismissNotification: (notificationId: string) => void;
+  isTutorialOpen: boolean;
+  openTutorial: () => void;
+  closeTutorial: () => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -103,6 +106,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
+  const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
+  const closeTutorial = useCallback(() => {
+    setIsTutorialOpen(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('agendia-tutorial-completed', 'true');
+    }
+  }, []);
 
   // Load from localStorage on client-side mount to avoid hydration errors
   useEffect(() => {
@@ -231,6 +243,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deletePerson = (id: string) => {
+    // Check if the person actually exists before proceeding
+    const personExists = people.some(p => p.id === id);
+    if (!personExists) return;
+
     // Remove person from main list
     setPeople(prev => prev.filter(p => p.id !== id));
     
@@ -251,7 +267,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       absentIds: record.absentIds.filter(pid => pid !== id),
       justifiedAbsenceIds: record.justifiedAbsenceIds?.filter(pid => pid !== id) || [],
       oneTimeAttendees: record.oneTimeAttendees?.filter(pid => pid !== id) || [],
-    })));
+    })).filter(record => record.presentIds.length > 0 || record.absentIds.length > 0 || (record.justifiedAbsenceIds && record.justifiedAbsenceIds.length > 0) || (record.oneTimeAttendees && record.oneTimeAttendees.length > 0) ));
 
     // Remove from any pending notifications
     setNotifications(prev => prev.filter(n => n.personId !== id));
@@ -353,7 +369,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const sessionToDelete = sessions.find(s => s.id === id);
     if (!sessionToDelete) return;
 
-    // Check for *actual*, existing enrolled people, not just ghost IDs
+    // A person is considered enrolled only if they exist in the main `people` list.
     const existingEnrolledPeople = sessionToDelete.personIds.filter(personId => 
         people.some(p => p.id === personId)
     );
@@ -650,7 +666,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, isTutorialOpen, openTutorial, closeTutorial }}>
       {children}
     </StudioContext.Provider>
   );
