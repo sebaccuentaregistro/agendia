@@ -434,7 +434,7 @@ export default function SchedulePage() {
     timeOfDay: 'all',
   });
   const searchParams = useSearchParams();
-  const [conflictInfo, setConflictInfo] = useState<{ specialist: string | null; space: string | null }>({ specialist: null, space: null });
+  const [conflictInfo, setConflictInfo] = useState<{ specialist: string | null; space: string | null, operatingHours: string | null }>({ specialist: null, space: null, operatingHours: null });
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -471,15 +471,11 @@ export default function SchedulePage() {
   useEffect(() => {
     if (!isDialogOpen) return;
 
-    if (!watchedDay || !watchedTime || !watchedInstructorId || !watchedSpaceId) {
-      setConflictInfo({ specialist: null, space: null });
-      return;
-    }
-
-    const checkConflicts = () => {
-      let specialistMsg: string | null = null;
-      let spaceMsg: string | null = null;
-
+    let specialistMsg: string | null = null;
+    let spaceMsg: string | null = null;
+    let operatingHoursMsg: string | null = null;
+    
+    if (watchedDay && watchedTime && watchedInstructorId && watchedSpaceId) {
       const specialistConflictSession = sessions.find(s =>
         s.id !== (selectedSession?.id || '') &&
         s.instructorId === watchedInstructorId &&
@@ -489,7 +485,7 @@ export default function SchedulePage() {
 
       if (specialistConflictSession) {
         const specialist = specialists.find(sp => sp.id === watchedInstructorId);
-        specialistMsg = `${specialist?.name || 'Este especialista'} ya tiene otra clase este día a las ${watchedTime}. Elegí otro horario o especialista.`;
+        specialistMsg = `${specialist?.name || 'Este especialista'} ya tiene otra clase este día a las ${watchedTime}.`;
       }
 
       const spaceConflictSession = sessions.find(s =>
@@ -501,13 +497,18 @@ export default function SchedulePage() {
 
       if (spaceConflictSession) {
         const space = spaces.find(sp => sp.id === watchedSpaceId);
-        spaceMsg = `${space?.name || 'Este espacio'} ya está en uso este día a las ${watchedTime}. Elegí otro horario o espacio.`;
+        spaceMsg = `${space?.name || 'Este espacio'} ya está en uso este día a las ${watchedTime}.`;
       }
-
-      setConflictInfo({ specialist: specialistMsg, space: spaceMsg });
-    };
-
-    checkConflicts();
+      
+      const space = spaces.find(s => s.id === watchedSpaceId);
+      if (space && space.operatingHoursStart && space.operatingHoursEnd) {
+          if (watchedTime < space.operatingHoursStart || watchedTime >= space.operatingHoursEnd) {
+              operatingHoursMsg = `Fuera del horario del espacio (${space.operatingHoursStart} - ${space.operatingHoursEnd}).`;
+          }
+      }
+    }
+    
+    setConflictInfo({ specialist: specialistMsg, space: spaceMsg, operatingHours: operatingHoursMsg });
   }, [watchedDay, watchedTime, watchedInstructorId, watchedSpaceId, sessions, specialists, spaces, selectedSession, isDialogOpen]);
 
   const availableSpecialists = useMemo(() => {
@@ -745,15 +746,22 @@ export default function SchedulePage() {
                                 </Select><FormMessage />
                             </FormItem>
                             )}/>
-                            <FormField control={form.control} name="time" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Hora</FormLabel>
-                                <FormControl><Input type="time" {...field} /></FormControl>
-                                <FormMessage />
-                            </FormItem>
+                            <FormField control={form.control} name="time" render={({ field, fieldState }) => (
+                                <FormItem>
+                                    <FormLabel>Hora</FormLabel>
+                                    <FormControl><Input type="time" {...field} /></FormControl>
+                                    <FormMessage />
+                                    {conflictInfo.operatingHours && !fieldState.error && (
+                                      <p className="text-sm text-destructive">{conflictInfo.operatingHours}</p>
+                                    )}
+                                </FormItem>
                             )}/>
                         </div>
-                        <DialogFooter><Button type="submit" disabled={!!conflictInfo.specialist || !!conflictInfo.space}>Guardar Cambios</Button></DialogFooter>
+                        <DialogFooter>
+                            <Button type="submit" disabled={!!conflictInfo.specialist || !!conflictInfo.space || !!conflictInfo.operatingHours}>
+                                Guardar Cambios
+                            </Button>
+                        </DialogFooter>
                         </form>
                     </Form>
                 </DialogContent>

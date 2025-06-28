@@ -56,8 +56,8 @@ export const people: Person[] = [
 ];
 
 export const spaces: Space[] = [
-  { id: 'space-1', name: 'Sala Sol', capacity: 20 },
-  { id: 'space-2', name: 'Sala Luna', capacity: 15 },
+  { id: 'space-1', name: 'Sala Sol', capacity: 20, operatingHoursStart: '07:00', operatingHoursEnd: '22:00' },
+  { id: 'space-2', name: 'Sala Luna', capacity: 15, operatingHoursStart: '08:00', operatingHoursEnd: '21:00' },
 ];
 
 export const sessions: Session[] = [

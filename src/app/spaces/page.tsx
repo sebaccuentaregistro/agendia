@@ -3,8 +3,8 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, Warehouse, Users } from 'lucide-react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Pencil, PlusCircle, Trash2, Warehouse, Users, Clock } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
@@ -21,6 +21,16 @@ import Link from 'next/link';
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
   capacity: z.coerce.number().min(1, { message: 'La capacidad debe ser de al menos 1.' }),
+  operatingHoursStart: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }).optional().or(z.literal('')),
+  operatingHoursEnd: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }).optional().or(z.literal('')),
+}).refine(data => {
+    if (data.operatingHoursStart && data.operatingHoursEnd) {
+        return data.operatingHoursStart < data.operatingHoursEnd;
+    }
+    return true;
+}, {
+    message: "La hora de cierre debe ser posterior a la de apertura.",
+    path: ["operatingHoursEnd"],
 });
 
 export default function SpacesPage() {
@@ -45,18 +55,23 @@ export default function SpacesPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '', capacity: 10 },
+    defaultValues: { name: '', capacity: 10, operatingHoursStart: '', operatingHoursEnd: '' },
   });
 
   function handleAdd() {
     setSelectedSpace(undefined);
-    form.reset({ name: '', capacity: 10 });
+    form.reset({ name: '', capacity: 10, operatingHoursStart: '08:00', operatingHoursEnd: '22:00' });
     setIsDialogOpen(true);
   }
 
   function handleEdit(space: Space) {
     setSelectedSpace(space);
-    form.reset({ name: space.name, capacity: space.capacity });
+    form.reset({
+      name: space.name,
+      capacity: space.capacity,
+      operatingHoursStart: space.operatingHoursStart || '',
+      operatingHoursEnd: space.operatingHoursEnd || ''
+    });
     setIsDialogOpen(true);
   }
 
@@ -98,16 +113,40 @@ export default function SpacesPage() {
             </Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>{selectedSpace ? 'Editar Espacio' : 'Añadir Nuevo Espacio'}</DialogTitle></DialogHeader>
+            <DialogHeader>
+              <DialogTitle>{selectedSpace ? 'Editar Espacio' : 'Añadir Nuevo Espacio'}</DialogTitle>
+              <DialogDescription>
+                  Define los detalles de tus salas o áreas de trabajo.
+              </DialogDescription>
+            </DialogHeader>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                 <FormField control={form.control} name="name" render={({ field }) => (
                   <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
                 <FormField control={form.control} name="capacity" render={({ field }) => (
                   <FormItem><FormLabel>Capacidad</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
-                <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField control={form.control} name="operatingHoursStart" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Apertura</FormLabel>
+                      <FormControl><Input type="time" {...field} value={field.value || ''} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}/>
+                  <FormField control={form.control} name="operatingHoursEnd" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cierre</FormLabel>
+                      <FormControl><Input type="time" {...field} value={field.value || ''} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}/>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                    <Button type="submit">Guardar Cambios</Button>
+                </DialogFooter>
               </form>
             </Form>
           </DialogContent>
@@ -136,6 +175,11 @@ export default function SpacesPage() {
                 </CardHeader>
                 <CardContent className="flex-grow space-y-3 text-sm">
                   <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300"><Users className="h-4 w-4 text-slate-500" /> <span className="font-semibold text-slate-700 dark:text-slate-200">Capacidad:</span> {space.capacity} personas</p>
+                  <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                    <Clock className="h-4 w-4 text-slate-500" />
+                    <span className="font-semibold text-slate-700 dark:text-slate-200">Horario:</span>
+                    {space.operatingHoursStart && space.operatingHoursEnd ? `${space.operatingHoursStart} - ${space.operatingHoursEnd}` : 'Todo el día'}
+                  </p>
                   <Link href={`/schedule?spaceId=${space.id}`} className="transition-opacity hover:opacity-75">
                     <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                       <Warehouse className="h-4 w-4 text-slate-500" />

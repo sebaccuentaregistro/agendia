@@ -55,6 +55,8 @@ export type Space = {
   id: string;
   name: string;
   capacity: number;
+  operatingHoursStart?: string; // Format "HH:mm"
+  operatingHoursEnd?: string; // Format "HH:mm"
 };
 
 export type SessionAttendance = {
