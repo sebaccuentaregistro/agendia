@@ -53,7 +53,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
   const filteredSessions = sessions
       .filter(session => 
-        (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
+        (actividadFilter === 'all' || session.actividadId ===ividadFilter) &&
         (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
       .map(session => {
@@ -670,52 +670,58 @@ export default function StudentsPage() {
   return (
     <div>
       <PageHeader title="Personas">
-        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
-          <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-64 bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"/>
-          <div className="flex items-center gap-2 self-end md:self-auto">
-            <Button variant="outline" onClick={handleExportPeople}>
-              <FileDown className="mr-2 h-4 w-4" />
-              Exportar
-            </Button>
-            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedPerson(undefined); }}>
-              <DialogTrigger asChild>
-                <Button onClick={handleAdd} size="icon">
-                  <UserPlus className="h-5 w-5" />
-                  <span className="sr-only">Añadir Persona</span>
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader><DialogTitle>{selectedPerson ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle></DialogHeader>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                    <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                    <FormField control={form.control} name="membershipType" render={({ field }) => (
-                      <FormItem><FormLabel>Membresía</FormLabel><FormControl>
-                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4 pt-2">
-                          <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Mensual" /></FormControl><FormLabel className="font-normal">Mensual</FormLabel></FormItem>
-                          <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Diario" /></FormControl><FormLabel className="font-normal">Diario</FormLabel></FormItem>
-                        </RadioGroup>
-                      </FormControl><FormMessage /></FormItem>
-                    )}/>
-                    <FormField control={form.control} name="healthInfo" render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Consideraciones de Salud (Opcional)</FormLabel>
-                            <FormControl>
-                                <Textarea placeholder="Ej: Lesión de rodilla, embarazo, hipertensión..." {...field} />
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}/>
-                    <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
-          </div>
+        <div className="flex w-full items-center justify-end gap-2 md:w-auto">
+          <Button variant="outline" onClick={handleExportPeople}>
+            <FileDown className="mr-2 h-4 w-4" />
+            Exportar
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedPerson(undefined); }}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd} size="icon">
+                <UserPlus className="h-5 w-5" />
+                <span className="sr-only">Añadir Persona</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader><DialogTitle>{selectedPerson ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle></DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                  <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                  <FormField control={form.control} name="membershipType" render={({ field }) => (
+                    <FormItem><FormLabel>Membresía</FormLabel><FormControl>
+                      <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4 pt-2">
+                        <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Mensual" /></FormControl><FormLabel className="font-normal">Mensual</FormLabel></FormItem>
+                        <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Diario" /></FormControl><FormLabel className="font-normal">Diario</FormLabel></FormItem>
+                      </RadioGroup>
+                    </FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="healthInfo" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Consideraciones de Salud (Opcional)</FormLabel>
+                          <FormControl>
+                              <Textarea placeholder="Ej: Lesión de rodilla, embarazo, hipertensión..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )}/>
+                  <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         </div>
       </PageHeader>
       
+      <div className="-mt-6 mb-8">
+        <Input 
+          placeholder="Buscar por nombre..." 
+          value={searchTerm} 
+          onChange={(e) => setSearchTerm(e.target.value)} 
+          className="w-full max-w-sm bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+        />
+      </div>
+
       {!isMounted ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[32rem] w-full bg-white/30 rounded-2xl" />)}

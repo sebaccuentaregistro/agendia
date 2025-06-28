@@ -8,12 +8,12 @@ type PageHeaderProps = {
 
 export function PageHeader({ title, description, children }: PageHeaderProps) {
   return (
-    <div className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+    <div className="mb-8 flex flex-col items-start gap-4 md:flex-row md:items-center md:justify-between">
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
         {description && <p className="mt-1 text-muted-foreground">{description}</p>}
       </div>
-      {children && <div className="flex shrink-0 items-center gap-2">{children}</div>}
+      {children && <div className="flex w-full shrink-0 items-center justify-end gap-2 md:w-auto">{children}</div>}
     </div>
   );
 }
