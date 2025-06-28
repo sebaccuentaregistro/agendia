@@ -34,6 +34,7 @@ import type { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 
 const formSchema = z.object({
@@ -588,7 +589,29 @@ export default function StudentsPage() {
                         <div className="p-4 bg-gradient-to-br from-primary to-fuchsia-600 text-primary-foreground">
                             <div className="flex flex-row items-start justify-between">
                                 <div className="flex-grow">
-                                    <h3 className="text-lg font-bold text-white">{person.name}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-lg font-bold text-white">{person.name}</h3>
+                                        {person.healthInfo && (
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
+                                                        <HeartPulse className="h-5 w-5" />
+                                                        <span className="sr-only">Ver consideraciones de salud</span>
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-80">
+                                                    <div className="grid gap-4">
+                                                        <div className="space-y-2">
+                                                            <h4 className="font-medium leading-none">Consideraciones de Salud</h4>
+                                                            <p className="text-sm text-muted-foreground">
+                                                                {person.healthInfo}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                        )}
+                                    </div>
                                     <div className="flex items-center gap-2 text-white/80 text-sm">
                                         <span>{person.phone}</span>
                                         <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
@@ -644,19 +667,6 @@ export default function StudentsPage() {
                                     <span>{(person as any).recoveryBalance} recupero(s) pendiente(s)</span>
                                 </div>
                             )}
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                                        <HeartPulse className="h-4 w-4 text-destructive" />
-                                        Consideraciones de Salud
-                                    </h4>
-                                </div>
-                                {person.healthInfo ? (
-                                    <p className="text-sm text-muted-foreground bg-amber-500/10 p-2 rounded-md border border-amber-500/20">{person.healthInfo}</p>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground italic">Sin consideraciones de salud.</p>
-                                )}
-                            </div>
                             <div className="space-y-2 flex flex-col flex-grow">
                                 <div className="flex justify-between items-center">
                                   <h4 className="text-sm font-semibold text-foreground">
