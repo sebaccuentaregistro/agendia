@@ -611,6 +611,35 @@ export default function StudentsPage() {
                                                 </PopoverContent>
                                             </Popover>
                                         )}
+                                        {sortedVacations.length > 0 && (
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
+                                                        <Plane className="h-5 w-5" />
+                                                        <span className="sr-only">Ver períodos de vacaciones</span>
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-80">
+                                                    <div className="grid gap-4">
+                                                        <div className="space-y-2">
+                                                            <h4 className="font-medium leading-none">Períodos de Vacaciones</h4>
+                                                            <div className="space-y-2 mt-2">
+                                                                {sortedVacations.map(vac => (
+                                                                    <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200">
+                                                                        <span className="font-medium">
+                                                                            {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
+                                                                        </span>
+                                                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeVacationPeriod(person.id, vac.id)}>
+                                                                            <Trash2 className="h-3 w-3 text-destructive" />
+                                                                        </Button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-2 text-white/80 text-sm">
                                         <span>{person.phone}</span>
@@ -710,32 +739,6 @@ export default function StudentsPage() {
                                     </div>
                                 )}
                             </div>
-                            <div className="space-y-2">
-                                <div className="flex justify-between items-center">
-                                  <h4 className="text-sm font-semibold text-foreground">
-                                      Períodos de Vacaciones
-                                  </h4>
-                                  <Badge variant="secondary" className="rounded-full bg-primary/20 text-primary font-bold">{sortedVacations.length}</Badge>
-                                </div>
-                                {sortedVacations.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {sortedVacations.map(vac => (
-                                            <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200">
-                                                <span className="font-medium">
-                                                    {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
-                                                </span>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeVacationPeriod(person.id, vac.id)}>
-                                                    <Trash2 className="h-3 w-3 text-destructive" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center justify-center rounded-lg h-10">
-                                        <p className="text-sm text-muted-foreground">Sin vacaciones registradas.</p>
-                                    </div>
-                                )}
-                            </div>
                         </CardContent>
                         <CardFooter className="p-4 border-t border-slate-100 dark:border-zinc-700/80 mt-auto">
                             <Button className="w-full bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95 font-bold" onClick={() => setPersonToEnroll(person)}>
@@ -826,5 +829,7 @@ export default function StudentsPage() {
     </div>
   );
 }
+
+    
 
     
