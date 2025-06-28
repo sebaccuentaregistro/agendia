@@ -275,10 +275,10 @@ function DashboardPageContent() {
                   )}>
                       <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-sm font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                  <CardTitle className={cn("text-lg font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
                       Atrasados
                   </CardTitle>
-                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
               </Card>
             </Link>
             <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
@@ -292,10 +292,10 @@ function DashboardPageContent() {
                   )}>
                       <CalendarClock className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-sm font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-lg font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
                       Recuperos
                   </CardTitle>
-                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
+                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
               </Card>
             </Link>
             <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
@@ -309,10 +309,10 @@ function DashboardPageContent() {
                   )}>
                       <Plane className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-sm font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
                       Vacaciones
                   </CardTitle>
-                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
               </Card>
             </Link>
             {mainCards.map((item) => (
@@ -321,9 +321,9 @@ function DashboardPageContent() {
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null && (
-                      <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     )}
                 </Card>
               </Link>
@@ -333,8 +333,8 @@ function DashboardPageContent() {
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Settings className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
-                   <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                  <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                   <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
               </Card>
             </Link>
           </>
@@ -345,8 +345,8 @@ function DashboardPageContent() {
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <ArrowLeft className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">Volver</CardTitle>
-                   <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                  <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">Volver</CardTitle>
+                   <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
               </Card>
             </Link>
             {managementCards.map((item) => (
@@ -355,11 +355,11 @@ function DashboardPageContent() {
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null ? (
-                      <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     ) : (
-                      <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                      <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
                     )}
                 </Card>
               </Link>
@@ -375,7 +375,7 @@ function DashboardPageContent() {
               <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
                 <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-sm rounded-xl">
                     <SelectValue placeholder="Especialista" />
                   </SelectTrigger>
                   <SelectContent>
@@ -384,7 +384,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-sm rounded-xl">
                     <SelectValue placeholder="Actividad" />
                   </SelectTrigger>
                   <SelectContent>
@@ -393,7 +393,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-sm rounded-xl">
                     <SelectValue placeholder="Espacio" />
                   </SelectTrigger>
                   <SelectContent>
@@ -402,7 +402,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-sm rounded-xl">
                     <SelectValue placeholder="Horario" />
                   </SelectTrigger>
                   <SelectContent>
@@ -455,7 +455,7 @@ function DashboardPageContent() {
                             <div>
                               <p className="font-bold text-primary">{formatTime(session.time)}</p>
                               <p className={cn(
-                                "text-base font-bold",
+                                "text-base font-semibold",
                                 isFull 
                                   ? "text-pink-600 dark:text-pink-400" 
                                   : isNearlyFull 
