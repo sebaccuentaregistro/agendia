@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal, UserX } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -61,12 +61,12 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
     // Regular attendees not on vacation today
     const regularAttendees = session.personIds
       .map(pid => people.find(p => p.id === pid))
-      .filter((p): p is Person => !!p && !isPersonOnVacation(p, today));
+      .filter((p): p is Person => !!p && p.status === 'active' && !isPersonOnVacation(p, today));
 
     // One-time attendees for today
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
-    const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
+    const oneTimeAttendees = people.filter(p => p.status === 'active' && oneTimeAttendeeIds.has(p.id));
 
     // Combine and remove duplicates
     const allAttendeesMap = new Map<string, Person>();
@@ -162,7 +162,7 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
     });
 
     return people
-      .filter(person => balances[person.id] > 0)
+      .filter(person => person.status === 'active' && balances[person.id] > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [people, attendance]);
 
@@ -283,7 +283,7 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
     onClose();
   }
 
-  const sortedPeople = [...people].sort((a, b) => a.name.localeCompare(b.name));
+  const sortedPeople = people.filter(p => p.status === 'active').sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
@@ -330,7 +330,7 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
                           </FormItem>
                         )}
                       />
-                    )) : <p className="text-center text-sm text-muted-foreground">No hay personas para inscribir.</p>}
+                    )) : <p className="text-center text-sm text-muted-foreground">No hay personas activas para inscribir.</p>}
                   </ScrollArea>
                   <FormMessage />
                 </FormItem>
@@ -359,7 +359,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
   const { people, actividades, spaces } = useStudio();
 
   const enrolledPeople = useMemo(() => {
-    return people.filter(p => session.personIds.includes(p.id));
+    return people.filter(p => p.status === 'active' && session.personIds.includes(p.id));
   }, [people, session]);
 
   const actividad = useMemo(() => {
@@ -543,7 +543,7 @@ export default function SchedulePage() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   };

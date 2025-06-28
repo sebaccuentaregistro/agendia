@@ -34,9 +34,9 @@ interface StudioContextType {
   addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
   updateSpecialist: (specialist: Specialist) => void;
   deleteSpecialist: (specialistId: string) => void;
-  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => void;
+  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'status' | 'cancellationReason' | 'cancellationDate'>) => void;
   updatePerson: (person: Person) => void;
-  deletePerson: (personId: string) => void;
+  deactivatePerson: (personId: string, reason: string) => void;
   recordPayment: (personId: string, months: number) => void;
   undoLastPayment: (personId: string) => void;
   addSpace: (space: Omit<Space, 'id'>) => void;
@@ -81,6 +81,7 @@ const loadFromLocalStorage = (key: string, defaultValue: any) => {
              ...p,
              joinDate: new Date(p.joinDate),
              lastPaymentDate: p.lastPaymentDate ? new Date(p.lastPaymentDate) : new Date(p.joinDate),
+             cancellationDate: p.cancellationDate ? new Date(p.cancellationDate) : undefined,
              vacationPeriods: p.vacationPeriods?.map((v: any) => ({
                  ...v,
                  startDate: new Date(v.startDate),
@@ -117,10 +118,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
   const closeTutorial = useCallback(() => {
-    setIsTutorialOpen(false);
     if (typeof window !== 'undefined') {
       localStorage.setItem('agendia-tutorial-completed', 'true');
     }
+    setIsTutorialOpen(false);
   }, []);
 
   // Load from localStorage on client-side mount to avoid hydration errors
@@ -166,7 +167,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const today = new Date();
     const churnNotifications: AppNotification[] = [];
 
-    people.forEach(person => {
+    const activePeople = people.filter(p => p.status === 'active');
+
+    activePeople.forEach(person => {
         if (isPersonOnVacation(person, today)) return;
 
         const personSessions = sessions.filter(s => s.personIds.includes(person.id));
@@ -211,7 +214,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...churnNotifications
     ]);
 
-  }, [isInitialized, people, sessions, attendance, isPersonOnVacation]);
+  }, [isInitialized, people, sessions, attendance, notifications, isPersonOnVacation]);
 
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
@@ -295,13 +298,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setSpecialists(prev => prev.filter(s => s.id !== id));
   };
 
-  const addPerson = (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+  const addPerson = (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'status' | 'cancellationReason' | 'cancellationDate'>) => {
     if (people.some(p => p.phone.trim() === person.phone.trim())) {
         toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe una persona con este número de teléfono." });
         return;
     }
     const now = new Date();
-    const newPerson: Person = { ...person, id: `person-${Date.now()}`, avatar: `https://placehold.co/100x100.png`, joinDate: now, lastPaymentDate: now, vacationPeriods: [] };
+    const newPerson: Person = { ...person, id: `person-${Date.now()}`, avatar: `https://placehold.co/100x100.png`, joinDate: now, lastPaymentDate: now, vacationPeriods: [], status: 'active' };
     setPeople(prev => [newPerson, ...prev]);
     if (newPerson.membershipType === 'Mensual') {
       const newPayment: Payment = { id: `pay-${Date.now()}`, personId: newPerson.id, date: now, months: 1 };
@@ -317,37 +320,53 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setPeople(prev => prev.map(p => p.id === updated.id ? updated : p));
   };
 
-  const deletePerson = (id: string) => {
-    // Check if the person actually exists before proceeding
-    const personExists = people.some(p => p.id === id);
-    if (!personExists) return;
+  const deactivatePerson = (personId: string, reason: string) => {
+    const personToDeactivate = people.find(p => p.id === personId);
+    if (!personToDeactivate) return;
 
-    // Remove person from main list
-    setPeople(prev => prev.filter(p => p.id !== id));
-    
-    // Remove person from all session enrollments (fixed and waitlist)
-    setSessions(prev => prev.map(session => ({ 
-      ...session, 
-      personIds: session.personIds.filter(pid => pid !== id),
-      waitlistPersonIds: session.waitlistPersonIds?.filter(pid => pid !== id) || []
-    })));
-    
-    // Remove associated payments
-    setPayments(prev => prev.filter(p => p.personId !== id));
+    // 1. Mark as inactive
+    setPeople(prev =>
+      prev.map(p =>
+        p.id === personId
+          ? { ...p, status: 'inactive', cancellationReason: reason, cancellationDate: new Date() }
+          : p
+      )
+    );
 
-    // Remove from all attendance records
-    setAttendance(prev => prev.map(record => ({
-      ...record,
-      presentIds: record.presentIds.filter(pid => pid !== id),
-      absentIds: record.absentIds.filter(pid => pid !== id),
-      justifiedAbsenceIds: record.justifiedAbsenceIds?.filter(pid => pid !== id) || [],
-      oneTimeAttendees: record.oneTimeAttendees?.filter(pid => pid !== id) || [],
-    })).filter(record => record.presentIds.length > 0 || record.absentIds.length > 0 || (record.justifiedAbsenceIds && record.justifiedAbsenceIds.length > 0) || (record.oneTimeAttendees && record.oneTimeAttendees.length > 0) ));
+    // 2. Unenroll from sessions and waitlists, triggering notifications if spots open up
+    setSessions(prev =>
+      prev.map(session => {
+        if (session.personIds.includes(personId) || session.waitlistPersonIds?.includes(personId)) {
+          // Check for waitlist notification opportunity when unenrolling
+          if (session.personIds.includes(personId) && session.waitlistPersonIds && session.waitlistPersonIds.length > 0) {
+            const nextPersonId = session.waitlistPersonIds[0];
+            const notificationExists = notifications.some(n => n.sessionId === session.id);
+            if (!notificationExists) {
+              const newNotification: AppNotification = {
+                id: `notif-${Date.now()}`,
+                type: 'waitlist',
+                sessionId: session.id,
+                personId: nextPersonId,
+                createdAt: new Date().toISOString(),
+              };
+              setNotifications(prevNotifs => [newNotification, ...prevNotifs]);
+              toast({ title: '¡Cupo Liberado!', description: `Se ha notificado una oportunidad para la lista de espera.` });
+            }
+          }
+          return {
+            ...session,
+            personIds: session.personIds.filter(pid => pid !== personId),
+            waitlistPersonIds: session.waitlistPersonIds?.filter(pid => pid !== personId) || [],
+          };
+        }
+        return session;
+      })
+    );
 
-    // Remove from any pending notifications
-    setNotifications(prev => prev.filter(n => n.personId !== id));
+    // 3. Remove pending notifications for this person
+    setNotifications(prev => prev.filter(n => n.personId !== personId));
 
-    toast({ title: 'Persona Eliminada', description: 'Se han eliminado todos los datos de la persona.' });
+    toast({ title: 'Persona Dada de Baja', description: `${personToDeactivate.name} ha sido marcado como inactivo.` });
   };
 
   const recordPayment = (personId: string, months: number) => {
@@ -488,7 +507,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     if (overbookedSession) {
       const sessionDetails = sessions.find(s => s.id === overbookedSession);
-      const actividad = actividades.find(a => a.id === sessionDetails?.actividadId);
+      constividad = actividades.find(a => a.id === sessionDetails?.actividadId);
       toast({
           variant: "destructive",
           title: sessionDetails?.sessionType === 'Individual' ? "Sesión Individual Ocupada" : "Sesión Llena",
@@ -795,7 +814,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, isTutorialOpen, openTutorial, closeTutorial }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deactivatePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, isTutorialOpen, openTutorial, closeTutorial }}>
       {children}
     </StudioContext.Provider>
   );

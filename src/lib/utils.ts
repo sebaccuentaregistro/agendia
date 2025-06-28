@@ -48,6 +48,9 @@ export function getNextPaymentDate(person: Person): Date | null {
 
 // This function checks if a person's payment is up-to-date.
 export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
+  if (person.status === 'inactive') {
+    return 'Atrasado';
+  }
   if (person.membershipType === 'Diario') {
     return 'Al día';
   }
