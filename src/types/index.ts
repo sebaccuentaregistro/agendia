@@ -26,6 +26,7 @@ export type Person = {
   lastPaymentDate: Date;
   avatar: string;
   vacationPeriods?: VacationPeriod[];
+  healthInfo?: string;
 };
 
 export type Session = {
@@ -69,3 +70,5 @@ export type AppNotification = {
   personId: string; // The person from the waitlist or at risk
   createdAt: string; // ISO string
 };
+
+    

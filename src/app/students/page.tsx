@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -33,12 +33,14 @@ import { exportToCsv } from '@/lib/utils';
 import type { DateRange } from 'react-day-picker';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   phone: z.string().regex(/^\d+$/, { message: 'El teléfono solo debe contener números (sin espacios ni guiones).' }).min(10, { message: 'El teléfono debe tener al menos 10 dígitos.' }),
   membershipType: z.enum(['Mensual', 'Diario'], { required_error: 'Debes seleccionar un tipo de membresía.' }),
+  healthInfo: z.string().optional(),
 });
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
@@ -449,7 +451,7 @@ export default function StudentsPage() {
     }
   }, [searchTerm, searchParams]);
 
-  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual' }});
+  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '' }});
 
   const getPaymentStatusBadge = (status: 'Al día' | 'Atrasado') => {
     if (status === 'Al día') return <Badge className="bg-white/90 text-green-700 hover:bg-white/90 font-bold border-green-200"><CheckCircle2 className="h-4 w-4 mr-1.5" />Al día</Badge>;
@@ -458,13 +460,13 @@ export default function StudentsPage() {
 
   function handleEdit(person: Person) {
     setSelectedPerson(person);
-    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType });
+    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '' });
     setIsDialogOpen(true);
   }
 
   function handleAdd() {
     setSelectedPerson(undefined);
-    form.reset({ name: '', phone: '', membershipType: 'Mensual' });
+    form.reset({ name: '', phone: '', membershipType: 'Mensual', healthInfo: '' });
     setIsDialogOpen(true);
   }
 
@@ -554,6 +556,15 @@ export default function StudentsPage() {
                       </RadioGroup>
                     </FormControl><FormMessage /></FormItem>
                   )}/>
+                  <FormField control={form.control} name="healthInfo" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Consideraciones de Salud (Opcional)</FormLabel>
+                          <FormControl>
+                              <Textarea placeholder="Ej: Lesión de rodilla, embarazo, hipertensión..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )}/>
                   <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
                 </form>
               </Form>
@@ -633,6 +644,19 @@ export default function StudentsPage() {
                                     <span>{(person as any).recoveryBalance} recupero(s) pendiente(s)</span>
                                 </div>
                             )}
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                        <HeartPulse className="h-4 w-4 text-destructive" />
+                                        Consideraciones de Salud
+                                    </h4>
+                                </div>
+                                {person.healthInfo ? (
+                                    <p className="text-sm text-muted-foreground bg-amber-500/10 p-2 rounded-md border border-amber-500/20">{person.healthInfo}</p>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground italic">Sin consideraciones de salud.</p>
+                                )}
+                            </div>
                             <div className="space-y-2 flex flex-col flex-grow">
                                 <div className="flex justify-between items-center">
                                   <h4 className="text-sm font-semibold text-foreground">
@@ -792,3 +816,5 @@ export default function StudentsPage() {
     </div>
   );
 }
+
+    

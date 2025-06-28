@@ -26,14 +26,14 @@ const daysAgo = (days: number): Date => {
 
 export const people: Person[] = [
   // ~11 months ago
-  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(340), membershipType: 'Mensual', lastPaymentDate: daysAgo(25), avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(340), membershipType: 'Mensual', lastPaymentDate: daysAgo(25), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Lesión lumbar crónica. Evitar torsiones profundas.' },
   // ~9 months ago
-  { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(275), membershipType: 'Mensual', lastPaymentDate: daysAgo(15), avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(275), membershipType: 'Mensual', lastPaymentDate: daysAgo(15), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Hipertensión. Controlar la intensidad.' },
   { id: 'stu-3', name: 'Chloe Kim', phone: '555-0103', joinDate: daysAgo(270), membershipType: 'Diario', lastPaymentDate: daysAgo(5), avatar: `https://placehold.co/100x100.png` },
   // ~8 months ago
   { id: 'stu-4', name: 'Benjamin Carter', phone: '555-0104', joinDate: daysAgo(245), membershipType: 'Mensual', lastPaymentDate: daysAgo(10), avatar: `https://placehold.co/100x100.png` },
   // ~6 months ago
-  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: daysAgo(185), membershipType: 'Diario', lastPaymentDate: daysAgo(2), avatar: `https://placehold.co/100x100.png` },
+  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: daysAgo(185), membershipType: 'Diario', lastPaymentDate: daysAgo(2), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Embarazo de 5 meses. Adaptar posturas.' },
   // ~5 months ago
   { id: 'stu-6', name: 'Noah Rodriguez', phone: '555-0106', joinDate: daysAgo(155), membershipType: 'Mensual', lastPaymentDate: daysAgo(29), avatar: `https://placehold.co/100x100.png` },
   { id: 'stu-7', name: 'Ava Wilson', phone: '555-0107', joinDate: daysAgo(150), membershipType: 'Mensual', lastPaymentDate: daysAgo(20), avatar: `https://placehold.co/100x100.png` },
@@ -96,3 +96,5 @@ export const payments: Payment[] = [
 export const attendance: SessionAttendance[] = [];
 
 export const notifications: AppNotification[] = [];
+
+    
