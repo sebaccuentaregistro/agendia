@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -869,6 +869,29 @@ export default function SchedulePage() {
                                   {isFull ? 'LLENO' : `${availableSpots} LUGARES`}
                                 </div>
                               )}
+                              <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2 text-slate-600 dark:text-slate-300">
+                                          <MoreHorizontal className="h-5 w-5" />
+                                          <span className="sr-only">Más opciones</span>
+                                      </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onSelect={() => handleEdit(session)}>
+                                          <Pencil className="mr-2 h-4 w-4" />
+                                          Editar Sesión
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onSelect={() => setSessionToNotify(session)}>
+                                          <Send className="mr-2 h-4 w-4" />
+                                          Notificar Asistentes
+                                      </DropdownMenuItem>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onSelect={() => openDeleteDialog(session)} className="text-destructive focus:text-destructive">
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Eliminar Sesión
+                                      </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </CardHeader>
                           <CardContent className="flex-grow p-4 pt-2 space-y-4">
@@ -935,20 +958,6 @@ export default function SchedulePage() {
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setSessionForPuntual(session)}>
                                         <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onSelect={() => handleEdit(session)}>
-                                        <Pencil className="mr-2 h-4 w-4" />
-                                        Editar Sesión
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => setSessionToNotify(session)}>
-                                        <Send className="mr-2 h-4 w-4" />
-                                        Notificar Asistentes
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem onSelect={() => openDeleteDialog(session)} className="text-destructive focus:text-destructive">
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Eliminar Sesión
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
