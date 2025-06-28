@@ -5,7 +5,7 @@ import React from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo, useState } from 'react';
@@ -152,7 +152,6 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
-  const router = useRouter();
   const searchParams = useSearchParams();
   const dashboardView = searchParams.get('view') === 'management' ? 'management' : 'main';
 
@@ -262,12 +261,12 @@ function DashboardPageContent() {
     <div className="space-y-8">
       <WaitlistNotifications />
       
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-6">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
         {dashboardView === 'main' ? (
           <>
             <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
               <Card className={cn(
-                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
                   hasOverdue ? "hover:!border-destructive" : "hover:!border-green-500"
               )}>
                   <div className={cn(
@@ -276,15 +275,15 @@ function DashboardPageContent() {
                   )}>
                       <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-base font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                  <CardTitle className={cn("text-sm font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
                       Atrasados
                   </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
               </Card>
             </Link>
             <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
               <Card className={cn(
-                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
                   hasPendingRecovery ? "hover:!border-yellow-500" : "hover:!border-green-500"
               )}>
                   <div className={cn(
@@ -293,15 +292,15 @@ function DashboardPageContent() {
                   )}>
                       <CalendarClock className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-base font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-sm font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
                       Recuperos
                   </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
+                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
               </Card>
             </Link>
             <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
               <Card className={cn(
-                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 aspect-square",
+                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
                   hasOnVacation ? "hover:!border-blue-500" : "hover:!border-green-500"
               )}>
                   <div className={cn(
@@ -310,48 +309,57 @@ function DashboardPageContent() {
                   )}>
                       <Plane className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-base font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-sm font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
                       Vacaciones
                   </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
               </Card>
             </Link>
             {mainCards.map((item) => (
               <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null && (
-                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                      <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     )}
                 </Card>
               </Link>
             ))}
             <Link href="/dashboard?view=management" className="transition-transform hover:-translate-y-1">
-              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
+              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Settings className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
-                   <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                   <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
               </Card>
             </Link>
           </>
         ) : (
           <>
+            <Link href="/dashboard" className="transition-transform hover:-translate-y-1">
+              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <ArrowLeft className="h-4 w-4" />
+                  </div>
+                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">Volver</CardTitle>
+                   <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+              </Card>
+            </Link>
             {managementCards.map((item) => (
               <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null ? (
-                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                      <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     ) : (
-                      <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                      <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
                     )}
                 </Card>
               </Link>
@@ -519,3 +527,5 @@ export default function DashboardPage() {
     </React.Suspense>
   );
 }
+
+    
