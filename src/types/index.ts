@@ -72,4 +72,10 @@ export type AppNotification = {
   createdAt: string; // ISO string
 };
 
+export type Tariff = {
+  id: string;
+  name: string;
+  price: number;
+  description?: string;
+};
     

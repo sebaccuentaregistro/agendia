@@ -1,4 +1,4 @@
-import type { Person, Specialist, Actividad, Session, Payment, Space, SessionAttendance, AppNotification } from '@/types';
+import type { Person, Specialist, Actividad, Session, Payment, Space, SessionAttendance, AppNotification, Tariff } from '@/types';
 
 // Use a fixed reference date to make initial data deterministic
 const refDate = new Date('2024-07-15T10:00:00Z');
@@ -97,4 +97,11 @@ export const attendance: SessionAttendance[] = [];
 
 export const notifications: AppNotification[] = [];
 
+export const tariffs: Tariff[] = [
+  { id: 'tariff-1', name: 'Clase Individual', price: 2500, description: 'Valor por una única clase (drop-in).' },
+  { id: 'tariff-2', name: '1 Clase por Semana', price: 8000, description: 'Plan mensual.' },
+  { id: 'tariff-3', name: '2 Clases por Semana', price: 12000, description: 'Plan mensual.' },
+  { id: 'tariff-4', name: '3 Clases por Semana', price: 15000, description: 'Plan mensual.' },
+  { id: 'tariff-5', name: 'Pase Libre', price: 18000, description: 'Acceso ilimitado a clases grupales.' },
+];
     

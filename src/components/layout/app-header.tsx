@@ -16,6 +16,7 @@ const navItems = [
   { href: "/instructors", label: "Especialistas" },
   { href: "/specializations", label: "Actividades" },
   { href: "/spaces", label: "Espacios" },
+  { href: "/tariffs", label: "Aranceles" },
   { href: "/statistics", label: "Estadísticas" },
 ];
 

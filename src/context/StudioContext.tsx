@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff } from '@/types';
 import { 
   actividades as initialActividades, 
   specialists as initialSpecialists,
@@ -11,7 +11,8 @@ import {
   payments as initialPayments,
   spaces as initialSpaces,
   attendance as initialAttendance,
-  notifications as initialNotifications
+  notifications as initialNotifications,
+  tariffs as initialTariffs
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import * as Utils from '@/lib/utils';
@@ -26,6 +27,7 @@ interface StudioContextType {
   spaces: Space[];
   attendance: SessionAttendance[];
   notifications: AppNotification[];
+  tariffs: Tariff[];
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
   updateActividad: (actividad: Actividad) => void;
   deleteActividad: (actividadId: string) => void;
@@ -54,6 +56,9 @@ interface StudioContextType {
   addToWaitlist: (sessionId: string, personId: string) => void;
   enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => void;
   dismissNotification: (notificationId: string) => void;
+  addTariff: (tariff: Omit<Tariff, 'id'>) => void;
+  updateTariff: (tariff: Tariff) => void;
+  deleteTariff: (tariffId: string) => void;
   isTutorialOpen: boolean;
   openTutorial: () => void;
   closeTutorial: () => void;
@@ -106,6 +111,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [tariffs, setTariffs] = useState<Tariff[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
@@ -127,6 +133,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setPayments(loadFromLocalStorage('yoga-payments', initialPayments));
     setAttendance(loadFromLocalStorage('yoga-attendance', initialAttendance));
     setNotifications(loadFromLocalStorage('yoga-notifications', initialNotifications));
+    setTariffs(loadFromLocalStorage('yoga-tariffs', initialTariffs));
     setIsInitialized(true); // Mark as initialized
   }, []);
 
@@ -139,6 +146,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-spaces', JSON.stringify(spaces)); }, [spaces, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-attendance', JSON.stringify(attendance)); }, [attendance, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-notifications', JSON.stringify(notifications)); }, [notifications, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-tariffs', JSON.stringify(tariffs)); }, [tariffs, isInitialized]);
   
   const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
@@ -763,8 +771,31 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     dismissNotification(notificationId);
   };
 
+  const addTariff = (tariff: Omit<Tariff, 'id'>) => {
+    if (tariffs.some(t => t.name.trim().toLowerCase() === tariff.name.trim().toLowerCase())) {
+        toast({ variant: "destructive", title: "Arancel Duplicado", description: "Ya existe un arancel con este nombre." });
+        return;
+    }
+    setTariffs(prev => [...prev, { ...tariff, id: `tariff-${Date.now()}` }]);
+    toast({ title: 'Arancel Creado', description: 'El nuevo arancel ha sido añadido.' });
+  };
+
+  const updateTariff = (updated: Tariff) => {
+    if (tariffs.some(t => t.id !== updated.id && t.name.trim().toLowerCase() === updated.name.trim().toLowerCase())) {
+        toast({ variant: "destructive", title: "Nombre Duplicado", description: "Ya existe otro arancel con este nombre." });
+        return;
+    }
+    setTariffs(prev => prev.map(t => t.id === updated.id ? updated : t));
+    toast({ title: 'Arancel Actualizado', description: 'El precio ha sido actualizado correctamente.' });
+  };
+  
+  const deleteTariff = (id: string) => {
+      setTariffs(prev => prev.filter(t => t.id !== id));
+      toast({ title: 'Arancel Eliminado' });
+  };
+
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, isTutorialOpen, openTutorial, closeTutorial }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, isTutorialOpen, openTutorial, closeTutorial }}>
       {children}
     </StudioContext.Provider>
   );
