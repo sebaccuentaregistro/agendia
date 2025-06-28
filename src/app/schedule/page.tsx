@@ -434,6 +434,7 @@ export default function SchedulePage() {
     timeOfDay: 'all',
   });
   const searchParams = useSearchParams();
+  const [conflictInfo, setConflictInfo] = useState<{ specialist: string | null; space: string | null }>({ specialist: null, space: null });
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -463,6 +464,51 @@ export default function SchedulePage() {
   
   const watchedActividadId = form.watch('actividadId');
   const watchedInstructorId = form.watch('instructorId');
+  const watchedDay = form.watch('dayOfWeek');
+  const watchedTime = form.watch('time');
+  const watchedSpaceId = form.watch('spaceId');
+
+  useEffect(() => {
+    if (!isDialogOpen) return;
+
+    if (!watchedDay || !watchedTime || !watchedInstructorId || !watchedSpaceId) {
+      setConflictInfo({ specialist: null, space: null });
+      return;
+    }
+
+    const checkConflicts = () => {
+      let specialistMsg: string | null = null;
+      let spaceMsg: string | null = null;
+
+      const specialistConflictSession = sessions.find(s =>
+        s.id !== (selectedSession?.id || '') &&
+        s.instructorId === watchedInstructorId &&
+        s.dayOfWeek === watchedDay &&
+        s.time === watchedTime
+      );
+
+      if (specialistConflictSession) {
+        const specialist = specialists.find(sp => sp.id === watchedInstructorId);
+        specialistMsg = `${specialist?.name || 'Este especialista'} ya tiene otra clase este día a las ${watchedTime}. Elegí otro horario o especialista.`;
+      }
+
+      const spaceConflictSession = sessions.find(s =>
+        s.id !== (selectedSession?.id || '') &&
+        s.spaceId === watchedSpaceId &&
+        s.dayOfWeek === watchedDay &&
+        s.time === watchedTime
+      );
+
+      if (spaceConflictSession) {
+        const space = spaces.find(sp => sp.id === watchedSpaceId);
+        spaceMsg = `${space?.name || 'Este espacio'} ya está en uso este día a las ${watchedTime}. Elegí otro horario o espacio.`;
+      }
+
+      setConflictInfo({ specialist: specialistMsg, space: spaceMsg });
+    };
+
+    checkConflicts();
+  }, [watchedDay, watchedTime, watchedInstructorId, watchedSpaceId, sessions, specialists, spaces, selectedSession, isDialogOpen]);
 
   const availableSpecialists = useMemo(() => {
     if (!watchedActividadId) return specialists;
@@ -657,28 +703,36 @@ export default function SchedulePage() {
                             </Select><FormMessage />
                             </FormItem>
                         )}/>
-                        <FormField control={form.control} name="instructorId" render={({ field }) => (
+                        <FormField control={form.control} name="instructorId" render={({ field, fieldState }) => (
                             <FormItem>
-                            <FormLabel>Especialista</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un especialista" /></SelectTrigger></FormControl>
-                                <SelectContent>
-                                    {availableSpecialists.length > 0 ? (
-                                        availableSpecialists.map((i) => (<SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>))
-                                    ) : (
-                                        <SelectItem value="no-options" disabled>No hay especialistas para esta actividad</SelectItem>
-                                    )}
-                                </SelectContent>
-                            </Select><FormMessage />
+                                <FormLabel>Especialista</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un especialista" /></SelectTrigger></FormControl>
+                                    <SelectContent>
+                                        {availableSpecialists.length > 0 ? (
+                                            availableSpecialists.map((i) => (<SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>))
+                                        ) : (
+                                            <SelectItem value="no-options" disabled>No hay especialistas para esta actividad</SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                {conflictInfo.specialist && !fieldState.error && (
+                                  <p className="text-sm text-destructive">{conflictInfo.specialist}</p>
+                                )}
                             </FormItem>
                         )}/>
-                        <FormField control={form.control} name="spaceId" render={({ field }) => (
+                        <FormField control={form.control} name="spaceId" render={({ field, fieldState }) => (
                             <FormItem>
-                            <FormLabel>Espacio</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                                <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un espacio" /></SelectTrigger></FormControl>
-                                <SelectContent>{spaces.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name} ({s.capacity} pers.)</SelectItem>))}</SelectContent>
-                            </Select><FormMessage />
+                                <FormLabel>Espacio</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un espacio" /></SelectTrigger></FormControl>
+                                    <SelectContent>{spaces.map((s) => (<SelectItem key={s.id} value={s.id}>{s.name} ({s.capacity} pers.)</SelectItem>))}</SelectContent>
+                                </Select>
+                                <FormMessage />
+                                {conflictInfo.space && !fieldState.error && (
+                                  <p className="text-sm text-destructive">{conflictInfo.space}</p>
+                                )}
                             </FormItem>
                         )}/>
                         <div className="grid grid-cols-2 gap-4">
@@ -699,7 +753,7 @@ export default function SchedulePage() {
                             </FormItem>
                             )}/>
                         </div>
-                        <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
+                        <DialogFooter><Button type="submit" disabled={!!conflictInfo.specialist || !!conflictInfo.space}>Guardar Cambios</Button></DialogFooter>
                         </form>
                     </Form>
                 </DialogContent>
