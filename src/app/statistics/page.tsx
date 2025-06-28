@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -100,7 +99,7 @@ export default function StatisticsPage() {
 
     return Object.entries(popularity)
       .map(([actividadId, count]) => {
-        const actividad = actividades.find(a => a.id ===ividadId);
+        const actividad = actividades.find(a => a.id === actividadId);
         return {
           name: actividad?.name || 'Desconocido',
           value: count,
