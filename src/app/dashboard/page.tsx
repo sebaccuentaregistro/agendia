@@ -375,7 +375,7 @@ function DashboardPageContent() {
               <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
                 <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-md rounded-xl">
                     <SelectValue placeholder="Especialista" />
                   </SelectTrigger>
                   <SelectContent>
@@ -384,7 +384,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-md rounded-xl">
                     <SelectValue placeholder="Actividad" />
                   </SelectTrigger>
                   <SelectContent>
@@ -393,7 +393,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-md rounded-xl">
                     <SelectValue placeholder="Espacio" />
                   </SelectTrigger>
                   <SelectContent>
@@ -402,7 +402,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-md rounded-xl">
                     <SelectValue placeholder="Horario" />
                   </SelectTrigger>
                   <SelectContent>
