@@ -768,14 +768,14 @@ export default function SchedulePage() {
         <CardContent className="p-0">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <Select value={filters.dayOfWeek} onValueChange={(value) => handleFilterChange('dayOfWeek', value)}>
-              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Día de la semana" /></SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Día de la semana" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los días</SelectItem>
                 {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Momento del día" /></SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Momento del día" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todo el día</SelectItem>
                 <SelectItem value="Mañana">Mañana</SelectItem>
@@ -784,21 +784,21 @@ export default function SchedulePage() {
               </SelectContent>
             </Select>
             <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Especialista" /></SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Especialista" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los especialistas</SelectItem>
                 {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Actividad" /></SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Actividad" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las actividades</SelectItem>
                 {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-              <SelectTrigger className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"><SelectValue placeholder="Espacio" /></SelectTrigger>
+              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Espacio" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos los espacios</SelectItem>
                 {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}

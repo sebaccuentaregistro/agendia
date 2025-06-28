@@ -106,7 +106,7 @@ export default function SpecialistsPage() {
               placeholder="Buscar por nombre..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-64 bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"
+              className="w-full md:w-64 bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
           />
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>

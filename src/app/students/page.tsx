@@ -671,7 +671,7 @@ export default function StudentsPage() {
     <div>
       <PageHeader title="Personas">
         <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
-          <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-64 bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-xl"/>
+          <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-64 bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"/>
           <Button variant="outline" onClick={handleExportPeople}>
             <FileDown className="mr-2 h-4 w-4" />
             Exportar
