@@ -376,15 +376,6 @@ function DashboardPageContent() {
           </>
         ) : (
           <>
-            <Link href="/dashboard" className="transition-transform hover:-translate-y-1">
-              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <ArrowLeft className="h-4 w-4" />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">Volver</CardTitle>
-                   <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-              </Card>
-            </Link>
             {managementCards.map((item) => (
               <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
                 <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
