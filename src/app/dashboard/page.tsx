@@ -283,7 +283,7 @@ function DashboardPageContent() {
     <div className="space-y-8">
       {isInitialCheckDone && <OnboardingTutorial isOpen={isTutorialOpen} onClose={handleCloseTutorial} />}
 
-      <PageHeader title="Panel de Control">
+      <div className="mb-8 flex justify-end">
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -297,7 +297,7 @@ function DashboardPageContent() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-      </PageHeader>
+      </div>
 
       <WaitlistNotifications />
       
@@ -415,7 +415,7 @@ function DashboardPageContent() {
               <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
                 <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
                     <SelectValue placeholder="Especialista" />
                   </SelectTrigger>
                   <SelectContent>
@@ -424,7 +424,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
                     <SelectValue placeholder="Actividad" />
                   </SelectTrigger>
                   <SelectContent>
@@ -433,7 +433,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
                     <SelectValue placeholder="Espacio" />
                   </SelectTrigger>
                   <SelectContent>
@@ -442,7 +442,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
                     <SelectValue placeholder="Horario" />
                   </SelectTrigger>
                   <SelectContent>
@@ -479,7 +479,7 @@ function DashboardPageContent() {
                       <li 
                         key={session.id}
                         className={cn(
-                          "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/50 dark:bg-zinc-800/50 border-white/20 hover:bg-white/80 dark:hover:bg-zinc-800/80 shadow-md",
+                          "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/50 dark:bg-zinc-800/50 border-white/20 shadow-md hover:shadow-lg",
                           isFull && "bg-pink-500/20 border-pink-500/30",
                           isNearlyFull && "bg-amber-500/10 border-amber-500/20"
                         )}
