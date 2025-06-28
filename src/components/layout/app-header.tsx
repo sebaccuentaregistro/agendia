@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ThemeToggle } from '../theme-toggle';
 
 const navItems = [
   { href: "/dashboard", label: "Inicio" },
@@ -50,7 +51,7 @@ export default function AppHeader() {
           })}
         </nav>
       </div>
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
         {pathname === '/dashboard' && (
           <TooltipProvider>
             <Tooltip>
@@ -66,6 +67,7 @@ export default function AppHeader() {
             </Tooltip>
           </TooltipProvider>
         )}
+        <ThemeToggle />
       </div>
     </header>
   );
