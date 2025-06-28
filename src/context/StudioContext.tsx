@@ -175,9 +175,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         const personSessions = sessions.filter(s => s.personIds.includes(person.id));
         if (personSessions.length === 0) return;
         
-        const existingNotification = notifications.find(n => n.type === 'churnRisk' && n.personId === person.id);
-        if (existingNotification) return;
-
         let hasChurnRisk = false;
 
         for (const session of personSessions) {
@@ -200,12 +197,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
         
         if (hasChurnRisk) {
-            churnNotifications.push({
-                id: `notif-churn-${person.id}`,
-                type: 'churnRisk',
-                personId: person.id,
-                createdAt: new Date().toISOString(),
-            });
+            const existingNotification = notifications.find(n => n.type === 'churnRisk' && n.personId === person.id);
+            if (!existingNotification) {
+                churnNotifications.push({
+                    id: `notif-churn-${person.id}`,
+                    type: 'churnRisk',
+                    personId: person.id,
+                    createdAt: new Date().toISOString(),
+                });
+            }
         }
     });
 
@@ -214,7 +214,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...churnNotifications
     ]);
 
-  }, [isInitialized, people, sessions, attendance, notifications, isPersonOnVacation]);
+  }, [isInitialized, people, sessions, attendance, isPersonOnVacation]);
 
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
