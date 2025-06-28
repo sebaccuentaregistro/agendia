@@ -68,7 +68,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
         
         return {
             ...session,
-            specialist: specialists.find(i => i.id === session.instructorId),
+            specialist: specialists.find(i => i.id === item.instructorId),
             actividad: actividades.find(a => a.id === session.actividadId),
             space,
             isPermanentlyFull: activeEnrolledCount >= capacity,
@@ -372,7 +372,7 @@ const justifyAbsenceSchema = z.object({
 });
 
 function JustifyAbsenceDialog({ person, onClose }: { person: Person; onClose: () => void; }) {
-  const { sessions, especialistas, actividades, addJustifiedAbsence } = useStudio();
+  const { sessions, specialists, actividades, addJustifiedAbsence } = useStudio();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const form = useForm<z.infer<typeof justifyAbsenceSchema>>({
@@ -387,10 +387,10 @@ function JustifyAbsenceDialog({ person, onClose }: { person: Person; onClose: ()
       .map(session => ({
         ...session,
         actividad: actividades.find(a => a.id === session.actividadId)?.name || 'N/A',
-        specialist: especialistas.find(s => s.id === session.instructorId)?.name || 'N/A',
+        specialist: specialists.find(s => s.id === session.instructorId)?.name || 'N/A',
       }))
       .sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
-  }, [sessions, person.id, actividades, especialistas]);
+  }, [sessions, person.id, actividades, specialists]);
 
   const selectedSession = useMemo(() => {
     return enrolledSessions.find(s => s.id === watchedSessionId);
