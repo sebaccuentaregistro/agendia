@@ -117,20 +117,20 @@ export default function TariffsPage() {
       
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {tariffs.sort((a,b) => a.price - b.price).map((tariff) => (
-          <Card key={tariff.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5 hover:border-primary/30">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-3 text-slate-800 dark:text-slate-100">
-                    <DollarSign className="h-6 w-6 text-primary" />
+          <Card key={tariff.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary/30">
+            <CardHeader className="p-4">
+                <CardTitle className="flex items-center gap-2 text-lg text-slate-800 dark:text-slate-100">
+                    <DollarSign className="h-5 w-5 text-primary" />
                     <span>{tariff.name}</span>
                 </CardTitle>
                 {tariff.description && (
                     <CardDescription>{tariff.description}</CardDescription>
                 )}
             </CardHeader>
-            <CardContent className="flex-grow flex items-center justify-center">
-                <p className="text-5xl font-bold text-slate-800 dark:text-slate-100">{formatPrice(tariff.price)}</p>
+            <CardContent className="p-4 flex-grow flex items-center justify-center">
+                <p className="text-4xl font-bold text-slate-800 dark:text-slate-100">{formatPrice(tariff.price)}</p>
             </CardContent>
-            <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-3">
+            <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2">
               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(tariff)}>
                 <Pencil className="h-4 w-4" />
                 <span className="sr-only">Editar</span>
