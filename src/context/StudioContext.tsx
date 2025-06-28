@@ -231,13 +231,32 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deletePerson = (id: string) => {
+    // Remove person from main list
     setPeople(prev => prev.filter(p => p.id !== id));
-    setSessions(prev => prev.map(c => ({ 
-      ...c, 
-      personIds: c.personIds.filter(pid => pid !== id),
-      waitlistPersonIds: c.waitlistPersonIds?.filter(pid => pid !== id) || []
+    
+    // Remove person from all session enrollments (fixed and waitlist)
+    setSessions(prev => prev.map(session => ({ 
+      ...session, 
+      personIds: session.personIds.filter(pid => pid !== id),
+      waitlistPersonIds: session.waitlistPersonIds?.filter(pid => pid !== id) || []
     })));
+    
+    // Remove associated payments
     setPayments(prev => prev.filter(p => p.personId !== id));
+
+    // Remove from all attendance records
+    setAttendance(prev => prev.map(record => ({
+      ...record,
+      presentIds: record.presentIds.filter(pid => pid !== id),
+      absentIds: record.absentIds.filter(pid => pid !== id),
+      justifiedAbsenceIds: record.justifiedAbsenceIds?.filter(pid => pid !== id) || [],
+      oneTimeAttendees: record.oneTimeAttendees?.filter(pid => pid !== id) || [],
+    })));
+
+    // Remove from any pending notifications
+    setNotifications(prev => prev.filter(n => n.personId !== id));
+
+    toast({ title: 'Persona Eliminada', description: 'Se han eliminado todos los datos de la persona.' });
   };
 
   const recordPayment = (personId: string) => {
