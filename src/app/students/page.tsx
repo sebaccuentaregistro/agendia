@@ -35,6 +35,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 
 const formSchema = z.object({
@@ -589,8 +590,23 @@ export default function StudentsPage() {
                         <div className="p-4 bg-gradient-to-br from-primary to-fuchsia-600 text-primary-foreground">
                             <div className="flex flex-row items-start justify-between">
                                 <div className="flex-grow">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 flex-wrap">
                                         <h3 className="text-lg font-bold text-white">{person.name}</h3>
+                                        {(person as any).recoveryBalance > 0 && (
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <div className="flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-900 shadow-sm cursor-default">
+                                                            <CalendarClock className="h-3.5 w-3.5" />
+                                                            <span>{(person as any).recoveryBalance}</span>
+                                                        </div>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        <p>{(person as any).recoveryBalance} clase(s) para recuperar</p>
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        )}
                                         {person.healthInfo && (
                                             <Popover>
                                                 <PopoverTrigger asChild>
@@ -690,12 +706,6 @@ export default function StudentsPage() {
                             </div>
                         </div>
                         <CardContent className="flex flex-col flex-grow space-y-4 p-4">
-                            {(person as any).recoveryBalance > 0 && (
-                                <div className="flex items-center gap-2 text-sm text-yellow-600 dark:text-yellow-400 font-semibold p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20">
-                                    <CalendarClock className="h-4 w-4" />
-                                    <span>{(person as any).recoveryBalance} recupero(s) pendiente(s)</span>
-                                </div>
-                            )}
                             <div className="space-y-2 flex flex-col flex-grow">
                                 <div className="flex justify-between items-center">
                                   <h4 className="text-sm font-semibold text-foreground">
