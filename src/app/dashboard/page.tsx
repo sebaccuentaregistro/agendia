@@ -439,7 +439,7 @@ function DashboardPageContent() {
                       <li 
                         key={session.id}
                         className={cn(
-                          "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/30 dark:bg-white/10 border-white/20 hover:bg-white/50 dark:hover:bg-white/20 hover:shadow-md",
+                          "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/50 dark:bg-zinc-800/50 border-white/20 hover:bg-white/80 dark:hover:bg-zinc-800/80 shadow-md",
                           isFull && "bg-pink-500/20 border-pink-500/30",
                           isNearlyFull && "bg-amber-500/10 border-amber-500/20"
                         )}
@@ -455,12 +455,12 @@ function DashboardPageContent() {
                             <div>
                               <p className="font-bold text-primary">{formatTime(session.time)}</p>
                               <p className={cn(
-                                "text-sm font-semibold",
+                                "text-base font-bold",
                                 isFull 
                                   ? "text-pink-600 dark:text-pink-400" 
                                   : isNearlyFull 
                                   ? "text-amber-600 dark:text-amber-500" 
-                                  : "text-slate-600 dark:text-slate-400"
+                                  : "text-slate-700 dark:text-slate-200"
                               )}>
                                 {enrolledCount}/{capacity} inscriptos
                               </p>
@@ -527,5 +527,3 @@ export default function DashboardPage() {
     </React.Suspense>
   );
 }
-
-    
