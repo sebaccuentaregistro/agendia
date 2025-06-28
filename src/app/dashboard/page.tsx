@@ -276,10 +276,10 @@ function DashboardPageContent() {
                   )}>
                       <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-sm font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                  <CardTitle className={cn("text-base font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
                       Atrasados
                   </CardTitle>
-                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
               </Card>
             </Link>
             <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
@@ -293,10 +293,10 @@ function DashboardPageContent() {
                   )}>
                       <CalendarClock className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-sm font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-base font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
                       Recuperos
                   </CardTitle>
-                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
+                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
               </Card>
             </Link>
             <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
@@ -310,10 +310,10 @@ function DashboardPageContent() {
                   )}>
                       <Plane className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-sm font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-base font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
                       Vacaciones
                   </CardTitle>
-                  <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
               </Card>
             </Link>
             {mainCards.map((item) => (
@@ -322,9 +322,9 @@ function DashboardPageContent() {
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null && (
-                      <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     )}
                 </Card>
               </Link>
@@ -334,8 +334,8 @@ function DashboardPageContent() {
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Settings className="h-4 w-4" />
                   </div>
-                  <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
-                   <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                  <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                   <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
               </Card>
             </Link>
           </>
@@ -347,11 +347,11 @@ function DashboardPageContent() {
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                         <item.icon className="h-4 w-4" />
                     </div>
-                    <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                    <CardTitle className="text-base font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
                     {item.count !== null ? (
-                      <p className="text-xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
                     ) : (
-                      <p className="text-xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                      <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
                     )}
                 </Card>
               </Link>
