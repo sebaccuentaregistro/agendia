@@ -1,14 +1,14 @@
 
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { Session } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
@@ -20,6 +20,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { OnboardingTutorial } from '@/components/onboarding-tutorial';
 
 function WaitlistNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -152,6 +153,27 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isInitialCheckDone, setIsInitialCheckDone] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
+      if (!tutorialCompleted) {
+        setIsTutorialOpen(true);
+      }
+      setIsInitialCheckDone(true);
+    }
+  }, []);
+
+  const handleCloseTutorial = () => {
+    setIsTutorialOpen(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('agendia-tutorial-completed', 'true');
+    }
+  };
+
+
   const searchParams = useSearchParams();
   const dashboardView = searchParams.get('view') === 'management' ? 'management' : 'main';
 
@@ -259,6 +281,24 @@ function DashboardPageContent() {
 
   return (
     <div className="space-y-8">
+      {isInitialCheckDone && <OnboardingTutorial isOpen={isTutorialOpen} onClose={handleCloseTutorial} />}
+
+      <PageHeader title="Panel de Control">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="outline" size="icon" onClick={() => setIsTutorialOpen(true)}>
+                <HelpCircle className="h-5 w-5" />
+                <span className="sr-only">Mostrar tutorial</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Mostrar tutorial de bienvenida</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </PageHeader>
+
       <WaitlistNotifications />
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -369,13 +409,13 @@ function DashboardPageContent() {
       </div>
 
       {dashboardView === 'main' && (
-        <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
+        <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border-white/20">
           <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
                 <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-md rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 shadow-sm rounded-xl">
                     <SelectValue placeholder="Especialista" />
                   </SelectTrigger>
                   <SelectContent>
@@ -384,7 +424,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-md rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 shadow-sm rounded-xl">
                     <SelectValue placeholder="Actividad" />
                   </SelectTrigger>
                   <SelectContent>
@@ -393,7 +433,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-md rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 shadow-sm rounded-xl">
                     <SelectValue placeholder="Espacio" />
                   </SelectTrigger>
                   <SelectContent>
@@ -402,7 +442,7 @@ function DashboardPageContent() {
                   </SelectContent>
                 </Select>
                 <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-card border shadow-md rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 shadow-sm rounded-xl">
                     <SelectValue placeholder="Horario" />
                   </SelectTrigger>
                   <SelectContent>
@@ -447,8 +487,8 @@ function DashboardPageContent() {
                         <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
                           <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Sesión'}</p>
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
-                            <span className="flex items-center gap-1.5"><UserIcon className="h-3 w-3" />{specialist?.name || 'N/A'}</span>
-                            <span className="flex items-center gap-1.5"><DoorOpen className="h-3 w-3" />{space?.name || 'N/A'}</span>
+                            <span className="flex items-center gap-1.5"><UserIcon className="h-4 w-4" />{specialist?.name || 'N/A'}</span>
+                            <span className="flex items-center gap-1.5"><DoorOpen className="h-4 w-4" />{space?.name || 'N/A'}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 text-right">
