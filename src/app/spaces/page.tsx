@@ -90,7 +90,7 @@ export default function SpacesPage() {
   return (
     <div>
       <PageHeader title="Espacios">
-        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+        <div className="flex flex-col gap-2 md:flex-row">
           <Input
             placeholder="Buscar por nombre..."
             value={searchTerm}

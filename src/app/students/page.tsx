@@ -670,7 +670,7 @@ export default function StudentsPage() {
   return (
     <div>
       <PageHeader title="Personas">
-        <div className="flex w-full items-center justify-end gap-2 md:w-auto">
+        <div className="flex items-center justify-end gap-2">
           <Button variant="outline" onClick={handleExportPeople}>
             <FileDown className="mr-2 h-4 w-4" />
             Exportar
