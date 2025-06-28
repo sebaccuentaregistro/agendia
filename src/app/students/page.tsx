@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session } from '@/types';
-import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -670,42 +670,49 @@ export default function StudentsPage() {
   return (
     <div>
       <PageHeader title="Personas">
-        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row">
+        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
           <Input placeholder="Buscar por nombre..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full md:w-64 bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"/>
-          <Button variant="outline" onClick={handleExportPeople}>
-            <FileDown className="mr-2 h-4 w-4" />
-            Exportar
-          </Button>
-          <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedPerson(undefined); }}>
-            <DialogTrigger asChild><Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Persona</Button></DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader><DialogTitle>{selectedPerson ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle></DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                  <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                  <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)}/>
-                  <FormField control={form.control} name="membershipType" render={({ field }) => (
-                    <FormItem><FormLabel>Membresía</FormLabel><FormControl>
-                      <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4 pt-2">
-                        <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Mensual" /></FormControl><FormLabel className="font-normal">Mensual</FormLabel></FormItem>
-                        <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Diario" /></FormControl><FormLabel className="font-normal">Diario</FormLabel></FormItem>
-                      </RadioGroup>
-                    </FormControl><FormMessage /></FormItem>
-                  )}/>
-                  <FormField control={form.control} name="healthInfo" render={({ field }) => (
-                      <FormItem>
-                          <FormLabel>Consideraciones de Salud (Opcional)</FormLabel>
-                          <FormControl>
-                              <Textarea placeholder="Ej: Lesión de rodilla, embarazo, hipertensión..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                      </FormItem>
-                  )}/>
-                  <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
+          <div className="flex items-center gap-2 self-end md:self-auto">
+            <Button variant="outline" onClick={handleExportPeople}>
+              <FileDown className="mr-2 h-4 w-4" />
+              Exportar
+            </Button>
+            <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) setSelectedPerson(undefined); }}>
+              <DialogTrigger asChild>
+                <Button onClick={handleAdd} size="icon">
+                  <UserPlus className="h-5 w-5" />
+                  <span className="sr-only">Añadir Persona</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader><DialogTitle>{selectedPerson ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle></DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                    <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                    <FormField control={form.control} name="membershipType" render={({ field }) => (
+                      <FormItem><FormLabel>Membresía</FormLabel><FormControl>
+                        <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4 pt-2">
+                          <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Mensual" /></FormControl><FormLabel className="font-normal">Mensual</FormLabel></FormItem>
+                          <FormItem className="flex items-center space-x-2"><FormControl><RadioGroupItem value="Diario" /></FormControl><FormLabel className="font-normal">Diario</FormLabel></FormItem>
+                        </RadioGroup>
+                      </FormControl><FormMessage /></FormItem>
+                    )}/>
+                    <FormField control={form.control} name="healthInfo" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Consideraciones de Salud (Opcional)</FormLabel>
+                            <FormControl>
+                                <Textarea placeholder="Ej: Lesión de rodilla, embarazo, hipertensión..." {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}/>
+                    <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </PageHeader>
       
@@ -741,10 +748,10 @@ export default function StudentsPage() {
                                         {(person as any).recoveryBalance > 0 && (
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <div className="flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-900 shadow-sm cursor-pointer hover:bg-amber-500 transition-colors">
+                                                    <button className="flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-900 shadow-sm cursor-pointer hover:bg-amber-500 transition-colors">
                                                         <CalendarClock className="h-3.5 w-3.5" />
                                                         <span>{(person as any).recoveryBalance}</span>
-                                                    </div>
+                                                    </button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-80">
                                                     <div className="grid gap-4">
