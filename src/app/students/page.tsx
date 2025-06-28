@@ -68,7 +68,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
         
         return {
             ...session,
-            specialist: specialists.find(i => i.id === item.instructorId),
+            specialist: specialists.find(i => i.id === session.instructorId),
             actividad: actividades.find(a => a.id === session.actividadId),
             space,
             isPermanentlyFull: activeEnrolledCount >= capacity,
@@ -719,6 +719,18 @@ export default function StudentsPage() {
                 const hasPayments = payments.some(p => p.personId === person.id);
                 const enrolledSessions = sessions.filter(session => session.personIds.includes(person.id)).sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
                 const sortedVacations = person.vacationPeriods?.sort((a,b) => a.startDate.getTime() - b.startDate.getTime()) || [];
+                const personRecoveryClasses = attendance
+                  .filter(record => record.justifiedAbsenceIds?.includes(person.id))
+                  .map(record => {
+                      const session = sessions.find(s => s.id === record.sessionId);
+                      const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                      return {
+                          date: record.date,
+                          actividadName: actividad?.name || 'Clase eliminada'
+                      };
+                  })
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
                 return (
                     <Card key={person.id} className="flex flex-col rounded-2xl shadow-lg overflow-hidden border border-slate-200/60 dark:border-zinc-700/60 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card">
                         <div className="p-4 bg-gradient-to-br from-primary to-fuchsia-600 text-primary-foreground">
@@ -727,19 +739,41 @@ export default function StudentsPage() {
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h3 className="text-lg font-bold text-white">{person.name}</h3>
                                         {(person as any).recoveryBalance > 0 && (
-                                            <TooltipProvider>
-                                                <Tooltip>
-                                                    <TooltipTrigger asChild>
-                                                        <div className="flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-900 shadow-sm cursor-default">
-                                                            <CalendarClock className="h-3.5 w-3.5" />
-                                                            <span>{(person as any).recoveryBalance}</span>
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <div className="flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-900 shadow-sm cursor-pointer hover:bg-amber-500 transition-colors">
+                                                        <CalendarClock className="h-3.5 w-3.5" />
+                                                        <span>{(person as any).recoveryBalance}</span>
+                                                    </div>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-80">
+                                                    <div className="grid gap-4">
+                                                        <div className="space-y-2">
+                                                            <h4 className="font-medium leading-none">Clases para Recuperar</h4>
+                                                            <p className="text-sm text-muted-foreground">
+                                                                Tiene {(person as any).recoveryBalance} clase(s) pendiente(s) de recuperar.
+                                                            </p>
                                                         </div>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>{(person as any).recoveryBalance} clase(s) para recuperar</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </TooltipProvider>
+                                                        <div className="space-y-2">
+                                                            <h5 className="text-xs font-semibold uppercase text-muted-foreground">Créditos de Ausencias Justificadas</h5>
+                                                            <ScrollArea className="h-32">
+                                                                <div className="space-y-2 pr-2">
+                                                                    {personRecoveryClasses.length > 0 ? personRecoveryClasses.map((rec, index) => (
+                                                                        <div key={index} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/50">
+                                                                            <div>
+                                                                                <p className="font-medium text-foreground">{rec.actividadName}</p>
+                                                                                <p className="text-xs text-muted-foreground">{format(new Date(rec.date + 'T12:00:00'), 'dd MMMM yyyy', { locale: es })}</p>
+                                                                            </div>
+                                                                        </div>
+                                                                    )) : (
+                                                                        <p className="text-xs text-muted-foreground">No hay ausencias justificadas registradas.</p>
+                                                                    )}
+                                                                </div>
+                                                            </ScrollArea>
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
                                         )}
                                         {person.healthInfo && (
                                             <Popover>
