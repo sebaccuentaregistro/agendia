@@ -415,7 +415,9 @@ function DashboardPageContent() {
                     const { specialist, actividad, space } = getSessionDetails(session);
                     const enrolledCount = (session as any).enrolledCount;
                     const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
-                    const isFull = capacity > 0 && enrolledCount >= capacity;
+                    const utilization = capacity > 0 ? enrolledCount / capacity : 0;
+                    const isFull = utilization >= 1;
+                    const isNearlyFull = utilization >= 0.8 && !isFull;
 
                     const now = new Date();
                     const [hour, minute] = session.time.split(':').map(Number);
@@ -430,7 +432,8 @@ function DashboardPageContent() {
                         key={session.id}
                         className={cn(
                           "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/30 dark:bg-white/10 border-white/20 hover:bg-white/50 dark:hover:bg-white/20 hover:shadow-md",
-                          isFull && "bg-pink-500/20 border-pink-500/30"
+                          isFull && "bg-pink-500/20 border-pink-500/30",
+                          isNearlyFull && "bg-amber-500/10 border-amber-500/20"
                         )}
                       >
                         <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
@@ -444,9 +447,13 @@ function DashboardPageContent() {
                             <div>
                               <p className="font-bold text-primary">{formatTime(session.time)}</p>
                               <p className={cn(
-                                  "text-sm", 
-                                  isFull ? "font-semibold text-pink-600 dark:text-pink-400" : "text-slate-600 dark:text-slate-400"
-                                )}>
+                                "text-sm font-semibold",
+                                isFull 
+                                  ? "text-pink-600 dark:text-pink-400" 
+                                  : isNearlyFull 
+                                  ? "text-amber-600 dark:text-amber-500" 
+                                  : "text-slate-600 dark:text-slate-400"
+                              )}>
                                 {enrolledCount}/{capacity} inscriptos
                               </p>
                             </div>
