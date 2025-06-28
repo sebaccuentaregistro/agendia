@@ -6,9 +6,11 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, XAx
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import { useStudio } from '@/context/StudioContext';
-import { format, subMonths, startOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { getStudentPaymentStatus } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
 
 export default function StatisticsPage() {
   const { sessions, people, actividades } = useStudio();
@@ -54,6 +56,41 @@ export default function StatisticsPage() {
       nuevasPersonas: memberCounts[monthKey] || 0,
     }));
   }, [people]);
+  
+  const retentionData = useMemo(() => {
+    const now = new Date();
+    
+    // 3-Month Cohort
+    const threeMonthsAgo = subMonths(now, 3);
+    const startOfThreeMonthCohort = startOfMonth(threeMonthsAgo);
+    const endOfThreeMonthCohort = endOfMonth(threeMonthsAgo);
+    const threeMonthCohortPeople = people.filter(p => p.joinDate >= startOfThreeMonthCohort && p.joinDate <= endOfThreeMonthCohort);
+    const activeInThreeMonthCohort = threeMonthCohortPeople.filter(p => getStudentPaymentStatus(p, now) === 'Al día').length;
+    const retentionRate3Months = threeMonthCohortPeople.length > 0 ? (activeInThreeMonthCohort / threeMonthCohortPeople.length) * 100 : 0;
+
+    // 6-Month Cohort
+    const sixMonthsAgo = subMonths(now, 6);
+    const startOfSixMonthCohort = startOfMonth(sixMonthsAgo);
+    const endOfSixMonthCohort = endOfMonth(sixMonthsAgo);
+    const sixMonthCohortPeople = people.filter(p => p.joinDate >= startOfSixMonthCohort && p.joinDate <= endOfSixMonthCohort);
+    const activeInSixMonthCohort = sixMonthCohortPeople.filter(p => getStudentPaymentStatus(p, now) === 'Al día').length;
+    const retentionRate6Months = sixMonthCohortPeople.length > 0 ? (activeInSixMonthCohort / sixMonthCohortPeople.length) * 100 : 0;
+
+    return {
+      threeMonths: {
+        rate: retentionRate3Months,
+        total: threeMonthCohortPeople.length,
+        active: activeInThreeMonthCohort,
+        label: format(startOfThreeMonthCohort, 'MMMM yyyy', { locale: es }),
+      },
+      sixMonths: {
+        rate: retentionRate6Months,
+        total: sixMonthCohortPeople.length,
+        active: activeInSixMonthCohort,
+        label: format(startOfSixMonthCohort, 'MMMM yyyy', { locale: es }),
+      },
+    };
+}, [people]);
 
   const activityPopularity = useMemo(() => {
     const popularity: Record<string, number> = sessions.reduce((acc, session) => {
@@ -63,7 +100,7 @@ export default function StatisticsPage() {
 
     return Object.entries(popularity)
       .map(([actividadId, count]) => {
-        const actividad = actividades.find(a => a.id === actividadId);
+        const actividad = actividades.find(a => a.id ===ividadId);
         return {
           name: actividad?.name || 'Desconocido',
           value: count,
@@ -160,6 +197,49 @@ export default function StatisticsPage() {
                 />
               </LineChart>
             </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-slate-100">Tasa de Retención de Clientes</CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-400">Porcentaje de personas que se inscriben en un mes y siguen activas después de un período.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-4">
+            {retentionData.threeMonths.total > 0 ? (
+              <div>
+                <div className="flex justify-between items-end mb-1">
+                  <span className="text-sm font-medium text-muted-foreground capitalize">Retención a 3 meses (Inscritos en {retentionData.threeMonths.label})</span>
+                  <span className="text-lg font-bold text-primary">{retentionData.threeMonths.rate.toFixed(0)}%</span>
+                </div>
+                <Progress value={retentionData.threeMonths.rate} className="h-2" />
+                <p className="text-xs text-right text-muted-foreground mt-1">
+                  {retentionData.threeMonths.active} de {retentionData.threeMonths.total} clientes continúan activos.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Retención a 3 meses</span>
+                <p className="text-xs text-muted-foreground mt-1">No hay datos de inscripción de hace 3 meses para calcular la retención.</p>
+              </div>
+            )}
+            {retentionData.sixMonths.total > 0 ? (
+              <div>
+                <div className="flex justify-between items-end mb-1">
+                  <span className="text-sm font-medium text-muted-foreground capitalize">Retención a 6 meses (Inscritos en {retentionData.sixMonths.label})</span>
+                  <span className="text-lg font-bold text-primary">{retentionData.sixMonths.rate.toFixed(0)}%</span>
+                </div>
+                <Progress value={retentionData.sixMonths.rate} className="h-2" />
+                <p className="text-xs text-right text-muted-foreground mt-1">
+                  {retentionData.sixMonths.active} de {retentionData.sixMonths.total} clientes continúan activos.
+                </p>
+              </div>
+            ) : (
+              <div>
+                <span className="text-sm font-medium text-muted-foreground">Retención a 6 meses</span>
+                <p className="text-xs text-muted-foreground mt-1">No hay datos de inscripción de hace 6 meses para calcular la retención.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
