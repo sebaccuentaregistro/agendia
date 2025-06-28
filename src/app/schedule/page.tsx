@@ -653,15 +653,15 @@ export default function SchedulePage() {
     <div className="space-y-8">
       <PageHeader title="Horarios">
         <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleExportSchedule} className="bg-white/80 dark:bg-zinc-800/80 border-slate-300/50 rounded-lg">
+            <Button variant="outline" onClick={handleExportSchedule}>
                 <FileDown className="mr-2 h-4 w-4"/>
                 Exportar
             </Button>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                <Button onClick={handleAdd}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Añadir Sesión
+                <Button onClick={handleAdd} size="icon">
+                    <PlusCircle className="h-5 w-5" />
+                    <span className="sr-only">Añadir Sesión</span>
                 </Button>
                 </DialogTrigger>
                 <DialogContent>

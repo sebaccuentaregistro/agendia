@@ -101,98 +101,99 @@ export default function SpecialistsPage() {
   return (
     <div>
       <PageHeader title="Especialistas">
-        <div className="flex flex-col gap-2 md:flex-row">
-          <Input 
-              placeholder="Buscar por nombre..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-64 bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
-          />
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAdd}>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Añadir Especialista
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>{selectedSpecialist ? 'Editar Especialista' : 'Añadir Nuevo Especialista'}</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                  <div className="grid gap-4 py-4">
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem className="grid grid-cols-4 items-center gap-4">
-                          <FormLabel className="text-right">Nombre</FormLabel>
-                          <FormControl>
-                            <Input {...field} className="col-span-3" />
-                          </FormControl>
-                          <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem className="grid grid-cols-4 items-center gap-4">
-                          <FormLabel className="text-right">Teléfono</FormLabel>
-                          <FormControl>
-                            <Input type="tel" {...field} className="col-span-3" />
-                          </FormControl>
-                          <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="actividadIds"
-                      render={() => (
-                        <FormItem className="grid grid-cols-4 items-start gap-4">
-                          <FormLabel className="text-right pt-2">Actividades</FormLabel>
-                          <div className="col-span-3 space-y-2">
-                            {actividades.map((item) => (
-                              <FormField
-                                key={item.id}
-                                control={form.control}
-                                name="actividadIds"
-                                render={({ field }) => (
-                                  <FormItem key={item.id} className="flex flex-row items-center space-x-3 space-y-0">
-                                    <FormControl>
-                                      <Checkbox
-                                        checked={field.value?.includes(item.id)}
-                                        onCheckedChange={(checked) => {
-                                          return checked
-                                            ? field.onChange([...(field.value || []), item.id])
-                                            : field.onChange(field.value?.filter((value) => value !== item.id));
-                                        }}
-                                      />
-                                    </FormControl>
-                                    <FormLabel className="font-normal">{item.name}</FormLabel>
-                                  </FormItem>
-                                )}
-                              />
-                            ))}
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit">Guardar Cambios</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={handleAdd} size="icon">
+              <PlusCircle className="h-5 w-5" />
+              <span className="sr-only">Añadir Especialista</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>{selectedSpecialist ? 'Editar Especialista' : 'Añadir Nuevo Especialista'}</DialogTitle>
+            </DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <div className="grid gap-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem className="grid grid-cols-4 items-center gap-4">
+                        <FormLabel className="text-right">Nombre</FormLabel>
+                        <FormControl>
+                          <Input {...field} className="col-span-3" />
+                        </FormControl>
+                        <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormItem className="grid grid-cols-4 items-center gap-4">
+                        <FormLabel className="text-right">Teléfono</FormLabel>
+                        <FormControl>
+                          <Input type="tel" {...field} className="col-span-3" />
+                        </FormControl>
+                        <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="actividadIds"
+                    render={() => (
+                      <FormItem className="grid grid-cols-4 items-start gap-4">
+                        <FormLabel className="text-right pt-2">Actividades</FormLabel>
+                        <div className="col-span-3 space-y-2">
+                          {actividades.map((item) => (
+                            <FormField
+                              key={item.id}
+                              control={form.control}
+                              name="actividadIds"
+                              render={({ field }) => (
+                                <FormItem key={item.id} className="flex flex-row items-center space-x-3 space-y-0">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(item.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...(field.value || []), item.id])
+                                          : field.onChange(field.value?.filter((value) => value !== item.id));
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="font-normal">{item.name}</FormLabel>
+                                </FormItem>
+                              )}
+                            />
+                          ))}
+                          <FormMessage />
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="submit">Guardar Cambios</Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
       
+      <div className="-mt-6 mb-8">
+        <Input 
+          placeholder="Buscar por nombre..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-sm bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+        />
+      </div>
+
       {filteredSpecialists.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredSpecialists.map((specialist) => (

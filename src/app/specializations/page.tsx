@@ -90,31 +90,35 @@ export default function ActividadesPage() {
   return (
     <div>
       <PageHeader title="Actividades">
-        <div className="flex flex-col gap-2 md:flex-row">
-            <Input
-              placeholder="Buscar por nombre..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full md:w-64 bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
-            />
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Actividad</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{selectedActividad ? 'Editar Actividad' : 'Añadir Nueva Actividad'}</DialogTitle></DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <FormField control={form.control} name="name" render={({ field }) => (
-                    <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                  )}/>
-                  <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={handleAdd} size="icon">
+              <PlusCircle className="h-5 w-5" />
+              <span className="sr-only">Añadir Actividad</span>
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{selectedActividad ? 'Editar Actividad' : 'Añadir Nueva Actividad'}</DialogTitle></DialogHeader>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField control={form.control} name="name" render={({ field }) => (
+                  <FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </PageHeader>
+      
+      <div className="-mt-6 mb-8">
+        <Input
+          placeholder="Buscar por nombre..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-sm bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+        />
+      </div>
       
       {isMounted ? (
         filteredActividades.length > 0 ? (
