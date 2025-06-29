@@ -1120,18 +1120,27 @@ export default function StudentsPage() {
                                         {sortedVacations.length > 0 && person.status === 'active' && (
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
-                                                        <Plane className="h-5 w-5" />
-                                                        <span className="sr-only">Gestionar Vacaciones</span>
-                                                    </Button>
+                                                    {(person as any).isOnVacationNow && (person as any).currentVacationEnd ? (
+                                                        <button className="flex items-center gap-1.5 rounded-full bg-blue-400 px-2 py-0.5 text-xs font-bold text-blue-900 shadow-sm cursor-pointer hover:bg-blue-500 transition-colors">
+                                                            <Plane className="h-3.5 w-3.5" />
+                                                            <span>
+                                                                Hasta {format(new Date((person as any).currentVacationEnd), 'dd/MM/yy')}
+                                                            </span>
+                                                        </button>
+                                                    ) : (
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
+                                                            <Plane className="h-5 w-5" />
+                                                            <span className="sr-only">Gestionar Vacaciones</span>
+                                                        </Button>
+                                                    )}
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-80">
                                                     <div className="grid gap-4">
                                                         <div className="space-y-2">
                                                             <h4 className="font-medium leading-none">Períodos de Vacaciones</h4>
-                                                            {(person as any).isOnVacationNow ? (
+                                                            {(person as any).isOnVacationNow && (person as any).currentVacationEnd ? (
                                                                 <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-r-md">
-                                                                    Actualmente de vacaciones hasta {format((person as any).currentVacationEnd, 'PPP', { locale: es })}.
+                                                                    Actualmente de vacaciones hasta {format(new Date((person as any).currentVacationEnd), 'PPP', { locale: es })}.
                                                                 </p>
                                                             ) : null}
                                                             <div className="space-y-2 mt-2">
