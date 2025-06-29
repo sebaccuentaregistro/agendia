@@ -1,3 +1,4 @@
+
 export type Actividad = {
   id: string;
   name: string;
@@ -89,5 +90,7 @@ export type Tariff = {
   name: string;
   price: number;
   description?: string;
+  frequency?: number;
+  isIndividual?: boolean;
 };
     

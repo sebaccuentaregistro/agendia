@@ -1,8 +1,9 @@
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, DollarSign } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, DollarSign, Calendar, CheckSquare } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState } from 'react';
@@ -15,11 +16,19 @@ import type { Tariff } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
   price: z.coerce.number().min(0, { message: 'El precio no puede ser negativo.' }),
   description: z.string().optional(),
+  frequency: z.coerce.number().optional(),
+  isIndividual: z.boolean().optional(),
+}).refine(data => {
+  return !(data.frequency && data.isIndividual);
+}, {
+  message: "Un arancel no puede ser individual y tener frecuencia a la vez.",
+  path: ["isIndividual"],
 });
 
 export default function TariffsPage() {
@@ -31,18 +40,24 @@ export default function TariffsPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '', price: 0, description: '' },
+    defaultValues: { name: '', price: 0, description: '', frequency: undefined, isIndividual: false },
   });
 
   function handleAdd() {
     setSelectedTariff(undefined);
-    form.reset({ name: '', price: 0, description: '' });
+    form.reset({ name: '', price: 0, description: '', frequency: undefined, isIndividual: false });
     setIsDialogOpen(true);
   }
 
   function handleEdit(tariff: Tariff) {
     setSelectedTariff(tariff);
-    form.reset({ name: tariff.name, price: tariff.price, description: tariff.description });
+    form.reset({
+        name: tariff.name,
+        price: tariff.price,
+        description: tariff.description,
+        frequency: tariff.frequency,
+        isIndividual: tariff.isIndividual,
+    });
     setIsDialogOpen(true);
   }
 
@@ -60,10 +75,16 @@ export default function TariffsPage() {
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    const finalValues = {
+        ...values,
+        frequency: values.frequency || undefined,
+        isIndividual: values.isIndividual || false,
+    };
+
     if (selectedTariff) {
-      updateTariff({ ...selectedTariff, ...values });
+      updateTariff({ ...selectedTariff, ...finalValues });
     } else {
-      addTariff(values);
+      addTariff(finalValues);
     }
     setIsDialogOpen(false);
     setSelectedTariff(undefined);
@@ -105,6 +126,29 @@ export default function TariffsPage() {
                 <FormField control={form.control} name="description" render={({ field }) => (
                   <FormItem><FormLabel>Descripción (Opcional)</FormLabel><FormControl><Textarea placeholder="Ej: Valor mensual, acceso a todas las clases..." {...field} /></FormControl><FormMessage /></FormItem>
                 )}/>
+                <FormField control={form.control} name="frequency" render={({ field }) => (
+                  <FormItem><FormLabel>Frecuencia Semanal Asociada (Opcional)</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.value)} /></FormControl><FormMessage /></FormItem>
+                )}/>
+                 <FormField
+                    control={form.control}
+                    name="isIndividual"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                        <FormControl>
+                            <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            />
+                        </FormControl>
+                        <div className="space-y-1 leading-none">
+                            <FormLabel>
+                            Es arancel para clase individual
+                            </FormLabel>
+                            <FormMessage />
+                        </div>
+                        </FormItem>
+                    )}
+                    />
                 <DialogFooter>
                     <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
                     <Button type="submit">Guardar Cambios</Button>
@@ -127,8 +171,14 @@ export default function TariffsPage() {
                     <CardDescription>{tariff.description}</CardDescription>
                 )}
             </CardHeader>
-            <CardContent className="p-4 flex-grow flex items-center justify-center">
+            <CardContent className="p-4 flex-grow flex flex-col items-center justify-center">
                 <p className="text-4xl font-bold text-slate-800 dark:text-slate-100">{formatPrice(tariff.price)}</p>
+                {tariff.frequency && (
+                    <span className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Calendar className="h-4 w-4" /> {tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} por semana</span>
+                )}
+                {tariff.isIndividual && (
+                    <span className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><CheckSquare className="h-4 w-4" /> Clase individual</span>
+                )}
             </CardContent>
             <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2">
               <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(tariff)}>

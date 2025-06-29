@@ -3,8 +3,8 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Person, Session } from '@/types';
-import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, UserX, UserCheck, Signal } from 'lucide-react';
+import type { Person, Session, Tariff } from '@/types';
+import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, UserX, UserCheck, Signal, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -650,9 +650,16 @@ function DeactivationDialog({ person, onClose }: { person: Person; onClose: () =
   );
 }
 
+const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0,
+    }).format(price);
+};
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deactivatePerson, reactivatePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance, levels } = useStudio();
+  const { people, addPerson, updatePerson, deactivatePerson, reactivatePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance, levels, tariffs } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personToDeactivate, setPersonToDeactivate] = useState<Person | null>(null);
@@ -708,6 +715,32 @@ export default function StudentsPage() {
             .sort((a,b) => b.date.getTime() - a.date.getTime());
 
         const lastAttendance = personAttendanceRecords[0];
+
+        let assignedTariff: Tariff | null = null;
+        if (p.status === 'active') {
+          if (p.membershipType === 'Diario') {
+            assignedTariff = tariffs.find(t => t.isIndividual) || null;
+          } else { // Mensual
+            const personSessions = sessions.filter(s => s.personIds.includes(p.id));
+            const uniqueDays = new Set(personSessions.map(s => s.dayOfWeek));
+            const frequency = uniqueDays.size;
+
+            if (frequency > 0) {
+              const frequencyTariffs = tariffs.filter(t => t.frequency).sort((a, b) => a.frequency! - b.frequency!);
+              let foundTariff = frequencyTariffs.find(t => t.frequency === frequency);
+
+              if (!foundTariff) {
+                // Find next highest tariff if no exact match
+                foundTariff = frequencyTariffs.find(t => t.frequency! > frequency);
+              }
+              if (!foundTariff && frequencyTariffs.length > 0) {
+                // If frequency is higher than any plan, assign the highest plan
+                foundTariff = frequencyTariffs[frequencyTariffs.length - 1];
+              }
+              assignedTariff = foundTariff || null;
+            }
+          }
+        }
         
         return { 
             ...p, 
@@ -715,7 +748,8 @@ export default function StudentsPage() {
             nextPaymentDate: Utils.getNextPaymentDate(p),
             recoveryBalance: recoveryBalances[p.id] > 0 ? recoveryBalances[p.id] : 0,
             lastPayment,
-            lastAttendance
+            lastAttendance,
+            assignedTariff,
         };
     });
     
@@ -739,7 +773,7 @@ export default function StudentsPage() {
     }
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, searchParams, searchTerm, isMounted, isPersonOnVacation, attendance, statusFilter]);
+  }, [people, payments, searchParams, searchTerm, isMounted, isPersonOnVacation, attendance, statusFilter, sessions, tariffs]);
 
   const emptyState = useMemo(() => {
     if (searchTerm) {
@@ -1089,7 +1123,7 @@ export default function StudentsPage() {
                                 <div className="mt-4">
                                     <div className="mb-3 flex flex-wrap items-center gap-2">
                                         {getPaymentStatusBadge((person as any).paymentStatus)}
-                                        {person.membershipType !== 'Diario' && (
+                                        {person.membershipType === 'Mensual' && (
                                             <Button
                                                 size="sm"
                                                 variant="outline"
@@ -1101,11 +1135,19 @@ export default function StudentsPage() {
                                             </Button>
                                         )}
                                     </div>
-                                    <h4 className="text-2xl font-bold">{person.membershipType}</h4>
-                                    <div className="flex justify-between mt-2 text-xs opacity-80 uppercase font-semibold">
+                                    {(person as any).assignedTariff ? (
+                                      <h4 className="text-2xl font-bold">{formatPrice((person as any).assignedTariff.price)}</h4>
+                                    ) : (
+                                      <h4 className="text-2xl font-bold">{person.membershipType}</h4>
+                                    )}
+                                    
+                                    <div className="flex justify-between items-center mt-2 text-xs opacity-80 uppercase font-semibold">
                                         <div>
-                                            <p>Inscripción</p>
-                                            <p>{format(person.joinDate, 'dd/MM/yyyy')}</p>
+                                            {(person as any).assignedTariff ? (
+                                              <p className="font-bold">{(person as any).assignedTariff.name}</p>
+                                            ) : (
+                                              <p>Sin Arancel</p>
+                                            )}
                                         </div>
                                         {(person as any).nextPaymentDate && (
                                         <div className="text-right">
