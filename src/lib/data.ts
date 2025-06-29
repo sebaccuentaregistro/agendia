@@ -1,6 +1,9 @@
 
 import type { Person, Specialist, Actividad, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level } from '@/types';
 
+// This file contains initial data for demonstration purposes when not connected to a database.
+// As the app is now connected to Firestore, this data is used as a reference but is no longer the primary data source.
+
 // Use a fixed reference date to make initial data deterministic
 const refDate = new Date('2024-07-15T10:00:00Z');
 
@@ -20,8 +23,8 @@ export const levels: Level[] = [
 ];
 
 export const specialists: Specialist[] = [
-  { id: 'inst-1', name: 'Elena Santos', phone: '123-456-7890',ividadIds: ['spec-1', 'spec-2'], avatar: `https://placehold.co/100x100.png` },
-  { id: 'inst-2', name: 'Marcus Chen', phone: '234-567-8901',ividadIds: ['spec-3'], avatar: `https://placehold.co/100x100.png` },
+  { id: 'inst-1', name: 'Elena Santos', phone: '123-456-7890', actividadIds: ['spec-1', 'spec-2'], avatar: `https://placehold.co/100x100.png` },
+  { id: 'inst-2', name: 'Marcus Chen', phone: '234-567-8901', actividadIds: ['spec-3'], avatar: `https://placehold.co/100x100.png` },
   { id: 'inst-3', name: 'Aisha Khan', phone: '345-678-9012',ividadIds: ['spec-4', 'spec-5'], avatar: `https://placehold.co/100x100.png` },
   { id: 'inst-4', name: 'David Miller', phone: '456-789-0123',ividadIds: ['spec-1', 'spec-4'], avatar: `https://placehold.co/100x100.png` },
 ];

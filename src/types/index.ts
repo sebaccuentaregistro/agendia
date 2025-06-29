@@ -6,19 +6,16 @@ export type LoginCredentials = {
 
 export type Actividad = {
   id: string;
-  instituteId: string;
   name: string;
 };
 
 export type Level = {
   id: string;
-  instituteId: string;
   name: string;
 };
 
 export type Specialist = {
   id: string;
-  instituteId: string;
   name: string;
   phone: string;
   actividadIds: string[];
@@ -33,7 +30,6 @@ export type VacationPeriod = {
 
 export type Person = {
   id: string;
-  instituteId: string;
   name: string;
   phone: string;
   joinDate: Date;
@@ -51,7 +47,6 @@ export type Person = {
 
 export type Session = {
   id: string;
-  instituteId: string;
   instructorId: string;
   actividadId: string;
   spaceId: string;
@@ -65,7 +60,6 @@ export type Session = {
 
 export type Payment = {
   id:string;
-  instituteId: string;
   personId: string;
   date: Date;
   months: number;
@@ -73,7 +67,6 @@ export type Payment = {
 
 export type Space = {
   id: string;
-  instituteId: string;
   name: string;
   capacity: number;
   operatingHoursStart?: string; // Format "HH:mm"
@@ -82,7 +75,6 @@ export type Space = {
 
 export type SessionAttendance = {
   id: string;
-  instituteId: string;
   sessionId: string;
   date: string; // YYYY-MM-DD
   presentIds: string[];
@@ -93,7 +85,6 @@ export type SessionAttendance = {
 
 export type AppNotification = {
   id: string;
-  instituteId: string;
   type: 'waitlist' | 'churnRisk';
   sessionId?: string;
   personId: string; // The person from the waitlist or at risk
@@ -102,7 +93,6 @@ export type AppNotification = {
 
 export type Tariff = {
   id: string;
-  instituteId: string;
   name: string;
   price: number;
   description?: string;
