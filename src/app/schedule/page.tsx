@@ -416,7 +416,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
 }
 
 export default function SchedulePage() {
-  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels } = useStudio();
+  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
@@ -856,7 +856,7 @@ export default function SchedulePage() {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const isIndividual = session.sessionType === 'Individual';
                       const capacity = isIndividual ? 1 : space?.capacity || 0;
-                      const enrolledCount = session.personIds?.length || 0;
+                      const enrolledCount = session.personIds.filter(pid => people.some(p => p.id === pid && p.status === 'active')).length;
                       const availableSpots = capacity - enrolledCount;
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
                       const isFull = availableSpots <= 0;
