@@ -37,6 +37,7 @@ interface StudioContextType {
   addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'status' | 'cancellationReason' | 'cancellationDate'>) => void;
   updatePerson: (person: Person) => void;
   deactivatePerson: (personId: string, reason: string) => void;
+  reactivatePerson: (personId: string) => void;
   recordPayment: (personId: string, months: number) => void;
   undoLastPayment: (personId: string) => void;
   addSpace: (space: Omit<Space, 'id'>) => void;
@@ -161,12 +162,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Effect to generate notifications for churn risk
-  useEffect(() => {
-    if (!isInitialized) return;
-
+  const generateChurnNotifications = useCallback(() => {
     const today = new Date();
     const churnNotifications: AppNotification[] = [];
-
     const activePeople = people.filter(p => p.status === 'active');
 
     activePeople.forEach(person => {
@@ -213,8 +211,12 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...prev.filter(n => n.type !== 'churnRisk'), 
         ...churnNotifications
     ]);
+  }, [people, sessions, attendance, isPersonOnVacation, notifications]);
 
-  }, [isInitialized, people, sessions, attendance, isPersonOnVacation]);
+  useEffect(() => {
+    if (!isInitialized) return;
+    generateChurnNotifications();
+  }, [isInitialized, generateChurnNotifications]);
 
 
   const addActividad = (actividad: Omit<Actividad, 'id'>) => {
@@ -300,7 +302,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const addPerson = (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'status' | 'cancellationReason' | 'cancellationDate'>) => {
     if (people.some(p => p.phone.trim() === person.phone.trim())) {
-        toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe una persona con este número de teléfono." });
+        toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe una persona (activa o inactiva) con este número de teléfono." });
         return;
     }
     const now = new Date();
@@ -314,7 +316,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const updatePerson = (updated: Person) => {
     if (people.some(p => p.id !== updated.id && p.phone.trim() === updated.phone.trim())) {
-        toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe otra persona con este número de teléfono." });
+        toast({ variant: "destructive", title: "Teléfono Duplicado", description: "Ya existe otra persona (activa o inactiva) con este número de teléfono." });
         return;
     }
     setPeople(prev => prev.map(p => p.id === updated.id ? updated : p));
@@ -367,6 +369,34 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => prev.filter(n => n.personId !== personId));
 
     toast({ title: 'Persona Dada de Baja', description: `${personToDeactivate.name} ha sido marcado como inactivo.` });
+  };
+  
+  const reactivatePerson = (personId: string) => {
+    const personToReactivate = people.find(p => p.id === personId);
+    if (!personToReactivate) return;
+
+    const now = new Date();
+    setPeople(prev =>
+      prev.map(p =>
+        p.id === personId
+          ? { 
+              ...p, 
+              status: 'active', 
+              cancellationReason: undefined, 
+              cancellationDate: undefined,
+              lastPaymentDate: now // Reset payment cycle
+            }
+          : p
+      )
+    );
+    
+    // Add a new payment record for the reactivation month
+    if (personToReactivate.membershipType === 'Mensual') {
+        const newPayment: Payment = { id: `pay-${Date.now()}`, personId, date: now, months: 1 };
+        setPayments(prev => [newPayment, ...prev]);
+    }
+    
+    toast({ title: '¡Bienvenido/a de vuelta!', description: `${personToReactivate.name} ha sido reactivado.` });
   };
 
   const recordPayment = (personId: string, months: number) => {
@@ -814,7 +844,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deactivatePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, isTutorialOpen, openTutorial, closeTutorial }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deactivatePerson, reactivatePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, isTutorialOpen, openTutorial, closeTutorial }}>
       {children}
     </StudioContext.Provider>
   );
