@@ -3,9 +3,9 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { StudioProvider } from '@/context/StudioContext';
-import AppHeader from '@/components/layout/app-header';
-import { MobileBottomNav } from '@/components/layout/mobile-bottom-nav';
 import { ThemeProvider } from '@/components/theme-provider';
+import { AuthProvider } from '@/context/AuthContext';
+import { AppShell } from '@/components/layout/app-shell';
 
 export const metadata: Metadata = {
   title: 'Agendia',
@@ -26,16 +26,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <StudioProvider>
-            <div className="flex min-h-screen w-full flex-col">
-              <AppHeader />
-              <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+          <AuthProvider>
+            <StudioProvider>
+              <AppShell>
                 {children}
-              </main>
-              <MobileBottomNav />
-            </div>
-            <Toaster />
-          </StudioProvider>
+              </AppShell>
+              <Toaster />
+            </StudioProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>
