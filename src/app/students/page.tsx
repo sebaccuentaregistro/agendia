@@ -797,7 +797,7 @@ export default function StudentsPage() {
     }
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, attendance, statusFilter, tariffs, sessions, filters, isMounted, actividades]);
+  }, [people, payments, attendance, statusFilter, tariffs, sessions, filters, isMounted, actividades, specialists, spaces]);
 
   const emptyState = useMemo(() => {
     const hasActiveLocalFilters = filters.searchTerm.trim() !== '' || filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all';
@@ -1236,11 +1236,6 @@ export default function StudentsPage() {
                         </div>
                         <CardContent className="flex flex-col flex-grow space-y-4 p-4">
                             <div className="space-y-2 flex flex-col flex-grow">
-                                <div className="flex justify-between items-center">
-                                  <h4 className="text-sm font-semibold text-foreground">
-                                      Horarios inscriptos
-                                  </h4>
-                                </div>
                                 {enrolledSessions.length > 0 ? (
                                     <div className="flex-grow space-y-3">
                                         {enrolledSessions.map(session => {
