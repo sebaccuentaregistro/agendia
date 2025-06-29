@@ -962,16 +962,16 @@ export default function StudentsPage() {
           placeholder="Buscar por nombre..." 
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)} 
-          className="w-full sm:w-auto sm:max-w-xs bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+          className="w-full md:w-auto md:max-w-xs bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
         />
-        <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-            <TabsList>
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full md:w-auto">
+            <TabsList className="grid w-full grid-cols-2 md:w-auto">
                 <TabsTrigger value="active">Activos</TabsTrigger>
                 <TabsTrigger value="inactive">Dados de Baja</TabsTrigger>
             </TabsList>
         </Tabs>
         <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
-          <SelectTrigger className="w-full sm:w-auto min-w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+          <SelectTrigger className="w-full md:w-auto min-w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
             <SelectValue placeholder="Filtrar por Especialista" />
           </SelectTrigger>
           <SelectContent>
@@ -1344,4 +1344,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
