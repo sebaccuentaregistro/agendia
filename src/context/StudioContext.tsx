@@ -164,7 +164,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   // Effect to generate notifications for churn risk
   const generateChurnNotifications = useCallback(() => {
     const today = new Date();
-    const churnNotifications: AppNotification[] = [];
+    const atRiskPersonIds = new Set<string>();
     const activePeople = people.filter(p => p.status === 'active');
 
     activePeople.forEach(person => {
@@ -174,7 +174,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (personSessions.length === 0) return;
         
         let hasChurnRisk = false;
-
         for (const session of personSessions) {
             const sessionAttendanceRecords = attendance
                 .filter(a => a.sessionId === session.id)
@@ -195,23 +194,37 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
         
         if (hasChurnRisk) {
-            const existingNotification = notifications.find(n => n.type === 'churnRisk' && n.personId === person.id);
-            if (!existingNotification) {
-                churnNotifications.push({
-                    id: `notif-churn-${person.id}`,
-                    type: 'churnRisk',
-                    personId: person.id,
-                    createdAt: new Date().toISOString(),
-                });
-            }
+            atRiskPersonIds.add(person.id);
         }
     });
 
-    setNotifications(prev => [
-        ...prev.filter(n => n.type !== 'churnRisk'), 
-        ...churnNotifications
-    ]);
-  }, [people, sessions, attendance, isPersonOnVacation, notifications]);
+    setNotifications(prevNotifications => {
+        const otherNotifications = prevNotifications.filter(n => n.type !== 'churnRisk');
+        const existingChurnNotifications = prevNotifications.filter(n => n.type === 'churnRisk');
+
+        // Filter out resolved churn risks
+        const stillRelevantChurnNotifications = existingChurnNotifications.filter(n => atRiskPersonIds.has(n.personId));
+        
+        // Identify new churn risks
+        const existingChurnPersonIds = new Set(existingChurnNotifications.map(n => n.personId));
+        const newChurnNotifications = Array.from(atRiskPersonIds)
+            .filter(personId => !existingChurnPersonIds.has(personId))
+            .map(personId => ({
+                id: `notif-churn-${personId}`,
+                type: 'churnRisk' as const,
+                personId: personId,
+                createdAt: new Date().toISOString(),
+            }));
+        
+        // If nothing changed, return original array to prevent re-render
+        if (newChurnNotifications.length === 0 && stillRelevantChurnNotifications.length === existingChurnNotifications.length) {
+            return prevNotifications;
+        }
+
+        return [...otherNotifications, ...stillRelevantChurnNotifications, ...newChurnNotifications];
+    });
+
+  }, [people, sessions, attendance, isPersonOnVacation]);
 
   useEffect(() => {
     if (!isInitialized) return;
