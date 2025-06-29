@@ -824,7 +824,7 @@ export default function StudentsPage() {
     }
   }, [searchTerm, searchParams, statusFilter, specialistFilter]);
 
-  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: '' }});
+  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none' }});
 
   const getPaymentStatusBadge = (status: 'Al día' | 'Atrasado') => {
     if (status === 'Al día') return <Badge className="bg-white/90 text-green-700 hover:bg-white/90 font-bold border-green-200"><CheckCircle2 className="h-4 w-4 mr-1.5" />Al día</Badge>;
@@ -957,12 +957,12 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      <div className="flex flex-wrap items-center gap-4 -mt-6 mb-8">
+      <div className="flex flex-col md:flex-row items-center gap-4 -mt-6 mb-8">
         <Input 
           placeholder="Buscar por nombre..." 
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)} 
-          className="w-full sm:w-auto sm:max-w-xs bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+          className="w-full md:w-auto md:max-w-xs bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
         />
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
             <TabsList>
@@ -971,7 +971,7 @@ export default function StudentsPage() {
             </TabsList>
         </Tabs>
         <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
-          <SelectTrigger className="w-full sm:w-auto sm:min-w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+          <SelectTrigger className="w-full md:w-auto md:min-w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
             <SelectValue placeholder="Filtrar por Especialista" />
           </SelectTrigger>
           <SelectContent>
