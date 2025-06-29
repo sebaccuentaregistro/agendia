@@ -3,7 +3,7 @@
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import AppHeader from './app-header';
+import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 
 function FullscreenLoader() {
