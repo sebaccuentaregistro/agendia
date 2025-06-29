@@ -9,7 +9,6 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useState, useMemo, useEffect } from 'react';
-import { Input } from '@/components/ui/input';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -669,9 +668,7 @@ export default function StudentsPage() {
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
   const [personToRecordPayment, setPersonToRecordPayment] = useState<Person | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
-  const [specialistFilter, setSpecialistFilter] = useState('all');
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
 
@@ -723,8 +720,7 @@ export default function StudentsPage() {
             assignedTariff = tariffs.find(t => t.isIndividual) || null;
           } else { // Mensual
             const personSessions = sessions.filter(s => s.personIds.includes(p.id));
-            const uniqueDays = new Set(personSessions.map(s => s.dayOfWeek));
-            const frequency = uniqueDays.size;
+            const frequency = new Set(personSessions.map(s => s.dayOfWeek)).size;
 
             if (frequency > 0) {
               const frequencyTariffs = tariffs.filter(t => t.frequency).sort((a, b) => a.frequency! - b.frequency!);
@@ -769,60 +765,23 @@ export default function StudentsPage() {
       }
     }
     
-    if (specialistFilter !== 'all') {
-      const peopleInSpecialistSessions = new Set<string>();
-      sessions
-        .filter(s => s.instructorId === specialistFilter)
-        .forEach(s => {
-          s.personIds.forEach(pid => peopleInSpecialistSessions.add(pid));
-        });
-      peopleList = peopleList.filter(p => peopleInSpecialistSessions.has(p.id));
-    }
-
-    if (searchTerm.trim() !== '') {
-      peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, searchParams, searchTerm, isMounted, isPersonOnVacation, attendance, statusFilter, sessions, tariffs, specialistFilter, specialists]);
+  }, [people, payments, searchParams, isMounted, isPersonOnVacation, attendance, statusFilter, tariffs, sessions]);
 
   const emptyState = useMemo(() => {
-    if (searchTerm || specialistFilter !== 'all') {
-      return {
-        title: `No se encontraron personas ${statusFilter === 'active' ? 'activas' : 'dadas de baja'}`,
-        description: "Intenta con otro filtro o limpia la búsqueda."
-      }
+    const filter = searchParams.get('filter');
+
+    if (people.length === 0) {
+        return { title: "No Hay Personas", description: "Empieza añadiendo tu primera persona." }
     }
     if (statusFilter === 'inactive') {
-        return {
-            title: "No hay personas dadas de baja",
-            description: "Aquí se mostrarán las personas que se den de baja."
-        }
+        return { title: "No hay personas dadas de baja", description: "Aquí se mostrarán las personas que des de baja." }
     }
-    const filter = searchParams.get('filter');
-    if (filter === 'overdue') {
-      return {
-        title: "Nadie tiene pagos atrasados",
-        description: "¡Excelente! Todas las personas están al día con sus pagos."
-      }
+    if (filter) {
+        return { title: "No se encontraron personas", description: "No hay personas que coincidan con el filtro activo." }
     }
-    if (filter === 'on-vacation') {
-      return {
-        title: "Nadie está de vacaciones",
-        description: "Actualmente no hay personas registradas en período de vacaciones."
-      }
-    }
-    if (filter === 'pending-recovery') {
-        return {
-            title: "Nadie tiene recuperos pendientes",
-            description: "¡Todo en orden! No hay clases para recuperar."
-        }
-    }
-    return {
-      title: "No Hay Personas",
-      description: "Empieza añadiendo tu primera persona."
-    }
-  }, [searchTerm, searchParams, statusFilter, specialistFilter]);
+    return { title: "No hay personas activas", description: "Puedes ver las personas dadas de baja en la otra pestaña." }
+  }, [people.length, statusFilter, searchParams]);
 
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none' }});
 
@@ -957,28 +916,13 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      <div className="flex flex-wrap items-center gap-4 -mt-6 mb-8">
-        <Input 
-          placeholder="Buscar por nombre..." 
-          value={searchTerm} 
-          onChange={(e) => setSearchTerm(e.target.value)} 
-          className="w-full md:w-auto md:max-w-xs bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
-        />
-        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="w-full md:w-auto">
-            <TabsList className="grid w-full grid-cols-2 md:w-auto">
+      <div className="-mt-6 mb-8">
+        <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+            <TabsList className="grid w-full max-w-[250px] grid-cols-2">
                 <TabsTrigger value="active">Activos</TabsTrigger>
                 <TabsTrigger value="inactive">Dados de Baja</TabsTrigger>
             </TabsList>
         </Tabs>
-        <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
-          <SelectTrigger className="w-full md:w-auto min-w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-            <SelectValue placeholder="Filtrar por Especialista" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los especialistas</SelectItem>
-            {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-          </SelectContent>
-        </Select>
       </div>
 
       {!isMounted ? (
@@ -1282,7 +1226,7 @@ export default function StudentsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-               {(!searchTerm && !searchParams.get('filter') && statusFilter === 'active') && (
+               { people.length === 0 && (
                  <Button onClick={handleAdd}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Persona
