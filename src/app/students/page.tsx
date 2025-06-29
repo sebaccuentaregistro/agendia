@@ -750,6 +750,14 @@ export default function StudentsPage() {
             }
           }
         }
+
+        const currentVacation = p.vacationPeriods?.find(vac => {
+            const startDate = new Date(vac.startDate);
+            startDate.setHours(0, 0, 0, 0);
+            const endDate = new Date(vac.endDate);
+            endDate.setHours(23, 59, 59, 999);
+            return now >= startDate && now <= endDate;
+        });
         
         return { 
             ...p, 
@@ -759,30 +767,24 @@ export default function StudentsPage() {
             lastPayment,
             lastAttendance,
             assignedTariff,
+            isOnVacationNow: !!currentVacation,
+            currentVacationEnd: currentVacation ? currentVacation.endDate : null,
         };
     });
     
     // Primary filter: active/inactive status
     peopleList = peopleList.filter(p => p.status === statusFilter);
 
-    // Secondary filter from query params (only applies to active people)
-    if (statusFilter === 'active') {
-      const filter = searchParams.get('filter');
-      if (filter === 'overdue') {
-        peopleList = peopleList.filter(p => p.paymentStatus === 'Atrasado');
-      } else if (filter === 'on-vacation') {
-        peopleList = peopleList.filter(p => isPersonOnVacation(p, now));
-      } else if (filter === 'pending-recovery') {
-        peopleList = peopleList.filter(p => p.recoveryBalance > 0);
-      }
-    }
-    
     // New local filters (only for active people)
     if (statusFilter === 'active') {
       peopleList = peopleList.filter(p => {
         const nameMatch = filters.searchTerm === '' || p.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
         
         const personEnrolledSessions = sessions.filter(s => s.personIds.includes(p.id));
+
+        if(personEnrolledSessions.length === 0 && (filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all')) {
+          return false;
+        }
 
         const specialistMatch = filters.specialistId === 'all' || personEnrolledSessions.some(s => s.instructorId === filters.specialistId);
         
@@ -795,18 +797,13 @@ export default function StudentsPage() {
     }
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, searchParams, isMounted, isPersonOnVacation, attendance, statusFilter, tariffs, sessions, filters]);
+  }, [people, payments, attendance, statusFilter, tariffs, sessions, filters, isMounted]);
 
   const emptyState = useMemo(() => {
-    const filter = searchParams.get('filter');
     const hasActiveLocalFilters = filters.searchTerm.trim() !== '' || filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all';
 
     if (hasActiveLocalFilters) {
         return { title: "No se encontraron personas", description: "Prueba a cambiar o limpiar los filtros." };
-    }
-
-    if (filter) {
-        return { title: "No se encontraron personas", description: "No hay personas que coincidan con el filtro del panel de inicio." };
     }
     
     if (people.filter(p => p.status === statusFilter).length === 0) {
@@ -819,7 +816,7 @@ export default function StudentsPage() {
 
     // Fallback if filters are active but the base list is empty
     return { title: "No hay personas que mostrar", description: "No hay personas en esta categoría." };
-  }, [people, statusFilter, searchParams, filters]);
+  }, [people, statusFilter, filters]);
 
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none', notes: '' }});
 
@@ -963,45 +960,55 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      <Card className="mb-8 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4 md:p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
-          <Input 
-            placeholder="Buscar por nombre..."
-            value={filters.searchTerm}
-            onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-            className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
-          />
-          <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Actividad" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas las actividades</SelectItem>
-                {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-              </SelectContent>
-          </Select>
-          <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Especialista" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los especialistas</SelectItem>
-                {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-          </Select>
-          <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Espacio" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos los espacios</SelectItem>
-                {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-          </Select>
+      <div className="mb-8 space-y-4">
+        <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4 md:p-6">
+            <div className="flex flex-wrap items-center gap-4">
+                <div className="w-full md:w-auto md:flex-1 md:min-w-[200px]">
+                    <Input 
+                        placeholder="Buscar por nombre..."
+                        value={filters.searchTerm}
+                        onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                        className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+                    />
+                </div>
+                <div className="w-full md:w-auto md:flex-1 md:min-w-[200px]">
+                    <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
+                        <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Actividad" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas las actividades</SelectItem>
+                            {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="w-full md:w-auto md:flex-1 md:min-w-[200px]">
+                    <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
+                        <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Especialista" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los especialistas</SelectItem>
+                            {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="w-full md:w-auto md:flex-1 md:min-w-[200px]">
+                    <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
+                        <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Espacio" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los espacios</SelectItem>
+                            {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+            </div>
+        </Card>
+
+        <div>
+            <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+                <TabsList className="grid w-full max-w-[250px] grid-cols-2">
+                    <TabsTrigger value="active">Activos</TabsTrigger>
+                    <TabsTrigger value="inactive">Dados de Baja</TabsTrigger>
+                </TabsList>
+            </Tabs>
         </div>
-      </Card>
-      
-      <div className="mb-8">
-        <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-            <TabsList className="grid w-full max-w-[250px] grid-cols-2">
-                <TabsTrigger value="active">Activos</TabsTrigger>
-                <TabsTrigger value="inactive">Dados de Baja</TabsTrigger>
-            </TabsList>
-        </Tabs>
       </div>
 
       {!isMounted ? (
@@ -1119,10 +1126,17 @@ export default function StudentsPage() {
                                         {sortedVacations.length > 0 && person.status === 'active' && (
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
-                                                        <Plane className="h-5 w-5" />
-                                                        <span className="sr-only">Ver períodos de vacaciones</span>
-                                                    </Button>
+                                                    {(person as any).isOnVacationNow ? (
+                                                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 font-bold border-blue-200/50 gap-1.5 cursor-pointer px-2 py-1">
+                                                            <Plane className="h-3.5 w-3.5" />
+                                                            Hasta {format((person as any).currentVacationEnd, 'dd/MM/yy')}
+                                                        </Badge>
+                                                    ) : (
+                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
+                                                            <Plane className="h-5 w-5" />
+                                                            <span className="sr-only">Ver períodos de vacaciones</span>
+                                                        </Button>
+                                                    )}
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-80">
                                                     <div className="grid gap-4">
