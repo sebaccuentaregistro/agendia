@@ -77,7 +77,7 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
     return Array.from(allAttendeesMap.values()).sort((a,b) => a.name.localeCompare(b.name));
   }, [session, people, isPersonOnVacation, today, attendance, todayStr]);
 
-  constividad = actividades.find(a => a.id === session.actividadId);
+  const actividad = actividades.find(a => a.id === session.actividadId);
 
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(message);
@@ -136,7 +136,7 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
 
 function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, addOneTimeAttendee, actividades, attendance } = useStudio();
-  constividad = actividades.find(a => a.id === session.actividadId);
+  const actividad = actividades.find(a => a.id === session.actividadId);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
@@ -277,7 +277,7 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
 
   const space = spaces.find(s => s.id === session.spaceId);
   const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
-  constividad = actividades.find(a => a.id === session.actividadId);
+  const actividad = actividades.find(a => a.id === session.actividadId);
 
   function onSubmit(data: { personIds: string[] }) {
     enrollPeopleInClass(session.id, data.personIds);
@@ -363,7 +363,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
     return people.filter(p => p.status === 'active' && session.personIds.includes(p.id));
   }, [people, session]);
 
-  constividad = useMemo(() => {
+  const actividad = useMemo(() => {
     return actividades.find((s) => s.id === session.actividadId);
   }, [session, actividades]);
   
@@ -547,10 +547,10 @@ export default function SchedulePage() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     const level = levels.find((l) => l.id === session.levelId);
-    return { specialist,ividad, space, level };
+    return { specialist, actividad, space, level };
   };
 
   const handleAdd = () => {
@@ -632,9 +632,9 @@ export default function SchedulePage() {
         capacidad: 'Capacidad'
     };
     const dataToExport = filteredSessions.map(session => {
-        const { specialist,ividad, space } = getSessionDetails(session);
+        const { specialist, actividad, space } = getSessionDetails(session);
         return {
-            actividad:ividad?.name || 'N/A',
+            actividad: actividad?.name || 'N/A',
             especialista: specialist?.name || 'N/A',
             espacio: space?.name || 'N/A',
             dia: session.dayOfWeek,
@@ -853,7 +853,7 @@ export default function SchedulePage() {
                 sessions.length > 0 ? (
                   filteredSessions.length > 0 ? (
                       filteredSessions.map((session) => {
-                      const { specialist,ividad, space, level } = getSessionDetails(session);
+                      const { specialist, actividad, space, level } = getSessionDetails(session);
                       const isIndividual = session.sessionType === 'Individual';
                       const capacity = isIndividual ? 1 : space?.capacity || 0;
                       const enrolledCount = session.personIds?.length || 0;

@@ -29,9 +29,9 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const level = levels.find(l => l.id === session.levelId);
-    return { specialist,ividad, level };
+    return { specialist, actividad, level };
   };
 
   return (
@@ -50,7 +50,7 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3 sticky top-0 bg-background/80 py-2">{day}</h3>
               <div className="space-y-3">
                 {sessionsForDay.map(session => {
-                  const { specialist,ividad, level } = getSessionDetails(session);
+                  const { specialist, actividad, level } = getSessionDetails(session);
                   return (
                     <Card
                       key={session.id}
@@ -99,7 +99,7 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
                         return (
                             <div key={`${day}-${time}`} className="border-l border-b border-slate-200/50 dark:border-slate-700/50 min-h-[70px] p-1 relative">
                                 {session && (() => {
-                                    const { specialist,ividad, level } = getSessionDetails(session);
+                                    const { specialist, actividad, level } = getSessionDetails(session);
                                     return (
                                         <Card 
                                             onClick={() => onSessionClick(session)}

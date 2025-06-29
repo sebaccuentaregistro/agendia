@@ -53,7 +53,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
   const filteredSessions = sessions
       .filter(session => 
-        (actividadFilter === 'all' || session.actividadId ===ividadFilter) &&
+        (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
         (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
       .map(session => {
@@ -128,7 +128,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                 <ScrollArea className="h-72 rounded-md border p-4">
                   <div className="space-y-4">
                     {filteredSessions.map((item) => {
-                      const { specialist,ividad, space, isPermanentlyFull, activeEnrolledCount, capacity } = item;
+                      const { specialist, actividad, space, isPermanentlyFull, activeEnrolledCount, capacity } = item;
                       if (!actividad || !specialist || !space) return null;
                       
                       const isEnrolledInForm = form.watch('sessionIds').includes(item.id);
@@ -225,7 +225,7 @@ function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: 
     return personHistory
       .map(entry => {
         const session = sessions.find(s => s.id === entry.sessionId);
-        constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
         const dateObj = new Date(`${entry.date}T12:00:00Z`); // Avoid timezone issues
         return {
           ...entry,
@@ -975,7 +975,7 @@ export default function StudentsPage() {
                   .filter(record => record.justifiedAbsenceIds?.includes(person.id))
                   .map(record => {
                       const session = sessions.find(s => s.id === record.sessionId);
-                      constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                      const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
                       return {
                           date: record.date,
                           actividadName: actividad?.name || 'Clase eliminada'
@@ -1176,7 +1176,7 @@ export default function StudentsPage() {
                                 {enrolledSessions.length > 0 ? (
                                     <div className="flex-grow space-y-3">
                                         {enrolledSessions.map(session => {
-                                            constividad = actividades.find(a => a.id === session.actividadId);
+                                            const actividad = actividades.find(a => a.id === session.actividadId);
                                             const specialist = specialists.find(s => s.id === session.instructorId);
                                             const space = spaces.find(s => s.id === session.spaceId);
                                             return (
