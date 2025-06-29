@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
@@ -208,7 +207,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     setNotifications(prevNotifications => {
         const otherNotifications = prevNotifications.filter(n => n.type !== 'churnRisk');
-        const existingChurnNotificationsForOtherPeople = prevNotifications.filter(n => n.type === 'churnRisk' && !atRiskPersonIds.has(n.personId));
         
         const newChurnNotifications = Array.from(atRiskPersonIds)
             .filter(personId => !prevNotifications.some(n => n.type === 'churnRisk' && n.personId === personId))
@@ -220,10 +218,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             }));
         
         const currentRelevantChurnNotifications = prevNotifications.filter(n => n.type === 'churnRisk' && atRiskPersonIds.has(n.personId));
-
-        if (newChurnNotifications.length === 0 && existingChurnNotificationsForOtherPeople.length === 0) {
-            return prevNotifications;
-        }
 
         return [...otherNotifications, ...currentRelevantChurnNotifications, ...newChurnNotifications];
     });
@@ -557,7 +551,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     if (overbookedSession) {
       const sessionDetails = sessions.find(s => s.id === overbookedSession);
-      constividad = actividades.find(a => a.id === sessionDetails?.actividadId);
+      const actividad = actividades.find(a => a.id === sessionDetails?.actividadId);
       toast({
           variant: "destructive",
           title: sessionDetails?.sessionType === 'Individual' ? "Sesión Individual Ocupada" : "Sesión Llena",
