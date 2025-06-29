@@ -4,10 +4,11 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session, Tariff } from '@/types';
-import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, UserX, UserCheck, Signal, DollarSign, Notebook } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, UserCheck, Signal, DollarSign, Notebook } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -670,6 +671,7 @@ export default function StudentsPage() {
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
   const [personToRecordPayment, setPersonToRecordPayment] = useState<Person | null>(null);
+  const [vacationToDelete, setVacationToDelete] = useState<{personId: string, vacationId: string} | null>(null);
   const [statusFilter, setStatusFilter] = useState('active');
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -1140,8 +1142,9 @@ export default function StudentsPage() {
                                                                         <span className="font-medium">
                                                                             {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
                                                                         </span>
-                                                                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeVacationPeriod(person.id, vac.id)}>
-                                                                            <UserX className="h-3 w-3 text-destructive" />
+                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setVacationToDelete({ personId: person.id, vacationId: vac.id })}>
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                            <span className="sr-only">Eliminar período de vacaciones</span>
                                                                         </Button>
                                                                     </div>
                                                                 ))}
@@ -1180,7 +1183,7 @@ export default function StudentsPage() {
                                                   <Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago
                                                 </DropdownMenuItem>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setPersonToDeactivate(person)}><UserX className="mr-2 h-4 w-4" />Dar de baja</DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setPersonToDeactivate(person)}><Trash2 className="mr-2 h-4 w-4" />Dar de baja</DropdownMenuItem>
                                             </>
                                         ) : (
                                             <DropdownMenuItem onClick={() => reactivatePerson(person.id)}><UserCheck className="mr-2 h-4 w-4" />Reactivar Persona</DropdownMenuItem>
@@ -1341,6 +1344,27 @@ export default function StudentsPage() {
       {personToRecordPayment && <RecordPaymentDialog person={personToRecordPayment} onClose={() => setPersonToRecordPayment(null)} />}
       {personToDeactivate && <DeactivationDialog person={personToDeactivate} onClose={() => setPersonToDeactivate(null)} />}
 
+      <AlertDialog open={!!vacationToDelete} onOpenChange={(open) => !open && setVacationToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Confirmas la eliminación?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará el período de vacaciones seleccionado permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setVacationToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (vacationToDelete) {
+                removeVacationPeriod(vacationToDelete.personId, vacationToDelete.vacationId);
+                setVacationToDelete(null);
+              }
+            }} className="bg-destructive hover:bg-destructive/90">
+              Sí, eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Sheet open={!!personForHistory} onOpenChange={(open) => !open && setPersonForHistory(null)}>
         <SheetContent>
