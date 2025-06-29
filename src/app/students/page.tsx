@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session, Tariff } from '@/types';
-import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, UserCheck, Signal, DollarSign, Notebook } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, UserCheck, Signal, DollarSign, Notebook, FilterX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -19,7 +19,7 @@ import * as Utils from '@/lib/utils';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -62,7 +62,6 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
         const space = spaces.find(s => s.id === session.spaceId);
         const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
         
-        // Count active people not on vacation
         const activeEnrolledCount = session.personIds.filter(pid => {
             const p = people.find(p => p.id === pid);
             return p && p.status === 'active' && !isPersonOnVacation(p, new Date());
@@ -679,7 +678,10 @@ export default function StudentsPage() {
     spaceId: 'all',
   });
   const [isMounted, setIsMounted] = useState(false);
+  
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const dashboardUrlFilter = searchParams.get('filter');
 
   useEffect(() => { setIsMounted(true); }, []);
   
@@ -801,10 +803,21 @@ export default function StudentsPage() {
         };
     });
     
-    // Primary filter: active/inactive status
+    // Apply dashboard URL filter first
+    if (dashboardUrlFilter) {
+      if (dashboardUrlFilter === 'overdue') {
+        peopleList = peopleList.filter(p => p.paymentStatus === 'Atrasado');
+      } else if (dashboardUrlFilter === 'pending-recovery') {
+        peopleList = peopleList.filter(p => p.recoveryBalance > 0);
+      } else if (dashboardUrlFilter === 'on-vacation') {
+        peopleList = peopleList.filter(p => p.isOnVacationNow);
+      }
+    }
+
+    // Apply status tab filter
     peopleList = peopleList.filter(p => p.status === statusFilter);
 
-    // New local filters (only for active people)
+    // Apply local search/select filters
     if (statusFilter === 'active') {
       peopleList = peopleList.filter(p => {
         const nameMatch = filters.searchTerm === '' || p.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
@@ -826,7 +839,7 @@ export default function StudentsPage() {
     }
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, attendance, statusFilter, tariffs, sessions, filters, isMounted, actividades, specialists, spaces]);
+  }, [people, payments, attendance, statusFilter, tariffs, sessions, filters, isMounted, actividades, specialists, spaces, dashboardUrlFilter]);
 
   const emptyState = useMemo(() => {
     const hasActiveLocalFilters = filters.searchTerm.trim() !== '' || filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all';
@@ -919,6 +932,12 @@ export default function StudentsPage() {
       exportToCsv(`historial_pagos_${personForHistory.name.replace(/\s/g, '_')}.csv`, personPayments, headers);
   };
 
+  const filterLabels: { [key: string]: string } = {
+    'overdue': 'Pagos Atrasados',
+    'pending-recovery': 'Recuperos Pendientes',
+    'on-vacation': 'En Vacaciones'
+  };
+
   return (
     <div>
       <PageHeader title="Personas">
@@ -994,6 +1013,24 @@ export default function StudentsPage() {
       </PageHeader>
       
       <div className="mb-8 space-y-4">
+        {dashboardUrlFilter && filterLabels[dashboardUrlFilter] && (
+          <Card className="p-3 bg-primary/10 border-primary/20">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-primary">
+                Filtro Activo: {filterLabels[dashboardUrlFilter]}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/students')}
+                className="text-primary hover:bg-primary/20"
+              >
+                <FilterX className="mr-2 h-4 w-4" />
+                Limpiar Filtro
+              </Button>
+            </div>
+          </Card>
+        )}
         <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4 md:p-6">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
                 <Input 
@@ -1480,3 +1517,4 @@ export default function StudentsPage() {
   );
 }
 
+    
