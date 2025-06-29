@@ -957,12 +957,12 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      <div className="flex flex-col md:flex-row items-center gap-4 -mt-6 mb-8">
+      <div className="flex flex-wrap items-center gap-4 -mt-6 mb-8">
         <Input 
           placeholder="Buscar por nombre..." 
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)} 
-          className="w-full md:w-auto md:max-w-xs bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+          className="w-full sm:w-auto sm:max-w-xs bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
         />
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
             <TabsList>
@@ -971,7 +971,7 @@ export default function StudentsPage() {
             </TabsList>
         </Tabs>
         <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
-          <SelectTrigger className="w-full md:w-auto md:min-w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+          <SelectTrigger className="w-full sm:w-auto min-w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
             <SelectValue placeholder="Filtrar por Especialista" />
           </SelectTrigger>
           <SelectContent>
@@ -1344,3 +1344,4 @@ export default function StudentsPage() {
     </div>
   );
 }
+
