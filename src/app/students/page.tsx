@@ -1019,9 +1019,6 @@ export default function StudentsPage() {
                                                 <DropdownMenuItem onClick={() => setPersonForJustification(person)}><CalendarClock className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
                                                 <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => setPersonToRecordPayment(person)} disabled={person.membershipType === 'Diario'}>
-                                                  <CreditCard className="mr-2 h-4 w-4" />Registrar Pago
-                                                </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}>
                                                   <Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago
                                                 </DropdownMenuItem>
@@ -1036,7 +1033,20 @@ export default function StudentsPage() {
                             </div>
                             {person.status === 'active' ? (
                                 <div className="mt-4">
-                                    <div className="mb-3">{getPaymentStatusBadge((person as any).paymentStatus)}</div>
+                                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                                        {getPaymentStatusBadge((person as any).paymentStatus)}
+                                        {person.membershipType !== 'Diario' && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-auto px-2 py-1 text-xs bg-white/20 text-white hover:bg-white/30 border-white/30"
+                                                onClick={() => setPersonToRecordPayment(person)}
+                                            >
+                                                <CreditCard className="mr-1.5 h-3 w-3" />
+                                                Registrar Pago
+                                            </Button>
+                                        )}
+                                    </div>
                                     <h4 className="text-2xl font-bold">{person.membershipType}</h4>
                                     <div className="flex justify-between mt-2 text-xs opacity-80 uppercase font-semibold">
                                         <div>
