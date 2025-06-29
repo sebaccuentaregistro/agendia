@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
 
 
 const formSchema = z.object({
@@ -52,7 +53,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
   const filteredSessions = sessions
       .filter(session => 
-        (actividadFilter === 'all' || session.actividadId ===ividadFilter) &&
+        (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
         (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
       .map(session => {
@@ -669,10 +670,20 @@ export default function StudentsPage() {
   const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
   const [personToRecordPayment, setPersonToRecordPayment] = useState<Person | null>(null);
   const [statusFilter, setStatusFilter] = useState('active');
+  const [filters, setFilters] = useState({
+    searchTerm: '',
+    actividadId: 'all',
+    specialistId: 'all',
+    spaceId: 'all',
+  });
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
 
   useEffect(() => { setIsMounted(true); }, []);
+  
+  const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
+    setFilters(prev => ({ ...prev, [filterName]: value }));
+  };
 
   const processedPeople = useMemo(() => {
     if (!isMounted) return [];
@@ -765,23 +776,49 @@ export default function StudentsPage() {
       }
     }
     
+    // New local filters (only for active people)
+    if (statusFilter === 'active') {
+      peopleList = peopleList.filter(p => {
+        const nameMatch = filters.searchTerm === '' || p.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
+        
+        const personEnrolledSessions = sessions.filter(s => s.personIds.includes(p.id));
+
+        const specialistMatch = filters.specialistId === 'all' || personEnrolledSessions.some(s => s.instructorId === filters.specialistId);
+        
+        const actividadMatch = filters.actividadId === 'all' || personEnrolledSessions.some(s => s.actividadId === filters.actividadId);
+
+        const spaceMatch = filters.spaceId === 'all' || personEnrolledSessions.some(s => s.spaceId === filters.spaceId);
+
+        return nameMatch && specialistMatch && actividadMatch && spaceMatch;
+      });
+    }
+    
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, searchParams, isMounted, isPersonOnVacation, attendance, statusFilter, tariffs, sessions]);
+  }, [people, payments, searchParams, isMounted, isPersonOnVacation, attendance, statusFilter, tariffs, sessions, filters]);
 
   const emptyState = useMemo(() => {
     const filter = searchParams.get('filter');
+    const hasActiveLocalFilters = filters.searchTerm.trim() !== '' || filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all';
 
-    if (people.length === 0) {
-        return { title: "No Hay Personas", description: "Empieza añadiendo tu primera persona." }
+    if (hasActiveLocalFilters) {
+        return { title: "No se encontraron personas", description: "Prueba a cambiar o limpiar los filtros." };
     }
-    if (statusFilter === 'inactive') {
-        return { title: "No hay personas dadas de baja", description: "Aquí se mostrarán las personas que des de baja." }
-    }
+
     if (filter) {
-        return { title: "No se encontraron personas", description: "No hay personas que coincidan con el filtro activo." }
+        return { title: "No se encontraron personas", description: "No hay personas que coincidan con el filtro del panel de inicio." };
     }
-    return { title: "No hay personas activas", description: "Puedes ver las personas dadas de baja en la otra pestaña." }
-  }, [people.length, statusFilter, searchParams]);
+    
+    if (people.filter(p => p.status === statusFilter).length === 0) {
+      if (statusFilter === 'active') {
+        return { title: "No Hay Personas Activas", description: "Empieza añadiendo tu primera persona." };
+      } else { // inactive
+        return { title: "No hay personas dadas de baja", description: "Aquí se mostrarán las personas que des de baja." };
+      }
+    }
+
+    // Fallback if filters are active but the base list is empty
+    return { title: "No hay personas que mostrar", description: "No hay personas en esta categoría." };
+  }, [people, statusFilter, searchParams, filters]);
 
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none' }});
 
@@ -916,7 +953,39 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      <div className="-mt-6 mb-8">
+      <Card className="mb-8 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4 md:p-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Input 
+            placeholder="Buscar por nombre..."
+            value={filters.searchTerm}
+            onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+            className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+          />
+          <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
+              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Actividad" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las actividades</SelectItem>
+                {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+              </SelectContent>
+          </Select>
+          <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
+              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Especialista" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los especialistas</SelectItem>
+                {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+          </Select>
+          <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
+              <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Espacio" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los espacios</SelectItem>
+                {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+              </SelectContent>
+          </Select>
+        </div>
+      </Card>
+      
+      <div className="mb-8">
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
             <TabsList className="grid w-full max-w-[250px] grid-cols-2">
                 <TabsTrigger value="active">Activos</TabsTrigger>
