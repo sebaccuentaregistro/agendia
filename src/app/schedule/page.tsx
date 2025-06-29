@@ -43,7 +43,7 @@ const formSchema = z.object({
   dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
   time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
   sessionType: z.enum(['Grupal', 'Individual']),
-  levelId: z.string().optional(),
+  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
 });
 
 const oneTimeAttendeeSchema = z.object({
@@ -768,7 +768,7 @@ export default function SchedulePage() {
                                 <Select onValueChange={field.onChange} value={field.value || ''}>
                                 <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar nivel" /></SelectTrigger></FormControl>
                                 <SelectContent>
-                                    <SelectItem value="">Sin Nivel</SelectItem>
+                                    <SelectItem value="none">Sin Nivel</SelectItem>
                                     {levels.map(level => (
                                     <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
                                     ))}

@@ -42,7 +42,7 @@ const formSchema = z.object({
   phone: z.string().regex(/^\d+$/, { message: 'El teléfono solo debe contener números (sin espacios ni guiones).' }).min(10, { message: 'El teléfono debe tener al menos 10 dígitos.' }),
   membershipType: z.enum(['Mensual', 'Diario'], { required_error: 'Debes seleccionar un tipo de membresía.' }),
   healthInfo: z.string().optional(),
-  levelId: z.string().optional(),
+  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
 });
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
@@ -886,7 +886,7 @@ export default function StudentsPage() {
                                 </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                                <SelectItem value="">Sin Nivel</SelectItem>
+                                <SelectItem value="none">Sin Nivel</SelectItem>
                                 {levels.map(level => (
                                     <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
                                 ))}
