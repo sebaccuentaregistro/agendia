@@ -43,7 +43,7 @@ const formSchema = z.object({
   phone: z.string().regex(/^\d+$/, { message: 'El teléfono solo debe contener números (sin espacios ni guiones).' }).min(10, { message: 'El teléfono debe tener al menos 10 dígitos.' }),
   membershipType: z.enum(['Mensual', 'Diario'], { required_error: 'Debes seleccionar un tipo de membresía.' }),
   healthInfo: z.string().optional(),
-  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
+  levelId: z.string().optional(),
   notes: z.string().optional(),
 });
 
@@ -1035,9 +1035,9 @@ export default function StudentsPage() {
                                 <div className="flex-grow">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h3 className="text-lg font-bold text-white">{person.name}</h3>
-                                        {level && (
+                                        {person.levelId && (
                                             <Badge className="bg-white/90 text-primary hover:bg-white/90 font-bold border-primary/20 gap-1.5">
-                                                <Signal className="h-3 w-3" /> {level.name}
+                                                <Signal className="h-3 w-3" /> {level ? level.name : 'Sin Nivel'}
                                             </Badge>
                                         )}
                                         {(person as any).recoveryBalance > 0 && person.status === 'active' && (
