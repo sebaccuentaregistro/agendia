@@ -1035,11 +1035,9 @@ export default function StudentsPage() {
                                 <div className="flex-grow">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h3 className="text-lg font-bold text-white">{person.name}</h3>
-                                        {person.levelId && (
-                                            <Badge className="bg-white/90 text-primary hover:bg-white/90 font-bold border-primary/20 gap-1.5">
-                                                <Signal className="h-3 w-3" /> {level ? level.name : 'Sin Nivel'}
-                                            </Badge>
-                                        )}
+                                        <Badge className="bg-white/90 text-primary hover:bg-white/90 font-bold border-primary/20 gap-1.5">
+                                            <Signal className="h-3 w-3" /> {level ? level.name : 'Sin Nivel'}
+                                        </Badge>
                                         {(person as any).recoveryBalance > 0 && person.status === 'active' && (
                                             <Popover>
                                                 <PopoverTrigger asChild>
@@ -1229,8 +1227,8 @@ export default function StudentsPage() {
                                         </div>
                                         
                                         {(person as any).nextPaymentDate && person.membershipType === 'Mensual' && (
-                                            <div className="text-right text-xs opacity-80 uppercase font-semibold">
-                                                <p>Próximo Pago</p>
+                                            <div className="text-right text-xs text-amber-600 dark:text-amber-500 uppercase font-bold">
+                                                <p>PROX. PAGO</p>
                                                 <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
                                             </div>
                                         )}
@@ -1277,12 +1275,18 @@ export default function StudentsPage() {
                                     <div className="flex flex-grow items-center justify-center rounded-lg border border-dashed border-slate-200 dark:border-zinc-700 h-24">
                                         <div className="text-center text-muted-foreground">
                                           <CalendarIcon className="mx-auto h-8 w-8 opacity-50"/>
-                                          <p className="text-sm mt-1">{person.status === 'active' ? 'Sin horarios inscriptos.' : 'Sin horarios.'}</p>
+                                          <p className="text-sm mt-1">{person.status === 'active' ? 'Sin horarios.' : 'Sin horarios.'}</p>
                                         </div>
                                     </div>
                                 )}
                             </div>
                             <div className="border-t border-slate-100 dark:border-zinc-700/80 pt-3 mt-auto text-xs text-muted-foreground space-y-2">
+                                {person.joinDate && (
+                                    <div className="flex items-center gap-2">
+                                        <UserPlus className="h-3.5 w-3.5" />
+                                        <span>Inscripto: {format(person.joinDate, 'dd/MM/yyyy')}</span>
+                                    </div>
+                                )}
                                 {(person as any).lastPayment ? (
                                     <div className="flex items-center gap-2">
                                         <CreditCard className="h-3.5 w-3.5" />
