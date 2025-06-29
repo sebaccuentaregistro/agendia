@@ -54,7 +54,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
   const filteredSessions = sessions
       .filter(session => 
-        (actividadFilter === 'all' || session.actividadId ===ividadFilter) &&
+        (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
         (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
       .map(session => {
@@ -788,11 +788,11 @@ export default function StudentsPage() {
 
         const specialistMatch = filters.specialistId === 'all' || personEnrolledSessions.some(s => s.instructorId === filters.specialistId);
         
-        constividadMatch = filters.actividadId === 'all' || personEnrolledSessions.some(s => s.actividadId === filters.actividadId);
+        const actividadMatch = filters.actividadId === 'all' || personEnrolledSessions.some(s => s.actividadId === filters.actividadId);
 
         const spaceMatch = filters.spaceId === 'all' || personEnrolledSessions.some(s => s.spaceId === filters.spaceId);
 
-        return nameMatch && specialistMatch &&ividadMatch && spaceMatch;
+        return nameMatch && specialistMatch && actividadMatch && spaceMatch;
       });
     }
     
@@ -1213,10 +1213,8 @@ export default function StudentsPage() {
                                                 </Button>
                                             )}
                                             
-                                            {(person as any).assignedTariff ? (
+                                            {(person as any).assignedTariff && (
                                                 <span className="text-2xl font-bold">{formatPrice((person as any).assignedTariff.price)}</span>
-                                            ) : (
-                                              person.membershipType === 'Mensual' ? <span className="text-xl font-bold">-</span> : null
                                             )}
                                         </div>
                                         
