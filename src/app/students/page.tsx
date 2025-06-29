@@ -1120,25 +1120,23 @@ export default function StudentsPage() {
                                         {sortedVacations.length > 0 && person.status === 'active' && (
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    {(person as any).isOnVacationNow ? (
-                                                        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200 font-bold border-blue-200/50 gap-1.5 cursor-pointer px-2 py-1">
-                                                            <Plane className="h-3.5 w-3.5" />
-                                                            Hasta {format((person as any).currentVacationEnd, 'dd/MM/yy')}
-                                                        </Badge>
-                                                    ) : (
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
-                                                            <Plane className="h-5 w-5" />
-                                                            <span className="sr-only">Ver períodos de vacaciones</span>
-                                                        </Button>
-                                                    )}
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
+                                                        <Plane className="h-5 w-5" />
+                                                        <span className="sr-only">Gestionar Vacaciones</span>
+                                                    </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-80">
                                                     <div className="grid gap-4">
                                                         <div className="space-y-2">
                                                             <h4 className="font-medium leading-none">Períodos de Vacaciones</h4>
+                                                            {(person as any).isOnVacationNow ? (
+                                                                <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-r-md">
+                                                                    Actualmente de vacaciones hasta {format((person as any).currentVacationEnd, 'PPP', { locale: es })}.
+                                                                </p>
+                                                            ) : null}
                                                             <div className="space-y-2 mt-2">
                                                                 {sortedVacations.map(vac => (
-                                                                    <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200">
+                                                                    <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/50">
                                                                         <span className="font-medium">
                                                                             {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
                                                                         </span>
