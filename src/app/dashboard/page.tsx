@@ -260,7 +260,7 @@ function DashboardPageContent() {
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
         const activeRegulars = session.personIds.filter(pid => {
             const person = people.find(p => p.id === pid);
-            return person && person.status === 'active';
+            return person && person.status === 'active' && !isPersonOnVacation(person, today);
         });
         return {
           ...session,
@@ -280,7 +280,7 @@ function DashboardPageContent() {
     });
 
     return { todaysSessions, filteredSessions: filtered, todayName };
-  }, [sessions, filters, attendance, people]);
+  }, [sessions, filters, attendance, people, isPersonOnVacation]);
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
