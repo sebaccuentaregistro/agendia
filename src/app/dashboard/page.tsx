@@ -20,7 +20,6 @@ import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
-import { AISuggestionCard } from '@/components/ai-suggestion-card';
 
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -298,7 +297,6 @@ function DashboardPageContent() {
     <div className="space-y-8">
       {isInitialCheckDone && <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />}
 
-      <AISuggestionCard />
       <AppNotifications />
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
