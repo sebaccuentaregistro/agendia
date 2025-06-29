@@ -127,7 +127,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                 <ScrollArea className="h-72 rounded-md border p-4">
                   <div className="space-y-4">
                     {filteredSessions.map((item) => {
-                      const { specialist, actividad, space, isPermanentlyFull, activeEnrolledCount, capacity } = item;
+                      const { specialist,ividad, space, isPermanentlyFull, activeEnrolledCount, capacity } = item;
                       if (!actividad || !specialist || !space) return null;
                       
                       const isEnrolledInForm = form.watch('sessionIds').includes(item.id);
@@ -224,7 +224,7 @@ function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: 
     return personHistory
       .map(entry => {
         const session = sessions.find(s => s.id === entry.sessionId);
-        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+        constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
         const dateObj = new Date(`${entry.date}T12:00:00Z`); // Avoid timezone issues
         return {
           ...entry,
@@ -683,12 +683,40 @@ export default function StudentsPage() {
       });
     });
     
-    let peopleList = people.map(p => ({ 
-        ...p, 
-        paymentStatus: Utils.getStudentPaymentStatus(p, now),
-        nextPaymentDate: Utils.getNextPaymentDate(p),
-        recoveryBalance: recoveryBalances[p.id] > 0 ? recoveryBalances[p.id] : 0,
-    }));
+    let peopleList = people.map(p => {
+        const lastPayment = payments
+            .filter(pay => pay.personId === p.id)
+            .sort((a, b) => b.date.getTime() - a.date.getTime())[0];
+
+        const personAttendanceRecords = attendance
+            .filter(record => 
+                record.presentIds.includes(p.id) || 
+                record.absentIds.includes(p.id) ||
+                record.justifiedAbsenceIds?.includes(p.id)
+            )
+            .map(record => {
+                let status: 'present' | 'absent' | 'justified' = 'absent';
+                if (record.presentIds.includes(p.id)) status = 'present';
+                else if (record.justifiedAbsenceIds?.includes(p.id)) status = 'justified';
+                
+                return {
+                    date: new Date(record.date + 'T12:00:00'), // Avoid timezone issues
+                    status: status
+                }
+            })
+            .sort((a,b) => b.date.getTime() - a.date.getTime());
+
+        const lastAttendance = personAttendanceRecords[0];
+        
+        return { 
+            ...p, 
+            paymentStatus: Utils.getStudentPaymentStatus(p, now),
+            nextPaymentDate: Utils.getNextPaymentDate(p),
+            recoveryBalance: recoveryBalances[p.id] > 0 ? recoveryBalances[p.id] : 0,
+            lastPayment,
+            lastAttendance
+        };
+    });
     
     // Primary filter: active/inactive status
     peopleList = peopleList.filter(p => p.status === statusFilter);
@@ -710,7 +738,7 @@ export default function StudentsPage() {
     }
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, searchParams, searchTerm, isMounted, isPersonOnVacation, attendance, statusFilter]);
+  }, [people, payments, searchParams, searchTerm, isMounted, isPersonOnVacation, attendance, statusFilter]);
 
   const emptyState = useMemo(() => {
     if (searchTerm) {
@@ -1080,7 +1108,7 @@ export default function StudentsPage() {
                                 {enrolledSessions.length > 0 ? (
                                     <div className="flex-grow space-y-3">
                                         {enrolledSessions.map(session => {
-                                            const actividad = actividades.find(a => a.id === session.actividadId);
+                                            constividad = actividades.find(a => a.id === session.actividadId);
                                             const specialist = specialists.find(s => s.id === session.instructorId);
                                             const space = spaces.find(s => s.id === session.spaceId);
                                             return (
@@ -1110,6 +1138,37 @@ export default function StudentsPage() {
                                           <CalendarIcon className="mx-auto h-8 w-8 opacity-50"/>
                                           <p className="text-sm mt-1">{person.status === 'active' ? 'Sin horarios inscriptos.' : 'Sin horarios.'}</p>
                                         </div>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="border-t border-slate-100 dark:border-zinc-700/80 pt-3 mt-auto text-xs text-muted-foreground space-y-2">
+                                {(person as any).lastPayment ? (
+                                    <div className="flex items-center gap-2">
+                                        <CreditCard className="h-3.5 w-3.5" />
+                                        <span>Últ. Pago: {format((person as any).lastPayment.date, 'dd/MM/yyyy')}</span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <CreditCard className="h-3.5 w-3.5" />
+                                        <span>Sin pagos registrados</span>
+                                    </div>
+                                )}
+                                {(person as any).lastAttendance ? (
+                                    <div className="flex items-center gap-2">
+                                        {(person as any).lastAttendance.status === 'present' && <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />}
+                                        {(person as any).lastAttendance.status === 'absent' && <XCircle className="h-3.5 w-3.5 text-destructive" />}
+                                        {(person as any).lastAttendance.status === 'justified' && <CalendarClock className="h-3.5 w-3.5 text-yellow-600" />}
+                                        <span>
+                                            Últ. Asist.: {format((person as any).lastAttendance.date, 'dd/MM/yyyy')} ({
+                                                (person as any).lastAttendance.status === 'present' ? 'Presente' :
+                                                (person as any).lastAttendance.status === 'absent' ? 'Ausente' : 'Justificada'
+                                            })
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <ClipboardCheck className="h-3.5 w-3.5" />
+                                        <span>Sin asistencias registradas</span>
                                     </div>
                                 )}
                             </div>
@@ -1193,7 +1252,8 @@ export default function StudentsPage() {
         </SheetContent>
       </Sheet>
 
-      {personForAttendance && (<AttendanceHistorySheet person={personForAttendance} onClose={() => setPersonForAttendance(null)}/>)}
+      {personForAttendance && (<AttendanceHistorySheet person={personForAttendance} onClose={() => setPersonForAttendance(null)} />)}
     </div>
   );
 }
+
