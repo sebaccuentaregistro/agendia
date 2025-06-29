@@ -9,31 +9,46 @@ import { useState } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sparkles, Bot, BarChart } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { generateSchedule, type ScheduleResponse } from '@/ai/flows/schedule-generator';
+import { useToast } from '@/hooks/use-toast';
 
-// This is a placeholder for the real Genkit flow output
-type AIResult = {
-  schedule: string;
-  reasoning: string;
-} | null;
+type AIResult = ScheduleResponse | null;
 
 export default function AssistantPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AIResult>(null);
+  const [availability, setAvailability] = useState('');
+  const [preferences, setPreferences] = useState('');
+  const { toast } = useToast();
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!availability.trim() || !preferences.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Campos requeridos',
+        description: 'Por favor, completa la disponibilidad y las preferencias.',
+      });
+      return;
+    }
+
     setIsLoading(true);
     setResult(null);
 
-    // Simulate AI call
-    setTimeout(() => {
-      // In a real implementation, you would get this from a Genkit flow
-      setResult({
-        schedule: `Lunes 09:00 - Vinyasa Flow (Sala Sol) - Elena Santos\nMartes 18:00 - Hatha Yoga (Sala Luna) - David Miller\nMiércoles 09:00 - Ashtanga Yoga (Sala Sol) - Marcus Chen\nJueves 19:30 - Yin Yoga (Sala Luna) - Aisha Khan\nViernes 07:00 - Vinyasa Flow (Sala Sol) - Elena Santos`,
-        reasoning: "El horario se optimizó para maximizar el uso de la Sala Sol en las horas de mayor demanda (mañana y tarde) y para ofrecer una variedad de estilos a lo largo de la semana, asignando especialistas a sus actividades principales. Se agruparon las clases de Vinyasa en días no consecutivos para permitir la recuperación."
+    try {
+      const aiResult = await generateSchedule({ availability, preferences });
+      setResult(aiResult);
+    } catch (error) {
+      console.error('Error generating schedule:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error del Asistente de IA',
+        description: 'No se pudo generar la sugerencia. Por favor, inténtalo de nuevo.',
       });
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -55,6 +70,8 @@ export default function AssistantPage() {
                   placeholder="Ej: Elena Santos: L-V 9-12, David Miller: M,J 18-21..."
                   rows={4}
                   className="bg-white/50 dark:bg-zinc-800/50"
+                  value={availability}
+                  onChange={(e) => setAvailability(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -64,6 +81,8 @@ export default function AssistantPage() {
                   placeholder="Ej: Mayoría prefiere clases de Vinyasa por la mañana. Yin Yoga es popular por la noche..."
                   rows={4}
                   className="bg-white/50 dark:bg-zinc-800/50"
+                  value={preferences}
+                  onChange={(e) => setPreferences(e.target.value)}
                 />
               </div>
             </CardContent>
