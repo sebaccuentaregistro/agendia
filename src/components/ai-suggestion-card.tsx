@@ -42,34 +42,36 @@ export function AISuggestionCard() {
   }, [sessions.length, fetchSuggestion]);
 
   const { Icon, iconColor, title } = useMemo(() => {
+    if (isLoading) return { Icon: Lightbulb, iconColor: 'text-primary', title: 'Analizando Estudio...' };
     if (!suggestion) return { Icon: Lightbulb, iconColor: 'text-primary', title: 'Sugerencia IA' };
+    
     switch (suggestion.suggestionType) {
       case 'conflict': return { Icon: AlertTriangle, iconColor: 'text-destructive', title: 'Conflicto Detectado' };
       case 'optimization': return { Icon: Lightbulb, iconColor: 'text-blue-500', title: 'Oportunidad de Mejora' };
       default: return { Icon: CheckCircle2, iconColor: 'text-green-600', title: 'Todo en Orden' };
     }
-  }, [suggestion]);
+  }, [suggestion, isLoading]);
 
   const cardContent = () => {
-    if (isLoading) return <Skeleton className="h-10 w-full" />;
-    if (error) return <p className="text-destructive text-sm">{error}</p>;
-    if (suggestion) return <p className="text-sm text-muted-foreground">{suggestion.suggestion}</p>;
+    if (isLoading) return <Skeleton className="h-10 w-full rounded-md bg-muted/80" />;
+    if (error) return <p className="text-sm text-destructive">{error}</p>;
+    if (suggestion) return <p className="text-sm text-foreground/80">{suggestion.suggestion}</p>;
     return null;
   };
 
   return (
-    <Card className="flex flex-col h-full">
+    <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-medium">{title}</CardTitle>
+            <CardTitle className={cn("text-base font-semibold text-slate-800 dark:text-slate-100", iconColor)}>{title}</CardTitle>
             <div className="flex items-center gap-2">
                  <Icon className={cn("h-5 w-5", iconColor)} />
-                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={fetchSuggestion} disabled={isLoading}>
+                 <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={fetchSuggestion} disabled={isLoading}>
                     <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
                     <span className="sr-only">Refrescar sugerencia</span>
                  </Button>
             </div>
         </CardHeader>
-        <CardContent className="flex-grow flex items-center min-h-[60px]">
+        <CardContent className="flex-grow flex items-center min-h-[50px] pt-2">
             {cardContent()}
         </CardContent>
     </Card>

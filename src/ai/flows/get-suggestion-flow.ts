@@ -38,19 +38,42 @@ export type GetSuggestionOutput = z.infer<typeof GetSuggestionOutputSchema>;
 // This is a mocked version. Uncomment the Genkit implementation when ready.
 export async function getSuggestion(input: GetSuggestionInput): Promise<GetSuggestionOutput> {
   // Simulate checking for conflicts
-  const schedule: Record<string, Record<string, { specialist: string, space: string }>> = {};
+  const schedule: Record<string, { specialist: string[], space: string[] }> = {};
+
   for (const session of input.sessions) {
-      const key = `${session.dayOfWeek}-${session.time}`;
-      if (!schedule[key]) {
-          schedule[key] = { specialist: '', space: '' };
-      }
-      if (schedule[key].specialist === session.instructorId || schedule[key].space === session.spaceId) {
-          return {
-              suggestion: `Conflicto detectado: Múltiples sesiones para el especialista o el espacio el ${session.dayOfWeek} a las ${session.time}.`,
-              suggestionType: "conflict",
-          };
-      }
-      schedule[key] = { specialist: session.instructorId, space: session.spaceId };
+    const key = `${session.dayOfWeek}-${session.time}`;
+    if (!schedule[key]) {
+      schedule[key] = { specialist: [], space: [] };
+    }
+    schedule[key].specialist.push(session.instructorId);
+    schedule[key].space.push(session.spaceId);
+  }
+
+  for (const key in schedule) {
+    const specialists = schedule[key].specialist;
+    const spaces = schedule[key].space;
+    const specialistCounts = specialists.reduce((acc, id) => ({...acc, [id]: (acc[id] || 0) + 1}), {} as Record<string, number>);
+    const spaceCounts = spaces.reduce((acc, id) => ({...acc, [id]: (acc[id] || 0) + 1}), {} as Record<string, number>);
+
+    const specialistConflict = Object.entries(specialistCounts).find(([_, count]) => count > 1);
+    if (specialistConflict) {
+        const specialistName = input.specialists.find(s => s.id === specialistConflict[0])?.name || 'un especialista';
+        const [day, time] = key.split('-');
+        return {
+            suggestion: `Conflicto detectado: ${specialistName} tiene múltiples sesiones programadas el ${day} a las ${time}.`,
+            suggestionType: "conflict",
+        };
+    }
+    
+    const spaceConflict = Object.entries(spaceCounts).find(([_, count]) => count > 1);
+    if (spaceConflict) {
+        const spaceName = input.spaces.find(s => s.id === spaceConflict[0])?.name || 'un espacio';
+        const [day, time] = key.split('-');
+        return {
+            suggestion: `Conflicto detectado: ${spaceName} está siendo usado para múltiples sesiones el ${day} a las ${time}.`,
+            suggestionType: "conflict",
+        };
+    }
   }
   
   // Simulate checking for optimization
@@ -58,7 +81,7 @@ export async function getSuggestion(input: GetSuggestionInput): Promise<GetSugge
     .filter(s => s.sessionType === 'Grupal')
     .map(session => {
       const space = input.spaces.find(s => s.id === session.spaceId);
-      if (!space) return { ...session, utilization: 0 };
+      if (!space || space.capacity === 0) return { ...session, utilization: 0 };
       return { ...session, utilization: session.personIds.length / space.capacity };
   }).sort((a,b) => a.utilization - b.utilization);
 
@@ -72,7 +95,7 @@ export async function getSuggestion(input: GetSuggestionInput): Promise<GetSugge
   }
 
   return {
-    suggestion: "Todo parece estar en orden en el estudio. ¡Sigue así!",
+    suggestion: "¡Todo en orden! No se encontraron conflictos ni optimizaciones evidentes.",
     suggestionType: "info"
   };
 }

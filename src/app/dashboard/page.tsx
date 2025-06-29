@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
+import { AISuggestionCard } from '@/components/ai-suggestion-card';
 
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -41,7 +42,7 @@ function AppNotifications() {
                     if (notification.type === 'waitlist' && notification.sessionId) {
                         const session = sessions.find(s => s.id === notification.sessionId);
                         const person = people.find(p => p.id === notification.personId);
-                        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                        constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
                         if (!session || !person || !actividad) {
                             return (
@@ -117,7 +118,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
     const specialist = specialists.find((i) => i.id === session.instructorId);
     constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist, actividad, space };
+    return { specialist,ividad, space };
   }, [session, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
@@ -285,7 +286,7 @@ function DashboardPageContent() {
     const specialist = specialists.find((i) => i.id === session.instructorId);
     constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist, actividad, space };
+    return { specialist,ividad, space };
   };
 
   const formatTime = (time: string) => {
@@ -297,6 +298,7 @@ function DashboardPageContent() {
     <div className="space-y-8">
       {isInitialCheckDone && <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />}
 
+      <AISuggestionCard />
       <AppNotifications />
       
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -449,7 +451,7 @@ function DashboardPageContent() {
               filteredSessions.length > 0 ? (
                 <ul className="space-y-4">
                   {filteredSessions.map(session => {
-                    const { specialist, actividad, space } = getSessionDetails(session);
+                    const { specialist,ividad, space } = getSessionDetails(session);
                     const enrolledCount = (session as any).enrolledCount;
                     const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
                     const utilization = capacity > 0 ? enrolledCount / capacity : 0;
