@@ -54,7 +54,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
   const filteredSessions = sessions
       .filter(session => 
-        (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
+        (actividadFilter === 'all' || session.actividadId ===ividadFilter) &&
         (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
       .map(session => {
@@ -788,16 +788,16 @@ export default function StudentsPage() {
 
         const specialistMatch = filters.specialistId === 'all' || personEnrolledSessions.some(s => s.instructorId === filters.specialistId);
         
-        const actividadMatch = filters.actividadId === 'all' || personEnrolledSessions.some(s => s.actividadId === filters.actividadId);
+        constividadMatch = filters.actividadId === 'all' || personEnrolledSessions.some(s => s.actividadId === filters.actividadId);
 
         const spaceMatch = filters.spaceId === 'all' || personEnrolledSessions.some(s => s.spaceId === filters.spaceId);
 
-        return nameMatch && specialistMatch && actividadMatch && spaceMatch;
+        return nameMatch && specialistMatch &&ividadMatch && spaceMatch;
       });
     }
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, attendance, statusFilter, tariffs, sessions, filters, isMounted]);
+  }, [people, payments, attendance, statusFilter, tariffs, sessions, filters, isMounted, actividades]);
 
   const emptyState = useMemo(() => {
     const hasActiveLocalFilters = filters.searchTerm.trim() !== '' || filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all';
@@ -962,42 +962,34 @@ export default function StudentsPage() {
       
       <div className="mb-8 space-y-4">
         <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4 md:p-6">
-            <div className="flex flex-wrap items-center gap-4">
-                <div className="w-full md:w-auto md:flex-1 md:min-w-[200px]">
-                    <Input 
-                        placeholder="Buscar por nombre..."
-                        value={filters.searchTerm}
-                        onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
-                        className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
-                    />
-                </div>
-                <div className="w-full md:w-auto md:flex-1 md:min-w-[200px]">
-                    <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                        <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Actividad" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todas las actividades</SelectItem>
-                            {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="w-full md:w-auto md:flex-1 md:min-w-[200px]">
-                    <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                        <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Especialista" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos los especialistas</SelectItem>
-                            {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="w-full md:w-auto md:flex-1 md:min-w-[200px]">
-                    <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                        <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Espacio" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todos los espacios</SelectItem>
-                            {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4">
+                <Input 
+                    placeholder="Buscar por nombre..."
+                    value={filters.searchTerm}
+                    onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                    className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+                />
+                <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
+                    <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Actividad" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas las actividades</SelectItem>
+                        {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
+                    <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Especialista" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos los especialistas</SelectItem>
+                        {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
+                <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
+                    <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Espacio" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todos los espacios</SelectItem>
+                        {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                </Select>
             </div>
         </Card>
 
@@ -1250,7 +1242,6 @@ export default function StudentsPage() {
                                   <h4 className="text-sm font-semibold text-foreground">
                                       Horarios inscriptos
                                   </h4>
-                                  <Badge variant="secondary" className="rounded-full bg-primary/20 text-primary font-bold">{enrolledSessions.length}</Badge>
                                 </div>
                                 {enrolledSessions.length > 0 ? (
                                     <div className="flex-grow space-y-3">
