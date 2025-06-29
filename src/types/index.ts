@@ -37,6 +37,7 @@ export type Person = {
   vacationPeriods?: VacationPeriod[];
   healthInfo?: string;
   levelId?: string;
+  notes?: string;
 };
 
 export type Session = {

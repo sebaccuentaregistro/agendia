@@ -34,7 +34,7 @@ const daysAgo = (days: number): Date => {
 
 export const people: Person[] = [
   // ~11 months ago
-  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(340), membershipType: 'Mensual', lastPaymentDate: daysAgo(25), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Lesión lumbar crónica. Evitar torsiones profundas.', status: 'active', levelId: 'level-2' },
+  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(340), membershipType: 'Mensual', lastPaymentDate: daysAgo(25), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Lesión lumbar crónica. Evitar torsiones profundas.', status: 'active', levelId: 'level-2', notes: 'Prefiere usar su propio mat.\nA veces llega 5 minutos tarde.' },
   // ~9 months ago
   { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(275), membershipType: 'Mensual', lastPaymentDate: daysAgo(15), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Hipertensión. Controlar la intensidad.', status: 'active', levelId: 'level-2' },
   { id: 'stu-3', name: 'Chloe Kim', phone: '555-0103', joinDate: daysAgo(270), membershipType: 'Diario', lastPaymentDate: daysAgo(5), avatar: `https://placehold.co/100x100.png`, status: 'active', levelId: 'level-1' },

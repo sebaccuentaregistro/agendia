@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session, Tariff } from '@/types';
-import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, UserX, UserCheck, Signal, DollarSign } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, UserX, UserCheck, Signal, DollarSign, Notebook } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -43,6 +43,7 @@ const formSchema = z.object({
   membershipType: z.enum(['Mensual', 'Diario'], { required_error: 'Debes seleccionar un tipo de membresía.' }),
   healthInfo: z.string().optional(),
   levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
+  notes: z.string().optional(),
 });
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
@@ -820,7 +821,7 @@ export default function StudentsPage() {
     return { title: "No hay personas que mostrar", description: "No hay personas en esta categoría." };
   }, [people, statusFilter, searchParams, filters]);
 
-  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none' }});
+  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none', notes: '' }});
 
   const getPaymentStatusBadge = (status: 'Al día' | 'Atrasado') => {
     if (status === 'Al día') return <Badge className="bg-white/90 text-green-700 hover:bg-white/90 font-bold border-green-200"><CheckCircle2 className="h-4 w-4 mr-1.5" />Al día</Badge>;
@@ -829,13 +830,13 @@ export default function StudentsPage() {
 
   function handleEdit(person: Person) {
     setSelectedPerson(person);
-    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '', levelId: person.levelId || 'none' });
+    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '', levelId: person.levelId || 'none', notes: person.notes || '' });
     setIsDialogOpen(true);
   }
 
   function handleAdd() {
     setSelectedPerson(undefined);
-    form.reset({ name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none' });
+    form.reset({ name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none', notes: '' });
     setIsDialogOpen(true);
   }
 
@@ -945,6 +946,15 @@ export default function StudentsPage() {
                           <FormMessage />
                       </FormItem>
                   )}/>
+                  <FormField control={form.control} name="notes" render={({ field }) => (
+                      <FormItem>
+                          <FormLabel>Notas (Opcional)</FormLabel>
+                          <FormControl>
+                              <Textarea placeholder="Ej: Prefiere la esquina derecha del salón, a veces llega tarde..." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                      </FormItem>
+                  )}/>
                   <DialogFooter><Button type="submit">Guardar Cambios</Button></DialogFooter>
                 </form>
               </Form>
@@ -954,7 +964,7 @@ export default function StudentsPage() {
       </PageHeader>
       
       <Card className="mb-8 bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4 md:p-6">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4">
           <Input 
             placeholder="Buscar por nombre..."
             value={filters.searchTerm}
@@ -1080,6 +1090,26 @@ export default function StudentsPage() {
                                                             <h4 className="font-medium leading-none">Consideraciones de Salud</h4>
                                                             <p className="text-sm text-muted-foreground">
                                                                 {person.healthInfo}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </PopoverContent>
+                                            </Popover>
+                                        )}
+                                        {person.notes && (
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
+                                                        <Notebook className="h-5 w-5" />
+                                                        <span className="sr-only">Ver notas</span>
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-80">
+                                                    <div className="grid gap-4">
+                                                        <div className="space-y-2">
+                                                            <h4 className="font-medium leading-none">Notas</h4>
+                                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                                {person.notes}
                                                             </p>
                                                         </div>
                                                     </div>
