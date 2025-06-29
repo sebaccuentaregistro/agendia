@@ -1197,40 +1197,42 @@ export default function StudentsPage() {
                                 </DropdownMenu>
                             </div>
                             {person.status === 'active' ? (
-                                <div className="mt-4">
-                                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                                <div className="mt-4 space-y-3">
+                                    <div className="flex items-center justify-between">
                                         {getPaymentStatusBadge((person as any).paymentStatus)}
-                                        {person.membershipType === 'Mensual' && (
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                className="h-auto px-2 py-1 text-xs bg-white/20 text-white hover:bg-white/30 border-white/30"
-                                                onClick={() => setPersonToRecordPayment(person)}
-                                            >
-                                                <CreditCard className="mr-1.5 h-3 w-3" />
-                                                Registrar Pago
-                                            </Button>
+                                        {(person as any).assignedTariff ? (
+                                          <p className="font-bold">{(person as any).assignedTariff.name}</p>
+                                        ) : (
+                                          <p className="font-bold">{person.membershipType}</p>
                                         )}
                                     </div>
-                                    {(person as any).assignedTariff ? (
-                                      <h4 className="text-2xl font-bold">{formatPrice((person as any).assignedTariff.price)}</h4>
-                                    ) : (
-                                      <h4 className="text-2xl font-bold">{person.membershipType}</h4>
-                                    )}
-                                    
-                                    <div className="flex justify-between items-center mt-2 text-xs opacity-80 uppercase font-semibold">
-                                        <div>
+                            
+                                    <div className="flex items-end justify-between">
+                                        <div className="flex items-center gap-3">
+                                            {person.membershipType === 'Mensual' && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="h-auto shrink-0 px-2 py-1 text-xs bg-white/20 text-white hover:bg-white/30 border-white/30"
+                                                    onClick={() => setPersonToRecordPayment(person)}
+                                                >
+                                                    <CreditCard className="mr-1.5 h-3 w-3" />
+                                                    Registrar Pago
+                                                </Button>
+                                            )}
+                                            
                                             {(person as any).assignedTariff ? (
-                                              <p className="font-bold">{(person as any).assignedTariff.name}</p>
+                                                <span className="text-2xl font-bold">{formatPrice((person as any).assignedTariff.price)}</span>
                                             ) : (
-                                              <p>Sin Arancel</p>
+                                              person.membershipType === 'Mensual' ? <span className="text-xl font-bold">-</span> : null
                                             )}
                                         </div>
-                                        {(person as any).nextPaymentDate && (
-                                        <div className="text-right">
-                                            <p>Próximo Pago</p>
-                                            <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
-                                        </div>
+                                        
+                                        {(person as any).nextPaymentDate && person.membershipType === 'Mensual' && (
+                                            <div className="text-right text-xs opacity-80 uppercase font-semibold">
+                                                <p>Próximo Pago</p>
+                                                <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
