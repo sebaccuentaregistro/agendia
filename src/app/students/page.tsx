@@ -957,7 +957,7 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4 -mt-6 mb-8">
+      <div className="flex flex-wrap items-center gap-4 -mt-6 mb-8">
         <Input 
           placeholder="Buscar por nombre..." 
           value={searchTerm} 
