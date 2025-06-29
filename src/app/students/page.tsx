@@ -671,7 +671,6 @@ export default function StudentsPage() {
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
   const [personToRecordPayment, setPersonToRecordPayment] = useState<Person | null>(null);
-  const [vacationToDelete, setVacationToDelete] = useState<{personId: string, vacationId: string} | null>(null);
   const [statusFilter, setStatusFilter] = useState('active');
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -840,10 +839,14 @@ export default function StudentsPage() {
   }
 
   function onSubmit(values: z.infer<typeof formSchema>) {
+    const finalValues = {
+        ...values,
+        levelId: values.levelId === 'none' ? undefined : values.levelId,
+    };
     if (selectedPerson) {
-      updatePerson({ ...selectedPerson, ...values });
+      updatePerson({ ...selectedPerson, ...finalValues });
     } else {
-      addPerson(values);
+      addPerson(finalValues);
     }
     setIsDialogOpen(false);
     setSelectedPerson(undefined);
@@ -1115,22 +1118,24 @@ export default function StudentsPage() {
                                                 </PopoverContent>
                                             </Popover>
                                         )}
-                                        {sortedVacations.length > 0 && person.status === 'active' && (
+                                        {person.status === 'active' && (
                                             <Popover>
                                                 <PopoverTrigger asChild>
-                                                    {(person as any).isOnVacationNow && (person as any).currentVacationEnd ? (
-                                                        <button className="flex items-center gap-1.5 rounded-full bg-blue-400 px-2 py-0.5 text-xs font-bold text-blue-900 shadow-sm cursor-pointer hover:bg-blue-500 transition-colors">
-                                                            <Plane className="h-3.5 w-3.5" />
-                                                            <span>
-                                                                Hasta {format(new Date((person as any).currentVacationEnd), 'dd/MM/yy')}
+                                                    <button>
+                                                        {(person as any).isOnVacationNow ? (
+                                                            <Badge variant="default" className="flex items-center gap-1.5 rounded-full bg-blue-400 px-2 py-1 text-xs font-bold text-blue-900 shadow-sm cursor-pointer hover:bg-blue-500 transition-colors">
+                                                                <Plane className="h-3.5 w-3.5" />
+                                                                <span>
+                                                                    Hasta {format(new Date((person as any).currentVacationEnd), 'dd/MM/yy')}
+                                                                </span>
+                                                            </Badge>
+                                                        ) : (
+                                                            <span className="inline-flex items-center justify-center h-7 w-7 text-white hover:bg-white/20 rounded-full cursor-pointer">
+                                                                <Plane className="h-5 w-5" />
+                                                                <span className="sr-only">Gestionar Vacaciones</span>
                                                             </span>
-                                                        </button>
-                                                    ) : (
-                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20 rounded-full">
-                                                            <Plane className="h-5 w-5" />
-                                                            <span className="sr-only">Gestionar Vacaciones</span>
-                                                        </Button>
-                                                    )}
+                                                        )}
+                                                    </button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-80">
                                                     <div className="grid gap-4">
@@ -1142,17 +1147,39 @@ export default function StudentsPage() {
                                                                 </p>
                                                             ) : null}
                                                             <div className="space-y-2 mt-2">
-                                                                {sortedVacations.map(vac => (
-                                                                    <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/50">
-                                                                        <span className="font-medium">
-                                                                            {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
-                                                                        </span>
-                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => setVacationToDelete({ personId: person.id, vacationId: vac.id })}>
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                            <span className="sr-only">Eliminar período de vacaciones</span>
-                                                                        </Button>
-                                                                    </div>
-                                                                ))}
+                                                                {sortedVacations.length > 0 ? (
+                                                                    sortedVacations.map(vac => (
+                                                                        <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/50">
+                                                                            <span className="font-medium">
+                                                                                {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
+                                                                            </span>
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10">
+                                                                                        <Trash2 className="h-4 w-4" />
+                                                                                        <span className="sr-only">Eliminar período de vacaciones</span>
+                                                                                    </Button>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>¿Confirmas la eliminación?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            Esta acción no se puede deshacer. Se eliminará el período de vacaciones seleccionado permanentemente.
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                                        <AlertDialogAction onClick={() => removeVacationPeriod(person.id, vac.id)} className="bg-destructive hover:bg-destructive/90">
+                                                                                            Sí, eliminar
+                                                                                        </AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        </div>
+                                                                    ))
+                                                                ) : (
+                                                                    <p className="text-sm text-muted-foreground p-2">No hay vacaciones registradas.</p>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1227,7 +1254,7 @@ export default function StudentsPage() {
                                         </div>
                                         
                                         {(person as any).nextPaymentDate && person.membershipType === 'Mensual' && (
-                                            <div className="text-right text-xs text-amber-600 dark:text-amber-500 uppercase font-bold">
+                                            <div className="text-right text-xs text-yellow-600 dark:text-yellow-400 uppercase font-bold">
                                                 <p>PROX. PAGO</p>
                                                 <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
                                             </div>
@@ -1354,28 +1381,6 @@ export default function StudentsPage() {
       {personForJustification && <JustifyAbsenceDialog person={personForJustification} onClose={() => setPersonForJustification(null)} />}
       {personToRecordPayment && <RecordPaymentDialog person={personToRecordPayment} onClose={() => setPersonToRecordPayment(null)} />}
       {personToDeactivate && <DeactivationDialog person={personToDeactivate} onClose={() => setPersonToDeactivate(null)} />}
-
-      <AlertDialog open={!!vacationToDelete} onOpenChange={(open) => !open && setVacationToDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Confirmas la eliminación?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el período de vacaciones seleccionado permanentemente.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setVacationToDelete(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (vacationToDelete) {
-                removeVacationPeriod(vacationToDelete.personId, vacationToDelete.vacationId);
-                setVacationToDelete(null);
-              }
-            }} className="bg-destructive hover:bg-destructive/90">
-              Sí, eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <Sheet open={!!personForHistory} onOpenChange={(open) => !open && setPersonForHistory(null)}>
         <SheetContent>
