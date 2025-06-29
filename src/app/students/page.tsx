@@ -53,7 +53,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
   const filteredSessions = sessions
       .filter(session => 
-        (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
+        (actividadFilter === 'all' || session.actividadId ===ividadFilter) &&
         (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
       .map(session => {
@@ -671,6 +671,7 @@ export default function StudentsPage() {
   const [personToRecordPayment, setPersonToRecordPayment] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
+  const [specialistFilter, setSpecialistFilter] = useState('all');
   const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
 
@@ -767,19 +768,29 @@ export default function StudentsPage() {
         peopleList = peopleList.filter(p => p.recoveryBalance > 0);
       }
     }
+    
+    if (specialistFilter !== 'all') {
+      const peopleInSpecialistSessions = new Set<string>();
+      sessions
+        .filter(s => s.instructorId === specialistFilter)
+        .forEach(s => {
+          s.personIds.forEach(pid => peopleInSpecialistSessions.add(pid));
+        });
+      peopleList = peopleList.filter(p => peopleInSpecialistSessions.has(p.id));
+    }
 
     if (searchTerm.trim() !== '') {
       peopleList = peopleList.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, searchParams, searchTerm, isMounted, isPersonOnVacation, attendance, statusFilter, sessions, tariffs]);
+  }, [people, payments, searchParams, searchTerm, isMounted, isPersonOnVacation, attendance, statusFilter, sessions, tariffs, specialistFilter, specialists]);
 
   const emptyState = useMemo(() => {
-    if (searchTerm) {
+    if (searchTerm || specialistFilter !== 'all') {
       return {
         title: `No se encontraron personas ${statusFilter === 'active' ? 'activas' : 'dadas de baja'}`,
-        description: "Intenta con otro nombre o limpia la búsqueda."
+        description: "Intenta con otro filtro o limpia la búsqueda."
       }
     }
     if (statusFilter === 'inactive') {
@@ -811,7 +822,7 @@ export default function StudentsPage() {
       title: "No Hay Personas",
       description: "Empieza añadiendo tu primera persona."
     }
-  }, [searchTerm, searchParams, statusFilter]);
+  }, [searchTerm, searchParams, statusFilter, specialistFilter]);
 
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: '' }});
 
@@ -822,13 +833,13 @@ export default function StudentsPage() {
 
   function handleEdit(person: Person) {
     setSelectedPerson(person);
-    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '', levelId: person.levelId || '' });
+    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '', levelId: person.levelId || 'none' });
     setIsDialogOpen(true);
   }
 
   function handleAdd() {
     setSelectedPerson(undefined);
-    form.reset({ name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: '' });
+    form.reset({ name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none' });
     setIsDialogOpen(true);
   }
 
@@ -913,7 +924,7 @@ export default function StudentsPage() {
                    <FormField control={form.control} name="levelId" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Nivel (Opcional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <Select onValueChange={field.onChange} value={field.value || 'none'}>
                             <FormControl>
                                 <SelectTrigger>
                                     <SelectValue placeholder="Seleccionar nivel" />
@@ -946,12 +957,12 @@ export default function StudentsPage() {
         </div>
       </PageHeader>
       
-      <div className="flex flex-col sm:flex-row gap-4 -mt-6 mb-8">
+      <div className="flex flex-col sm:flex-row flex-wrap items-center gap-4 -mt-6 mb-8">
         <Input 
           placeholder="Buscar por nombre..." 
           value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)} 
-          className="w-full max-w-sm bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+          className="w-full sm:w-auto sm:max-w-xs bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
         />
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
             <TabsList>
@@ -959,6 +970,15 @@ export default function StudentsPage() {
                 <TabsTrigger value="inactive">Dados de Baja</TabsTrigger>
             </TabsList>
         </Tabs>
+        <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
+          <SelectTrigger className="w-full sm:w-auto sm:min-w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+            <SelectValue placeholder="Filtrar por Especialista" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos los especialistas</SelectItem>
+            {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       {!isMounted ? (
