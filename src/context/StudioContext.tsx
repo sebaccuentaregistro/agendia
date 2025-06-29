@@ -109,15 +109,15 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
 
     const collections = {
         actividades: collection(db, 'institutes', instituteId, 'actividades'),
-        specialists: collection(db, 'institutes', instituteId, 'specialists'),
-        spaces: collection(db, 'institutes', instituteId, 'spaces'),
-        sessions: collection(db, 'institutes', instituteId, 'sessions'),
-        people: collection(db, 'institutes', instituteId, 'people'),
-        payments: collection(db, 'institutes', instituteId, 'payments'),
-        attendance: collection(db, 'institutes', instituteId, 'attendance'),
-        notifications: collection(db, 'institutes', instituteId, 'notifications'),
-        tariffs: collection(db, 'institutes', instituteId, 'tariffs'),
-        levels: collection(db, 'institutes', instituteId, 'levels'),
+        specialists: collection(db, 'institutes', instituteId, 'especialistas'),
+        spaces: collection(db, 'institutes', instituteId, 'espacios'),
+        sessions: collection(db, 'institutes', instituteId, 'horarios'),
+        people: collection(db, 'institutes', instituteId, 'personas'),
+        payments: collection(db, 'institutes', instituteId, 'pagos'),
+        attendance: collection(db, 'institutes', instituteId, 'asistencias'),
+        notifications: collection(db, 'institutes', instituteId, 'notificaciones'),
+        tariffs: collection(db, 'institutes', instituteId, 'aranceles'),
+        levels: collection(db, 'institutes', instituteId, 'niveles'),
     };
 
     const unsubscribes = [
@@ -187,12 +187,12 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   };
   
   const addSpecialist = async (data: Omit<Specialist, 'id' | 'avatar'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'specialists'), { ...data, avatar: `https://placehold.co/100x100.png` });
+    await addDoc(collection(db, 'institutes', instituteId, 'especialistas'), { ...data, avatar: `https://placehold.co/100x100.png` });
   };
 
   const updateSpecialist = async (updated: Specialist) => {
     const { id, ...data } = updated;
-    await setDoc(doc(db, 'institutes', instituteId, 'specialists', id), data);
+    await setDoc(doc(db, 'institutes', instituteId, 'especialistas', id), data);
   };
 
   const deleteSpecialist = async (id: string) => {
@@ -200,7 +200,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       toast({ variant: "destructive", title: "Especialista en Uso" });
       return;
     }
-    await deleteDoc(doc(db, 'institutes', instituteId, 'specialists', id));
+    await deleteDoc(doc(db, 'institutes', instituteId, 'especialistas', id));
   };
   
   const addPerson = async (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'status' | 'cancellationReason' | 'cancellationDate'>) => {
@@ -213,19 +213,19 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         vacationPeriods: [],
         avatar: `https://placehold.co/100x100.png`
     };
-    const newPersonRef = await addDoc(collection(db, 'institutes', instituteId, 'people'), newPersonData);
+    const newPersonRef = await addDoc(collection(db, 'institutes', instituteId, 'personas'), newPersonData);
     if (data.membershipType === 'Mensual') {
-      await addDoc(collection(db, 'institutes', instituteId, 'payments'), { personId: newPersonRef.id, date: now, months: 1 });
+      await addDoc(collection(db, 'institutes', instituteId, 'pagos'), { personId: newPersonRef.id, date: now, months: 1 });
     }
   };
 
   const updatePerson = async (updated: Person) => {
     const { id, ...data } = updated;
-    await setDoc(doc(db, 'institutes', instituteId, 'people', id), data);
+    await setDoc(doc(db, 'institutes', instituteId, 'personas', id), data);
   };
   
   const deactivatePerson = async (personId: string, reason: string) => {
-    const personRef = doc(db, 'institutes', instituteId, 'people', personId);
+    const personRef = doc(db, 'institutes', instituteId, 'personas', personId);
     await setDoc(personRef, { status: 'inactive', cancellationReason: reason, cancellationDate: new Date() }, { merge: true });
 
     const updatedSessions = sessions.map(session => {
@@ -242,7 +242,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     const batch = writeBatch(db);
     updatedSessions.forEach(session => {
         const { id, ...sessionData } = session;
-        batch.set(doc(db, 'institutes', instituteId, 'sessions', id), sessionData);
+        batch.set(doc(db, 'institutes', instituteId, 'horarios', id), sessionData);
     });
     await batch.commit();
 
@@ -253,9 +253,9 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     const personToReactivate = people.find(p => p.id === personId);
     if (!personToReactivate) return;
     const now = new Date();
-    await setDoc(doc(db, 'institutes', instituteId, 'people', personId), { status: 'active', cancellationReason: null, cancellationDate: null, lastPaymentDate: now }, { merge: true });
+    await setDoc(doc(db, 'institutes', instituteId, 'personas', personId), { status: 'active', cancellationReason: null, cancellationDate: null, lastPaymentDate: now }, { merge: true });
     if (personToReactivate.membershipType === 'Mensual') {
-      await addDoc(collection(db, 'institutes', instituteId, 'payments'), { personId, date: now, months: 1 });
+      await addDoc(collection(db, 'institutes', instituteId, 'pagos'), { personId, date: now, months: 1 });
     }
   };
   
@@ -263,8 +263,8 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     const person = people.find(p => p.id === personId);
     if (!person) return;
     const now = new Date();
-    await addDoc(collection(db, 'institutes', instituteId, 'payments'), { personId, date: now, months });
-    await setDoc(doc(db, 'institutes', instituteId, 'people', personId), { lastPaymentDate: addMonths(person.lastPaymentDate, months) }, { merge: true });
+    await addDoc(collection(db, 'institutes', instituteId, 'pagos'), { personId, date: now, months });
+    await setDoc(doc(db, 'institutes', instituteId, 'personas', personId), { lastPaymentDate: addMonths(person.lastPaymentDate, months) }, { merge: true });
   };
   
   const undoLastPayment = async (personId: string) => {
@@ -272,12 +272,12 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   };
 
   const addSpace = async (data: Omit<Space, 'id'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'spaces'), data);
+    await addDoc(collection(db, 'institutes', instituteId, 'espacios'), data);
   };
 
   const updateSpace = async (updated: Space) => {
     const { id, ...data } = updated;
-    await setDoc(doc(db, 'institutes', instituteId, 'spaces', id), data);
+    await setDoc(doc(db, 'institutes', instituteId, 'espacios', id), data);
   };
 
   const deleteSpace = async (id: string) => {
@@ -285,16 +285,16 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       toast({ variant: "destructive", title: "Espacio en Uso" });
       return;
     }
-    await deleteDoc(doc(db, 'institutes', instituteId, 'spaces', id));
+    await deleteDoc(doc(db, 'institutes', instituteId, 'espacios', id));
   };
   
   const addSession = async (data: Omit<Session, 'id'|'personIds'|'waitlistPersonIds'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'sessions'), { ...data, personIds: [], waitlistPersonIds: [] });
+    await addDoc(collection(db, 'institutes', instituteId, 'horarios'), { ...data, personIds: [], waitlistPersonIds: [] });
   };
 
   const updateSession = async (updated: Session) => {
     const { id, ...data } = updated;
-    await setDoc(doc(db, 'institutes', instituteId, 'sessions', id), data);
+    await setDoc(doc(db, 'institutes', instituteId, 'horarios', id), data);
   };
 
   const deleteSession = async (id: string) => {
@@ -303,7 +303,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       toast({ variant: 'destructive', title: 'Sesión con inscriptos' });
       return;
     }
-    await deleteDoc(doc(db, 'institutes', instituteId, 'sessions', id));
+    await deleteDoc(doc(db, 'institutes', instituteId, 'horarios', id));
   };
   
   const enrollPersonInSessions = async (personId: string, newSessionIds: string[]) => {
@@ -317,7 +317,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   const saveAttendance = async (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
       const dateStr = formatDate(new Date(), 'yyyy-MM-dd');
       const attendanceQuery = query(
-        collection(db, 'institutes', instituteId, 'attendance'),
+        collection(db, 'institutes', instituteId, 'asistencias'),
         where('sessionId', '==', sessionId),
         where('date', '==', dateStr)
       );
@@ -325,10 +325,10 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       const data = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
 
       if (querySnapshot.empty) {
-          await addDoc(collection(db, 'institutes', instituteId, 'attendance'), data);
+          await addDoc(collection(db, 'institutes', instituteId, 'asistencias'), data);
       } else {
           const docId = querySnapshot.docs[0].id;
-          await setDoc(doc(db, 'institutes', instituteId, 'attendance', docId), data);
+          await setDoc(doc(db, 'institutes', instituteId, 'asistencias', docId), data);
       }
       toast({title: 'Asistencia Guardada'});
   };
@@ -358,29 +358,29 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   };
 
   const dismissNotification = async (notificationId: string) => {
-      await deleteDoc(doc(db, 'institutes', instituteId, 'notifications', notificationId));
+      await deleteDoc(doc(db, 'institutes', instituteId, 'notificaciones', notificationId));
   };
 
   const addTariff = async (tariff: Omit<Tariff, 'id'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'tariffs'), tariff);
+    await addDoc(collection(db, 'institutes', instituteId, 'aranceles'), tariff);
   };
 
   const updateTariff = async (tariff: Tariff) => {
     const { id, ...data } = tariff;
-    await setDoc(doc(db, 'institutes', instituteId, 'tariffs', id), data);
+    await setDoc(doc(db, 'institutes', instituteId, 'aranceles', id), data);
   };
 
   const deleteTariff = async (id: string) => {
-    await deleteDoc(doc(db, 'institutes', instituteId, 'tariffs', id));
+    await deleteDoc(doc(db, 'institutes', instituteId, 'aranceles', id));
   };
 
   const addLevel = async (level: Omit<Level, 'id'>) => {
-    await addDoc(collection(db, 'institutes', instituteId, 'levels'), level);
+    await addDoc(collection(db, 'institutes', instituteId, 'niveles'), level);
   };
 
   const updateLevel = async (level: Level) => {
     const { id, ...data } = level;
-    await setDoc(doc(db, 'institutes', instituteId, 'levels', id), data);
+    await setDoc(doc(db, 'institutes', instituteId, 'niveles', id), data);
   };
   
   const deleteLevel = async (id: string) => {
@@ -388,7 +388,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       toast({ variant: 'destructive', title: 'Nivel en uso' });
       return;
     }
-    await deleteDoc(doc(db, 'institutes', instituteId, 'levels', id));
+    await deleteDoc(doc(db, 'institutes', instituteId, 'niveles', id));
   };
 
   return (

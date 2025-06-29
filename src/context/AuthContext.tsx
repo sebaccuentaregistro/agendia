@@ -21,54 +21,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [instituteId, setInstituteId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setUser(user);
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userDocRef);
-
-        if (userDocSnap.exists()) {
-          setInstituteId(userDocSnap.data().instituteId);
-        } else {
-          // User exists in Auth, but not in our 'users' collection.
-          // Let's try to automatically link them to an institute.
-          console.log("User document not found. Attempting to auto-link...");
-          
-          const institutesQuery = query(collection(db, 'institutes'));
-          const institutesSnapshot = await getDocs(institutesQuery);
-          
-          if (institutesSnapshot.size === 1) {
-            // There is exactly one institute in the whole database.
-            const singleInstitute = institutesSnapshot.docs[0];
-            const singleInstituteId = singleInstitute.id;
-            
-            console.log(`Found a single institute (ID: ${singleInstituteId}). Linking user...`);
-
-            // Create the user document automatically.
-            await setDoc(doc(db, 'users', user.uid), {
-              instituteId: singleInstituteId,
-            });
-
-            // Set the instituteId for the current session.
-            setInstituteId(singleInstituteId);
-            console.log("User successfully linked to institute.");
-
-          } else {
-            console.error("Could not auto-link user. Found", institutesSnapshot.size, "institutes. Expected 1.");
-            setInstituteId(null);
-          }
-        }
-      } else {
-        setUser(null);
-        setInstituteId(null);
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
   const login = (credentials: LoginCredentials) => {
     return signInWithEmailAndPassword(auth, credentials.email, credentials.password);
   };
@@ -76,6 +28,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     return signOut(auth);
   };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      try {
+        if (user) {
+          setUser(user);
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+            setInstituteId(userDocSnap.data().instituteId);
+          } else {
+            console.log("User document not found in 'users'. Attempting to auto-link to a single institute...");
+            
+            const institutesQuery = query(collection(db, 'institutes'));
+            const institutesSnapshot = await getDocs(institutesQuery);
+            
+            if (institutesSnapshot.size === 1) {
+              const singleInstitute = institutesSnapshot.docs[0];
+              const singleInstituteId = singleInstitute.id;
+              
+              console.log(`Found a single institute (ID: ${singleInstituteId}). Linking user ${user.uid}...`);
+
+              await setDoc(doc(db, 'users', user.uid), {
+                instituteId: singleInstituteId,
+              });
+              setInstituteId(singleInstituteId);
+              console.log("User successfully linked.");
+
+            } else {
+              console.error(`Could not auto-link user. Found ${institutesSnapshot.size} institutes, but expected exactly 1.`);
+              // Gracefully log out the user if their institute can't be determined.
+              // This prevents an infinite loading state.
+              await logout();
+            }
+          }
+        } else {
+          setUser(null);
+          setInstituteId(null);
+        }
+      } catch (error) {
+        console.error("Error during authentication state change:", error);
+        // Ensure user is logged out on error to prevent being stuck.
+        await logout();
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const value = {
     user,
