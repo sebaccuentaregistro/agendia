@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { LoginCredentials } from '@/types';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, setDoc, query } from 'firebase/firestore';
 
 interface AuthContextType {
   user: User | null;
@@ -25,15 +25,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        // Find the user's institute
         const userDocRef = doc(db, 'users', user.uid);
         const userDocSnap = await getDoc(userDocRef);
+
         if (userDocSnap.exists()) {
           setInstituteId(userDocSnap.data().instituteId);
         } else {
-          // Handle case where user exists in Auth but not in 'users' collection
-          console.error("User document not found in Firestore.");
-          setInstituteId(null);
+          // User exists in Auth, but not in our 'users' collection.
+          // Let's try to automatically link them to an institute.
+          console.log("User document not found. Attempting to auto-link...");
+          
+          const institutesQuery = query(collection(db, 'institutes'));
+          const institutesSnapshot = await getDocs(institutesQuery);
+          
+          if (institutesSnapshot.size === 1) {
+            // There is exactly one institute in the whole database.
+            const singleInstitute = institutesSnapshot.docs[0];
+            const singleInstituteId = singleInstitute.id;
+            
+            console.log(`Found a single institute (ID: ${singleInstituteId}). Linking user...`);
+
+            // Create the user document automatically.
+            await setDoc(doc(db, 'users', user.uid), {
+              instituteId: singleInstituteId,
+            });
+
+            // Set the instituteId for the current session.
+            setInstituteId(singleInstituteId);
+            console.log("User successfully linked to institute.");
+
+          } else {
+            console.error("Could not auto-link user. Found", institutesSnapshot.size, "institutes. Expected 1.");
+            setInstituteId(null);
+          }
         }
       } else {
         setUser(null);
