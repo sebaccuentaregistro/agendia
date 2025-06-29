@@ -743,13 +743,13 @@ export default function StudentsPage() {
   const emptyState = useMemo(() => {
     if (searchTerm) {
       return {
-        title: `No se encontraron personas ${statusFilter === 'active' ? 'activas' : 'inactivas'}`,
+        title: `No se encontraron personas ${statusFilter === 'active' ? 'activas' : 'dadas de baja'}`,
         description: "Intenta con otro nombre o limpia la búsqueda."
       }
     }
     if (statusFilter === 'inactive') {
         return {
-            title: "No hay personas inactivas",
+            title: "No hay personas dadas de baja",
             description: "Aquí se mostrarán las personas que se den de baja."
         }
     }
@@ -902,7 +902,7 @@ export default function StudentsPage() {
         <Tabs value={statusFilter} onValueChange={setStatusFilter}>
             <TabsList>
                 <TabsTrigger value="active">Activos</TabsTrigger>
-                <TabsTrigger value="inactive">Inactivos</TabsTrigger>
+                <TabsTrigger value="inactive">Dados de Baja</TabsTrigger>
             </TabsList>
         </Tabs>
       </div>
@@ -1091,7 +1091,7 @@ export default function StudentsPage() {
                                 </div>
                             ) : (
                                 <div className="mt-4 text-sm">
-                                    <p className="font-bold">INACTIVO</p>
+                                    <p className="font-bold">DADO DE BAJA</p>
                                     {person.cancellationDate && <p className="text-xs opacity-80">Dado de baja el {format(person.cancellationDate, 'dd/MM/yyyy')}</p>}
                                     {person.cancellationReason && <p className="text-xs opacity-80 mt-1">Motivo: {person.cancellationReason}</p>}
                                 </div>
@@ -1256,4 +1256,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
