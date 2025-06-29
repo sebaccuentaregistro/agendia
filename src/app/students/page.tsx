@@ -1254,7 +1254,7 @@ export default function StudentsPage() {
                                         </div>
                                         
                                         {(person as any).nextPaymentDate && person.membershipType === 'Mensual' && (
-                                            <div className="text-right text-xs text-yellow-600 dark:text-yellow-400 uppercase font-bold">
+                                            <div className="text-right text-xs text-yellow-300 uppercase font-bold">
                                                 <p>PROX. PAGO</p>
                                                 <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
                                             </div>
@@ -1427,4 +1427,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
