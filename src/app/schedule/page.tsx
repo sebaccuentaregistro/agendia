@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal, UserX } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal, UserX, Signal } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
@@ -43,6 +43,7 @@ const formSchema = z.object({
   dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
   time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
   sessionType: z.enum(['Grupal', 'Individual']),
+  levelId: z.string().optional(),
 });
 
 const oneTimeAttendeeSchema = z.object({
@@ -76,7 +77,7 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
     return Array.from(allAttendeesMap.values()).sort((a,b) => a.name.localeCompare(b.name));
   }, [session, people, isPersonOnVacation, today, attendance, todayStr]);
 
-  const actividad = actividades.find(a => a.id === session.actividadId);
+  constividad = actividades.find(a => a.id === session.actividadId);
 
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(message);
@@ -135,7 +136,7 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
 
 function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, addOneTimeAttendee, actividades, attendance } = useStudio();
-  const actividad = actividades.find(a => a.id === session.actividadId);
+  constividad = actividades.find(a => a.id === session.actividadId);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
@@ -276,7 +277,7 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
 
   const space = spaces.find(s => s.id === session.spaceId);
   const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
-  const actividad = actividades.find(a => a.id === session.actividadId);
+  constividad = actividades.find(a => a.id === session.actividadId);
 
   function onSubmit(data: { personIds: string[] }) {
     enrollPeopleInClass(session.id, data.personIds);
@@ -362,7 +363,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
     return people.filter(p => p.status === 'active' && session.personIds.includes(p.id));
   }, [people, session]);
 
-  const actividad = useMemo(() => {
+  constividad = useMemo(() => {
     return actividades.find((s) => s.id === session.actividadId);
   }, [session, actividades]);
   
@@ -415,7 +416,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
 }
 
 export default function SchedulePage() {
-  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession } = useStudio();
+  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
@@ -432,6 +433,7 @@ export default function SchedulePage() {
     spaceId: 'all',
     dayOfWeek: 'all',
     timeOfDay: 'all',
+    levelId: 'all',
   });
   const searchParams = useSearchParams();
   const [conflictInfo, setConflictInfo] = useState<{ specialist: string | null; space: string | null, operatingHours: string | null }>({ specialist: null, space: null, operatingHours: null });
@@ -459,6 +461,7 @@ export default function SchedulePage() {
       dayOfWeek: 'Lunes',
       time: '09:00',
       sessionType: 'Grupal',
+      levelId: '',
     },
   });
   
@@ -546,18 +549,19 @@ export default function SchedulePage() {
     const specialist = specialists.find((i) => i.id === session.instructorId);
     constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist, actividad, space };
+    const level = levels.find((l) => l.id === session.levelId);
+    return { specialist,ividad, space, level };
   };
 
   const handleAdd = () => {
     setSelectedSession(undefined);
-    form.reset({ instructorId: '', actividadId: '', spaceId: '', dayOfWeek: 'Lunes', time: '09:00', sessionType: 'Grupal' });
+    form.reset({ instructorId: '', actividadId: '', spaceId: '', dayOfWeek: 'Lunes', time: '09:00', sessionType: 'Grupal', levelId: '' });
     setIsDialogOpen(true);
   };
 
   const handleEdit = (session: Session) => {
     setSelectedSession(session);
-    form.reset({ ...session });
+    form.reset({ ...session, levelId: session.levelId || '' });
     setIsDialogOpen(true);
   };
 
@@ -609,7 +613,8 @@ export default function SchedulePage() {
             (filters.spaceId === 'all' || session.spaceId === filters.spaceId) &&
             (filters.specialistId === 'all' || session.instructorId === filters.specialistId) &&
             (filters.dayOfWeek === 'all' || session.dayOfWeek === filters.dayOfWeek) &&
-            (filters.timeOfDay === 'all' || timeOfDay === filters.timeOfDay)
+            (filters.timeOfDay === 'all' || timeOfDay === filters.timeOfDay) &&
+            (filters.levelId === 'all' || session.levelId === filters.levelId)
         );
     });
   }, [sortedSessions, filters]);
@@ -627,9 +632,9 @@ export default function SchedulePage() {
         capacidad: 'Capacidad'
     };
     const dataToExport = filteredSessions.map(session => {
-        const { specialist, actividad, space } = getSessionDetails(session);
+        const { specialist,ividad, space } = getSessionDetails(session);
         return {
-            actividad: actividad?.name || 'N/A',
+            actividad:ividad?.name || 'N/A',
             especialista: specialist?.name || 'N/A',
             espacio: space?.name || 'N/A',
             dia: session.dayOfWeek,
@@ -757,6 +762,20 @@ export default function SchedulePage() {
                                 </FormItem>
                             )}/>
                         </div>
+                        <FormField control={form.control} name="levelId" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Nivel (Opcional)</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || ''}>
+                                <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar nivel" /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                    <SelectItem value="">Sin Nivel</SelectItem>
+                                    {levels.map(level => (
+                                    <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select><FormMessage />
+                            </FormItem>
+                        )}/>
                         <DialogFooter>
                             <Button type="submit" disabled={!!conflictInfo.specialist || !!conflictInfo.space || !!conflictInfo.operatingHours}>
                                 Guardar Cambios
@@ -774,7 +793,7 @@ export default function SchedulePage() {
           <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-100">Filtrar Horarios</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
             <Select value={filters.dayOfWeek} onValueChange={(value) => handleFilterChange('dayOfWeek', value)}>
               <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Día de la semana" /></SelectTrigger>
               <SelectContent>
@@ -812,6 +831,13 @@ export default function SchedulePage() {
                 {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={filters.levelId} onValueChange={(value) => handleFilterChange('levelId', value)}>
+                <SelectTrigger className="bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"><SelectValue placeholder="Nivel" /></SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="all">Todos los niveles</SelectItem>
+                    {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -827,7 +853,7 @@ export default function SchedulePage() {
                 sessions.length > 0 ? (
                   filteredSessions.length > 0 ? (
                       filteredSessions.map((session) => {
-                      const { specialist, actividad, space } = getSessionDetails(session);
+                      const { specialist,ividad, space, level } = getSessionDetails(session);
                       const isIndividual = session.sessionType === 'Individual';
                       const capacity = isIndividual ? 1 : space?.capacity || 0;
                       const enrolledCount = session.personIds?.length || 0;
@@ -865,7 +891,12 @@ export default function SchedulePage() {
                           )}
                         >
                           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
-                            <CardTitle className="text-lg font-bold text-primary">{sessionTitle}</CardTitle>
+                             <div className="flex flex-col gap-2">
+                                <CardTitle className="text-lg font-bold text-primary">{sessionTitle}</CardTitle>
+                                {level && (
+                                    <Badge variant="outline" className="font-semibold w-fit flex items-center gap-1.5"><Signal className="h-3 w-3" />{level.name}</Badge>
+                                )}
+                            </div>
                             <div className="flex items-center gap-2">
                               {isIndividual ? (
                                 <div className="flex items-center gap-1.5 rounded-full bg-pink-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
@@ -1010,6 +1041,7 @@ export default function SchedulePage() {
                 specialists={specialists}
                 actividades={actividades}
                 spaces={spaces}
+                levels={levels}
                 onSessionClick={setSessionForRoster}
             />
           ) : (

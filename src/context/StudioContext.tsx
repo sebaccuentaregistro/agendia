@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
-import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level } from '@/types';
 import { 
   actividades as initialActividades, 
   specialists as initialSpecialists,
@@ -12,7 +12,8 @@ import {
   spaces as initialSpaces,
   attendance as initialAttendance,
   notifications as initialNotifications,
-  tariffs as initialTariffs
+  tariffs as initialTariffs,
+  levels as initialLevels
 } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import * as Utils from '@/lib/utils';
@@ -28,6 +29,7 @@ interface StudioContextType {
   attendance: SessionAttendance[];
   notifications: AppNotification[];
   tariffs: Tariff[];
+  levels: Level[];
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
   updateActividad: (actividad: Actividad) => void;
   deleteActividad: (actividadId: string) => void;
@@ -60,6 +62,9 @@ interface StudioContextType {
   addTariff: (tariff: Omit<Tariff, 'id'>) => void;
   updateTariff: (tariff: Tariff) => void;
   deleteTariff: (tariffId: string) => void;
+  addLevel: (level: Omit<Level, 'id'>) => void;
+  updateLevel: (level: Level) => void;
+  deleteLevel: (levelId: string) => void;
   isTutorialOpen: boolean;
   openTutorial: () => void;
   closeTutorial: () => void;
@@ -114,6 +119,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [tariffs, setTariffs] = useState<Tariff[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
@@ -136,6 +142,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     setAttendance(loadFromLocalStorage('yoga-attendance', initialAttendance));
     setNotifications(loadFromLocalStorage('yoga-notifications', initialNotifications));
     setTariffs(loadFromLocalStorage('yoga-tariffs', initialTariffs));
+    setLevels(loadFromLocalStorage('yoga-levels', initialLevels));
     setIsInitialized(true); // Mark as initialized
   }, []);
 
@@ -149,6 +156,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-attendance', JSON.stringify(attendance)); }, [attendance, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-notifications', JSON.stringify(notifications)); }, [notifications, isInitialized]);
   useEffect(() => { if(isInitialized) localStorage.setItem('yoga-tariffs', JSON.stringify(tariffs)); }, [tariffs, isInitialized]);
+  useEffect(() => { if(isInitialized) localStorage.setItem('yoga-levels', JSON.stringify(levels)); }, [levels, isInitialized]);
   
   const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
@@ -200,15 +208,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     setNotifications(prevNotifications => {
         const otherNotifications = prevNotifications.filter(n => n.type !== 'churnRisk');
-        const existingChurnNotifications = prevNotifications.filter(n => n.type === 'churnRisk');
-
-        // Filter out resolved churn risks
-        const stillRelevantChurnNotifications = existingChurnNotifications.filter(n => atRiskPersonIds.has(n.personId));
+        const existingChurnNotificationsForOtherPeople = prevNotifications.filter(n => n.type === 'churnRisk' && !atRiskPersonIds.has(n.personId));
         
-        // Identify new churn risks
-        const existingChurnPersonIds = new Set(existingChurnNotifications.map(n => n.personId));
         const newChurnNotifications = Array.from(atRiskPersonIds)
-            .filter(personId => !existingChurnPersonIds.has(personId))
+            .filter(personId => !prevNotifications.some(n => n.type === 'churnRisk' && n.personId === personId))
             .map(personId => ({
                 id: `notif-churn-${personId}`,
                 type: 'churnRisk' as const,
@@ -216,19 +219,23 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                 createdAt: new Date().toISOString(),
             }));
         
-        // If nothing changed, return original array to prevent re-render
-        if (newChurnNotifications.length === 0 && stillRelevantChurnNotifications.length === existingChurnNotifications.length) {
+        const currentRelevantChurnNotifications = prevNotifications.filter(n => n.type === 'churnRisk' && atRiskPersonIds.has(n.personId));
+
+        if (newChurnNotifications.length === 0 && existingChurnNotificationsForOtherPeople.length === 0) {
             return prevNotifications;
         }
 
-        return [...otherNotifications, ...stillRelevantChurnNotifications, ...newChurnNotifications];
+        return [...otherNotifications, ...currentRelevantChurnNotifications, ...newChurnNotifications];
     });
 
   }, [people, sessions, attendance, isPersonOnVacation]);
 
   useEffect(() => {
     if (!isInitialized) return;
-    generateChurnNotifications();
+    const timer = setTimeout(() => {
+      generateChurnNotifications();
+    }, 1000); // Delay to prevent rapid updates on init
+    return () => clearTimeout(timer);
   }, [isInitialized, generateChurnNotifications]);
 
 
@@ -856,8 +863,39 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       toast({ title: 'Arancel Eliminado' });
   };
 
+  const addLevel = (level: Omit<Level, 'id'>) => {
+    if (levels.some(l => l.name.trim().toLowerCase() === level.name.trim().toLowerCase())) {
+      toast({ variant: 'destructive', title: 'Nivel Duplicado', description: 'Ya existe un nivel con este nombre.' });
+      return;
+    }
+    setLevels(prev => [...prev, { ...level, id: `level-${Date.now()}` }]);
+  };
+
+  const updateLevel = (updated: Level) => {
+    if (levels.some(l => l.id !== updated.id && l.name.trim().toLowerCase() === updated.name.trim().toLowerCase())) {
+      toast({ variant: 'destructive', title: 'Nombre Duplicado', description: 'Ya existe otro nivel con este nombre.' });
+      return;
+    }
+    setLevels(prev => prev.map(l => l.id === updated.id ? updated : l));
+  };
+
+  const deleteLevel = (id: string) => {
+    const isUsedInSession = sessions.some(s => s.levelId === id);
+    const isUsedInPerson = people.some(p => p.levelId === id);
+    if (isUsedInSession || isUsedInPerson) {
+      toast({
+        variant: 'destructive',
+        title: 'Nivel en Uso',
+        description: 'Este nivel está asignado a personas o sesiones y no puede ser eliminado.',
+        duration: 5000,
+      });
+      return;
+    }
+    setLevels(prev => prev.filter(l => l.id !== id));
+  };
+
   return (
-    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deactivatePerson, reactivatePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, isTutorialOpen, openTutorial, closeTutorial }}>
+    <StudioContext.Provider value={{ actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, levels, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deactivatePerson, reactivatePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPersonInSessions, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addJustifiedAbsence, addVacationPeriod, removeVacationPeriod, isPersonOnVacation, addToWaitlist, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, addLevel, updateLevel, deleteLevel, isTutorialOpen, openTutorial, closeTutorial }}>
       {children}
     </StudioContext.Provider>
   );

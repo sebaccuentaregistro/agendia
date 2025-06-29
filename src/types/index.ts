@@ -3,6 +3,11 @@ export type Actividad = {
   name: string;
 };
 
+export type Level = {
+  id: string;
+  name: string;
+};
+
 export type Specialist = {
   id: string;
   name: string;
@@ -30,6 +35,7 @@ export type Person = {
   cancellationDate?: Date;
   vacationPeriods?: VacationPeriod[];
   healthInfo?: string;
+  levelId?: string;
 };
 
 export type Session = {
@@ -42,6 +48,7 @@ export type Session = {
   sessionType: 'Grupal' | 'Individual';
   personIds: string[];
   waitlistPersonIds?: string[];
+  levelId?: string;
 };
 
 export type Payment = {

@@ -2,19 +2,22 @@
 'use client';
 
 import React from 'react';
-import type { Session, Specialist, Actividad, Space } from '@/types';
+import type { Session, Specialist, Actividad, Space, Level } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { Badge } from './ui/badge';
+import { Signal } from 'lucide-react';
 
 interface ScheduleCalendarViewProps {
   sessions: Session[];
   specialists: Specialist[];
   actividades: Actividad[];
   spaces: Space[];
+  levels: Level[];
   onSessionClick: (session: Session) => void;
 }
 
-export function ScheduleCalendarView({ sessions, specialists, actividades, onSessionClick }: ScheduleCalendarViewProps) {
+export function ScheduleCalendarView({ sessions, specialists, actividades, levels, onSessionClick }: ScheduleCalendarViewProps) {
   const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   const timeSlots = Array.from({ length: 16 }, (_, i) => `${String(i + 7).padStart(2, '0')}:00`); // 7:00 to 22:00
 
@@ -26,8 +29,9 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, onSes
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
-    return { specialist, actividad };
+    constividad = actividades.find((s) => s.id === session.actividadId);
+    const level = levels.find(l => l.id === session.levelId);
+    return { specialist,ividad, level };
   };
 
   return (
@@ -46,19 +50,20 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, onSes
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3 sticky top-0 bg-background/80 py-2">{day}</h3>
               <div className="space-y-3">
                 {sessionsForDay.map(session => {
-                  const { specialist, actividad } = getSessionDetails(session);
+                  const { specialist,ividad, level } = getSessionDetails(session);
                   return (
                     <Card
                       key={session.id}
                       onClick={() => onSessionClick(session)}
                       className="p-3 cursor-pointer bg-white/50 dark:bg-white/10 hover:bg-white/70 dark:hover:bg-white/20 transition-colors"
                     >
-                      <div className="flex justify-between items-center gap-4">
-                        <div className="flex-1">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1 space-y-1">
                           <p className="font-bold text-primary">{actividad?.name || 'Sesión'}</p>
                           <p className="text-xs text-slate-600 dark:text-slate-400">{specialist?.name || 'N/A'}</p>
+                           {level && <Badge variant="outline" className="text-[10px] px-1 py-0">{level.name}</Badge>}
                         </div>
-                        <p className="font-semibold text-sm text-slate-700 dark:text-slate-300">{session.time}</p>
+                        <p className="font-semibold text-sm text-slate-700 dark:text-slate-300 flex-shrink-0">{session.time}</p>
                       </div>
                     </Card>
                   );
@@ -94,7 +99,7 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, onSes
                         return (
                             <div key={`${day}-${time}`} className="border-l border-b border-slate-200/50 dark:border-slate-700/50 min-h-[70px] p-1 relative">
                                 {session && (() => {
-                                    const { specialist, actividad } = getSessionDetails(session);
+                                    const { specialist,ividad, level } = getSessionDetails(session);
                                     return (
                                         <Card 
                                             onClick={() => onSessionClick(session)}
@@ -103,9 +108,10 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, onSes
                                                 "bg-white/50 dark:bg-white/10"
                                             )}
                                         >
-                                            <CardContent className="p-2 text-center flex flex-col justify-center h-full">
+                                            <CardContent className="p-2 text-center flex flex-col justify-center items-center h-full">
                                                 <p className="font-bold text-xs leading-tight text-primary">{actividad?.name || 'Sesión'}</p>
                                                 <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">{specialist?.name || 'N/A'}</p>
+                                                {level && <Badge variant="outline" className="text-[9px] px-1 py-0 mt-1 flex items-center gap-1"><Signal className="h-2 w-2"/>{level.name}</Badge>}
                                             </CardContent>
                                         </Card>
                                     );

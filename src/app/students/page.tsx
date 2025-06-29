@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session } from '@/types';
-import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, UserX, UserCheck } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, UserX, UserCheck, Signal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -42,6 +42,7 @@ const formSchema = z.object({
   phone: z.string().regex(/^\d+$/, { message: 'El teléfono solo debe contener números (sin espacios ni guiones).' }).min(10, { message: 'El teléfono debe tener al menos 10 dígitos.' }),
   membershipType: z.enum(['Mensual', 'Diario'], { required_error: 'Debes seleccionar un tipo de membresía.' }),
   healthInfo: z.string().optional(),
+  levelId: z.string().optional(),
 });
 
 function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: (open: boolean) => void }) {
@@ -651,7 +652,7 @@ function DeactivationDialog({ person, onClose }: { person: Person; onClose: () =
 
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deactivatePerson, reactivatePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance } = useStudio();
+  const { people, addPerson, updatePerson, deactivatePerson, reactivatePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance, levels } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personToDeactivate, setPersonToDeactivate] = useState<Person | null>(null);
@@ -778,7 +779,7 @@ export default function StudentsPage() {
     }
   }, [searchTerm, searchParams, statusFilter]);
 
-  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '' }});
+  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: '' }});
 
   const getPaymentStatusBadge = (status: 'Al día' | 'Atrasado') => {
     if (status === 'Al día') return <Badge className="bg-white/90 text-green-700 hover:bg-white/90 font-bold border-green-200"><CheckCircle2 className="h-4 w-4 mr-1.5" />Al día</Badge>;
@@ -787,13 +788,13 @@ export default function StudentsPage() {
 
   function handleEdit(person: Person) {
     setSelectedPerson(person);
-    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '' });
+    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '', levelId: person.levelId || '' });
     setIsDialogOpen(true);
   }
 
   function handleAdd() {
     setSelectedPerson(undefined);
-    form.reset({ name: '', phone: '', membershipType: 'Mensual', healthInfo: '' });
+    form.reset({ name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: '' });
     setIsDialogOpen(true);
   }
 
@@ -875,6 +876,25 @@ export default function StudentsPage() {
                       </RadioGroup>
                     </FormControl><FormMessage /></FormItem>
                   )}/>
+                   <FormField control={form.control} name="levelId" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Nivel (Opcional)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                            <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Seleccionar nivel" />
+                                </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                                <SelectItem value="">Sin Nivel</SelectItem>
+                                {levels.map(level => (
+                                    <SelectItem key={level.id} value={level.id}>{level.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                    </FormItem>
+                  )}/>
                   <FormField control={form.control} name="healthInfo" render={({ field }) => (
                       <FormItem>
                           <FormLabel>Consideraciones de Salud (Opcional)</FormLabel>
@@ -928,6 +948,7 @@ export default function StudentsPage() {
                       };
                   })
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                const level = person.levelId ? levels.find(l => l.id === person.levelId) : null;
 
                 return (
                     <Card key={person.id} className={cn("flex flex-col rounded-2xl shadow-lg overflow-hidden border border-slate-200/60 dark:border-zinc-700/60 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card", person.status === 'inactive' && 'bg-slate-50 dark:bg-zinc-900/50 opacity-70')}>
@@ -936,6 +957,11 @@ export default function StudentsPage() {
                                 <div className="flex-grow">
                                     <div className="flex items-center gap-2 flex-wrap">
                                         <h3 className="text-lg font-bold text-white">{person.name}</h3>
+                                        {level && (
+                                            <Badge className="bg-white/90 text-primary hover:bg-white/90 font-bold border-primary/20 gap-1.5">
+                                                <Signal className="h-3 w-3" /> {level.name}
+                                            </Badge>
+                                        )}
                                         {(person as any).recoveryBalance > 0 && person.status === 'active' && (
                                             <Popover>
                                                 <PopoverTrigger asChild>

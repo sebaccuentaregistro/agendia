@@ -4,7 +4,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo } from 'react';
@@ -163,7 +163,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 }
 
 function DashboardPageContent() {
-  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial } = useStudio();
+  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -230,6 +230,7 @@ function DashboardPageContent() {
     { href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
     { href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
     { href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
+    { href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
     { href: "/tariffs", label: "Aranceles", icon: DollarSign, count: null },
     { href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
