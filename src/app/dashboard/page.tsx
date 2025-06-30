@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, 'use aclient';
+
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal } from 'lucide-react';
@@ -349,7 +350,7 @@ function DashboardPageContent() {
                       <Plane className="h-4 w-4" />
                   </div>
                   <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
-                      Vacacion
+                      Vacaciones
                   </CardTitle>
                   <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
               </Card>
