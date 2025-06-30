@@ -6,7 +6,7 @@ runConfig:
   # It's a valid change that forces a redeploy.
   cpu: 1
   # Explicitly set the memory for the instance.
-  memoryMiB: 1024
+  memoryMiB: 512
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
   maxInstances: 3
