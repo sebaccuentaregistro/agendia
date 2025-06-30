@@ -46,7 +46,7 @@ export default function SignupPage() {
       console.error(error);
       const description = error.code === 'auth/email-already-in-use' 
         ? 'Este email ya está registrado. Por favor, inicia sesión.'
-        : `No se pudo crear la cuenta. ${error.message}`;
+        : 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.';
       toast({
         variant: 'destructive',
         title: 'Error en el registro',
@@ -71,7 +71,7 @@ export default function SignupPage() {
       toast({
         variant: 'destructive',
         title: 'Error de Google',
-        description: `No se pudo registrar con Google. ${error.message}`,
+        description: 'No se pudo registrar con Google. Por favor, revisa la configuración de Firebase.',
       });
     } finally {
         setIsGoogleLoading(false);

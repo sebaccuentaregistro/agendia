@@ -46,7 +46,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Error al iniciar sesión',
-        description: `Las credenciales son incorrectas. Por favor, inténtalo de nuevo. ${error.message}`,
+        description: 'Las credenciales son incorrectas. Por favor, inténtalo de nuevo.',
       });
     } finally {
         setIsLoading(false);
@@ -63,7 +63,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Error de Google',
-        description: `No se pudo iniciar sesión con Google. ${error.message}`,
+        description: 'No se pudo iniciar sesión con Google. Por favor, revisa la configuración de Firebase.',
       });
     } finally {
         setIsGoogleLoading(false);
