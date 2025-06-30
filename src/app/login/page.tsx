@@ -63,7 +63,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Error de Google',
-        description: 'No se pudo iniciar sesión con Google. Por favor, inténtalo de nuevo.',
+        description: `No se pudo iniciar sesión con Google. ${error.message}`,
       });
     } finally {
         setIsGoogleLoading(false);

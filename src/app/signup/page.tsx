@@ -71,7 +71,7 @@ export default function SignupPage() {
       toast({
         variant: 'destructive',
         title: 'Error de Google',
-        description: 'No se pudo registrar con Google. Por favor, inténtalo de nuevo.',
+        description: `No se pudo registrar con Google. ${error.message}`,
       });
     } finally {
         setIsGoogleLoading(false);
