@@ -5,7 +5,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { LoginCredentials } from '@/types';
-import { doc, setDoc, serverTimestamp, onSnapshot, getDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, onSnapshot, writeBatch, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppUserProfile {
@@ -39,20 +39,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
       const user = userCredential.user;
+
+      // This is a multi-tenant app. Create an institute for the new user.
+      const batch = writeBatch(db);
+
+      // 1. Create a new institute document
+      const newInstituteRef = doc(collection(db, 'institutes'));
+      batch.set(newInstituteRef, {
+        name: 'Mi Estudio', // Default name
+        ownerId: user.uid,
+        createdAt: serverTimestamp(),
+      });
       
+      // 2. Create the user profile and link it to the new institute
       const userDocRef = doc(db, 'users', user.uid);
-      await setDoc(userDocRef, {
+      batch.set(userDocRef, {
         email: user.email,
-        status: 'pending',
-        instituteId: null,
+        status: 'active', // User is active immediately
+        instituteId: newInstituteRef.id, // Link to the new institute
         createdAt: serverTimestamp(),
       });
 
+      // Commit both operations at once
+      await batch.commit();
+
       return userCredential;
 
-    } catch(error) {
-      console.error("Error creating user and profile:", error);
-      // Re-throw to be caught by the UI component
+    } catch(error: any) {
+      console.error("Error creating user, institute and profile:", error);
+      const description = error.code === 'auth/email-already-in-use' 
+        ? 'Este email ya está registrado. Por favor, inicia sesión.'
+        : 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.';
+      toast({
+        variant: 'destructive',
+        title: 'Error en el registro',
+        description,
+      });
+      // Re-throw to be caught by the UI component if needed
       throw error;
     }
   };
@@ -66,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let unsubscribeProfile: () => void = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      // Clean up previous profile listener
       unsubscribeProfile();
 
       if (user) {
@@ -80,6 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               status: data.status,
               instituteId: data.instituteId,
             });
+          } else {
+             // This case might happen if user is created in Auth but Firestore fails.
+             // The signup/login logic should handle this, but as a fallback, we clear the profile.
+            setUserProfile(null);
           }
           setLoading(false);
         }, (error) => {

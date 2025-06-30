@@ -1,7 +1,14 @@
 
+
 export type LoginCredentials = {
   email: string;
   password: string;
+};
+
+export type Institute = {
+  id: string;
+  name: string;
+  ownerId: string;
 };
 
 export type Actividad = {
