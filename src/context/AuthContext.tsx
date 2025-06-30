@@ -34,9 +34,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUser(user);
-        // --- DIAGNOSTIC CHANGE: Temporarily hardcode instituteId to avoid Firestore read on startup ---
-        setInstituteId('institute_123'); // Using a dummy ID
-        setLoading(false);
+        try {
+          const userDocRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            setInstituteId(userDocSnap.data().instituteId);
+          } else {
+            console.error("No user document found for UID:", user.uid);
+            setInstituteId(null);
+          }
+        } catch (error) {
+          console.error("Error fetching instituteId:", error);
+          setInstituteId(null);
+        } finally {
+          setLoading(false);
+        }
       } else {
         setUser(null);
         setInstituteId(null);
