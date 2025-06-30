@@ -89,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           } else {
             // This case might happen during signup before the doc is created
+            // Or for a user that existed before the users collection was implemented
             setUserProfile(null); 
           }
         } catch (error) {
