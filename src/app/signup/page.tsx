@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,8 +12,6 @@ import { useAuth } from '@/context/AuthContext';
 import { Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-import { Separator } from '@/components/ui/separator';
-import { GoogleIcon } from '@/components/google-icon';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -23,9 +20,7 @@ const formSchema = z.object({
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { signupWithEmail, loginWithGoogle } = useAuth();
-  const router = useRouter();
+  const { signupWithEmail } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -50,20 +45,6 @@ export default function SignupPage() {
       });
     } finally {
         setIsLoading(false);
-    }
-  }
-
-  async function handleGoogleSignup() {
-    setIsGoogleLoading(true);
-    try {
-      await loginWithGoogle();
-      // AppShell will show the pending screen automatically.
-    } catch (error: any) {
-      // Errors (except popup closed) are now handled and toasted by the AuthContext.
-      // We just need to catch it so the loading state is managed correctly.
-      console.error("Signup with Google failed:", error);
-    } finally {
-        setIsGoogleLoading(false);
     }
   }
 
@@ -108,23 +89,13 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
+              <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
               </Button>
             </form>
           </Form>
-
-            <div className="relative my-4">
-                <Separator />
-                <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">O</span>
-            </div>
-
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignup} disabled={isLoading || isGoogleLoading}>
-                <GoogleIcon className="mr-2 h-5 w-5" />
-                {isGoogleLoading ? 'Cargando...' : 'Registrarse con Google'}
-            </Button>
           
-           <p className="mt-4 text-center text-sm text-muted-foreground">
+           <p className="mt-6 text-center text-sm text-muted-foreground">
               ¿Ya tienes una cuenta?{' '}
               <Link href="/login" className="font-semibold text-primary underline-offset-4 hover:underline">
                   Inicia Sesión

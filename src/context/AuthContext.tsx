@@ -1,10 +1,10 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, db, googleProvider } from '@/lib/firebase';
+import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
 import type { LoginCredentials } from '@/types';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, Timestamp } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppUserProfile {
@@ -19,7 +19,6 @@ interface AuthContextType {
   loading: boolean;
   login: (credentials: LoginCredentials) => Promise<any>;
   signupWithEmail: (credentials: LoginCredentials) => Promise<any>;
-  loginWithGoogle: () => Promise<any>;
   logout: () => Promise<void>;
 }
 
@@ -48,54 +47,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     }
     return userCredential;
-  };
-  
-  const loginWithGoogle = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      const userDocRef = doc(db, 'users', user.uid);
-      const userDocSnap = await getDoc(userDocRef);
-
-      if (userDocSnap.exists()) {
-        const data = userDocSnap.data();
-        if (!data.status) {
-          // The user document exists but is incomplete. Repair it.
-          await setDoc(userDocRef, {
-            status: 'pending',
-            instituteId: null,
-            createdAt: data.createdAt || serverTimestamp(), // Preserve original creation date
-            email: user.email,
-            name: user.displayName,
-          }, { merge: true });
-        }
-      } else {
-        // The user document does not exist. Create it from scratch.
-        await setDoc(userDocRef, {
-          email: user.email,
-          status: 'pending',
-          instituteId: null,
-          createdAt: serverTimestamp(),
-          name: user.displayName,
-        });
-      }
-      
-      return result;
-    } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        console.log('Google Sign-In popup closed by user.');
-        throw error;
-      }
-
-      console.error("Error during Google Sign-In or Firestore operation:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Error de Google',
-        description: `No se pudo completar la operación. ${error.message}`,
-      });
-      throw error;
-    }
   };
 
   const logout = () => {
@@ -130,6 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.error("Error fetching user profile:", error);
           setUserProfile(null);
           setLoading(false);
+          toast({
+            variant: "destructive",
+            title: "Error de perfil",
+            description: "No se pudo cargar el perfil de usuario."
+          })
         });
       } else {
         setUser(null);
@@ -142,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeAuth();
       unsubscribeProfile();
     };
-  }, []);
+  }, [toast]);
 
   const value = {
     user,
@@ -151,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     signupWithEmail,
-    loginWithGoogle
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
