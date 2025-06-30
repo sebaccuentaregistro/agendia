@@ -4,7 +4,7 @@
 runConfig:
   # This setting specifies the number of CPUs to allocate to a container.
   # It's a valid change that forces a redeploy.
-  cpu: 1
+  cpu: 2
   # Explicitly set the memory for the instance.
   memoryMiB: 512
   # Increase this value if you'd like to automatically spin up
