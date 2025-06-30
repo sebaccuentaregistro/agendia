@@ -3,12 +3,11 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-// import { set, addMonths, differenceInDays, addDays, format as formatDate } from 'date-fns';
-// import { db } from '@/lib/firebase';
-// import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp } from 'firebase/firestore';
+import { set, addMonths, differenceInDays, addDays, format as formatDate } from 'date-fns';
+import { db } from '@/lib/firebase';
+import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp } from 'firebase/firestore';
 
-// --- TEMPORARY DEBUGGING ---
-// Switched to local data to isolate deployment issues.
+// --- DIAGNOSTIC CHANGE: Using local data to isolate deployment issues. ---
 import { 
     actividades as mockActividades,
     specialists as mockSpecialists,
@@ -21,9 +20,6 @@ import {
     tariffs as mockTariffs,
     levels as mockLevels,
 } from '@/lib/data';
-import { set } from 'date-fns';
-// --- END TEMPORARY DEBUGGING ---
-
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -113,7 +109,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
   }, []);
 
-  const showDisabledToast = () => toast({ variant: 'destructive', title: 'Función Deshabilitada', description: 'Conectando a la base de datos. Inténtalo de nuevo en un momento.' });
+  const showDisabledToast = () => toast({ variant: 'destructive', title: 'Función Deshabilitada', description: 'Esta acción se habilitará cuando la app se conecte a la base de datos.' });
 
   return (
     <StudioContext.Provider value={{ 

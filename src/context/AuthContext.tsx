@@ -32,26 +32,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      try {
-        if (user) {
-          setUser(user);
-          const userDocRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userDocRef);
-
-          if (userDocSnap.exists() && userDocSnap.data().instituteId) {
-            setInstituteId(userDocSnap.data().instituteId);
-          } else {
-            console.error(`User document for ${user.uid} not found or is missing instituteId. Logging out.`);
-            await logout();
-          }
-        } else {
-          setUser(null);
-          setInstituteId(null);
-        }
-      } catch (error) {
-        console.error("Error during authentication state change:", error);
-        await logout();
-      } finally {
+      if (user) {
+        setUser(user);
+        // --- DIAGNOSTIC CHANGE: Temporarily hardcode instituteId to avoid Firestore read on startup ---
+        setInstituteId('institute_123'); // Using a dummy ID
+        setLoading(false);
+      } else {
+        setUser(null);
+        setInstituteId(null);
         setLoading(false);
       }
     });
