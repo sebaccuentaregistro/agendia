@@ -36,48 +36,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signupWithEmail = async (credentials: LoginCredentials) => {
-    try {
-      const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
-      const user = userCredential.user;
+    const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
+    const user = userCredential.user;
 
-      // This is a multi-tenant app. Create an institute for the new user.
-      const batch = writeBatch(db);
+    // This is a multi-tenant app. Create an institute for the new user.
+    const batch = writeBatch(db);
 
-      // 1. Create a new institute document
-      const newInstituteRef = doc(collection(db, 'institutes'));
-      batch.set(newInstituteRef, {
-        name: 'Mi Estudio', // Default name
-        ownerId: user.uid,
-        createdAt: serverTimestamp(),
-      });
-      
-      // 2. Create the user profile and link it to the new institute
-      const userDocRef = doc(db, 'users', user.uid);
-      batch.set(userDocRef, {
-        email: user.email,
-        status: 'active', // User is active immediately
-        instituteId: newInstituteRef.id, // Link to the new institute
-        createdAt: serverTimestamp(),
-      });
+    // 1. Create a new institute document
+    const newInstituteRef = doc(collection(db, 'institutes'));
+    batch.set(newInstituteRef, {
+      name: 'Mi Estudio', // Default name
+      ownerId: user.uid,
+      createdAt: serverTimestamp(),
+    });
+    
+    // 2. Create the user profile and link it to the new institute
+    const userDocRef = doc(db, 'users', user.uid);
+    batch.set(userDocRef, {
+      email: user.email,
+      status: 'active', // User is active immediately
+      instituteId: newInstituteRef.id, // Link to the new institute
+      createdAt: serverTimestamp(),
+    });
 
-      // Commit both operations at once
-      await batch.commit();
+    // Commit both operations at once
+    await batch.commit();
 
-      return userCredential;
-
-    } catch(error: any) {
-      console.error("Error creating user, institute and profile:", error);
-      const description = error.code === 'auth/email-already-in-use' 
-        ? 'Este email ya está registrado. Por favor, inicia sesión.'
-        : 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.';
-      toast({
-        variant: 'destructive',
-        title: 'Error en el registro',
-        description,
-      });
-      // Re-throw to be caught by the UI component if needed
-      throw error;
-    }
+    return userCredential;
   };
 
   const logout = () => {
