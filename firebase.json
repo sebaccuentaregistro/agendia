@@ -1,5 +1,7 @@
+
 {
   "hosting": {
+    "site": "agendia-57247",
     "source": ".",
     "ignore": [
       "firebase.json",
@@ -10,7 +12,8 @@
       {
         "source": "**",
         "apphosting": {
-          "backendId": "agendia-57247"
+          "backendId": "agendia-57247",
+          "region": "us-central1"
         }
       }
     ]
