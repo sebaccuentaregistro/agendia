@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { auth, db, googleProvider } from '@/lib/firebase';
 import type { LoginCredentials } from '@/types';
-import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, onSnapshot, Timestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppUserProfile {
@@ -58,7 +58,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userDocRef = doc(db, 'users', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
-      if (!userDocSnap.exists()) {
+      if (userDocSnap.exists()) {
+        const data = userDocSnap.data();
+        if (!data.status) {
+          // The user document exists but is incomplete. Repair it.
+          await setDoc(userDocRef, {
+            status: 'pending',
+            instituteId: null,
+            createdAt: data.createdAt || serverTimestamp(), // Preserve original creation date
+            email: user.email,
+            name: user.displayName,
+          }, { merge: true });
+        }
+      } else {
+        // The user document does not exist. Create it from scratch.
         await setDoc(userDocRef, {
           email: user.email,
           status: 'pending',
@@ -67,13 +80,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           name: user.displayName,
         });
       }
+      
       return result;
     } catch (error: any) {
-      // Don't show toast for user closing popup, just log it.
       if (error.code === 'auth/popup-closed-by-user') {
         console.log('Google Sign-In popup closed by user.');
-        // We re-throw the error so the calling component's finally() block executes,
-        // but we don't show a toast.
         throw error;
       }
 
