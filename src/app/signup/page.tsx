@@ -46,7 +46,7 @@ export default function SignupPage() {
       console.error(error);
       const description = error.code === 'auth/email-already-in-use' 
         ? 'Este email ya está registrado. Por favor, inicia sesión.'
-        : error.message || 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.';
+        : 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.';
       toast({
         variant: 'destructive',
         title: 'Error en el registro',
@@ -67,11 +67,15 @@ export default function SignupPage() {
       });
       router.push('/dashboard'); // Will be caught by app shell to show pending state
     } catch (error: any) {
-       console.error(error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        console.log('Google sign-in popup closed by user.');
+        return;
+      }
+      console.error(error);
       toast({
         variant: 'destructive',
         title: 'Error de Google',
-        description: error.message || 'No se pudo registrar con Google. Por favor, revisa la configuración de Firebase.',
+        description: 'No se pudo registrar con Google. Por favor, inténtalo de nuevo.',
       });
     } finally {
         setIsGoogleLoading(false);

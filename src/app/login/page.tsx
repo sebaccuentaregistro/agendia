@@ -59,11 +59,15 @@ export default function LoginPage() {
       await loginWithGoogle();
       router.push('/dashboard');
     } catch (error: any) {
-       console.error(error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        console.log('Google sign-in popup closed by user.');
+        return;
+      }
+      console.error(error);
       toast({
         variant: 'destructive',
         title: 'Error de Google',
-        description: error.message || 'No se pudo iniciar sesión con Google. Por favor, revisa la configuración de Firebase.',
+        description: 'No se pudo iniciar sesión con Google. Por favor, inténtalo de nuevo.',
       });
     } finally {
         setIsGoogleLoading(false);
