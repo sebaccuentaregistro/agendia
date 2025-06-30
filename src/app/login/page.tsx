@@ -46,7 +46,7 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Error al iniciar sesión',
-        description: 'Las credenciales son incorrectas. Por favor, inténtalo de nuevo.',
+        description: `Las credenciales son incorrectas. Por favor, inténtalo de nuevo. ${error.message}`,
       });
     } finally {
         setIsLoading(false);

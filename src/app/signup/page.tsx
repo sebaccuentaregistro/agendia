@@ -46,7 +46,7 @@ export default function SignupPage() {
       console.error(error);
       const description = error.code === 'auth/email-already-in-use' 
         ? 'Este email ya está registrado. Por favor, inicia sesión.'
-        : 'No se pudo crear la cuenta. Inténtalo de nuevo.';
+        : `No se pudo crear la cuenta. ${error.message}`;
       toast({
         variant: 'destructive',
         title: 'Error en el registro',
