@@ -69,7 +69,7 @@ export default function SpecialistsPage() {
 
   function handleAdd() {
     setSelectedSpecialist(undefined);
-    form.reset({ name: '', phone: '',ividadIds: [] });
+    form.reset({ name: '', phone: '', actividadIds: [] });
     setIsDialogOpen(true);
   }
 
