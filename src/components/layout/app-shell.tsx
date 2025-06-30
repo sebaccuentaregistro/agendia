@@ -88,17 +88,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         return <FullscreenLoader />;
     }
 
-    if (user && !userProfile && !publicRoutes.includes(pathname)) {
-        return <ErrorShell 
-            title="Error de Perfil de Usuario"
-            description="Tu cuenta está autenticada, pero no tiene un perfil de usuario asociado en la base de datos. Esto puede pasar si tu cuenta fue creada antes de la configuración inicial. Por favor, crea el perfil de usuario o contacta al soporte." 
-        >
-            <Button variant="outline" onClick={logout} className="mt-4">
-                Cerrar Sesión
-            </Button>
-        </ErrorShell>;
-    }
-
     if (user && userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
