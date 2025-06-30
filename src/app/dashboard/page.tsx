@@ -349,7 +349,7 @@ function DashboardPageContent() {
                       <Plane className="h-4 w-4" />
                   </div>
                   <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
-                      Vacaciones
+                      Vacacion
                   </CardTitle>
                   <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
               </Card>
