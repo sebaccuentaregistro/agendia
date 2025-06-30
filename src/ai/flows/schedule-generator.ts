@@ -7,9 +7,8 @@
  * - ScheduleResponse - The return type for the generateSchedule function.
  */
 
+import {ai} from '@/ai/genkit';
 import {z} from 'zod';
-
-// NOTE: This flow is temporarily disabled for deployment debugging.
 
 export const ScheduleRequestSchema = z.object({
   availability: z.string().describe(
@@ -34,12 +33,35 @@ export type ScheduleResponse = z.infer<typeof ScheduleResponseSchema>;
 export async function generateSchedule(
   input: ScheduleRequest
 ): Promise<ScheduleResponse> {
-  console.log('AI schedule generation is temporarily disabled for debugging.');
-  // Return a dummy response to avoid application errors.
-  return {
-    schedule:
-      'El asistente de IA está temporalmente desactivado para mantenimiento. Por favor, intente más tarde.',
-    reasoning:
-      'El sistema está siendo actualizado para mejorar la estabilidad.',
-  };
+  return generateScheduleFlow(input);
 }
+
+const generateSchedulePrompt = ai.definePrompt({
+  name: 'generateSchedulePrompt',
+  input: {schema: ScheduleRequestSchema},
+  output: {schema: ScheduleResponseSchema},
+  prompt: `You are an expert AI scheduler for a wellness center. Your task is to create an optimized weekly schedule based on the availability of specialists and the preferences of the members.
+
+  **Instructions:**
+  1.  Analyze the specialist availability carefully.
+  2.  Consider the member preferences for class types and times.
+  3.  Create a balanced and logical schedule in Spanish, presented day by day (Lunes, Martes, etc.).
+  4.  Provide a clear reasoning for your scheduling decisions, explaining how you optimized for popularity and specialist availability.
+  5.  The output must be in valid JSON format matching the provided schema.
+
+  **Input Data:**
+  - Specialist Availability: {{{availability}}}
+  - Member Preferences: {{{preferences}}}`,
+});
+
+const generateScheduleFlow = ai.defineFlow(
+  {
+    name: 'generateScheduleFlow',
+    inputSchema: ScheduleRequestSchema,
+    outputSchema: ScheduleResponseSchema,
+  },
+  async (input) => {
+    const {output} = await generateSchedulePrompt(input);
+    return output!;
+  }
+);

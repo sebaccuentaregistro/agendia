@@ -1,21 +1,14 @@
-
 {
   "hosting": {
     "site": "agendia-57247",
     "source": ".",
     "ignore": [
       "firebase.json",
-      "**/node_modules/**",
-      "**/.*"
+      "**/.*",
+      "**/node_modules/**"
     ],
-    "rewrites": [
-      {
-        "source": "**",
-        "apphosting": {
-          "backendId": "agendia-57247",
-          "region": "us-central1"
-        }
-      }
-    ]
+    "frameworksBackend": {
+      "region": "us-central1"
+    }
   }
 }

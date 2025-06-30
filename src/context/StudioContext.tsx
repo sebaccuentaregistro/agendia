@@ -76,7 +76,7 @@ interface StudioContextType {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
-export function StudioProvider({ children, instituteId }: { children: ReactNode, instituteId: string }) {
+export function StudioProvider({ children, instituteId }: { children: ReactNode, instituteId: string | null }) {
   const { toast } = useToast();
   
   const [actividades, setActividades] = useState<Actividad[]>([]);
@@ -132,6 +132,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   }, [instituteId, toast]);
 
   const getCollectionRef = useCallback((collectionName: string) => {
+      if (!instituteId) throw new Error("No instituteId provided");
       return collection(doc(db, 'institutes', instituteId), collectionName);
   }, [instituteId]);
 
@@ -152,7 +153,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   const updateEntity = useCallback(async (collectionName: string, entityId: string, data: any, successMessage: string) => {
       try {
           const { id, ...updateData } = data; // Don't save the id inside the document
-          await setDoc(doc(getCollectionRef(collectionName), entityId), updateData);
+          await setDoc(doc(getCollectionRef(collectionName), entityId), updateData, { merge: true });
           toast({ title: 'Éxito', description: successMessage });
       } catch (error) {
           handleFirestoreError(error, `updateEntity (${collectionName})`);
@@ -303,11 +304,12 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
 
   const enrollPeopleInClass = useCallback(async (sessionId: string, personIds: string[]) => {
       try {
+          const sessionRef = doc(getCollectionRef('sessions'), sessionId);
           await updateEntity('sessions', sessionId, { personIds }, 'Inscripciones actualizadas.');
       } catch (error) {
           handleFirestoreError(error, 'enrollPeopleInClass');
       }
-  }, [updateEntity]);
+  }, [getCollectionRef, updateEntity]);
   
   const saveAttendance = useCallback(async (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
       const dateStr = formatDate(new Date(), 'yyyy-MM-dd');
