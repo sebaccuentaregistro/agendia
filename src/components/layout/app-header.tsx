@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -21,6 +20,7 @@ const navItems = [
   { href: "/levels", label: "Niveles" },
   { href: "/tariffs", label: "Aranceles" },
   { href: "/statistics", label: "Estadísticas" },
+  { href: "/assistant", label: "Asistente IA" },
 ];
 
 export function AppHeader() {
