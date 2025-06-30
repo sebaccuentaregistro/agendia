@@ -1,10 +1,11 @@
+
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import type { LoginCredentials } from '@/types';
-import { doc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, onSnapshot, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppUserProfile {
@@ -35,9 +36,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signupWithEmail = async (credentials: LoginCredentials) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
-    const user = userCredential.user;
-    if (user) {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
+      const user = userCredential.user;
+      
       const userDocRef = doc(db, 'users', user.uid);
       await setDoc(userDocRef, {
         email: user.email,
@@ -45,8 +47,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         instituteId: null,
         createdAt: serverTimestamp(),
       });
+
+      return userCredential;
+
+    } catch(error) {
+      console.error("Error creating user and profile:", error);
+      // Re-throw to be caught by the UI component
+      throw error;
     }
-    return userCredential;
   };
 
   const logout = () => {
@@ -72,9 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               status: data.status,
               instituteId: data.instituteId,
             });
-          } else {
-            // This case can happen briefly when a new user signs up.
-            // We don't nullify the profile, just wait for the doc to be created.
           }
           setLoading(false);
         }, (error) => {
