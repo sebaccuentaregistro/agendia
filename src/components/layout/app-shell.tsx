@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
+import { AlertTriangle } from 'lucide-react';
 
 function FullscreenLoader() {
     return (
@@ -27,6 +28,19 @@ function FullscreenLoader() {
         </div>
     );
 }
+
+function ErrorShell({ title, description }: { title: string, description: string }) {
+    return (
+        <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
+            <div className="flex flex-col items-center gap-4 text-center">
+                <AlertTriangle className="h-12 w-12 text-destructive" />
+                <h1 className="text-2xl font-bold text-destructive">{title}</h1>
+                <p className="max-w-md text-muted-foreground">{description}</p>
+            </div>
+        </div>
+    );
+}
+
 
 export function AppShell({ children }: { children: ReactNode }) {
     const { user, instituteId, loading } = useAuth();
@@ -54,9 +68,12 @@ export function AppShell({ children }: { children: ReactNode }) {
         return <FullscreenLoader />;
     }
     
-    // User is logged in but we are still waiting for the instituteId
+    // After loading, if we have a user but NO instituteId, it's an error state.
     if (user && !instituteId && !publicRoutes.includes(pathname)) {
-        return <FullscreenLoader />;
+        return <ErrorShell 
+            title="Cuenta no activada"
+            description="Esta cuenta de usuario no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso de alta." 
+        />;
     }
 
     if (!user && publicRoutes.includes(pathname)) {
