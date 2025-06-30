@@ -59,16 +59,9 @@ export default function LoginPage() {
       await loginWithGoogle();
       // AppShell will handle redirection automatically.
     } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        console.log('Google sign-in popup closed by user.');
-        return;
-      }
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Error de Google',
-        description: 'No se pudo iniciar sesión con Google. Por favor, inténtalo de nuevo.',
-      });
+      // Errors (except popup closed) are now handled and toasted by the AuthContext.
+      // We just need to catch it so the loading state is managed correctly.
+      console.error("Login with Google failed:", error);
     } finally {
         setIsGoogleLoading(false);
     }

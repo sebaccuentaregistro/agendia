@@ -59,16 +59,9 @@ export default function SignupPage() {
       await loginWithGoogle();
       // AppShell will show the pending screen automatically.
     } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
-        console.log('Google sign-in popup closed by user.');
-        return;
-      }
-      console.error(error);
-      toast({
-        variant: 'destructive',
-        title: 'Error de Google',
-        description: 'No se pudo registrar con Google. Por favor, inténtalo de nuevo.',
-      });
+      // Errors (except popup closed) are now handled and toasted by the AuthContext.
+      // We just need to catch it so the loading state is managed correctly.
+      console.error("Signup with Google failed:", error);
     } finally {
         setIsGoogleLoading(false);
     }

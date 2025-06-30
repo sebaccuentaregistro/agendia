@@ -5,6 +5,7 @@ import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut, createUs
 import { auth, db, googleProvider } from '@/lib/firebase';
 import type { LoginCredentials } from '@/types';
 import { doc, getDoc, setDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 interface AppUserProfile {
   email: string;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const login = (credentials: LoginCredentials) => {
     return signInWithEmailAndPassword(auth, credentials.email, credentials.password);
@@ -49,22 +51,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   
   const loginWithGoogle = async () => {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
-    
-    const userDocRef = doc(db, 'users', user.uid);
-    const userDocSnap = await getDoc(userDocRef);
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDocSnap = await getDoc(userDocRef);
 
-    if (!userDocSnap.exists()) {
-       await setDoc(userDocRef, {
-        email: user.email,
-        status: 'pending',
-        instituteId: null,
-        createdAt: serverTimestamp(),
-        name: user.displayName,
+      if (!userDocSnap.exists()) {
+        await setDoc(userDocRef, {
+          email: user.email,
+          status: 'pending',
+          instituteId: null,
+          createdAt: serverTimestamp(),
+          name: user.displayName,
+        });
+      }
+      return result;
+    } catch (error: any) {
+      // Don't show toast for user closing popup, just log it.
+      if (error.code === 'auth/popup-closed-by-user') {
+        console.log('Google Sign-In popup closed by user.');
+        // We re-throw the error so the calling component's finally() block executes,
+        // but we don't show a toast.
+        throw error;
+      }
+
+      console.error("Error during Google Sign-In or Firestore operation:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de Google',
+        description: `No se pudo completar la operación. ${error.message}`,
       });
+      throw error;
     }
-    return result;
   };
 
   const logout = () => {
@@ -91,7 +111,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               instituteId: data.instituteId,
             });
           } else {
-            setUserProfile(null);
+            // This case can happen briefly when a new user signs up.
+            // We don't nullify the profile, just wait for the doc to be created.
           }
           setLoading(false);
         }, (error) => {
