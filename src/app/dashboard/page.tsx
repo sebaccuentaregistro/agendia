@@ -1,14 +1,12 @@
-
 'use client';
 
-import React, 'use aclient';
+import React, { useState, useEffect, useMemo } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import { useMemo } from 'react';
 import type { Session } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
@@ -116,9 +114,9 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 
   const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist, actividad, space };
+    return { specialist,ividad, space };
   }, [session, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
@@ -285,9 +283,9 @@ function DashboardPageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist, actividad, space };
+    return { specialist,ividad, space };
   };
 
   const formatTime = (time: string) => {
@@ -451,7 +449,7 @@ function DashboardPageContent() {
               filteredSessions.length > 0 ? (
                 <ul className="space-y-4">
                   {filteredSessions.map(session => {
-                    const { specialist, actividad, space } = getSessionDetails(session);
+                    const { specialist,ividad, space } = getSessionDetails(session);
                     const enrolledCount = (session as any).enrolledCount;
                     const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
                     const utilization = capacity > 0 ? enrolledCount / capacity : 0;
