@@ -50,11 +50,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createdAt: serverTimestamp(),
     });
     
-    // 2. Create the user profile and link it to the new institute
+    // 2. Create the user profile and link it to the new institute, starting as pending.
     const userDocRef = doc(db, 'users', user.uid);
     batch.set(userDocRef, {
       email: user.email,
-      status: 'active', // User is active immediately
+      status: 'pending', // User requires approval
       instituteId: newInstituteRef.id, // Link to the new institute
       createdAt: serverTimestamp(),
     });
