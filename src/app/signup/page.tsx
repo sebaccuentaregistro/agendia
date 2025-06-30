@@ -37,11 +37,7 @@ export default function SignupPage() {
     setIsLoading(true);
     try {
       await signupWithEmail(values);
-      toast({
-        title: '¡Registro exitoso!',
-        description: 'Tu cuenta ha sido creada y está pendiente de aprobación.',
-      });
-      router.push('/login'); // Redirect to login, where they'll see the pending state
+      // AppShell will show the pending screen automatically.
     } catch (error: any) {
       console.error(error);
       const description = error.code === 'auth/email-already-in-use' 
@@ -61,11 +57,7 @@ export default function SignupPage() {
     setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
-       toast({
-        title: '¡Registro exitoso!',
-        description: 'Tu cuenta ha sido creada y está pendiente de aprobación.',
-      });
-      router.push('/dashboard'); // Will be caught by app shell to show pending state
+      // AppShell will show the pending screen automatically.
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
         console.log('Google sign-in popup closed by user.');

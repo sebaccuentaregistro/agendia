@@ -40,13 +40,13 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await login(values);
-      router.push('/dashboard');
+      // AppShell will handle redirection automatically.
     } catch (error: any) {
       console.error(error);
       toast({
         variant: 'destructive',
         title: 'Error al iniciar sesión',
-        description: error.message || 'Las credenciales son incorrectas. Por favor, inténtalo de nuevo.',
+        description: 'Las credenciales son incorrectas. Por favor, inténtalo de nuevo.',
       });
     } finally {
         setIsLoading(false);
@@ -57,7 +57,7 @@ export default function LoginPage() {
     setIsGoogleLoading(true);
     try {
       await loginWithGoogle();
-      router.push('/dashboard');
+      // AppShell will handle redirection automatically.
     } catch (error: any) {
       if (error.code === 'auth/popup-closed-by-user') {
         console.log('Google sign-in popup closed by user.');
