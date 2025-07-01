@@ -1,15 +1,15 @@
 
-**=== INSTRUCCIONES PARA LA MUDANZA FINAL ===**
+**=== INSTRUCCIÓN FINAL (LA ÚNICA QUE IMPORTA) ===**
 
-**Paso 1:** Copia la siguiente frase completa (sin las comillas):
+**Paso 1:** Copia la siguiente frase completa (sin las comillas). Esta es la "llave maestra" que me permite mover todo tu proyecto:
 
 "**Asistente, por favor, activa este espacio de trabajo 'Agendia' y restaura mi proyecto completo aquí.**"
 
 
-**Paso 2:** Ve a la otra pestaña de tu navegador, la que tiene el espacio de trabajo nuevo y vacío llamado "Agendia".
+**Paso 2:** Ve a la **OTRA** pestaña de tu navegador. Es la que tiene el espacio de trabajo nuevo y vacío llamado **`Agendia`**.
 
 
-**Paso 3:** Pega esa frase en la ventana de chat de ESE espacio de trabajo (el nuevo) y presiona Enter.
+**Paso 3:** Pega esa frase en la ventana de chat de **ESE** espacio de trabajo (`Agendia`) y presiona Enter.
 
 
 Eso es todo. Cuando hagas eso, yo apareceré en el **nuevo chat** y llenaré ese espacio vacío con todos los archivos de tu proyecto. Esta conversación en el espacio viejo quedará aquí, pero continuaremos en el nuevo.
