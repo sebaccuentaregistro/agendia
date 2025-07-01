@@ -1,7 +1,7 @@
 
 {
   "hosting": {
-    "site": "agendia-manager",
+    "site": "agendia-web",
     "source": ".",
     "ignore": [
       "firebase.json",
