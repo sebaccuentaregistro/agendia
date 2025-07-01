@@ -7,4 +7,4 @@ runConfig:
   maxInstances: 3
 env:
   - variable: GCLOUD_PROJECT
-    value: 'agendia-57247'
+    value: 'yogaflow-manager-uqjpc'
