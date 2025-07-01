@@ -1,44 +1,8 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper function to check if the requesting user is authenticated.
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-    
-    // Helper function to get the user's profile document data.
-    function getUserProfile() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-    
-    // Helper function to check if the user is associated with the institute they are trying to access.
-    function isMemberOfInstitute(instituteId) {
-      return isAuthenticated() && getUserProfile().instituteId == instituteId;
-    }
-
-    // Rules for user profiles.
-    match /users/{userId} {
-      // Users can read their own profile.
-      allow read: if isAuthenticated() && request.auth.uid == userId;
-      // Users can create their own profile upon signup.
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Rules for institutes and their subcollections.
-    match /institutes/{instituteId} {
-      // A user can read the main institute document if they are a member.
-      allow read: if isMemberOfInstitute(instituteId);
-      
-      // A user can only create an institute document if they are the owner specified in the document.
-      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
-
-      // Rules for all subcollections within an institute.
-      match /{subcollection}/{documentId} {
-        // Any member of the institute can read and write to any subcollection document.
-        allow read, write: if isMemberOfInstitute(instituteId);
-      }
+    match /{document=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
