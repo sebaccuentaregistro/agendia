@@ -5,6 +5,3 @@ runConfig:
   cpu: 1
   memoryMiB: 512
   maxInstances: 3
-env:
-  - variable: GCLOUD_PROJECT
-    value: 'agendia-57247'
