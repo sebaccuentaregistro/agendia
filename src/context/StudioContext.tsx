@@ -24,6 +24,18 @@ const convertTimestamps = (data: any) => {
     return newData;
 };
 
+// Helper function to remove undefined fields from an object before Firestore operations.
+const cleanDataForFirestore = (data: any) => {
+    const cleanData = { ...data };
+    for (const key in cleanData) {
+        if (cleanData[key] === undefined) {
+            delete cleanData[key];
+        }
+    }
+    return cleanData;
+};
+
+
 interface StudioContextType {
   actividades: Actividad[];
   specialists: Specialist[];
@@ -144,10 +156,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   };
   
   const addEntity = useCallback(async (collectionName: string, data: any, successMessage: string) => {
-      // Firestore doesn't accept `undefined` values. We need to clean the object.
-      const cleanData = Object.fromEntries(
-        Object.entries(data).filter(([_, v]) => v !== undefined)
-      );
+      const cleanData = cleanDataForFirestore(data);
       try {
           await addDoc(getCollectionRef(collectionName), cleanData);
           toast({ title: 'Éxito', description: successMessage });
@@ -159,10 +168,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   const updateEntity = useCallback(async (collectionName: string, entityId: string, data: any, successMessage: string) => {
       try {
           const { id, ...updateDataRaw } = data; // Don't save the id inside the document
-           // Firestore doesn't accept `undefined` values. We need to clean the object.
-          const updateData = Object.fromEntries(
-              Object.entries(updateDataRaw).filter(([_, v]) => v !== undefined)
-          );
+          const updateData = cleanDataForFirestore(updateDataRaw);
           await setDoc(doc(getCollectionRef(collectionName), entityId), updateData, { merge: true });
           toast({ title: 'Éxito', description: successMessage });
       } catch (error) {
