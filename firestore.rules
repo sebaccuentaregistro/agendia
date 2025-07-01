@@ -1,18 +1,28 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Los usuarios pueden crear su propio documento de perfil
+
+    // Users can read and write their own profile.
     match /users/{userId} {
-      allow read, update, delete: if request.auth.uid == userId;
-      allow create: if request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // El acceso a los datos de un instituto solo se permite si el usuario
-    // tiene el instituteId correspondiente en su perfil.
-    match /institutes/{instituteId}/{collection}/{docId} {
-      allow read, write: if get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+    // Rules for the institutes collection
+    match /institutes/{instituteId} {
+      // Any authenticated user can read the main institute document (e.g., for its name).
+      allow read: if request.auth != null;
+      
+      // An authenticated user can create a new institute IF they set themselves as the owner.
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+
+      // Only the existing owner can update the institute document.
+      allow update: if request.auth != null && get(/databases/$(database)/documents/institutes/$(instituteId)).data.ownerId == request.auth.uid;
+
+      // Anyone belonging to the institute can read/write to its subcollections (people, sessions, etc.)
+      match /{subCollection}/{docId} {
+        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+      }
     }
   }
 }
