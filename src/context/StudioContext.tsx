@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { set, addMonths, differenceInDays, addDays, format as formatDate } from 'date-fns';
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { useAuth } from './AuthContext';
 
 
 // Helper function to convert Firestore Timestamps to Dates in nested objects
@@ -77,6 +78,7 @@ interface StudioContextType {
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
 export function StudioProvider({ children, instituteId }: { children: ReactNode, instituteId: string | null }) {
+  const { user } = useAuth();
   const { toast } = useToast();
   
   const [actividades, setActividades] = useState<Actividad[]>([]);
@@ -191,8 +193,16 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         status: 'active' as const,
         vacationPeriods: [],
     };
+    
+    console.log('--- DEBUG INFO ---');
+    console.log('User UID:', user?.uid);
+    console.log('Institute ID from Context:', instituteId);
+    console.log('Document to be created:', newPerson);
+    console.log('Target path: /institutes/' + instituteId + '/people/[new_id]');
+    console.log('------------------');
+
     await addEntity('people', newPerson, 'La persona ha sido añadida correctamente.');
-  }, [addEntity]);
+  }, [addEntity, instituteId, user]);
 
   const deactivatePerson = useCallback(async (personId: string, reason: string) => {
       try {
