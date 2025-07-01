@@ -2,27 +2,28 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Users can read and write their own profile.
+    
+    // Los usuarios pueden crear su propio perfil y solo ellos pueden leerlo o actualizarlo.
     match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, update: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null;
     }
 
-    // Rules for the institutes collection
+    // Reglas para la colección de institutos
     match /institutes/{instituteId} {
-      // Any authenticated user can read the main institute document (e.g., for its name).
-      allow read: if request.auth != null;
-      
-      // An authenticated user can create a new institute IF they set themselves as the owner.
-      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      // Cualquiera autenticado puede crear un instituto (durante el registro).
+      allow create: if request.auth != null;
 
-      // Only the existing owner can update the institute document.
-      allow update: if request.auth != null && get(/databases/$(database)/documents/institutes/$(instituteId)).data.ownerId == request.auth.uid;
+      // Solo los miembros del instituto pueden leer o actualizar los datos del instituto.
+      allow read, update: if request.auth != null 
+                          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
+    }
 
-      // Anyone belonging to the institute can read/write to its subcollections (people, sessions, etc.)
-      match /{subCollection}/{docId} {
-        allow read, write: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
-      }
+    // Reglas para todas las subcolecciones dentro de un instituto (people, sessions, etc.)
+    match /institutes/{instituteId}/{collection}/{docId} {
+      // Solo los miembros del instituto pueden leer o escribir en sus subcolecciones.
+      allow read, write: if request.auth != null 
+                         && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.instituteId == instituteId;
     }
   }
 }
