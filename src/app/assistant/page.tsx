@@ -40,7 +40,6 @@ export default function AssistantPage() {
       const aiResult = await generateSchedule({ availability, preferences });
       setResult(aiResult);
     } catch (error) {
-      console.error('Error generating schedule:', error);
       toast({
         variant: 'destructive',
         title: 'Error del Asistente de IA',

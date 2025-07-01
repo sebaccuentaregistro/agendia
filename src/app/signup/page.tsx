@@ -35,7 +35,6 @@ export default function SignupPage() {
       await signupWithEmail(values);
       // AppShell will show the pending screen automatically.
     } catch (error: any) {
-      console.error(error);
       const description = error.code === 'auth/email-already-in-use' 
         ? 'Este email ya está registrado. Por favor, inicia sesión.'
         : 'No se pudo crear la cuenta. Por favor, inténtalo de nuevo.';

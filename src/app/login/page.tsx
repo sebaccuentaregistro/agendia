@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -37,7 +38,6 @@ export default function LoginPage() {
       await login(values);
       // AppShell will handle redirection automatically.
     } catch (error: any) {
-      console.error(error);
       toast({
         variant: 'destructive',
         title: 'Error al iniciar sesión',
