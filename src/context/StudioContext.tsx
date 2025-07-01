@@ -144,8 +144,12 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   };
   
   const addEntity = useCallback(async (collectionName: string, data: any, successMessage: string) => {
+      // Firestore doesn't accept `undefined` values. We need to clean the object.
+      const cleanData = Object.fromEntries(
+        Object.entries(data).filter(([_, v]) => v !== undefined)
+      );
       try {
-          await addDoc(getCollectionRef(collectionName), data);
+          await addDoc(getCollectionRef(collectionName), cleanData);
           toast({ title: 'Éxito', description: successMessage });
       } catch (error) {
           handleFirestoreError(error, `addEntity (${collectionName})`);
@@ -154,7 +158,11 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
 
   const updateEntity = useCallback(async (collectionName: string, entityId: string, data: any, successMessage: string) => {
       try {
-          const { id, ...updateData } = data; // Don't save the id inside the document
+          const { id, ...updateDataRaw } = data; // Don't save the id inside the document
+           // Firestore doesn't accept `undefined` values. We need to clean the object.
+          const updateData = Object.fromEntries(
+              Object.entries(updateDataRaw).filter(([_, v]) => v !== undefined)
+          );
           await setDoc(doc(getCollectionRef(collectionName), entityId), updateData, { merge: true });
           toast({ title: 'Éxito', description: successMessage });
       } catch (error) {
@@ -193,16 +201,8 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         status: 'active' as const,
         vacationPeriods: [],
     };
-    
-    console.log('--- DEBUG INFO ---');
-    console.log('User UID:', user?.uid);
-    console.log('Institute ID from Context:', instituteId);
-    console.log('Document to be created:', newPerson);
-    console.log('Target path: /institutes/' + instituteId + '/people/[new_id]');
-    console.log('------------------');
-
     await addEntity('people', newPerson, 'La persona ha sido añadida correctamente.');
-  }, [addEntity, instituteId, user]);
+  }, [addEntity]);
 
   const deactivatePerson = useCallback(async (personId: string, reason: string) => {
       try {
