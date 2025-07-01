@@ -1,0 +1,10 @@
+# Settings to manage and configure a Firebase App Hosting backend.
+# https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  cpu: 1
+  memoryMiB: 512
+  maxInstances: 3
+env:
+  - variable: GCLOUD_PROJECT
+    value: 'agendia-57247'
