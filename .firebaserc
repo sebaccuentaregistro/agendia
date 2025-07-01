@@ -2,5 +2,8 @@
 {
   "projects": {
     "default": "agendia-57247"
+  },
+  "hosting": {
+    "agendia-live": "agendia-57247"
   }
 }
