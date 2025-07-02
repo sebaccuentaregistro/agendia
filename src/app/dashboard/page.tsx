@@ -43,12 +43,7 @@ function AppNotifications() {
                         const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
                         if (!session || !person || !actividad) {
-                            return (
-                                <div key={notification.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
-                                    <p className="text-muted-foreground">Esta notificación ya no es válida.</p>
-                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
-                                </div>
-                            );
+                            return null;
                         }
 
                         return (
@@ -65,7 +60,7 @@ function AppNotifications() {
                     }
                     if (notification.type === 'churnRisk') {
                         const person = people.find(p => p.id === notification.personId);
-                        if (!person || person.status === 'inactive') return null; // Stale notification or inactive person
+                        if (!person || person.status === 'inactive') return null;
 
                         return (
                             <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
