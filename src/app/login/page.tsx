@@ -9,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
-import { Heart } from 'lucide-react';
+import { Heart, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 const formSchema = z.object({
@@ -25,6 +26,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [debugError, setDebugError] = useState<string | null>(null);
   const { loginWithEmailAndPassword, sendPasswordReset } = useAuth();
   const { toast } = useToast();
 
@@ -38,12 +40,14 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    setDebugError(null);
     try {
       await loginWithEmailAndPassword(values);
       // AppShell will handle redirection automatically.
     } catch (error: any) {
-      // The context has a toast that will display the error.
-      // No need to display it here again.
+      // Capture and display the full technical error object for debugging
+      const fullError = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
+      setDebugError(fullError);
     } finally {
       setIsLoading(false);
     }
@@ -114,6 +118,18 @@ export default function LoginPage() {
               </form>
             </Form>
             
+            {debugError && (
+              <Alert variant="destructive" className="mt-4">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Error de Depuración</AlertTitle>
+                <AlertDescription>
+                  <pre className="mt-2 w-full whitespace-pre-wrap rounded-md bg-slate-950 p-4 text-xs text-slate-50">
+                    <code>{debugError}</code>
+                  </pre>
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="mt-4 text-center text-sm">
               ¿No tienes cuenta?{" "}
               <Link href="/signup" className="underline">
