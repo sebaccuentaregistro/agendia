@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
+import { GoogleIcon } from '@/components/google-icon';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -19,7 +20,7 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const { loginWithEmailAndPassword } = useAuth();
+  const { loginWithEmailAndPassword, loginWithGoogle } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -36,7 +37,20 @@ export default function LoginPage() {
       // AppShell will handle redirection automatically.
     } catch (error) {
       // Error toast is handled in the context
+    } finally {
       setIsLoading(false);
+    }
+  }
+  
+  async function handleGoogleLogin() {
+    setIsLoading(true);
+    try {
+      await loginWithGoogle();
+      // AppShell will handle redirection automatically.
+    } catch (error) {
+        // Error toast is handled in the context
+    } finally {
+        setIsLoading(false);
     }
   }
 
@@ -84,6 +98,22 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
+          
+          <div className="relative my-4">
+            <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                O continuar con
+                </span>
+            </div>
+          </div>
+          
+          <Button variant="outline" className="w-full" onClick={handleGoogleLogin} disabled={isLoading}>
+            <GoogleIcon className="mr-2 h-5 w-5" />
+            Ingresar con Google
+          </Button>
           
           <div className="mt-4 text-center text-sm">
             ¿No tienes cuenta?{" "}
