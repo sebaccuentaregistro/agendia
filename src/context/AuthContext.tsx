@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp, onSnapshot, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -21,6 +21,7 @@ interface AuthContextType {
   loginWithEmailAndPassword: (credentials: LoginCredentials) => Promise<any>;
   signupWithEmailAndPassword: (credentials: LoginCredentials) => Promise<any>;
   logout: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -107,6 +108,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return signOut(auth);
   };
 
+  const sendPasswordReset = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: 'Correo de recuperación enviado',
+        description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.',
+      });
+    } catch (error: any) {
+      console.error("Password Reset Error:", error.code, error.message);
+      let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+          description = 'No se encontró ninguna cuenta con este correo electrónico.';
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Error al enviar correo',
+        description,
+      });
+      throw error;
+    }
+  };
+
   useEffect(() => {
     let unsubscribeProfile: () => void = () => {};
 
@@ -162,6 +185,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loginWithEmailAndPassword,
     signupWithEmailAndPassword,
     logout,
+    sendPasswordReset,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
