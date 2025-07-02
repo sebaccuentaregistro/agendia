@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp, onSnapshot, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -19,7 +19,6 @@ interface AuthContextType {
   userProfile: AppUserProfile | null;
   loading: boolean;
   loginWithEmailAndPassword: (credentials: LoginCredentials) => Promise<any>;
-  loginWithGoogle: () => Promise<any>;
   signupWithEmailAndPassword: (credentials: LoginCredentials) => Promise<any>;
   logout: () => Promise<void>;
 }
@@ -87,17 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       handleAuthError(error);
       throw error;
-    }
-  };
-
-  const loginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-        const result = await signInWithPopup(auth, provider);
-        return handleAuthSuccess(result);
-    } catch (error: any) {
-        handleAuthError(error);
-        throw error;
     }
   };
 
@@ -169,7 +157,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     userProfile,
     loading,
     loginWithEmailAndPassword,
-    loginWithGoogle,
     signupWithEmailAndPassword,
     logout,
   };
