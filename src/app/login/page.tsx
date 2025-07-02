@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -20,6 +21,7 @@ const formSchema = z.object({
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const { loginWithEmailAndPassword } = useAuth();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -35,7 +37,12 @@ export default function LoginPage() {
       await loginWithEmailAndPassword(values);
       // AppShell will handle redirection automatically.
     } catch (error) {
-      // Error toast is handled in the context
+      // The context also shows a toast, but this is a fallback for robustness.
+      toast({
+        variant: 'destructive',
+        title: 'Error al iniciar sesión',
+        description: 'Tus credenciales son incorrectas. Por favor, inténtalo de nuevo.',
+      });
     } finally {
       setIsLoading(false);
     }

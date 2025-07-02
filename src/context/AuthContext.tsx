@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   
   const handleAuthError = (error: any) => {
-      console.error("Auth Error:", error);
+      console.error("Authentication Error:", error.code, error.message);
       let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
       switch (error.code) {
         case 'auth/user-not-found':
@@ -70,6 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             break;
         case 'auth/popup-closed-by-user':
             description = 'Has cerrado la ventana de inicio de sesión.';
+            break;
+        case 'auth/network-request-failed':
+            description = 'Error de red. Por favor, comprueba tu conexión a internet.';
             break;
       }
 
