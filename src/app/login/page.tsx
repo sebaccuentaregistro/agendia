@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [loginError, setLoginError] = useState<any>(null); // State for displaying the error
   const { loginWithEmailAndPassword, sendPasswordReset } = useAuth();
   const { toast } = useToast();
 
@@ -38,11 +39,13 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    setLoginError(null); // Clear previous errors
     try {
       await loginWithEmailAndPassword(values);
       // AppShell will handle redirection automatically.
     } catch (error: any) {
-      // The AuthContext will show a toast, so we just need to handle the loading state.
+      // Catch the error and set it to state to be displayed on the screen.
+      setLoginError(error);
     } finally {
       setIsLoading(false);
     }
@@ -112,6 +115,17 @@ export default function LoginPage() {
                 </Button>
               </form>
             </Form>
+            
+            {/* Error display block */}
+            {loginError && (
+                <div className="mt-4 p-3 bg-destructive/10 border border-destructive/50 rounded-md text-destructive text-xs">
+                    <h4 className="font-bold mb-2">Error Técnico:</h4>
+                    <pre className="whitespace-pre-wrap break-all font-mono">
+                        {/* Stringify the full error object for detailed debug info */}
+                        {JSON.stringify(loginError, Object.getOwnPropertyNames(loginError), 2)}
+                    </pre>
+                </div>
+            )}
             
             <div className="mt-4 text-center text-sm">
               ¿No tienes cuenta?{" "}
