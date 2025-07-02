@@ -1,3 +1,5 @@
+// YogaFlow Next.js Configuration
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
