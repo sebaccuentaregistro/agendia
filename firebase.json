@@ -1,7 +1,7 @@
 
 {
   "hosting": {
-    "site": "agendia-live",
+    "site": "yogaflow-manager-uqjpc",
     "source": ".",
     "ignore": [
       "firebase.json",
