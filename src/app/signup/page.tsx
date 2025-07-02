@@ -47,7 +47,7 @@ export default function SignupPage() {
           <div className="flex justify-center items-center gap-2 mb-4">
             <Heart className="h-8 w-8 text-fuchsia-500" />
             <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
-              Agendia
+              YogaFlow
             </CardTitle>
           </div>
           <CardDescription>

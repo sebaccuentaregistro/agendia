@@ -1,6 +1,6 @@
-# Agendia
+# YogaFlow
 
-Agendia es una aplicación web moderna construida con Next.js y diseñada para la gestión integral de centros de bienestar, como estudios de yoga o gimnasios.
+YogaFlow es una aplicación web moderna construida con Next.js y diseñada para la gestión integral de centros de bienestar, como estudios de yoga o gimnasios.
 
 ## Tech Stack
 

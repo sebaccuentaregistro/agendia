@@ -46,7 +46,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <div className="flex justify-center items-center gap-2 mb-4">
             <Heart className="h-8 w-8 text-fuchsia-500" />
-            <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">Agendia</CardTitle>
+            <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">YogaFlow</CardTitle>
           </div>
           <CardDescription>Ingresa a tu cuenta para gestionar tu estudio.</CardDescription>
         </CardHeader>
