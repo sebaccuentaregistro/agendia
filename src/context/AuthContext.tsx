@@ -1,8 +1,8 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db, googleProvider } from '@/lib/firebase';
+import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp, onSnapshot, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { LoginCredentials } from '@/types';
@@ -18,8 +18,6 @@ interface AuthContextType {
   user: User | null;
   userProfile: AppUserProfile | null;
   loading: boolean;
-  loginWithGoogle: () => Promise<any>;
-  signupWithGoogle: () => Promise<any>;
   loginWithEmailAndPassword: (credentials: LoginCredentials) => Promise<any>;
   signupWithEmailAndPassword: (credentials: LoginCredentials) => Promise<any>;
   logout: () => Promise<void>;
@@ -65,26 +63,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           : 'Ocurrió un error. Verifica tus credenciales o inténtalo de nuevo.',
       });
   }
-
-  const loginWithGoogle = async () => {
-    try {
-        const result = await signInWithPopup(auth, googleProvider);
-        return handleAuthSuccess(result);
-    } catch (error) {
-        handleAuthError(error);
-        throw error;
-    }
-  };
-  
-  const signupWithGoogle = async () => {
-    try {
-        const result = await signInWithPopup(auth, googleProvider);
-        return handleAuthSuccess(result);
-    } catch (error) {
-        handleAuthError(error);
-        throw error;
-    }
-  };
   
   const loginWithEmailAndPassword = async ({ email, password }: LoginCredentials) => {
     try {
@@ -162,8 +140,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     userProfile,
     loading,
-    loginWithGoogle,
-    signupWithGoogle,
     loginWithEmailAndPassword,
     signupWithEmailAndPassword,
     logout,

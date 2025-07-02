@@ -11,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
-import { GoogleIcon } from '@/components/google-icon';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -20,8 +19,7 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { loginWithEmailAndPassword, loginWithGoogle } = useAuth();
+  const { loginWithEmailAndPassword } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -39,17 +37,6 @@ export default function LoginPage() {
     } catch (error) {
       // Error toast is handled in the context
       setIsLoading(false);
-    }
-  }
-
-  async function handleGoogleLogin() {
-    setIsGoogleLoading(true);
-    try {
-      await loginWithGoogle();
-      // AppShell will handle redirection automatically.
-    } catch (error: any) {
-      // Error toast is handled in the context for Google login too
-      setIsGoogleLoading(false);
     }
   }
 
@@ -97,29 +84,6 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">O continúa con</span>
-            </div>
-          </div>
-
-          <Button 
-            onClick={handleGoogleLogin} 
-            className="w-full" 
-            disabled={isGoogleLoading}
-            variant="outline"
-          >
-            {isGoogleLoading ? 'Ingresando...' : (
-              <>
-                <GoogleIcon className="mr-2 h-5 w-5" />
-                Ingresar con Google
-              </>
-            )}
-          </Button>
           
           <div className="mt-4 text-center text-sm">
             ¿No tienes cuenta?{" "}
