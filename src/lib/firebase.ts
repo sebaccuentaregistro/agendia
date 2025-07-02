@@ -2,7 +2,6 @@
 import { initializeApp, getApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -11,7 +10,7 @@ const firebaseConfig = {
   projectId: "yogaflow-manager-uqjpc",
   storageBucket: "yogaflow-manager-uqjpc.firebasestorage.app",
   messagingSenderId: "230355743596",
-  appId: "1:230355743596:web:f541439b9995fa2dd8b949"
+  appId: "1:230355743596:web:91e896c93c7f0965d8b949"
 };
 
 
@@ -21,11 +20,6 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 
-// Initialize Analytics if it's supported
-isSupported().then(supported => {
-  if (supported) {
-    getAnalytics(app);
-  }
-});
+// Firebase Analytics has been temporarily disabled to troubleshoot a production issue.
 
 export { app, auth, db };
