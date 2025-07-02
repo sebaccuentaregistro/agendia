@@ -1,11 +1,12 @@
-
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signInWithPopup, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth, db, googleProvider } from '@/lib/firebase';
 import { doc, setDoc, serverTimestamp, onSnapshot, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import type { LoginCredentials } from '@/types';
+
 
 interface AppUserProfile {
   email: string;
@@ -19,6 +20,8 @@ interface AuthContextType {
   loading: boolean;
   loginWithGoogle: () => Promise<any>;
   signupWithGoogle: () => Promise<any>;
+  loginWithEmailAndPassword: (credentials: LoginCredentials) => Promise<any>;
+  signupWithEmailAndPassword: (credentials: LoginCredentials) => Promise<any>;
   logout: () => Promise<void>;
 }
 
@@ -53,13 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   
   const handleAuthError = (error: any) => {
-      console.error("Google Auth Error:", error);
+      console.error("Auth Error:", error);
       toast({
         variant: 'destructive',
         title: 'Error de Autenticación',
         description: error.code === 'auth/popup-closed-by-user' 
           ? 'Has cerrado la ventana de inicio de sesión.'
-          : 'No se pudo completar la operación con Google. Inténtalo de nuevo.',
+          : 'Ocurrió un error. Verifica tus credenciales o inténtalo de nuevo.',
       });
   }
 
@@ -78,6 +81,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const result = await signInWithPopup(auth, googleProvider);
         return handleAuthSuccess(result);
     } catch (error) {
+        handleAuthError(error);
+        throw error;
+    }
+  };
+  
+  const loginWithEmailAndPassword = async ({ email, password }: LoginCredentials) => {
+    try {
+      return await signInWithEmailAndPassword(auth, email, password);
+    } catch (error: any) {
+      handleAuthError(error);
+      throw error;
+    }
+  };
+
+  const signupWithEmailAndPassword = async ({ email, password }: LoginCredentials) => {
+    try {
+        const result = await createUserWithEmailAndPassword(auth, email, password);
+        return handleAuthSuccess(result);
+    } catch (error: any) {
         handleAuthError(error);
         throw error;
     }
@@ -142,6 +164,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     loginWithGoogle,
     signupWithGoogle,
+    loginWithEmailAndPassword,
+    signupWithEmailAndPassword,
     logout,
   };
 
