@@ -11,3 +11,7 @@ YogaFlow es una aplicación web moderna construida con Next.js y diseñada para 
 - **Inteligencia Artificial**: Genkit
 - **Tipografía**: Poppins
 - **Iconos**: Lucide-react
+
+## Deployment
+
+This application is deployed on Firebase App Hosting.
