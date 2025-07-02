@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -12,7 +11,6 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -94,14 +92,6 @@ export default function LoginPage() {
               </Button>
             </form>
           </Form>
-
-           <p className="mt-6 text-center text-sm text-muted-foreground">
-              ¿No tienes una cuenta?{' '}
-              <Link href="/signup" className="font-semibold text-primary underline-offset-4 hover:underline">
-                  Regístrate
-              </Link>
-          </p>
-
         </CardContent>
       </Card>
     </div>
