@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
-    const publicRoutes = ['/login'];
+    const publicRoutes = ['/login', '/signup'];
     const instituteId = userProfile?.instituteId;
 
     useEffect(() => {
