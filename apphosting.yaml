@@ -1,6 +1,9 @@
 # Este archivo le indica a App Hosting cómo construir y ejecutar tu aplicación.
 # Es opcional para Next.js, pero es una buena práctica tenerlo.
 
+build:
+  # Comando para construir la aplicación para producción
+  cmd: npm run build
 run:
   # Comando para iniciar el servidor de producción de Next.js
   cmd: npm run start

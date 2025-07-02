@@ -1,9 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,59 +9,22 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
-import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
-
-const formSchema = z.object({
-  email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
-  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
-});
+import { GoogleIcon } from '@/components/google-icon';
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const { signupWithEmail } = useAuth();
-  const { toast } = useToast();
-  const router = useRouter();
+  const { signupWithGoogle } = useAuth();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function handleGoogleSignup() {
     setIsLoading(true);
     try {
-      await signupWithEmail(values);
-      toast({
-        title: '¡Registro Exitoso!',
-        description: 'Tu cuenta ha sido creada y está pendiente de aprobación.',
-      });
-      router.push('/login');
+      await signupWithGoogle();
+      // AppShell will handle redirection automatically upon login.
     } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error en el registro',
-        description:
-          error.code === 'auth/email-already-in-use'
-            ? 'Este email ya está registrado.'
-            : 'Ocurrió un error. Por favor, inténtalo de nuevo.',
-      });
-    } finally {
+      // The context will show a toast on error
       setIsLoading(false);
     }
   }
@@ -83,40 +43,20 @@ export default function SignupPage() {
             Crea una cuenta para empezar a gestionar tu estudio.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="tu@email.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contraseña</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Registrando...' : 'Crear Cuenta'}
-              </Button>
-            </form>
-          </Form>
+        <CardContent className="space-y-4">
+           <Button 
+            onClick={handleGoogleSignup} 
+            className="w-full" 
+            disabled={isLoading}
+            variant="outline"
+          >
+            {isLoading ? 'Creando cuenta...' : (
+              <>
+                <GoogleIcon className="mr-2 h-5 w-5" />
+                Registrarse con Google
+              </>
+            )}
+          </Button>
           <div className="mt-4 text-center text-sm">
             ¿Ya tienes una cuenta?{' '}
             <Link href="/login" className="underline">

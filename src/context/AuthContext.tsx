@@ -2,10 +2,9 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import type { LoginCredentials } from '@/types';
-import { doc, setDoc, serverTimestamp, onSnapshot, writeBatch, collection } from 'firebase/firestore';
+import { onAuthStateChanged, User, signInWithPopup, signOut } from 'firebase/auth';
+import { auth, db, googleProvider } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp, onSnapshot, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppUserProfile {
@@ -18,8 +17,8 @@ interface AuthContextType {
   user: User | null;
   userProfile: AppUserProfile | null;
   loading: boolean;
-  login: (credentials: LoginCredentials) => Promise<any>;
-  signupWithEmail: (credentials: LoginCredentials) => Promise<any>;
+  loginWithGoogle: () => Promise<any>;
+  signupWithGoogle: () => Promise<any>;
   logout: () => Promise<void>;
 }
 
@@ -31,38 +30,57 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const login = (credentials: LoginCredentials) => {
-    return signInWithEmailAndPassword(auth, credentials.email, credentials.password);
-  };
-
-  const signupWithEmail = async (credentials: LoginCredentials) => {
-    const userCredential = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
+  const handleAuthSuccess = async (userCredential: any) => {
     const user = userCredential.user;
-
-    // This is a multi-tenant app. Create an institute for the new user.
-    const batch = writeBatch(db);
-
-    // 1. Create a new institute document
-    const newInstituteRef = doc(collection(db, 'institutes'));
-    batch.set(newInstituteRef, {
-      name: 'Mi Estudio', // Default name
-      ownerId: user.uid,
-      createdAt: serverTimestamp(),
-    });
-    
-    // 2. Create the user profile and link it to the new institute, starting as pending.
     const userDocRef = doc(db, 'users', user.uid);
-    batch.set(userDocRef, {
-      email: user.email,
-      status: 'pending', // User requires approval
-      instituteId: newInstituteRef.id, // Link to the new institute
-      createdAt: serverTimestamp(),
-    });
+    const userDoc = await getDoc(userDocRef);
 
-    // Commit both operations at once
-    await batch.commit();
-
+    if (!userDoc.exists()) {
+      // This is a new user signing up.
+      await setDoc(userDocRef, {
+        email: user.email,
+        status: 'pending', // All new users start as pending
+        instituteId: null,   // An admin must assign an institute
+        createdAt: serverTimestamp(),
+      });
+      toast({
+        title: '¡Registro Exitoso!',
+        description: 'Tu cuenta ha sido creada y está pendiente de aprobación por un administrador.',
+      });
+    }
+    // For existing users, onAuthStateChanged will handle loading their profile.
     return userCredential;
+  };
+  
+  const handleAuthError = (error: any) => {
+      console.error("Google Auth Error:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Error de Autenticación',
+        description: error.code === 'auth/popup-closed-by-user' 
+          ? 'Has cerrado la ventana de inicio de sesión.'
+          : 'No se pudo completar la operación con Google. Inténtalo de nuevo.',
+      });
+  }
+
+  const loginWithGoogle = async () => {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        return handleAuthSuccess(result);
+    } catch (error) {
+        handleAuthError(error);
+        throw error;
+    }
+  };
+  
+  const signupWithGoogle = async () => {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        return handleAuthSuccess(result);
+    } catch (error) {
+        handleAuthError(error);
+        throw error;
+    }
   };
 
   const logout = () => {
@@ -90,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               instituteId: data.instituteId,
             });
           } else {
-             // This case might happen if user is created in Auth but Firestore fails.
-             // The signup/login logic should handle this, but as a fallback, we clear the profile.
+            // This can happen briefly if a user signs up and the doc hasn't been created yet.
+            // The handleAuthSuccess function ensures the doc is created.
             setUserProfile(null);
           }
           setLoading(false);
@@ -122,9 +140,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     userProfile,
     loading,
-    login,
+    loginWithGoogle,
+    signupWithGoogle,
     logout,
-    signupWithEmail,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,49 +1,31 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
-
-const formSchema = z.object({
-  email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
-  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
-});
+import { GoogleIcon } from '@/components/google-icon';
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { loginWithGoogle } = useAuth();
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
-  });
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function handleGoogleLogin() {
     setIsLoading(true);
     try {
-      await login(values);
+      await loginWithGoogle();
       // AppShell will handle redirection automatically.
     } catch (error: any) {
       toast({
         variant: 'destructive',
         title: 'Error al iniciar sesión',
-        description: 'Las credenciales son incorrectas. Por favor, inténtalo de nuevo.',
+        description: 'No se pudo iniciar sesión con Google. Por favor, inténtalo de nuevo.',
       });
-    } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }
 
@@ -59,40 +41,20 @@ export default function LoginPage() {
             Ingresa a tu cuenta para gestionar tu estudio.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="tu@email.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contraseña</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Ingresando...' : 'Ingresar'}
-              </Button>
-            </form>
-          </Form>
+        <CardContent className="space-y-4">
+          <Button 
+            onClick={handleGoogleLogin} 
+            className="w-full" 
+            disabled={isLoading}
+            variant="outline"
+          >
+            {isLoading ? 'Ingresando...' : (
+              <>
+                <GoogleIcon className="mr-2 h-5 w-5" />
+                Ingresar con Google
+              </>
+            )}
+          </Button>
            <div className="mt-4 text-center text-sm">
             ¿No tienes cuenta?{" "}
             <Link href="/signup" className="underline">
