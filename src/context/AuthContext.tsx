@@ -1,12 +1,15 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, setDoc, serverTimestamp, onSnapshot, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged, User, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, getAuth } from 'firebase/auth';
+import { app } from '@/lib/firebase';
+import { doc, setDoc, serverTimestamp, onSnapshot, getDoc, getFirestore } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { LoginCredentials } from '@/types';
 
+// Initialize Firebase services
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 interface AppUserProfile {
   email: string;

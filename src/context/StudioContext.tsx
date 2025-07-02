@@ -4,10 +4,12 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { set, addMonths, differenceInDays, addDays, format as formatDate } from 'date-fns';
-import { db } from '@/lib/firebase';
-import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, orderBy } from 'firebase/firestore';
+import { app } from '@/lib/firebase';
+import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, orderBy, getFirestore } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 
+// Initialize Firebase service
+const db = getFirestore(app);
 
 // Helper function to convert Firestore Timestamps to Dates in nested objects
 const convertTimestamps = (data: any) => {
