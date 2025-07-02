@@ -11,7 +11,7 @@ const firebaseConfig = {
   projectId: "yogaflow-manager-uqjpc",
   storageBucket: "yogaflow-manager-uqjpc.firebasestorage.app",
   messagingSenderId: "230355743596",
-  appId: "1:230355743596:web:8c8fa565063b913fd8b949"
+  appId: "1:230355743596:web:f541439b9995fa2dd8b949"
 };
 
 
