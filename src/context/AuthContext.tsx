@@ -55,12 +55,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const handleAuthError = (error: any) => {
       console.error("Auth Error:", error);
+      let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
+      switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            description = 'El email o la contraseña son incorrectos. Por favor, verifica tus credenciales.';
+            break;
+        case 'auth/email-already-in-use':
+            description = 'Este email ya está registrado. Por favor, intenta iniciar sesión.';
+            break;
+        case 'auth/weak-password':
+            description = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
+            break;
+        case 'auth/popup-closed-by-user':
+            description = 'Has cerrado la ventana de inicio de sesión.';
+            break;
+      }
+
       toast({
         variant: 'destructive',
         title: 'Error de Autenticación',
-        description: error.code === 'auth/popup-closed-by-user' 
-          ? 'Has cerrado la ventana de inicio de sesión.'
-          : 'Ocurrió un error. Verifica tus credenciales o inténtalo de nuevo.',
+        description: description,
       });
   }
   
