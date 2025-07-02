@@ -6,12 +6,13 @@ import { getAnalytics, isSupported } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDMlnGw4QdX8TmRy-uGQr0iseudb9cy4TM",
-  authDomain: "yogaflow-manager-uqjpc.firebaseapp.com",
-  projectId: "yogaflow-manager-uqjpc",
-  storageBucket: "yogaflow-manager-uqjpc.firebasestorage.app",
-  messagingSenderId: "230355743596",
-  appId: "1:230355743596:web:48c5af60d64ff075d8b949"
+  apiKey: "AIzaSyCBYgL407y8tC5sL2oWb8jH1rFp4eA_4eE",
+  authDomain: "agendia-live.firebaseapp.com",
+  projectId: "agendia-live",
+  storageBucket: "agendia-live.appspot.com",
+  messagingSenderId: "56358814771",
+  appId: "1:56358814771:web:3a5f7e7e6f6a7d1a2b3c4d",
+  measurementId: "G-51E7L7745L"
 };
 
 
