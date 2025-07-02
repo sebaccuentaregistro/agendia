@@ -25,6 +25,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [debugError, setDebugError] = useState<string | null>(null);
   const { loginWithEmailAndPassword, sendPasswordReset } = useAuth();
   const { toast } = useToast();
 
@@ -38,16 +39,18 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
+    setDebugError(null);
     try {
       await loginWithEmailAndPassword(values);
       // AppShell will handle redirection automatically.
-    } catch (error) {
+    } catch (error: any) {
       // The context also shows a toast, but this is a fallback for robustness.
       toast({
         variant: 'destructive',
         title: 'Error al iniciar sesión',
         description: 'Tus credenciales son incorrectas. Por favor, inténtalo de nuevo.',
       });
+      setDebugError(`Code: ${error.code}\nMessage: ${error.message}\n\nFull Error:\n${JSON.stringify(error, null, 2)}`);
     } finally {
       setIsLoading(false);
     }
@@ -118,6 +121,15 @@ export default function LoginPage() {
               </form>
             </Form>
             
+            {debugError && (
+              <div className="mt-4 p-4 bg-destructive/10 border border-destructive/50 rounded-md">
+                <h4 className="font-bold text-destructive">Información de depuración:</h4>
+                <pre className="mt-2 text-xs text-destructive whitespace-pre-wrap break-all">
+                  {debugError}
+                </pre>
+              </div>
+            )}
+
             <div className="mt-4 text-center text-sm">
               ¿No tienes cuenta?{" "}
               <Link href="/signup" className="underline">
