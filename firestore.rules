@@ -1,8 +1,27 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // Helper function to get the user's profile data from the 'users' collection
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    // Rules for the 'users' collection
+    match /users/{userId} {
+      // A user can only read or update their own profile.
+      allow read, update: if request.auth.uid == userId;
+      // Anyone can create a user profile during signup, as long as the ID matches their own auth ID.
+      allow create: if request.auth.uid == userId;
+    }
+
+    // Rules for all data nested under a specific institute
+    match /institutes/{instituteId}/{document=**} {
+      // A user can only read or write documents if their own user profile's
+      // instituteId matches the instituteId in the path they are trying to access.
+      // This is the core multi-tenancy security rule.
+      allow read, write: if request.auth != null && getUserData().instituteId == instituteId;
     }
   }
 }
