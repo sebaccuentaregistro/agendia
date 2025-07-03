@@ -22,9 +22,27 @@ const navItems = [
   { href: "/statistics", label: "Estadísticas" },
 ];
 
+function TutorialButton() {
+  const { openTutorial } = useStudio();
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button variant="ghost" size="icon" onClick={openTutorial} className="text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-white/10">
+            <Info className="h-5 w-5" />
+            <span className="sr-only">Mostrar tutorial</span>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Mostrar tutorial de bienvenida</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
+
 export function AppHeader() {
   const pathname = usePathname();
-  const { openTutorial } = useStudio();
   const { logout } = useAuth();
   const router = useRouter();
 
@@ -38,7 +56,7 @@ export function AppHeader() {
       <div className="flex items-center gap-6">
         <Link href="/dashboard" className="flex flex-shrink-0 items-center gap-2.5 font-semibold text-slate-800 dark:text-white">
           <Heart className="h-7 w-7 text-fuchsia-500" />
-          <span className="text-lg">YogaFlow</span>
+          <span className="text-lg">Agendia</span>
         </Link>
         
         <nav className="hidden items-center gap-5 md:flex">
@@ -60,21 +78,7 @@ export function AppHeader() {
         </nav>
       </div>
       <div className="flex items-center gap-2">
-        {pathname === '/dashboard' && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={openTutorial} className="text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-white/10">
-                  <Info className="h-5 w-5" />
-                  <span className="sr-only">Mostrar tutorial</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Mostrar tutorial de bienvenida</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+        {pathname === '/dashboard' && <TutorialButton />}
         <ThemeToggle />
         <TooltipProvider>
             <Tooltip>
