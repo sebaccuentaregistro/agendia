@@ -31,13 +31,16 @@ function FullscreenLoader() {
 }
 
 function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
+    const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
             <div className="flex flex-col items-center gap-4 text-center">
                 <AlertTriangle className="h-12 w-12 text-destructive" />
                 <h1 className="text-2xl font-bold text-destructive">{title}</h1>
                 <p className="max-w-md text-muted-foreground">{description}</p>
-                 {children}
+                 <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
             </div>
         </div>
     );
@@ -66,8 +69,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
-    const publicRoutes = ['/login', '/signup'];
-    const isPublicRoute = publicRoutes.includes(pathname);
+    const isPublicRoute = ['/login', '/signup'].includes(pathname);
     const instituteId = userProfile?.instituteId;
 
     useEffect(() => {
@@ -89,31 +91,21 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
 
     if (!user) {
-        if (isPublicRoute) {
-            return <>{children}</>;
-        }
-        return <FullscreenLoader />; // Should be redirected by useEffect, but this is a safe fallback
+        return isPublicRoute ? <>{children}</> : <FullscreenLoader />;
     }
 
-    // From here, user is guaranteed to be non-null
+    // User is authenticated from here
     if (userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
 
     if (userProfile?.status === 'active' && !instituteId) {
-        const { logout } = useAuth();
-        return (
-            <ErrorShell 
-                title="Cuenta no activada"
-                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-            >
-                 <Button variant="outline" onClick={logout} className="mt-4">
-                    Cerrar Sesión
-                </Button>
-            </ErrorShell>
-        );
+        return <ErrorShell 
+            title="Cuenta no activada"
+            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+        />;
     }
-    
+
     if (instituteId && !isPublicRoute) {
         return (
             <StudioProvider instituteId={instituteId}>
@@ -127,7 +119,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </StudioProvider>
         );
     }
+    
+    // Fallback for authenticated user on a public route before redirection kicks in
+    if (isPublicRoute) {
+        return <FullscreenLoader />;
+    }
 
-    // Fallback for user on public route or other edge cases
-    return <FullscreenLoader />;
+    return <>{children}</>;
 }

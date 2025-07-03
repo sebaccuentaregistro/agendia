@@ -16,7 +16,7 @@ interface AuthContextType {
   user: User | null;
   userProfile: AppUserProfile | null;
   loading: boolean;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,35 +30,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const auth = getFirebaseAuth();
     
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true);
       if (currentUser) {
-        // User is signed in, now fetch their profile
+        setUser(currentUser);
         const db = getFirebaseDb();
         const userDocRef = doc(db, 'users', currentUser.uid);
-        const docSnap = await getDoc(userDocRef);
-        
-        if (docSnap.exists()) {
-          setUserProfile(docSnap.data() as AppUserProfile);
-        } else {
-          // This case might happen if the user doc creation fails after signup
+        try {
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            setUserProfile(docSnap.data() as AppUserProfile);
+          } else {
+            setUserProfile(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
           setUserProfile(null);
         }
-        setUser(currentUser);
       } else {
-        // User is signed out
         setUser(null);
         setUserProfile(null);
       }
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
 
   const logout = async () => {
     try {
       await doLogout();
-      // onAuthStateChanged will handle state updates
+      // onAuthStateChanged will handle clearing user and userProfile state
     } catch (error) {
       console.error("Logout failed", error);
     }
