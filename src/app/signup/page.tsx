@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -88,7 +89,7 @@ export default function SignupPage() {
             <Heart className="h-8 w-8 text-fuchsia-500" />
             <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
               YogaFlow
-            </DCardTitle>
+            </CardTitle>
           </div>
           <CardDescription>
             Crea una cuenta para empezar a gestionar tu estudio.
