@@ -4,11 +4,11 @@ import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, Info, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/AuthContext';
+import { useStudio } from '@/context/StudioContext';
 
 const navItems = [
   { href: "/dashboard", label: "Inicio" },
