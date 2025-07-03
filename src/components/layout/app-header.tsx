@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Info, LogOut, Sparkles } from 'lucide-react';
+import { Heart, Info, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,6 @@ const navItems = [
   { href: "/levels", label: "Niveles" },
   { href: "/tariffs", label: "Aranceles" },
   { href: "/statistics", label: "Estadísticas" },
-  { href: "/assistant", label: "Asistente IA" },
 ];
 
 export function AppHeader() {
