@@ -5,7 +5,7 @@ import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAtt
 import { useToast } from '@/hooks/use-toast';
 import { set, addMonths, differenceInDays, addDays, format as formatDate } from 'date-fns';
 import { db } from '@/lib/firebase';
-import { collection, onSnapshot, doc, query, where, getDocs, Timestamp, orderBy, CollectionReference } from 'firebase/firestore';
+import { collection, onSnapshot, doc, query, where, getDocs, Timestamp, orderBy, CollectionReference, getDoc, setDoc } from 'firebase/firestore';
 import * as Actions from '@/lib/firestore-actions';
 
 // Helper function to convert Firestore Timestamps to Dates in nested objects
@@ -117,6 +117,21 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   }, [instituteId]);
 
   useEffect(() => {
+    if (!instituteId) return;
+
+    const checkAndCreateInstitute = async () => {
+        const instituteDocRef = doc(db, 'institutes', instituteId);
+        const docSnap = await getDoc(instituteDocRef);
+        if (!docSnap.exists()) {
+            console.log(`Institute with ID ${instituteId} does not exist. Creating it now.`);
+            await setDoc(instituteDocRef, {
+                createdAt: Timestamp.now(),
+                name: `Mi Estudio (${instituteId.substring(0, 5)})` // Placeholder name
+            });
+        }
+    };
+    checkAndCreateInstitute();
+
     const collectionsToFetch = [
         { name: 'actividades', setter: setActividades, ref: collectionRefs.actividades },
         { name: 'specialists', setter: setSpecialists, ref: collectionRefs.specialists },
@@ -141,7 +156,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [collectionRefs, toast]);
+  }, [instituteId, collectionRefs, toast]);
   
   const handleAction = useCallback(async (action: Promise<any>, successMessage: string) => {
       try {
