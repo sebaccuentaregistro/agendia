@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/context/AuthContext';
+import { doSignupWithEmailAndPassword } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
 
@@ -19,7 +20,7 @@ const formSchema = z.object({
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const { signupWithEmailAndPassword } = useAuth();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -32,10 +33,10 @@ export default function SignupPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      await signupWithEmailAndPassword(values);
+      await doSignupWithEmailAndPassword(values, toast);
       // AppShell will handle redirection automatically upon login.
     } catch (error: any) {
-      // The context will show a toast on error
+      // The context function will show a toast on error
       setIsLoading(false);
     }
   }

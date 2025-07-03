@@ -8,6 +8,7 @@ import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
+import { doLogout } from '@/context/AuthContext';
 
 function FullscreenLoader() {
     return (
@@ -44,7 +45,6 @@ function ErrorShell({ title, description, children }: { title: string, descripti
 }
 
 function PendingApprovalShell() {
-    const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
             <div className="flex flex-col items-center gap-4 text-center">
@@ -53,7 +53,7 @@ function PendingApprovalShell() {
                 <p className="max-w-md text-muted-foreground">
                     Gracias por registrarte. Tu cuenta está siendo revisada por un administrador. Recibirás una notificación cuando sea aprobada.
                 </p>
-                <Button variant="outline" onClick={logout} className="mt-4">
+                <Button variant="outline" onClick={doLogout} className="mt-4">
                     Cerrar Sesión
                 </Button>
             </div>
@@ -62,7 +62,7 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, userProfile, loading, logout } = useAuth();
+    const { user, userProfile, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -97,7 +97,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             title="Cuenta no activada"
             description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
         >
-            <Button variant="outline" onClick={logout} className="mt-4">
+            <Button variant="outline" onClick={doLogout} className="mt-4">
                 Cerrar Sesión
             </Button>
         </ErrorShell>;

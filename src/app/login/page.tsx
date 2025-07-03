@@ -8,14 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useAuth } from '@/context/AuthContext';
+import { doLoginWithEmailAndPassword, doSendPasswordReset } from '@/context/AuthContext';
 import { Heart, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -27,7 +26,6 @@ export default function LoginPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const [debugError, setDebugError] = useState<string | null>(null);
-  const { loginWithEmailAndPassword, sendPasswordReset } = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -42,10 +40,8 @@ export default function LoginPage() {
     setIsLoading(true);
     setDebugError(null);
     try {
-      await loginWithEmailAndPassword(values);
-      // AppShell will handle redirection automatically.
+      await doLoginWithEmailAndPassword(values, toast);
     } catch (error: any) {
-      // Capture and display the full technical error object for debugging
       const fullError = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
       setDebugError(fullError);
     } finally {
@@ -59,11 +55,11 @@ export default function LoginPage() {
         return;
     }
     try {
-        await sendPasswordReset(resetEmail);
+        await doSendPasswordReset(resetEmail, toast);
         setIsResetDialogOpen(false);
         setResetEmail('');
     } catch (error) {
-        // The context will already show a toast on error.
+      // The context function already shows a toast on error.
     }
   }
 
