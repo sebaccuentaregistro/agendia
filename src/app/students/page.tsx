@@ -1183,72 +1183,74 @@ export default function StudentsPage() {
                                                 </PopoverContent>
                                             </Popover>
                                         )}
-                                        <Popover>
-                                            <PopoverTrigger asChild>
-                                                <button>
-                                                    {(person as any).isOnVacationNow ? (
-                                                        <Badge variant="default" className="flex items-center gap-1.5 rounded-full bg-blue-400 px-2 py-1 text-xs font-bold text-blue-900 shadow-sm cursor-pointer hover:bg-blue-500 transition-colors">
-                                                            <Plane className="h-3.5 w-3.5" />
-                                                            <span>
-                                                                Hasta {format(new Date((person as any).currentVacationEnd), 'dd/MM/yy')}
+                                        {person.vacationPeriods && person.vacationPeriods.length > 0 && (
+                                            <Popover>
+                                                <PopoverTrigger asChild>
+                                                    <button>
+                                                        {(person as any).isOnVacationNow ? (
+                                                            <Badge variant="default" className="flex items-center gap-1.5 rounded-full bg-blue-400 px-2 py-1 text-xs font-bold text-blue-900 shadow-sm cursor-pointer hover:bg-blue-500 transition-colors">
+                                                                <Plane className="h-3.5 w-3.5" />
+                                                                <span>
+                                                                    Hasta {format(new Date((person as any).currentVacationEnd), 'dd/MM/yy')}
+                                                                </span>
+                                                            </Badge>
+                                                        ) : (
+                                                            <span className="inline-flex items-center justify-center h-7 w-7 text-white hover:bg-white/20 rounded-full cursor-pointer">
+                                                                <Plane className="h-5 w-5" />
+                                                                <span className="sr-only">Gestionar Vacaciones</span>
                                                             </span>
-                                                        </Badge>
-                                                    ) : (
-                                                        <span className="inline-flex items-center justify-center h-7 w-7 text-white hover:bg-white/20 rounded-full cursor-pointer">
-                                                            <Plane className="h-5 w-5" />
-                                                            <span className="sr-only">Gestionar Vacaciones</span>
-                                                        </span>
-                                                    )}
-                                                </button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-80">
-                                                <div className="grid gap-4">
-                                                    <div className="space-y-2">
-                                                        <h4 className="font-medium leading-none">Períodos de Vacaciones</h4>
-                                                        {(person as any).isOnVacationNow && (person as any).currentVacationEnd ? (
-                                                            <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-r-md">
-                                                                Actualmente de vacaciones hasta {format(new Date((person as any).currentVacationEnd), 'PPP', { locale: es })}.
-                                                            </p>
-                                                        ) : null}
-                                                        <div className="space-y-2 mt-2">
-                                                            {sortedVacations.length > 0 ? (
-                                                                sortedVacations.map(vac => (
-                                                                    <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/50">
-                                                                        <span className="font-medium">
-                                                                            {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
-                                                                        </span>
-                                                                        <AlertDialog>
-                                                                            <AlertDialogTrigger asChild>
-                                                                                <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10">
-                                                                                    <Trash2 className="h-4 w-4" />
-                                                                                    <span className="sr-only">Eliminar período de vacaciones</span>
-                                                                                </Button>
-                                                                            </AlertDialogTrigger>
-                                                                            <AlertDialogContent>
-                                                                                <AlertDialogHeader>
-                                                                                    <AlertDialogTitle>¿Confirmas la eliminación?</AlertDialogTitle>
-                                                                                    <AlertDialogDescription>
-                                                                                        Esta acción no se puede deshacer. Se eliminará el período de vacaciones seleccionado permanentemente.
-                                                                                    </AlertDialogDescription>
-                                                                                </AlertDialogHeader>
-                                                                                <AlertDialogFooter>
-                                                                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                                                                    <AlertDialogAction onClick={() => removeVacationPeriod(person.id, vac.id)} className="bg-destructive hover:bg-destructive/90">
-                                                                                        Sí, eliminar
-                                                                                    </AlertDialogAction>
-                                                                                </AlertDialogFooter>
-                                                                            </AlertDialogContent>
-                                                                        </AlertDialog>
-                                                                    </div>
-                                                                ))
-                                                            ) : (
-                                                                <p className="text-sm text-muted-foreground p-2">No hay vacaciones registradas.</p>
-                                                            )}
+                                                        )}
+                                                    </button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="w-80">
+                                                    <div className="grid gap-4">
+                                                        <div className="space-y-2">
+                                                            <h4 className="font-medium leading-none">Períodos de Vacaciones</h4>
+                                                            {(person as any).isOnVacationNow && (person as any).currentVacationEnd ? (
+                                                                <p className="text-sm text-blue-600 dark:text-blue-400 font-semibold border-l-4 border-blue-500 pl-3 py-1 bg-blue-50 dark:bg-blue-900/20 rounded-r-md">
+                                                                    Actualmente de vacaciones hasta {format(new Date((person as any).currentVacationEnd), 'PPP', { locale: es })}.
+                                                                </p>
+                                                            ) : null}
+                                                            <div className="space-y-2 mt-2">
+                                                                {sortedVacations.length > 0 ? (
+                                                                    sortedVacations.map(vac => (
+                                                                        <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-lg bg-muted/50">
+                                                                            <span className="font-medium">
+                                                                                {format(vac.startDate, 'dd/MM/yy')} - {format(vac.endDate, 'dd/MM/yy')}
+                                                                            </span>
+                                                                            <AlertDialog>
+                                                                                <AlertDialogTrigger asChild>
+                                                                                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10">
+                                                                                        <Trash2 className="h-4 w-4" />
+                                                                                        <span className="sr-only">Eliminar período de vacaciones</span>
+                                                                                    </Button>
+                                                                                </AlertDialogTrigger>
+                                                                                <AlertDialogContent>
+                                                                                    <AlertDialogHeader>
+                                                                                        <AlertDialogTitle>¿Confirmas la eliminación?</AlertDialogTitle>
+                                                                                        <AlertDialogDescription>
+                                                                                            Esta acción no se puede deshacer. Se eliminará el período de vacaciones seleccionado permanentemente.
+                                                                                        </AlertDialogDescription>
+                                                                                    </AlertDialogHeader>
+                                                                                    <AlertDialogFooter>
+                                                                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                                                        <AlertDialogAction onClick={() => removeVacationPeriod(person.id, vac.id)} className="bg-destructive hover:bg-destructive/90">
+                                                                                            Sí, eliminar
+                                                                                        </AlertDialogAction>
+                                                                                    </AlertDialogFooter>
+                                                                                </AlertDialogContent>
+                                                                            </AlertDialog>
+                                                                        </div>
+                                                                    ))
+                                                                ) : (
+                                                                    <p className="text-sm text-muted-foreground p-2">No hay vacaciones registradas.</p>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </PopoverContent>
-                                        </Popover>
+                                                </PopoverContent>
+                                            </Popover>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-2 text-white/80 text-sm">
                                         <span>{person.phone}</span>
