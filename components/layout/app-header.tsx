@@ -38,7 +38,7 @@ export function AppHeader() {
       <div className="flex items-center gap-6">
         <Link href="/dashboard" className="flex flex-shrink-0 items-center gap-2.5 font-semibold text-slate-800 dark:text-white">
           <Heart className="h-7 w-7 text-fuchsia-500" />
-          <span className="text-lg">YogaFlow</span>
+          <span className="text-lg">Agendia</span>
         </Link>
         
         <nav className="hidden items-center gap-5 md:flex">
@@ -93,3 +93,5 @@ export function AppHeader() {
     </header>
   );
 }
+
+    

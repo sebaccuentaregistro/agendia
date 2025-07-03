@@ -7,7 +7,7 @@ import { AuthProvider } from '@/context/AuthContext';
 import { AppShell } from '@/components/layout/app-shell';
 
 export const metadata: Metadata = {
-  title: 'YogaFlow',
+  title: 'Agendia',
   description: 'Gestiona tu centro de bienestar de forma sencilla y eficiente.',
 };
 
@@ -36,3 +36,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+    

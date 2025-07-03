@@ -14,7 +14,7 @@ interface OnboardingTutorialProps {
 const tutorialSteps = [
   {
     icon: Heart,
-    title: '¡Bienvenido/a a YogaFlow!',
+    title: '¡Bienvenido/a a Agendia!',
     description: 'Hemos preparado un breve recorrido para que conozcas las secciones clave de la aplicación y puedas empezar a gestionar tu estudio de bienestar de forma sencilla. ¡Vamos allá!',
   },
   {
@@ -25,7 +25,7 @@ const tutorialSteps = [
   {
     icon: Calendar,
     title: '2. Organiza tus Horarios',
-    description: 'La sección de Horarios es el corazón de YogaFlow. Aquí podrás crear nuevas clases, asignarlas a especialistas y espacios, y ver toda tu semana de un vistazo.',
+    description: 'La sección de Horarios es el corazón de Agendia. Aquí podrás crear nuevas clases, asignarlas a especialistas y espacios, y ver toda tu semana de un vistazo.',
   },
   {
     icon: Users,
@@ -94,3 +94,5 @@ export function OnboardingTutorial({ isOpen, onClose }: OnboardingTutorialProps)
     </Dialog>
   );
 }
+
+    

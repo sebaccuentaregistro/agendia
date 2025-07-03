@@ -1,11 +1,11 @@
 
-# Documentación Integral de YogaFlow
+# Documentación Integral de Agendia
 
-Este documento describe la arquitectura completa, el flujo de datos, la lógica de negocio y el sistema de diseño de la aplicación YogaFlow. Está diseñado para que cualquier desarrollador pueda entender, mantener y replicar la aplicación.
+Este documento describe la arquitectura completa, el flujo de datos, la lógica de negocio y el sistema de diseño de la aplicación Agendia. Está diseñado para que cualquier desarrollador pueda entender, mantener y replicar la aplicación.
 
 ## 1. Propósito de la Aplicación
 
-YogaFlow es una aplicación web de gestión integral (Software as a Service - SaaS) para centros de bienestar, como estudios de yoga o gimnasios. Permite administrar clases, horarios, alumnos, especialistas, pagos, asistencias y más.
+Agendia es una aplicación web de gestión integral (Software as a Service - SaaS) para centros de bienestar, como estudios de yoga o gimnasios. Permite administrar clases, horarios, alumnos, especialistas, pagos, asistencias y más.
 
 ## 2. Stack Tecnológico
 
@@ -210,3 +210,6 @@ El diseño se basa en un sistema de variables CSS con HSL, lo que permite un the
 - La aplicación está configurada para **Firebase App Hosting**.
 - El archivo `apphosting.yaml` define los comandos de construcción (`npm run build`) y ejecución (`npm run start`).
 - El proceso de despliegue empaqueta la aplicación Next.js en un contenedor optimizado que Firebase gestiona automáticamente.
+
+
+    
