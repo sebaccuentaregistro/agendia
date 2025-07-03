@@ -30,17 +30,14 @@ function FullscreenLoader() {
     );
 }
 
-function ErrorShell({ title, description }: { title: string, description: string }) {
-    const { logout } = useAuth();
+function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
             <div className="flex flex-col items-center gap-4 text-center">
                 <AlertTriangle className="h-12 w-12 text-destructive" />
                 <h1 className="text-2xl font-bold text-destructive">{title}</h1>
                 <p className="max-w-md text-muted-foreground">{description}</p>
-                 <Button variant="outline" onClick={logout} className="mt-4">
-                    Cerrar Sesión
-                </Button>
+                 {children}
             </div>
         </div>
     );
