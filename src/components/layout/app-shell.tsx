@@ -3,11 +3,42 @@
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
-import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
-import { AlertTriangle, Clock } from 'lucide-react';
+import { AlertTriangle, Clock, Heart, LogOut } from 'lucide-react';
 import { Button } from '../ui/button';
+import Link from 'next/link';
+
+// --- Start of New Inlined Header ---
+// This header is placed directly here to avoid any import issues with cached files.
+function InlinedHeader() {
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
+  };
+
+  return (
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-transparent px-4 backdrop-blur-xl sm:px-6">
+      <div className="flex items-center gap-6">
+        <Link href="/dashboard" className="flex flex-shrink-0 items-center gap-2.5 font-semibold text-slate-800 dark:text-white">
+          <Heart className="h-7 w-7 text-fuchsia-500" />
+          <span className="text-lg">Agendia</span>
+        </Link>
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-white/10">
+          <LogOut className="h-5 w-5" />
+          <span className="sr-only">Cerrar sesión</span>
+        </Button>
+      </div>
+    </header>
+  );
+}
+// --- End of New Inlined Header ---
+
 
 function FullscreenLoader() {
     return (
@@ -107,7 +138,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         return (
             <StudioProvider instituteId={instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
-                    <AppHeader />
+                    <InlinedHeader />
                     <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
                         {children}
                     </main>
