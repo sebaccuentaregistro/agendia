@@ -80,7 +80,7 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              <div className="space-y-4">
                 <FormField
                   control={form.control}
                   name="email"
@@ -112,10 +112,15 @@ export default function LoginPage() {
                     </FormItem>
                   )}
                 />
-                <Button type="submit" className="w-full" disabled={isLoading}>
+                <Button 
+                  type="button" 
+                  className="w-full" 
+                  disabled={isLoading}
+                  onClick={form.handleSubmit(onSubmit)}
+                >
                   {isLoading ? 'Ingresando...' : 'Ingresar'}
                 </Button>
-              </form>
+              </div>
             </Form>
             
             {debugError && (
