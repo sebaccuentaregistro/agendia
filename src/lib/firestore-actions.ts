@@ -2,7 +2,7 @@
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod } from '@/types';
-import { getFirebaseDb } from './firebase';
+import { db } from './firebase';
 import { format as formatDate } from 'date-fns';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -49,7 +49,6 @@ export const addPersonAction = async (collectionRef: CollectionReference, person
 };
 
 export const deactivatePersonAction = async (peopleRef: CollectionReference, sessionsRef: CollectionReference, personId: string, reason: string) => {
-    const db = getFirebaseDb();
     const batch = writeBatch(db);
     const personRef = doc(peopleRef, personId);
     batch.update(personRef, { status: 'inactive', cancellationDate: new Date(), cancellationReason: reason });
@@ -77,7 +76,6 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, peop
         date: new Date(),
         months,
     };
-    const db = getFirebaseDb();
     const batch = writeBatch(db);
     const paymentRef = doc(paymentsRef);
     batch.set(paymentRef, newPayment);
@@ -89,7 +87,6 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, peop
 };
 
 export const undoLastPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, lastPayment: any, newLastPaymentDate: Date) => {
-    const db = getFirebaseDb();
     const batch = writeBatch(db);
     const paymentRef = doc(paymentsRef, lastPayment.id);
     batch.delete(paymentRef);
@@ -101,7 +98,6 @@ export const undoLastPaymentAction = async (paymentsRef: CollectionReference, pe
 };
 
 export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[], currentSessions: Session[]) => {
-    const db = getFirebaseDb();
     const batch = writeBatch(db);
     
     const personEnrolledSessionsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
@@ -188,7 +184,6 @@ export const addToWaitlistAction = async (sessionDocRef: any, session: Session, 
 };
 
 export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference, notificationsRef: CollectionReference, notificationId: string, sessionId: string, personId: string, session: Session) => {
-    const db = getFirebaseDb();
     const batch = writeBatch(db);
     const sessionRef = doc(sessionsRef, sessionId);
     const newPersonIds = Array.from(new Set([...session.personIds, personId]));

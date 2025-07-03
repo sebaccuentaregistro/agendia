@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { set, addMonths, differenceInDays, addDays, format as formatDate } from 'date-fns';
-import { getFirebaseDb } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, query, where, getDocs, Timestamp, orderBy, CollectionReference } from 'firebase/firestore';
 import * as Actions from '@/lib/firestore-actions';
 
@@ -101,7 +101,6 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   }, []);
 
   const collectionRefs = useMemo(() => {
-      const db = getFirebaseDb();
       const instituteRef = doc(db, 'institutes', instituteId);
       return {
           actividades: collection(instituteRef, 'actividades'),

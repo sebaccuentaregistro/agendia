@@ -13,7 +13,7 @@ import { doSignupWithEmailAndPassword } from '@/lib/firebase-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
-import { getFirebaseDb } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
@@ -55,7 +55,6 @@ export default function SignupPage() {
 
     if (result.success && result.userCredential?.user) {
       const user = result.userCredential.user;
-      const db = getFirebaseDb();
       const userDocRef = doc(db, 'users', user.uid);
       
       try {

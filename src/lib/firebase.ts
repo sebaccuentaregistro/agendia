@@ -17,20 +17,8 @@ const firebaseConfig = {
 // Initialize Firebase App
 const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-let auth: Auth;
-let db: Firestore;
+// Initialize and export the Firebase services directly
+const auth: Auth = getAuth(app);
+const db: Firestore = getFirestore(app);
 
-// Functions to get singleton instances of Firebase services
-export const getFirebaseAuth = () => {
-    if (!auth) {
-        auth = getAuth(app);
-    }
-    return auth;
-};
-
-export const getFirebaseDb = () => {
-    if (!db) {
-        db = getFirestore(app);
-    }
-    return db;
-};
+export { auth, db };

@@ -9,7 +9,7 @@ import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { doc, getDoc } from 'firebase/firestore';
-import { getFirebaseDb } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 
 interface AppUserProfile {
   email: string;
@@ -84,7 +84,6 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         if (user) {
             setProfileLoading(true);
-            const db = getFirebaseDb();
             const userDocRef = doc(db, 'users', user.uid);
             getDoc(userDocRef).then(docSnap => {
                 if (docSnap.exists()) {
@@ -104,7 +103,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
     }, [user, authLoading]);
 
-    const isPublicRoute = ['/login', '/signup'].includes(pathname);
+    const publicRoutes = ['/login', '/signup'];
+    const isPublicRoute = publicRoutes.includes(pathname);
     const instituteId = userProfile?.instituteId;
 
     if (authLoading || profileLoading) {
@@ -116,12 +116,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         if (isPublicRoute) {
             return <>{children}</>;
         }
+        // Redirect to login, but show a loader to avoid flashing content
         router.push('/login');
         return <FullscreenLoader />;
     }
 
     // User IS logged in
     if (isPublicRoute) {
+        // If logged in, shouldn't be on public routes, redirect to dashboard
         router.push('/dashboard');
         return <FullscreenLoader />;
     }
@@ -151,7 +153,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
     
-    // Fallback case, e.g. user logged in but profile is null or corrupt
+    // Fallback case for any other unexpected state
     return <ErrorShell 
         title="Error de Perfil"
         description="No pudimos cargar los datos de tu perfil. Por favor, intenta cerrar sesión y volver a ingresar." 
