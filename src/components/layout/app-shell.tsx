@@ -2,21 +2,13 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode, useState } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { doLogout } from '@/lib/firebase-auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
-interface AppUserProfile {
-  email: string;
-  status: 'pending' | 'active';
-  instituteId: string | null;
-}
 
 function FullscreenLoader() {
     return (
@@ -70,106 +62,74 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, loading: authLoading } = useAuth();
-    const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
-    const [profileLoading, setProfileLoading] = useState(true);
+    const { user, userProfile, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
-    useEffect(() => {
-        if (authLoading) return;
-
-        const fetchUserProfile = async () => {
-            if (user) {
-                setProfileLoading(true);
-                try {
-                    const userDocRef = doc(db, 'users', user.uid);
-                    const docSnap = await getDoc(userDocRef);
-                    if (docSnap.exists()) {
-                        setUserProfile(docSnap.data() as AppUserProfile);
-                    } else {
-                        setUserProfile(null);
-                    }
-                } catch (error) {
-                    console.error("Error fetching user profile in AppShell:", error);
-                    setUserProfile(null);
-                } finally {
-                    setProfileLoading(false);
-                }
-            } else {
-                setUserProfile(null);
-                setProfileLoading(false);
-            }
-        };
-
-        fetchUserProfile();
-    }, [user, authLoading]);
+    const publicRoutes = ['/login', '/signup'];
+    const isPublicRoute = publicRoutes.includes(pathname);
+    const instituteId = userProfile?.instituteId;
 
     useEffect(() => {
-        if (authLoading || profileLoading) return;
+        if (loading) return;
 
-        const publicRoutes = ['/login', '/signup'];
-        const isPublicRoute = publicRoutes.includes(pathname);
-        const instituteId = userProfile?.instituteId;
-
+        // If user is not logged in and not on a public route, redirect to login
         if (!user && !isPublicRoute) {
             router.push('/login');
-        } else if (user && isPublicRoute) {
+        }
+
+        // If user is logged in and on a public route, redirect to dashboard if profile is active
+        if (user && isPublicRoute) {
             if (userProfile?.status === 'active' && instituteId) {
                 router.push('/dashboard');
             }
         }
-    }, [user, userProfile, authLoading, profileLoading, router, pathname]);
+    }, [user, userProfile, loading, router, pathname, instituteId, isPublicRoute]);
 
-    const isLoading = authLoading || profileLoading;
-
-    if (isLoading) {
-        return <FullscreenLoader />;
-    }
-    
-    const publicRoutes = ['/login', '/signup'];
-    if (publicRoutes.includes(pathname)) {
-        // If user is logged in, FullscreenLoader is shown until redirection happens.
-        // If not logged in, render the public route.
-        return user ? <FullscreenLoader /> : <>{children}</>;
-    }
-    
-    // ----- Protected Routes Logic -----
-
-    if (!user) {
-        // This case is handled by the redirect effect, but as a fallback:
+    if (loading) {
         return <FullscreenLoader />;
     }
 
-    if (userProfile?.status === 'pending') {
-        return <PendingApprovalShell />;
+    // Render public routes if user is not logged in
+    if (!user && isPublicRoute) {
+        return <>{children}</>;
     }
+    
+    // After loading, if user is logged in, check their status
+    if (user) {
+        if (userProfile?.status === 'pending') {
+            return <PendingApprovalShell />;
+        }
 
-    if (userProfile?.status === 'active' && !userProfile.instituteId) {
-        return <ErrorShell 
-            title="Cuenta no activada"
-            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-        >
-            <Button variant="outline" onClick={doLogout} className="mt-4">
-                Cerrar Sesión
-            </Button>
-        </ErrorShell>;
+        if (userProfile?.status === 'active' && !instituteId) {
+            return (
+              <ErrorShell 
+                  title="Cuenta no activada"
+                  description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+              >
+                  <Button variant="outline" onClick={doLogout} className="mt-4">
+                      Cerrar Sesión
+                  </Button>
+              </ErrorShell>
+            );
+        }
+
+        // If user has an active profile and instituteId, and is on a protected route, show the app
+        if (instituteId && !isPublicRoute) {
+            return (
+                <StudioProvider instituteId={instituteId}>
+                    <div className="flex min-h-screen w-full flex-col">
+                        <AppHeader />
+                        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+                            {children}
+                        </main>
+                        <MobileBottomNav />
+                    </div>
+                </StudioProvider>
+            );
+        }
     }
-
-    if (userProfile?.instituteId) {
-        return (
-            <StudioProvider instituteId={userProfile.instituteId}>
-                <div className="flex min-h-screen w-full flex-col">
-                    <AppHeader />
-                    <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
-                        {children}
-                    </main>
-                    <MobileBottomNav />
-                </div>
-            </StudioProvider>
-        );
-    }
-
-    // Fallback for any other state
+    
+    // Fallback loader for edge cases during redirection
     return <FullscreenLoader />;
 }
