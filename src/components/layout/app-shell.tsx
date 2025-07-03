@@ -70,38 +70,47 @@ export function AppShell({ children }: { children: ReactNode }) {
     const pathname = usePathname();
 
     const publicRoutes = ['/login', '/signup', '/terms'];
+    const isPublicRoute = publicRoutes.includes(pathname);
 
     useEffect(() => {
         if (loading) return;
-        const isPublicRoute = publicRoutes.includes(pathname);
 
+        // If not logged in and not on a public page, redirect to login.
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
 
+        // If logged in and on a public page, redirect to the dashboard.
         if (user && isPublicRoute) {
             if (userProfile?.status === 'active' && userProfile?.instituteId) {
                 router.push('/dashboard');
             }
         }
-    }, [user, userProfile, loading, router, pathname]);
+    }, [user, userProfile, loading, router, pathname, isPublicRoute]);
 
     if (loading) {
         return <FullscreenLoader />;
     }
-    
-    // User is not logged in.
+
+    // --- Render Logic ---
+
     if (!user) {
-        // We must be on a public route, because useEffect would have redirected otherwise.
-        return <>{children}</>;
-    }
-    
-    // User is logged in.
-    if (publicRoutes.includes(pathname)) {
-        // useEffect is redirecting, show loader to prevent flash of content.
+        // User is logged out.
+        if (isPublicRoute) {
+            return <>{children}</>; // Render public pages like /login
+        }
+        // Not on a public route, so we're in the process of redirecting. Show loader.
         return <FullscreenLoader />;
     }
 
+    // From here, we know the user is logged in.
+    if (isPublicRoute) {
+        // Logged in, but on a public route. We are redirecting. Show loader.
+        return <FullscreenLoader />;
+    }
+    
+    // Now we know the user is logged in and on a protected route.
+    // We can check their profile.
     if (userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
