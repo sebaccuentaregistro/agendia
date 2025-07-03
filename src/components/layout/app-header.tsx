@@ -8,7 +8,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '../theme-toggle';
-import { doLogout } from '@/context/AuthContext';
+import { doLogout } from '@/lib/firebase-auth';
 
 const navItems = [
   { href: "/dashboard", label: "Inicio" },

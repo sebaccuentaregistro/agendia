@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { doSignupWithEmailAndPassword } from '@/context/AuthContext';
+import { doSignupWithEmailAndPassword } from '@/lib/firebase-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
@@ -37,7 +37,8 @@ export default function SignupPage() {
       // AppShell will handle redirection automatically upon login.
     } catch (error: any) {
       // The context function will show a toast on error
-      setIsLoading(false);
+    } finally {
+        setIsLoading(false);
     }
   }
 

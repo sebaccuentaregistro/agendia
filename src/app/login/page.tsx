@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { doLoginWithEmailAndPassword, doSendPasswordReset } from '@/context/AuthContext';
+import { doLoginWithEmailAndPassword, doSendPasswordReset } from '@/lib/firebase-auth';
 import { Heart, Terminal } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';

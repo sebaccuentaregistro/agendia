@@ -8,7 +8,7 @@ import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
-import { doLogout } from '@/context/AuthContext';
+import { doLogout } from '@/lib/firebase-auth';
 
 function FullscreenLoader() {
     return (
