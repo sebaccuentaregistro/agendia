@@ -2,7 +2,7 @@
 
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import type { LoginCredentials } from '@/types';
 
 // This is a generic error handler for Firebase Auth errors.
@@ -35,6 +35,7 @@ const handleAuthError = (error: any, toast: (options: any) => void) => {
 // This function is called upon successful signup to create a user profile document.
 const handleAuthSuccess = async (userCredential: any, toast: (options: any) => void) => {
   const user = userCredential.user;
+  const db = getFirebaseDb();
   const userDocRef = doc(db, 'users', user.uid);
   const userDoc = await getDoc(userDocRef);
 
@@ -56,6 +57,7 @@ const handleAuthSuccess = async (userCredential: any, toast: (options: any) => v
 // --- EXPORTED AUTH FUNCTIONS ---
 
 export const doLoginWithEmailAndPassword = async (credentials: LoginCredentials, toast: (options: any) => void) => {
+  const auth = getFirebaseAuth();
   try {
     return await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
   } catch (error: any) {
@@ -65,6 +67,7 @@ export const doLoginWithEmailAndPassword = async (credentials: LoginCredentials,
 };
 
 export const doSignupWithEmailAndPassword = async (credentials: LoginCredentials, toast: (options: any) => void) => {
+  const auth = getFirebaseAuth();
   try {
     const result = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
     return await handleAuthSuccess(result, toast);
@@ -75,6 +78,7 @@ export const doSignupWithEmailAndPassword = async (credentials: LoginCredentials
 };
 
 export const doSendPasswordReset = async (email: string, toast: (options: any) => void) => {
+  const auth = getFirebaseAuth();
   try {
     await sendPasswordResetEmail(auth, email);
     toast({
@@ -93,5 +97,6 @@ export const doSendPasswordReset = async (email: string, toast: (options: any) =
 };
 
 export const doLogout = () => {
+  const auth = getFirebaseAuth();
   return signOut(auth);
 };

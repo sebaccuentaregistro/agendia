@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useCa
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { set, addMonths, differenceInDays, addDays, format as formatDate } from 'date-fns';
-import { db } from '@/lib/firebase';
+import { getFirebaseDb } from '@/lib/firebase';
 import { collection, onSnapshot, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, orderBy } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 
@@ -115,6 +115,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   useEffect(() => {
     if (!instituteId) return;
 
+    const db = getFirebaseDb();
     const instituteRef = doc(db, 'institutes', instituteId);
 
     const collectionsToFetch = [
@@ -146,6 +147,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
 
   const getCollectionRef = useCallback((collectionName: string) => {
       if (!instituteId) throw new Error("No instituteId provided");
+      const db = getFirebaseDb();
       return collection(doc(db, 'institutes', instituteId), collectionName);
   }, [instituteId]);
 
@@ -211,6 +213,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
 
   const deactivatePerson = useCallback(async (personId: string, reason: string) => {
       try {
+          const db = getFirebaseDb();
           const batch = writeBatch(db);
           const personRef = doc(getCollectionRef('people'), personId);
           batch.update(personRef, { status: 'inactive', cancellationDate: new Date(), cancellationReason: reason });
@@ -252,6 +255,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       };
 
       try {
+          const db = getFirebaseDb();
           const batch = writeBatch(db);
           const paymentRef = doc(collection(getCollectionRef('payments')));
           batch.set(paymentRef, newPayment);
@@ -276,6 +280,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       const newLastPaymentDate = personPayments.length > 1 ? personPayments[1].date : people.find(p => p.id === personId)?.joinDate || new Date();
 
       try {
+          const db = getFirebaseDb();
           const batch = writeBatch(db);
           const paymentRef = doc(getCollectionRef('payments'), lastPayment.id);
           batch.delete(paymentRef);
@@ -292,6 +297,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   
   const enrollPersonInSessions = useCallback(async (personId: string, sessionIds: string[]) => {
       try {
+          const db = getFirebaseDb();
           const batch = writeBatch(db);
           // Remove person from all sessions first
           const allSessionsQuery = query(getCollectionRef('sessions'), where('personIds', 'array-contains', personId));
@@ -408,6 +414,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       const newWaitlist = session.waitlistPersonIds?.filter(id => id !== personId) || [];
       
       try {
+          const db = getFirebaseDb();
           const batch = writeBatch(db);
           const sessionRef = doc(getCollectionRef('sessions'), sessionId);
           batch.update(sessionRef, { personIds: newPersonIds, waitlistPersonIds: newWaitlist });
