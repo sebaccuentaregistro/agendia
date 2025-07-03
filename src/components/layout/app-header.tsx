@@ -5,7 +5,7 @@ import * as React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, Info, LogOut, Moon, Sun } from 'lucide-react';
-import { useTheme } from "next-themes"
+import { useTheme } from "next-themes";
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from '@/context/AuthContext';
 
 
