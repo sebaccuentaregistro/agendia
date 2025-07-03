@@ -2,18 +2,10 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
-
-interface AppUserProfile {
-  email: string;
-  status: 'pending' | 'active';
-  instituteId: string | null;
-}
+import { auth } from '@/lib/firebase';
 
 interface AuthContextType {
   user: User | null;
-  userProfile: AppUserProfile | null;
   loading: boolean;
 }
 
@@ -21,37 +13,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        // User is signed in, now fetch their profile.
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        try {
-          const docSnap = await getDoc(userDocRef);
-          if (docSnap.exists()) {
-            const data = docSnap.data();
-            setUserProfile({
-              email: data.email,
-              status: data.status,
-              instituteId: data.instituteId,
-            });
-          } else {
-            // This case might happen if the user document hasn't been created yet.
-            setUserProfile(null);
-          }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-          setUserProfile(null);
-        }
-        setUser(currentUser);
-      } else {
-        // User is signed out.
-        setUser(null);
-        setUserProfile(null);
-      }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
       setLoading(false);
     });
 
@@ -61,7 +27,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = {
     user,
-    userProfile,
     loading,
   };
 
