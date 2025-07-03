@@ -1,9 +1,7 @@
 'use client';
 
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut } from 'firebase/auth';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
-import type { LoginCredentials } from '@/types';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, UserCredential } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase';
 
 // This is a generic error handler for Firebase Auth errors.
 const handleAuthError = (error: any, toast: (options: any) => void) => {
@@ -32,48 +30,28 @@ const handleAuthError = (error: any, toast: (options: any) => void) => {
   throw error; // Re-throw the error to be caught by the caller if needed
 };
 
-// This function is called upon successful signup to create a user profile document.
-const handleAuthSuccess = async (userCredential: any, toast: (options: any) => void) => {
-  const user = userCredential.user;
-  const db = getFirebaseDb();
-  const userDocRef = doc(db, 'users', user.uid);
-  const userDoc = await getDoc(userDocRef);
-
-  if (!userDoc.exists()) {
-    await setDoc(userDocRef, {
-      email: user.email,
-      status: 'pending',
-      instituteId: null,
-      createdAt: serverTimestamp(),
-    });
-    toast({
-      title: '¡Registro Exitoso!',
-      description: 'Tu cuenta ha sido creada y está pendiente de aprobación por un administrador.',
-    });
-  }
-  return userCredential;
-};
 
 // --- EXPORTED AUTH FUNCTIONS ---
+type LoginCredentials = {
+  email: string;
+  password: string;
+}
 
-export const doLoginWithEmailAndPassword = async (credentials: LoginCredentials, toast: (options: any) => void) => {
+export const doLoginWithEmailAndPassword = async (credentials: LoginCredentials, toast: (options: any) => void): Promise<UserCredential | undefined> => {
   const auth = getFirebaseAuth();
   try {
     return await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
   } catch (error: any) {
     handleAuthError(error, toast);
-    // The error is re-thrown by handleAuthError
   }
 };
 
-export const doSignupWithEmailAndPassword = async (credentials: LoginCredentials, toast: (options: any) => void) => {
+export const doSignupWithEmailAndPassword = async (credentials: LoginCredentials, toast: (options: any) => void): Promise<UserCredential | undefined> => {
   const auth = getFirebaseAuth();
   try {
-    const result = await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
-    return await handleAuthSuccess(result, toast);
+    return await createUserWithEmailAndPassword(auth, credentials.email, credentials.password);
   } catch (error: any) {
     handleAuthError(error, toast);
-    // The error is re-thrown by handleAuthError
   }
 };
 

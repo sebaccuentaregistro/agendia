@@ -2,12 +2,20 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
+import { doc, getDoc } from 'firebase/firestore';
+import { getFirebaseDb } from '@/lib/firebase';
+
+interface AppUserProfile {
+  email: string;
+  status: 'pending' | 'active';
+  instituteId: string | null;
+}
 
 function FullscreenLoader() {
     return (
@@ -30,7 +38,7 @@ function FullscreenLoader() {
     );
 }
 
-function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
+function ErrorShell({ title, description }: { title: string, description: string }) {
     const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
@@ -65,75 +73,87 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, userProfile, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
+    const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
+    const [profileLoading, setProfileLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
+
+    useEffect(() => {
+        if (authLoading) return; // Wait for initial auth check
+
+        if (user) {
+            setProfileLoading(true);
+            const db = getFirebaseDb();
+            const userDocRef = doc(db, 'users', user.uid);
+            getDoc(userDocRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    setUserProfile(docSnap.data() as AppUserProfile);
+                } else {
+                    setUserProfile(null);
+                }
+            }).catch(error => {
+                console.error("Error fetching user profile:", error);
+                setUserProfile(null);
+            }).finally(() => {
+                setProfileLoading(false);
+            });
+        } else {
+            setUserProfile(null);
+            setProfileLoading(false);
+        }
+    }, [user, authLoading]);
 
     const isPublicRoute = ['/login', '/signup'].includes(pathname);
     const instituteId = userProfile?.instituteId;
 
-    useEffect(() => {
-        if (loading) return; // Don't run redirects until auth state is known
-
-        // If logged in, but on a public route, redirect to dashboard
-        if (user && isPublicRoute) {
-            router.push('/dashboard');
-        }
-
-        // If not logged in, and on a protected route, redirect to login
-        if (!user && !isPublicRoute) {
-            router.push('/login');
-        }
-
-    }, [user, isPublicRoute, loading, router]);
-
-    if (loading) {
+    if (authLoading || profileLoading) {
         return <FullscreenLoader />;
     }
 
-    // After loading, decide what to render based on auth state
-    if (user) {
-        // User is authenticated
-        if (userProfile?.status === 'pending') {
-            return <PendingApprovalShell />;
-        }
-
-        if (userProfile?.status === 'active' && !instituteId) {
-            return <ErrorShell 
-                title="Cuenta no activada"
-                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-            />;
-        }
-
-        if (instituteId) {
-            // This is the main path for an active, logged-in user
-            // If they are on a public route, the useEffect will redirect them,
-            // so we show a loader in the meantime.
-            if (isPublicRoute) {
-                return <FullscreenLoader />;
-            }
-            
-            // Otherwise, show the full app shell
-            return (
-                <StudioProvider instituteId={instituteId}>
-                    <div className="flex min-h-screen w-full flex-col">
-                        <AppHeader />
-                        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
-                            {children}
-                        </main>
-                        <MobileBottomNav />
-                    </div>
-                </StudioProvider>
-            );
-        }
-    } else {
-        // User is not authenticated
-        // If on a public route, render it.
+    // User is NOT logged in
+    if (!user) {
         if (isPublicRoute) {
             return <>{children}</>;
         }
+        router.push('/login');
+        return <FullscreenLoader />;
     }
 
-    // Fallback for any other case (e.g., redirecting) is the loader.
-    return <FullscreenLoader />;
+    // User IS logged in
+    if (isPublicRoute) {
+        router.push('/dashboard');
+        return <FullscreenLoader />;
+    }
+
+    if (userProfile?.status === 'pending') {
+        return <PendingApprovalShell />;
+    }
+
+    if (userProfile?.status === 'active' && !instituteId) {
+        return <ErrorShell 
+            title="Cuenta no activada"
+            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+        />;
+    }
+
+    if (instituteId) {
+        return (
+            <StudioProvider instituteId={instituteId}>
+                <div className="flex min-h-screen w-full flex-col">
+                    <AppHeader />
+                    <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+                        {children}
+                    </main>
+                    <MobileBottomNav />
+                </div>
+            </StudioProvider>
+        );
+    }
+    
+    // Fallback case, e.g. user logged in but profile is null or corrupt
+    return <ErrorShell 
+        title="Error de Perfil"
+        description="No pudimos cargar los datos de tu perfil. Por favor, intenta cerrar sesión y volver a ingresar." 
+    />;
 }

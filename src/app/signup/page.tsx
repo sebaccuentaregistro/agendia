@@ -12,6 +12,8 @@ import { doSignupWithEmailAndPassword } from '@/lib/firebase-auth';
 import { useToast } from '@/hooks/use-toast';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
+import { getFirebaseDb } from '@/lib/firebase';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -33,10 +35,28 @@ export default function SignupPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      await doSignupWithEmailAndPassword(values, toast);
-      // AppShell will handle redirection automatically upon login.
+      const userCredential = await doSignupWithEmailAndPassword(values, toast);
+
+      if (userCredential?.user) {
+        const user = userCredential.user;
+        const db = getFirebaseDb();
+        const userDocRef = doc(db, 'users', user.uid);
+        
+        await setDoc(userDocRef, {
+          email: user.email,
+          status: 'pending',
+          instituteId: null,
+          createdAt: serverTimestamp(),
+        });
+
+        toast({
+          title: '¡Registro Exitoso!',
+          description: 'Tu cuenta ha sido creada y está pendiente de aprobación por un administrador.',
+        });
+      }
+      // AppShell will handle redirection automatically upon auth state change.
     } catch (error: any) {
-      // The context function will show a toast on error
+      // The auth function will show a toast on error
     } finally {
         setIsLoading(false);
     }
