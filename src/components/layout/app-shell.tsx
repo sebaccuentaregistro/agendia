@@ -2,22 +2,13 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { doLogout } from '@/lib/firebase-auth';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
-interface AppUserProfile {
-  email: string;
-  status: 'pending' | 'active';
-  instituteId: string | null;
-}
-
 
 function FullscreenLoader() {
     return (
@@ -71,41 +62,12 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, loading: authLoading } = useAuth();
-    const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
-    const [profileLoading, setProfileLoading] = useState(true);
-
+    const { user, userProfile, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
-    useEffect(() => {
-        if (user) {
-            setProfileLoading(true);
-            const userDocRef = doc(db, 'users', user.uid);
-            getDoc(userDocRef)
-                .then(docSnap => {
-                    if (docSnap.exists()) {
-                        setUserProfile(docSnap.data() as AppUserProfile);
-                    } else {
-                        setUserProfile(null);
-                    }
-                })
-                .catch(error => {
-                    console.error("Error fetching user profile in AppShell:", error);
-                    setUserProfile(null);
-                })
-                .finally(() => {
-                    setProfileLoading(false);
-                });
-        } else {
-            setUserProfile(null);
-            setProfileLoading(false);
-        }
-    }, [user]);
-    
     const publicRoutes = ['/login', '/signup'];
     const instituteId = userProfile?.instituteId;
-    const loading = authLoading || profileLoading;
 
     useEffect(() => {
         if (loading) return;
