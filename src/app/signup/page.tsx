@@ -31,35 +31,53 @@ export default function SignupPage() {
       password: '',
     },
   });
+  
+  const handleAuthError = (error: { code: string, message: string }) => {
+    let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
+    switch (error.code) {
+      case 'auth/email-already-in-use':
+          description = 'Este email ya está registrado. Por favor, intenta iniciar sesión.';
+          break;
+      case 'auth/weak-password':
+          description = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
+          break;
+      case 'auth/network-request-failed':
+          description = 'Error de red. Por favor, comprueba tu conexión a internet.';
+          break;
+    }
+    toast({ variant: 'destructive', title: 'Error de Registro', description });
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    try {
-      const userCredential = await doSignupWithEmailAndPassword(values, toast);
+    const result = await doSignupWithEmailAndPassword(values);
 
-      if (userCredential?.user) {
-        const user = userCredential.user;
-        const db = getFirebaseDb();
-        const userDocRef = doc(db, 'users', user.uid);
-        
+    if (result.success && result.userCredential?.user) {
+      const user = result.userCredential.user;
+      const db = getFirebaseDb();
+      const userDocRef = doc(db, 'users', user.uid);
+      
+      try {
         await setDoc(userDocRef, {
           email: user.email,
           status: 'pending',
           instituteId: null,
           createdAt: serverTimestamp(),
         });
-
         toast({
           title: '¡Registro Exitoso!',
           description: 'Tu cuenta ha sido creada y está pendiente de aprobación por un administrador.',
         });
+        // AppShell will handle redirection automatically upon auth state change.
+      } catch (dbError) {
+        console.error("Error creating user profile in Firestore:", dbError);
+        toast({ variant: 'destructive', title: 'Error de Perfil', description: 'Tu cuenta fue creada, pero no pudimos guardar tu perfil. Contacta a soporte.' });
       }
-      // AppShell will handle redirection automatically upon auth state change.
-    } catch (error: any) {
-      // The auth function will show a toast on error
-    } finally {
-        setIsLoading(false);
+    } else if (result.error) {
+      handleAuthError(result.error);
     }
+    
+    setIsLoading(false);
   }
 
   return (
@@ -70,7 +88,7 @@ export default function SignupPage() {
             <Heart className="h-8 w-8 text-fuchsia-500" />
             <CardTitle className="text-2xl font-bold text-slate-800 dark:text-slate-100">
               YogaFlow
-            </CardTitle>
+            </DCardTitle>
           </div>
           <CardDescription>
             Crea una cuenta para empezar a gestionar tu estudio.
