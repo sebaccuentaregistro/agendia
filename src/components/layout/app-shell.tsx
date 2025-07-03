@@ -2,13 +2,21 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, type ReactNode, useState } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { doLogout } from '@/lib/firebase-auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface AppUserProfile {
+  email: string;
+  status: 'pending' | 'active';
+  instituteId: string | null;
+}
 
 function FullscreenLoader() {
     return (
@@ -62,37 +70,82 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, userProfile, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
+    const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
+    const [profileLoading, setProfileLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
 
-    const publicRoutes = ['/login', '/signup'];
-    const instituteId = userProfile?.instituteId;
+    useEffect(() => {
+        if (authLoading) return;
+
+        const fetchUserProfile = async () => {
+            if (user) {
+                setProfileLoading(true);
+                try {
+                    const userDocRef = doc(db, 'users', user.uid);
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        setUserProfile(docSnap.data() as AppUserProfile);
+                    } else {
+                        setUserProfile(null);
+                    }
+                } catch (error) {
+                    console.error("Error fetching user profile in AppShell:", error);
+                    setUserProfile(null);
+                } finally {
+                    setProfileLoading(false);
+                }
+            } else {
+                setUserProfile(null);
+                setProfileLoading(false);
+            }
+        };
+
+        fetchUserProfile();
+    }, [user, authLoading]);
 
     useEffect(() => {
-        if (loading) return;
+        if (authLoading || profileLoading) return;
+
+        const publicRoutes = ['/login', '/signup'];
         const isPublicRoute = publicRoutes.includes(pathname);
+        const instituteId = userProfile?.instituteId;
 
         if (!user && !isPublicRoute) {
             router.push('/login');
-        }
-
-        if (user && isPublicRoute) {
+        } else if (user && isPublicRoute) {
             if (userProfile?.status === 'active' && instituteId) {
                 router.push('/dashboard');
             }
         }
-    }, [user, userProfile, loading, router, pathname, instituteId]);
+    }, [user, userProfile, authLoading, profileLoading, router, pathname]);
 
-    if (loading) {
+    const isLoading = authLoading || profileLoading;
+
+    if (isLoading) {
+        return <FullscreenLoader />;
+    }
+    
+    const publicRoutes = ['/login', '/signup'];
+    if (publicRoutes.includes(pathname)) {
+        // If user is logged in, FullscreenLoader is shown until redirection happens.
+        // If not logged in, render the public route.
+        return user ? <FullscreenLoader /> : <>{children}</>;
+    }
+    
+    // ----- Protected Routes Logic -----
+
+    if (!user) {
+        // This case is handled by the redirect effect, but as a fallback:
         return <FullscreenLoader />;
     }
 
-    if (user && userProfile?.status === 'pending') {
+    if (userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
 
-    if (user && userProfile?.status === 'active' && !instituteId) {
+    if (userProfile?.status === 'active' && !userProfile.instituteId) {
         return <ErrorShell 
             title="Cuenta no activada"
             description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
@@ -103,13 +156,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         </ErrorShell>;
     }
 
-    if (!user && publicRoutes.includes(pathname)) {
-        return <>{children}</>;
-    }
-
-    if (user && instituteId && !publicRoutes.includes(pathname)) {
+    if (userProfile?.instituteId) {
         return (
-            <StudioProvider instituteId={instituteId}>
+            <StudioProvider instituteId={userProfile.instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
                     <AppHeader />
                     <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
@@ -120,6 +169,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </StudioProvider>
         );
     }
-    
+
+    // Fallback for any other state
     return <FullscreenLoader />;
 }
