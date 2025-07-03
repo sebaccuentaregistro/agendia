@@ -9,12 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { doLoginWithEmailAndPassword, doSendPasswordReset } from '@/lib/firebase-auth';
-import { Heart, Terminal } from 'lucide-react';
+import { Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -25,7 +24,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [debugError, setDebugError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -38,12 +36,12 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    setDebugError(null);
     try {
       await doLoginWithEmailAndPassword(values, toast);
+      // AppShell will handle redirection automatically upon successful login.
     } catch (error: any) {
-      const fullError = JSON.stringify(error, Object.getOwnPropertyNames(error), 2);
-      setDebugError(fullError);
+      // Errors are handled and toasted within doLoginWithEmailAndPassword,
+      // so we just need to stop the loading indicator here.
     } finally {
       setIsLoading(false);
     }
@@ -76,7 +74,7 @@ export default function LoginPage() {
           </CardHeader>
           <CardContent>
             <Form {...form}>
-              <div className="space-y-4">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <FormField
                   control={form.control}
                   name="email"
@@ -109,27 +107,14 @@ export default function LoginPage() {
                   )}
                 />
                 <Button 
-                  type="button" 
+                  type="submit"
                   className="w-full" 
                   disabled={isLoading}
-                  onClick={form.handleSubmit(onSubmit)}
                 >
                   {isLoading ? 'Ingresando...' : 'Ingresar'}
                 </Button>
-              </div>
+              </form>
             </Form>
-            
-            {debugError && (
-              <Alert variant="destructive" className="mt-4">
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Error de Depuración</AlertTitle>
-                <AlertDescription>
-                  <pre className="mt-2 w-full whitespace-pre-wrap rounded-md bg-slate-950 p-4 text-xs text-slate-50">
-                    <code>{debugError}</code>
-                  </pre>
-                </AlertDescription>
-              </Alert>
-            )}
 
             <div className="mt-4 text-center text-sm">
               ¿No tienes cuenta?{" "}
