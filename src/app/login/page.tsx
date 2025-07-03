@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -34,14 +35,28 @@ export default function LoginPage() {
     },
   });
 
+  const handleAuthError = (error: any) => {
+    let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
+    switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+        case 'auth/invalid-credential':
+            description = 'El email o la contraseña son incorrectos. Por favor, verifica tus credenciales.';
+            break;
+        case 'auth/network-request-failed':
+            description = 'Error de red. Por favor, comprueba tu conexión a internet.';
+            break;
+    }
+    toast({ variant: 'destructive', title: 'Error de Autenticación', description });
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-      await doLoginWithEmailAndPassword(values, toast);
+      await doLoginWithEmailAndPassword(values.email, values.password);
       // AppShell will handle redirection automatically upon successful login.
     } catch (error: any) {
-      // Errors are handled and toasted within doLoginWithEmailAndPassword,
-      // so we just need to stop the loading indicator here.
+      handleAuthError(error);
     } finally {
       setIsLoading(false);
     }
@@ -53,11 +68,20 @@ export default function LoginPage() {
         return;
     }
     try {
-        await doSendPasswordReset(resetEmail, toast);
+        await doSendPasswordReset(resetEmail);
+        toast({
+          title: 'Correo de recuperación enviado',
+          description: 'Revisa tu bandeja de entrada para restablecer tu contraseña.',
+        });
         setIsResetDialogOpen(false);
         setResetEmail('');
-    } catch (error) {
-      // The context function already shows a toast on error.
+    } catch (error: any) {
+        console.error("Password Reset Error:", error.code, error.message);
+        let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-email') {
+            description = 'No se encontró ninguna cuenta con este correo electrónico.';
+        }
+        toast({ variant: 'destructive', title: 'Error al enviar correo', description });
     }
   }
 
