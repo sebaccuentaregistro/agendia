@@ -23,4 +23,4 @@ Agendia es una aplicación web moderna construida con Next.js y diseñada para l
 
 Esta aplicación está desplegada en Firebase App Hosting.
 
-    
+_Estado del proyecto: en desarrollo activo._
