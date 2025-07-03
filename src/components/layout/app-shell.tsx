@@ -2,13 +2,21 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
 import { doLogout } from '@/lib/firebase-auth';
+import { getFirebaseDb } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+interface AppUserProfile {
+  email: string;
+  status: 'pending' | 'active';
+  instituteId: string | null;
+}
 
 function FullscreenLoader() {
     return (
@@ -45,6 +53,10 @@ function ErrorShell({ title, description, children }: { title: string, descripti
 }
 
 function PendingApprovalShell() {
+    const handleLogout = async () => {
+        await doLogout();
+        // The router will automatically handle redirection via the main useEffect in AppShell
+    };
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
             <div className="flex flex-col items-center gap-4 text-center">
@@ -53,7 +65,7 @@ function PendingApprovalShell() {
                 <p className="max-w-md text-muted-foreground">
                     Gracias por registrarte. Tu cuenta está siendo revisada por un administrador. Recibirás una notificación cuando sea aprobada.
                 </p>
-                <Button variant="outline" onClick={doLogout} className="mt-4">
+                <Button variant="outline" onClick={handleLogout} className="mt-4">
                     Cerrar Sesión
                 </Button>
             </div>
@@ -62,7 +74,9 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, userProfile, loading } = useAuth();
+    const { user, loading: authLoading } = useAuth();
+    const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
+    const [profileLoading, setProfileLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -71,7 +85,34 @@ export function AppShell({ children }: { children: ReactNode }) {
     const instituteId = userProfile?.instituteId;
 
     useEffect(() => {
-        if (loading) return;
+        if (authLoading) return; // Wait for firebase auth to be ready first.
+        
+        if (user) {
+            setProfileLoading(true);
+            const db = getFirebaseDb();
+            const userDocRef = doc(db, 'users', user.uid);
+            getDoc(userDocRef).then(docSnap => {
+                if (docSnap.exists()) {
+                    setUserProfile(docSnap.data() as AppUserProfile);
+                } else {
+                    setUserProfile(null);
+                }
+            }).catch(error => {
+                console.error("Error fetching user profile:", error);
+                setUserProfile(null);
+            }).finally(() => {
+                setProfileLoading(false);
+            });
+        } else {
+            // No user, so not loading a profile.
+            setUserProfile(null);
+            setProfileLoading(false);
+        }
+    }, [user, authLoading]);
+
+    useEffect(() => {
+        const totalLoading = authLoading || profileLoading;
+        if (totalLoading) return;
 
         // If user is not logged in and not on a public route, redirect to login
         if (!user && !isPublicRoute) {
@@ -84,9 +125,11 @@ export function AppShell({ children }: { children: ReactNode }) {
                 router.push('/dashboard');
             }
         }
-    }, [user, userProfile, loading, router, pathname, instituteId, isPublicRoute]);
+    }, [user, userProfile, authLoading, profileLoading, router, pathname, instituteId, isPublicRoute]);
 
-    if (loading) {
+    const isLoading = authLoading || profileLoading;
+
+    if (isLoading) {
         return <FullscreenLoader />;
     }
 
@@ -102,12 +145,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
 
         if (userProfile?.status === 'active' && !instituteId) {
+            const handleLogout = async () => {
+                await doLogout();
+            };
             return (
               <ErrorShell 
                   title="Cuenta no activada"
                   description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
               >
-                  <Button variant="outline" onClick={doLogout} className="mt-4">
+                  <Button variant="outline" onClick={handleLogout} className="mt-4">
                       Cerrar Sesión
                   </Button>
               </ErrorShell>
