@@ -1,5 +1,3 @@
-'use client';
-
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, UserCredential } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 
