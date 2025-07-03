@@ -15,14 +15,10 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
   password: z.string().min(1, { message: 'La contraseña no puede estar vacía.' }),
-  terms: z.boolean().refine(val => val === true, {
-    message: 'Debes aceptar los términos y condiciones para continuar.'
-  })
 });
 
 export default function LoginPage() {
@@ -36,7 +32,6 @@ export default function LoginPage() {
     defaultValues: {
       email: '',
       password: '',
-      terms: false,
     },
   });
 
@@ -136,33 +131,9 @@ export default function LoginPage() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="terms"
-                  render={({ field }) => (
-                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
-                      <FormControl>
-                        <Checkbox
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                          id="terms-login"
-                        />
-                      </FormControl>
-                      <div className="space-y-1 leading-none">
-                        <Label htmlFor="terms-login">
-                          He leído y acepto los{' '}
-                          <Link href="/terms" target="_blank" className="underline hover:text-primary">
-                            Términos y Condiciones
-                          </Link>
-                        </Label>
-                        <FormMessage />
-                      </div>
-                    </FormItem>
-                  )}
-                />
                 <Button 
                   type="submit"
-                  className="w-full" 
+                  className="w-full !mt-6" 
                   disabled={isLoading}
                 >
                   {isLoading ? 'Ingresando...' : 'Ingresar'}
