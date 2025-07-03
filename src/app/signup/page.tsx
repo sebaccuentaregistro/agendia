@@ -15,10 +15,15 @@ import { Heart } from 'lucide-react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
+  terms: z.boolean().refine(val => val === true, {
+    message: 'Debes aceptar los términos y condiciones.'
+  })
 });
 
 export default function SignupPage() {
@@ -30,6 +35,7 @@ export default function SignupPage() {
     defaultValues: {
       email: '',
       password: '',
+      terms: false,
     },
   });
   
@@ -123,6 +129,30 @@ export default function SignupPage() {
                   </FormItem>
                 )}
               />
+               <FormField
+                  control={form.control}
+                  name="terms"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 pt-2">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          id="terms-signup"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <Label htmlFor="terms-signup">
+                          He leído y acepto los{' '}
+                          <Link href="/terms" target="_blank" className="underline hover:text-primary">
+                            Términos y Condiciones
+                          </Link>
+                        </Label>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
+                  )}
+                />
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? 'Creando cuenta...' : 'Registrarse'}
               </Button>
