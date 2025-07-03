@@ -67,63 +67,47 @@ export function AppShell({ children }: { children: ReactNode }) {
     const pathname = usePathname();
 
     const publicRoutes = ['/login', '/signup', '/terms'];
-    const isPublicRoute = publicRoutes.includes(pathname);
+    const instituteId = userProfile?.instituteId;
 
     useEffect(() => {
         if (loading) return;
+        const isPublicRoute = publicRoutes.includes(pathname);
 
-        // If not logged in and not on a public page, redirect to login.
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
 
-        // If logged in and on a public page, redirect to the dashboard.
         if (user && isPublicRoute) {
-            if (userProfile?.status === 'active' && userProfile?.instituteId) {
+            if (userProfile?.status === 'active' && instituteId) {
                 router.push('/dashboard');
             }
         }
-    }, [user, userProfile, loading, router, pathname, isPublicRoute]);
+    }, [user, userProfile, loading, router, pathname, instituteId]);
 
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    // --- Render Logic ---
-
-    if (!user) {
-        // User is logged out.
-        if (isPublicRoute) {
-            return <>{children}</>; // Render public pages like /login
-        }
-        // Not on a public route, so we're in the process of redirecting. Show loader.
-        return <FullscreenLoader />;
-    }
-
-    // From here, we know the user is logged in.
-    if (isPublicRoute) {
-        // Logged in, but on a public route. We are redirecting. Show loader.
-        return <FullscreenLoader />;
-    }
-    
-    // Now we know the user is logged in and on a protected route.
-    // We can check their profile.
-    if (userProfile?.status === 'pending') {
+    if (user && userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
 
-    if (userProfile?.status === 'active' && !userProfile.instituteId) {
+    if (user && userProfile?.status === 'active' && !instituteId) {
         return <ErrorShell 
             title="Cuenta no activada"
             description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
         />;
     }
-    
-    if (userProfile?.instituteId) {
+
+    if (!user && publicRoutes.includes(pathname)) {
+        return <>{children}</>;
+    }
+
+    if (user && instituteId && !publicRoutes.includes(pathname)) {
         return (
-            <StudioProvider instituteId={userProfile.instituteId}>
+            <StudioProvider instituteId={instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
-                    {/* <AppHeader /> */}
+                    {/* Placeholder header to avoid breaking the layout */}
                     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-transparent px-4 backdrop-blur-xl sm:px-6">
                         <div className="text-lg font-semibold">Agendia</div>
                     </header>
@@ -136,9 +120,5 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
     
-    // Fallback for unexpected states (e.g., user exists but profile doc doesn't).
-    return <ErrorShell 
-        title="Error de Perfil"
-        description="No pudimos cargar los datos de tu perfil. Por favor, intenta cerrar sesión y volver a ingresar." 
-    />;
+    return <FullscreenLoader />;
 }
