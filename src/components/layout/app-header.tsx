@@ -1,3 +1,4 @@
+
 'use client';
 // Forcing a change to trigger commit.
 
@@ -8,7 +9,6 @@ import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
@@ -76,7 +76,6 @@ export function AppHeader() {
             </Tooltip>
           </TooltipProvider>
         )}
-        <ThemeToggle />
         <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
