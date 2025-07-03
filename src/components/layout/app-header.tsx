@@ -8,7 +8,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '../theme-toggle';
-import { doLogout } from '@/lib/firebase-auth';
+import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
   { href: "/dashboard", label: "Inicio" },
@@ -25,16 +25,12 @@ const navItems = [
 export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial } = useStudio();
+  const { logout } = useAuth();
   const router = useRouter();
 
   const handleLogout = async () => {
-    try {
-      await doLogout();
-      router.push('/login');
-    } catch (error) {
-      console.error("Logout failed", error);
-      // Optionally show a toast to the user
-    }
+    await logout();
+    router.push('/login');
   };
 
   return (
