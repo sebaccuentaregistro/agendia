@@ -2,12 +2,20 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import { doLogout } from '@/lib/firebase-auth';
+import { doc, getDoc } from 'firebase/firestore';
+
+interface AppUserProfile {
+  email: string;
+  status: 'pending' | 'active';
+  instituteId: string | null;
+}
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean; // This is ONLY for the initial auth check
+  userProfile: AppUserProfile | null;
+  loading: boolean;
   logout: () => Promise<void>;
 }
 
@@ -15,12 +23,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true); // True until the first onAuthStateChanged call
+  const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      setLoading(false); // The initial check is done
+      if (currentUser) {
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        try {
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            setUserProfile(docSnap.data() as AppUserProfile);
+          } else {
+            // This case might happen if user record is deleted from firestore but not from auth
+            setUserProfile(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setUserProfile(null);
+        }
+      } else {
+        setUserProfile(null);
+      }
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -28,11 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await doLogout();
-    // onAuthStateChanged will handle setting user to null
+    // onAuthStateChanged will handle setting user and userProfile to null
   };
 
   const value = {
     user,
+    userProfile,
     loading,
     logout,
   };

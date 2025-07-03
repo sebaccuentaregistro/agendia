@@ -2,20 +2,12 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
-interface AppUserProfile {
-  email: string;
-  status: 'pending' | 'active';
-  instituteId: string | null;
-}
 
 function FullscreenLoader() {
     return (
@@ -73,58 +65,40 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, loading: authLoading } = useAuth();
-    const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
-    const [profileLoading, setProfileLoading] = useState(true);
+    const { user, userProfile, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
+    const publicRoutes = ['/login', '/signup', '/terms'];
+
     useEffect(() => {
-        if (authLoading) return; // Wait for initial auth check
+        if (loading) return;
+        const isPublicRoute = publicRoutes.includes(pathname);
 
-        if (user) {
-            setProfileLoading(true);
-            const userDocRef = doc(db, 'users', user.uid);
-            getDoc(userDocRef).then(docSnap => {
-                if (docSnap.exists()) {
-                    setUserProfile(docSnap.data() as AppUserProfile);
-                } else {
-                    setUserProfile(null);
-                }
-            }).catch(error => {
-                console.error("Error fetching user profile:", error);
-                setUserProfile(null);
-            }).finally(() => {
-                setProfileLoading(false);
-            });
-        } else {
-            setUserProfile(null);
-            setProfileLoading(false);
+        if (!user && !isPublicRoute) {
+            router.push('/login');
         }
-    }, [user, authLoading]);
 
-    const publicRoutes = ['/login', '/signup'];
-    const isPublicRoute = publicRoutes.includes(pathname);
-    const instituteId = userProfile?.instituteId;
+        if (user && isPublicRoute) {
+            if (userProfile?.status === 'active' && userProfile?.instituteId) {
+                router.push('/dashboard');
+            }
+        }
+    }, [user, userProfile, loading, router, pathname]);
 
-    if (authLoading || profileLoading) {
+    if (loading) {
         return <FullscreenLoader />;
     }
-
-    // User is NOT logged in
+    
+    // User is not logged in.
     if (!user) {
-        if (isPublicRoute) {
-            return <>{children}</>;
-        }
-        // Redirect to login, but show a loader to avoid flashing content
-        router.push('/login');
-        return <FullscreenLoader />;
+        // We must be on a public route, because useEffect would have redirected otherwise.
+        return <>{children}</>;
     }
-
-    // User IS logged in
-    if (isPublicRoute) {
-        // If logged in, shouldn't be on public routes, redirect to dashboard
-        router.push('/dashboard');
+    
+    // User is logged in.
+    if (publicRoutes.includes(pathname)) {
+        // useEffect is redirecting, show loader to prevent flash of content.
         return <FullscreenLoader />;
     }
 
@@ -132,16 +106,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         return <PendingApprovalShell />;
     }
 
-    if (userProfile?.status === 'active' && !instituteId) {
+    if (userProfile?.status === 'active' && !userProfile.instituteId) {
         return <ErrorShell 
             title="Cuenta no activada"
             description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
         />;
     }
-
-    if (instituteId) {
+    
+    if (userProfile?.instituteId) {
         return (
-            <StudioProvider instituteId={instituteId}>
+            <StudioProvider instituteId={userProfile.instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
                     <AppHeader />
                     <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
@@ -153,7 +127,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
     
-    // Fallback case for any other unexpected state
+    // Fallback for unexpected states (e.g., user exists but profile doc doesn't).
     return <ErrorShell 
         title="Error de Perfil"
         description="No pudimos cargar los datos de tu perfil. Por favor, intenta cerrar sesión y volver a ingresar." 
