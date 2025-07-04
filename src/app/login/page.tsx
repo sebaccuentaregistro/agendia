@@ -9,12 +9,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { doLoginWithEmailAndPassword, doSendPasswordReset } from '@/lib/firebase-auth';
+import { doSendPasswordReset } from '@/lib/firebase-auth';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/context/AuthContext';
 
 const formSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
   const { toast } = useToast();
+  const { login } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -35,31 +37,9 @@ export default function LoginPage() {
     },
   });
 
-  const handleAuthError = (error: { code: string, message: string }) => {
-    let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
-    switch (error.code) {
-        case 'auth/user-not-found':
-        case 'auth/wrong-password':
-        case 'auth/invalid-credential':
-            description = 'El email o la contraseña son incorrectos. Por favor, verifica tus credenciales.';
-            break;
-        case 'auth/network-request-failed':
-            description = 'Error de red. Por favor, comprueba tu conexión a internet.';
-            break;
-    }
-    toast({ variant: 'destructive', title: 'Error de Autenticación', description });
-  };
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const result = await doLoginWithEmailAndPassword(values.email, values.password);
-    
-    if (result.success) {
-      // AppShell will handle redirection automatically upon successful login.
-    } else if (result.error) {
-      handleAuthError(result.error);
-    }
-    
+    await login(values);
     setIsLoading(false);
   }
 
@@ -178,5 +158,3 @@ export default function LoginPage() {
     </>
   );
 }
-
-    

@@ -1,6 +1,11 @@
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, signOut, UserCredential } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
+export type SignupCredentials = {
+  email: string;
+  password: string;
+}
+
 type AuthResult = {
     success: boolean;
     userCredential?: UserCredential;
@@ -15,11 +20,6 @@ export const doLoginWithEmailAndPassword = async (email: string, password: strin
     return { success: false, error: { code: error.code, message: error.message } };
   }
 };
-
-type SignupCredentials = {
-  email: string;
-  password: string;
-}
 
 export const doSignupWithEmailAndPassword = async (credentials: SignupCredentials): Promise<AuthResult> => {
   try {

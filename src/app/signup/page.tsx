@@ -9,12 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { doSignupWithEmailAndPassword } from '@/lib/firebase-auth';
-import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 import { Heart } from 'lucide-react';
 import Link from 'next/link';
-import { db } from '@/lib/firebase';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -28,7 +25,7 @@ const formSchema = z.object({
 
 export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const { signup } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -38,51 +35,10 @@ export default function SignupPage() {
       terms: false,
     },
   });
-  
-  const handleAuthError = (error: { code: string, message: string }) => {
-    let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
-    switch (error.code) {
-      case 'auth/email-already-in-use':
-          description = 'Este email ya está registrado. Por favor, intenta iniciar sesión.';
-          break;
-      case 'auth/weak-password':
-          description = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
-          break;
-      case 'auth/network-request-failed':
-          description = 'Error de red. Por favor, comprueba tu conexión a internet.';
-          break;
-    }
-    toast({ variant: 'destructive', title: 'Error de Registro', description });
-  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const result = await doSignupWithEmailAndPassword(values);
-
-    if (result.success && result.userCredential?.user) {
-      const user = result.userCredential.user;
-      const userDocRef = doc(db, 'users', user.uid);
-      
-      try {
-        await setDoc(userDocRef, {
-          email: user.email,
-          status: 'pending',
-          instituteId: null,
-          createdAt: serverTimestamp(),
-        });
-        toast({
-          title: '¡Registro Exitoso!',
-          description: 'Tu cuenta ha sido creada y está pendiente de aprobación por un administrador.',
-        });
-        // AppShell will handle redirection automatically upon auth state change.
-      } catch (dbError) {
-        console.error("Error creating user profile in Firestore:", dbError);
-        toast({ variant: 'destructive', title: 'Error de Perfil', description: 'Tu cuenta fue creada, pero no pudimos guardar tu perfil. Contacta a soporte.' });
-      }
-    } else if (result.error) {
-      handleAuthError(result.error);
-    }
-    
+    await signup(values);
     setIsLoading(false);
   }
 
@@ -170,5 +126,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-    
