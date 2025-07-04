@@ -15,10 +15,15 @@ const firebaseConfig = {
 
 
 // Initialize Firebase App
-const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+// const app: FirebaseApp = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize and export the Firebase services directly
-const auth: Auth = getAuth(app);
-const db: Firestore = getFirestore(app);
+// const auth: Auth = getAuth(app);
+// const db: Firestore = getFirestore(app);
+
+// Disconnected as requested. Exporting null objects.
+const auth: Auth = {} as Auth;
+const db: Firestore = {} as Firestore;
+
 
 export { auth, db };
