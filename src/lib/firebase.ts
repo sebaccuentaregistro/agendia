@@ -3,7 +3,10 @@ import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration is now read from environment variables
+// Your web app's Firebase configuration is now read from environment variables.
+// These variables are automatically provided by Firebase App Hosting during deployment.
+// For local development, you can create a `.env.local` file at the root of your
+// project and add the configuration values there.
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
