@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const batch = writeBatch(db);
       const newInstituteRef = doc(collection(db, 'institutes'));
       batch.set(newInstituteRef, {
-        name: 'Mi Estudio',
+        name: 'Agendia',
         ownerId: user.uid,
         createdAt: serverTimestamp(),
       });
