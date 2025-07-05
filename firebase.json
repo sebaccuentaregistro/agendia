@@ -1,7 +1,7 @@
 
 {
   "hosting": {
-    "site": "REEMPLAZAR-CON-EL-ID-DE-TU-SITIO-DE-FIREBASE",
+    "site": "yogaflow-manager-uqjpc",
     "source": ".",
     "ignore": [
       "firebase.json",
