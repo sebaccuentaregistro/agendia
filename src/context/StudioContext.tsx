@@ -119,19 +119,6 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   useEffect(() => {
     if (!instituteId) return;
 
-    const checkAndCreateInstitute = async () => {
-        const instituteDocRef = doc(db, 'institutes', instituteId);
-        const docSnap = await getDoc(instituteDocRef);
-        if (!docSnap.exists()) {
-            console.log(`Institute with ID ${instituteId} does not exist. Creating it now.`);
-            await setDoc(instituteDocRef, {
-                createdAt: Timestamp.now(),
-                name: `Mi Estudio (${instituteId.substring(0, 5)})` // Placeholder name
-            });
-        }
-    };
-    checkAndCreateInstitute();
-
     const collectionsToFetch = [
         { name: 'actividades', setter: setActividades, ref: collectionRefs.actividades },
         { name: 'specialists', setter: setSpecialists, ref: collectionRefs.specialists },

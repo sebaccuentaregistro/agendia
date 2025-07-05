@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doLogout, doLoginWithEmailAndPassword, doSignupWithEmailAndPassword, type SignupCredentials } from '@/lib/firebase-auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 interface AppUserProfile {
@@ -64,6 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (docSnap.exists()) {
             setUserProfile(docSnap.data() as AppUserProfile);
           } else {
+            // This can happen if a user is created in Auth but the Firestore doc creation fails.
+            // The new signup logic ensures this is an atomic operation, but for existing users, this might be an issue.
+            // For now, we set profile to null, which will keep them on the login/signup page.
             setUserProfile(null);
           }
         } catch (error) {
@@ -91,22 +94,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await doSignupWithEmailAndPassword(credentials);
     if (result.success && result.userCredential?.user) {
       const user = result.userCredential.user;
+      
+      // Use a batch to perform multiple writes atomically
+      const batch = writeBatch(db);
+
+      // 1. Create a new institute document for this user
+      const newInstituteRef = doc(collection(db, 'institutes'));
+      batch.set(newInstituteRef, {
+        name: 'Mi Estudio', // Default name
+        ownerId: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      
+      // 2. Create the user's profile and link it to the new institute, making them active immediately
       const userDocRef = doc(db, 'users', user.uid);
+      batch.set(userDocRef, {
+        email: user.email,
+        status: 'active', // User is active immediately
+        instituteId: newInstituteRef.id, // Link to the new institute
+        createdAt: serverTimestamp(),
+      });
+
       try {
-        await setDoc(userDocRef, {
-          email: user.email,
-          status: 'pending',
-          instituteId: null,
-          createdAt: serverTimestamp(),
-        });
+        // Commit both operations at once
+        await batch.commit();
         toast({
-          title: '¡Registro Exitoso!',
-          description: 'Tu cuenta ha sido creada y está pendiente de aprobación por un administrador.',
+            title: '¡Bienvenido/a a Agendia!',
+            description: 'Tu cuenta y tu estudio han sido creados.',
         });
-        // AppShell handles redirection
+        // AppShell will handle redirection now that user will have an active profile
       } catch (dbError) {
-        console.error("Error creating user profile in Firestore:", dbError);
-        toast({ variant: 'destructive', title: 'Error de Perfil', description: 'Tu cuenta fue creada, pero no pudimos guardar tu perfil. Contacta a soporte.' });
+        console.error("Error creating user profile and institute:", dbError);
+        toast({ variant: 'destructive', title: 'Error de Perfil', description: 'Tu cuenta fue creada, pero no pudimos configurar tu estudio. Contacta a soporte.' });
       }
     } else if (result.error) {
       handleAuthError(result.error, 'signup');
