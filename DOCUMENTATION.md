@@ -210,6 +210,4 @@ El diseño se basa en un sistema de variables CSS con HSL, lo que permite un the
 - La aplicación está configurada para **Firebase App Hosting**.
 - El archivo `apphosting.yaml` define los comandos de construcción (`npm run build`) y ejecución (`npm run start`).
 - El proceso de despliegue empaqueta la aplicación Next.js en un contenedor optimizado que Firebase gestiona automáticamente.
-
-
-    
+- **Importante:** Para que el despliegue en Firebase App Hosting funcione, la cuenta de Firebase debe tener la facturación activada.
