@@ -50,6 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         case 'auth/network-request-failed':
             description = 'Error de red. Por favor, comprueba tu conexión a internet e inténtalo de nuevo.';
             break;
+        case 'auth/api-key-not-valid':
+            description = 'La clave de API de Firebase no es válida. Asegúrate de que las credenciales en tu archivo .env.local sean correctas.';
+            break;
         default:
              console.error(`Unhandled Auth Error (${action}):`, error.code, error.message);
              // The generic description defined above will be used.
