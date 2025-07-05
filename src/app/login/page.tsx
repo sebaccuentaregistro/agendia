@@ -26,6 +26,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
+  const [isResetting, setIsResetting] = useState(false);
   const { toast } = useToast();
   const { login } = useAuth();
 
@@ -39,7 +40,7 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    await login(values);
+    await login(values.email, values.password);
     setIsLoading(false);
   }
 
@@ -48,7 +49,10 @@ export default function LoginPage() {
         toast({ variant: 'destructive', title: 'Email requerido', description: 'Por favor, introduce tu email.' });
         return;
     }
+    setIsResetting(true);
     const result = await doSendPasswordReset(resetEmail);
+    setIsResetting(false);
+
     if(result.success) {
         toast({
           title: 'Correo de recuperación enviado',
@@ -58,9 +62,9 @@ export default function LoginPage() {
         setResetEmail('');
     } else {
         console.error("Password Reset Error:", result.error?.code, result.error?.message);
-        let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
+        let description = 'Ocurrió un error al intentar enviar el correo. Por favor, inténtalo de nuevo.';
         if (result.error?.code === 'auth/user-not-found' || result.error?.code === 'auth/invalid-email') {
-            description = 'No se encontró ninguna cuenta con este correo electrónico.';
+            description = 'No se encontró ninguna cuenta con este correo electrónico. Por favor, verifica que lo hayas escrito correctamente.';
         }
         toast({ variant: 'destructive', title: 'Error al enviar correo', description });
     }
@@ -151,7 +155,9 @@ export default function LoginPage() {
             </div>
             <DialogFooter>
                 <Button variant="outline" onClick={() => setIsResetDialogOpen(false)}>Cancelar</Button>
-                <Button onClick={handlePasswordReset}>Enviar enlace</Button>
+                <Button onClick={handlePasswordReset} disabled={isResetting}>
+                    {isResetting ? 'Enviando...' : 'Enviar enlace'}
+                </Button>
             </DialogFooter>
         </DialogContent>
       </Dialog>

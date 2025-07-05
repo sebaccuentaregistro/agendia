@@ -1,3 +1,4 @@
+
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -17,7 +18,7 @@ interface AuthContextType {
   user: User | null;
   userProfile: AppUserProfile | null;
   loading: boolean;
-  login: (credentials: SignupCredentials) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   signup: (credentials: SignupCredentials) => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -31,24 +32,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
 
   const handleAuthError = (error: { code: string, message: string }, action: 'login' | 'signup') => {
-    let description = 'Ocurrió un error. Por favor, inténtalo de nuevo.';
-    const title = action === 'login' ? 'Error de Autenticación' : 'Error de Registro';
+    let description = 'Ocurrió un error inesperado. Por favor, revisa tu conexión y vuelve a intentarlo.';
+    const title = action === 'login' ? 'Error al Iniciar Sesión' : 'Error de Registro';
 
     switch (error.code) {
         case 'auth/user-not-found':
         case 'auth/wrong-password':
         case 'auth/invalid-credential':
-            description = 'El email o la contraseña son incorrectos. Por favor, verifica tus credenciales.';
+            description = 'El email o la contraseña son incorrectos. Por favor, verifica tus credenciales e inténtalo de nuevo.';
             break;
         case 'auth/email-already-in-use':
-          description = 'Este email ya está registrado. Por favor, intenta iniciar sesión.';
+          description = 'Este email ya está en uso. Por favor, intenta iniciar sesión o recuperar tu contraseña.';
           break;
         case 'auth/weak-password':
           description = 'La contraseña es demasiado débil. Debe tener al menos 6 caracteres.';
           break;
         case 'auth/network-request-failed':
-            description = 'Error de red. Por favor, comprueba tu conexión a internet.';
+            description = 'Error de red. Por favor, comprueba tu conexión a internet e inténtalo de nuevo.';
             break;
+        default:
+             console.error(`Unhandled Auth Error (${action}):`, error.code, error.message);
+             // The generic description defined above will be used.
+             break;
     }
     toast({ variant: 'destructive', title, description });
   };
@@ -64,9 +69,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (docSnap.exists()) {
             setUserProfile(docSnap.data() as AppUserProfile);
           } else {
-            // This can happen if a user is created in Auth but the Firestore doc creation fails.
-            // The new signup logic ensures this is an atomic operation, but for existing users, this might be an issue.
-            // For now, we set profile to null, which will keep them on the login/signup page.
             setUserProfile(null);
           }
         } catch (error) {
@@ -82,47 +84,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const login = async (credentials: SignupCredentials) => {
-    const result = await doLoginWithEmailAndPassword(credentials.email, credentials.password);
+  const login = async (email: string, password: string) => {
+    const result = await doLoginWithEmailAndPassword(email, password);
     if (result.error) {
       handleAuthError(result.error, 'login');
     }
-    // AppShell handles redirection on success
   };
 
   const signup = async (credentials: SignupCredentials) => {
     const result = await doSignupWithEmailAndPassword(credentials);
     if (result.success && result.userCredential?.user) {
       const user = result.userCredential.user;
-      
-      // Use a batch to perform multiple writes atomically
       const batch = writeBatch(db);
-
-      // 1. Create a new institute document for this user
       const newInstituteRef = doc(collection(db, 'institutes'));
       batch.set(newInstituteRef, {
-        name: 'Mi Estudio', // Default name
+        name: 'Mi Estudio',
         ownerId: user.uid,
         createdAt: serverTimestamp(),
       });
       
-      // 2. Create the user's profile and link it to the new institute, making them active immediately
       const userDocRef = doc(db, 'users', user.uid);
       batch.set(userDocRef, {
         email: user.email,
-        status: 'active', // User is active immediately
-        instituteId: newInstituteRef.id, // Link to the new institute
+        status: 'active',
+        instituteId: newInstituteRef.id,
         createdAt: serverTimestamp(),
       });
 
       try {
-        // Commit both operations at once
         await batch.commit();
         toast({
             title: '¡Bienvenido/a a Agendia!',
             description: 'Tu cuenta y tu estudio han sido creados.',
         });
-        // AppShell will handle redirection now that user will have an active profile
       } catch (dbError) {
         console.error("Error creating user profile and institute:", dbError);
         toast({ variant: 'destructive', title: 'Error de Perfil', description: 'Tu cuenta fue creada, pero no pudimos configurar tu estudio. Contacta a soporte.' });
@@ -135,7 +129,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     await doLogout();
-    // onAuthStateChanged will handle setting user and userProfile to null
   };
 
   const value = {
