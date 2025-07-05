@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Person, Session, Tariff } from '@/types';
+import type { Person, Session, Tariff, Payment } from '@/types';
 import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, UserCheck, Signal, DollarSign, Notebook, FilterX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -691,42 +691,55 @@ export default function StudentsPage() {
 
   const processedPeople = useMemo(() => {
     if (!isMounted) return [];
-    
+
     const now = new Date();
+
+    // 1. Pre-process payments
+    const lastPaymentsByPersonId = new Map<string, Payment>();
+    payments.forEach(payment => {
+        const existing = lastPaymentsByPersonId.get(payment.personId);
+        if (!existing || payment.date > existing.date) {
+            lastPaymentsByPersonId.set(payment.personId, payment);
+        }
+    });
+
+    // 2. Pre-process attendance and recovery balances
+    const attendanceByPersonId = new Map<string, { date: Date; status: 'present' | 'absent' | 'justified' }[]>();
     const recoveryBalances: Record<string, number> = {};
     people.forEach(p => (recoveryBalances[p.id] = 0));
+
     attendance.forEach(record => {
-      record.justifiedAbsenceIds?.forEach(personId => {
-        if (recoveryBalances[personId] !== undefined) recoveryBalances[personId]++;
-      });
-      record.oneTimeAttendees?.forEach(personId => {
-        if (recoveryBalances[personId] !== undefined) recoveryBalances[personId]--;
-      });
+        const recordDate = new Date(record.date + 'T12:00:00');
+        const processPerson = (personId: string, status: 'present' | 'absent' | 'justified') => {
+            if (!attendanceByPersonId.has(personId)) {
+                attendanceByPersonId.set(personId, []);
+            }
+            attendanceByPersonId.get(personId)!.push({ date: recordDate, status });
+        };
+
+        record.presentIds.forEach(id => processPerson(id, 'present'));
+        record.absentIds.forEach(id => processPerson(id, 'absent'));
+        if (record.justifiedAbsenceIds) {
+            record.justifiedAbsenceIds.forEach(id => {
+                processPerson(id, 'justified');
+                if (recoveryBalances[id] !== undefined) recoveryBalances[id]++;
+            });
+        }
+        if (record.oneTimeAttendees) {
+            record.oneTimeAttendees.forEach(id => {
+                if (recoveryBalances[id] !== undefined) recoveryBalances[id]--;
+            });
+        }
     });
     
+    // Sort attendance records for each person once
+    attendanceByPersonId.forEach(records => {
+        records.sort((a, b) => b.date.getTime() - a.date.getTime());
+    });
+
     let peopleList = people.map(p => {
-        const lastPayment = payments
-            .filter(pay => pay.personId === p.id)
-            .sort((a, b) => b.date.getTime() - a.date.getTime())[0];
-
-        const personAttendanceRecords = attendance
-            .filter(record => 
-                record.presentIds.includes(p.id) || 
-                record.absentIds.includes(p.id) ||
-                record.justifiedAbsenceIds?.includes(p.id)
-            )
-            .map(record => {
-                let status: 'present' | 'absent' | 'justified' = 'absent';
-                if (record.presentIds.includes(p.id)) status = 'present';
-                else if (record.justifiedAbsenceIds?.includes(p.id)) status = 'justified';
-                
-                return {
-                    date: new Date(record.date + 'T12:00:00'), // Avoid timezone issues
-                    status: status
-                }
-            })
-            .sort((a,b) => b.date.getTime() - a.date.getTime());
-
+        const lastPayment = lastPaymentsByPersonId.get(p.id);
+        const personAttendanceRecords = attendanceByPersonId.get(p.id) || [];
         const lastAttendance = personAttendanceRecords[0];
 
         let assignedTariff: Tariff | null = null;
@@ -742,11 +755,9 @@ export default function StudentsPage() {
               let foundTariff = frequencyTariffs.find(t => t.frequency === frequency);
 
               if (!foundTariff) {
-                // Find next highest tariff if no exact match
                 foundTariff = frequencyTariffs.find(t => t.frequency! > frequency);
               }
               if (!foundTariff && frequencyTariffs.length > 0) {
-                // If frequency is higher than any plan, assign the highest plan
                 foundTariff = frequencyTariffs[frequencyTariffs.length - 1];
               }
               assignedTariff = foundTariff || null;
@@ -762,26 +773,16 @@ export default function StudentsPage() {
             return now >= startDate && now <= endDate;
         });
         
-        // Monthly attendance calculation
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-        const monthlyAttendanceRecords = attendance.filter(record => {
-            const recordDate = new Date(record.date + 'T12:00:00'); 
-            return recordDate >= startOfMonth && recordDate <= endOfMonth;
-        });
-
         let presentes = 0;
         let ausencias = 0;
-
-        monthlyAttendanceRecords.forEach(record => {
-            if (record.presentIds.includes(p.id)) {
-                presentes++;
-            } else if (record.absentIds.includes(p.id)) {
-                ausencias++;
+        personAttendanceRecords.forEach(record => {
+            if (record.date >= startOfMonth && record.date <= endOfMonth) {
+                if (record.status === 'present') presentes++;
+                if (record.status === 'absent') ausencias++;
             }
         });
-
         const totalClasesMes = presentes + ausencias;
         const asistenciaPorcentaje = totalClasesMes > 0 ? Math.round((presentes / totalClasesMes) * 100) : 0;
 
@@ -1518,5 +1519,3 @@ export default function StudentsPage() {
     </div>
   );
 }
-
-    
