@@ -67,55 +67,63 @@ export function AppShell({ children }: { children: ReactNode }) {
     const pathname = usePathname();
 
     const publicRoutes = ['/login', '/signup', '/terms'];
-    const instituteId = userProfile?.instituteId;
 
     useEffect(() => {
         if (loading) return;
+        
         const isPublicRoute = publicRoutes.includes(pathname);
 
+        // If not logged in and trying to access a protected route, redirect to login.
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
 
-        if (user && isPublicRoute) {
-            if (userProfile?.status === 'active' && instituteId) {
-                router.push('/dashboard');
-            }
+        // If logged in and on a public route, redirect to the dashboard.
+        if (user && isPublicRoute && userProfile?.status === 'active' && userProfile.instituteId) {
+            router.push('/dashboard');
         }
-    }, [user, userProfile, loading, router, pathname, instituteId]);
+    }, [user, userProfile, loading, router, pathname]);
 
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    if (user && userProfile?.status === 'pending') {
-        return <PendingApprovalShell />;
-    }
-
-    if (user && userProfile?.status === 'active' && !instituteId) {
-        return <ErrorShell 
-            title="Cuenta no activada"
-            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-        />;
-    }
-
-    if (!user && publicRoutes.includes(pathname)) {
-        return <>{children}</>;
-    }
-
-    if (user && instituteId && !publicRoutes.includes(pathname)) {
-        return (
-            <StudioProvider instituteId={instituteId}>
-                <div className="flex min-h-screen w-full flex-col">
-                    <AppHeader />
-                    <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
-                        {children}
-                    </main>
-                    <MobileBottomNav />
-                </div>
-            </StudioProvider>
-        );
+    // Handle different user states
+    if (user) {
+        if (userProfile?.status === 'pending') {
+            return <PendingApprovalShell />;
+        }
+        if (userProfile?.status === 'active' && !userProfile.instituteId) {
+            return <ErrorShell 
+                title="Cuenta no activada"
+                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+            />;
+        }
+        // If logged in and on a public route, show a loader while redirecting
+        if (publicRoutes.includes(pathname)) {
+            return <FullscreenLoader />;
+        }
+        // If logged in, has an institute, and is on a protected route, show the app
+        if (userProfile?.instituteId) {
+            return (
+                <StudioProvider instituteId={userProfile.instituteId}>
+                    <div className="flex min-h-screen w-full flex-col">
+                        <AppHeader />
+                        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+                            {children}
+                        </main>
+                        <MobileBottomNav />
+                    </div>
+                </StudioProvider>
+            );
+        }
+    } else {
+        // Not logged in, on a public route
+        if (publicRoutes.includes(pathname)) {
+            return <>{children}</>;
+        }
     }
     
+    // Default fallback loader for any other state
     return <FullscreenLoader />;
 }
