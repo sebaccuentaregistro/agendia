@@ -1,213 +1,66 @@
+# Documentación del Proyecto Agendia
 
-# Documentación Integral de Agendia
-
-Este documento describe la arquitectura completa, el flujo de datos, la lógica de negocio y el sistema de diseño de la aplicación Agendia. Está diseñado para que cualquier desarrollador pueda entender, mantener y replicar la aplicación.
+Este documento describe la arquitectura, el modelo de datos y las instrucciones de despliegue para la aplicación Agendia.
 
 ## 1. Propósito de la Aplicación
 
-Agendia es una aplicación web de gestión integral (Software as a Service - SaaS) para centros de bienestar, como estudios de yoga o gimnasios. Permite administrar clases, horarios, alumnos, especialistas, pagos, asistencias y más.
+Agendia es una aplicación web (SaaS) para la gestión integral de centros de bienestar (estudios de yoga, gimnasios, etc.). Permite administrar clases, horarios, alumnos, especialistas, pagos y asistencias.
 
 ## 2. Stack Tecnológico
 
-- **Framework**: Next.js 14 (con App Router)
+- **Framework**: Next.js 14 (App Router)
 - **Lenguaje**: TypeScript
-- **Base de Datos**: Google Firestore (NoSQL)
+- **Base de Datos**: Google Firestore
 - **Autenticación**: Firebase Authentication
 - **Despliegue**: Firebase App Hosting
-- **UI Components**: ShadCN UI
-- **Estilos**: Tailwind CSS
+- **UI**: ShadCN UI & Tailwind CSS
 - **Iconos**: `lucide-react`
-- **Inteligencia Artificial (Deshabilitado)**: Genkit
 
-## 3. Arquitectura y Estructura de Datos
+## 3. Arquitectura y Modelo de Datos
 
-### 3.1. Modelo de Datos y Relaciones
+La base de datos en Firestore se organiza bajo una colección principal `institutes`. Cada documento en esta colección representa un centro, y dentro de él se anidan las colecciones de datos del negocio.
 
-La base de datos en Firestore está estructurada bajo una colección principal `institutes`. Cada documento en esta colección representa un estudio o centro de bienestar, y dentro de cada instituto, se anidan las colecciones de datos correspondientes.
+**Ruta base de datos:** `/institutes/{instituteId}/{collectionName}/{documentId}`
 
-**Ruta base:** `/institutes/{instituteId}/{collectionName}/{documentId}`
+### Colecciones Principales:
 
-A continuación se detallan las colecciones y sus relaciones:
-
----
-
-#### **`users` (Colección a nivel raíz)**
-- **Propósito**: Gestiona los usuarios que pueden acceder a la aplicación. No contiene datos del negocio, solo de autenticación y permisos.
-- **Campos**:
-  - `email`: (string) El correo del usuario.
-  - `status`: (string) 'pending' (recién registrado, necesita aprobación) o 'active' (aprobado).
-  - `instituteId`: (string | null) El ID del instituto al que pertenece el usuario. Si es `null`, no puede acceder a los datos de ningún centro.
-
----
-
-#### **`people` (Alumnos/Clientes)**
-- **Propósito**: Almacena la información de cada alumno.
-- **Ruta**: `/institutes/{instituteId}/people/{personId}`
-- **Campos**:
-  - `name`, `phone`, `avatar`: (string) Datos básicos.
-  - `joinDate`: (Timestamp) Fecha de alta.
-  - `lastPaymentDate`: (Timestamp) Fecha del último pago registrado. Usada para calcular el próximo vencimiento.
-  - `membershipType`: (string) 'Mensual' o 'Diario'.
-  - `status`: (string) 'active' o 'inactive'.
-  - `levelId`: (string, opcional) ID del nivel de práctica del alumno.
-  - `healthInfo`, `notes`: (string, opcional) Información adicional.
-  - `vacationPeriods`: (array, opcional) Arreglo de objetos `{ id, startDate, endDate }` para gestionar ausencias largas.
-
----
-
-#### **`specialists` (Especialistas/Instructores)**
-- **Propósito**: Gestiona a los instructores.
-- **Ruta**: `/institutes/{instituteId}/specialists/{specialistId}`
-- **Campos**:
-  - `name`, `phone`, `avatar`: (string) Datos básicos.
-  - `actividadIds`: (array de strings) **Relación M-a-M con `actividades`**. Contiene los IDs de las actividades que este especialista puede impartir.
-
----
-
-#### **`actividades` (Actividades/Tipos de Clase)**
-- **Propósito**: Define los tipos de clases o servicios que ofrece el estudio.
-- **Ruta**: `/institutes/{instituteId}/actividades/{actividadId}`
-- **Campos**: `name`: (string).
-
----
-
-#### **`spaces` (Espacios/Salas)**
-- **Propósito**: Define las salas físicas donde se imparten las clases.
-- **Ruta**: `/institutes/{instituteId}/spaces/{spaceId}`
-- **Campos**:
-  - `name`: (string).
-  - `capacity`: (number) Capacidad máxima de la sala.
-  - `operatingHoursStart`/`End`: (string, opcional) 'HH:mm'.
-
----
-
-#### **`sessions` (Sesiones/Clases en el Horario)**
-- **Propósito**: El corazón de la aplicación. Representa una clase recurrente en un día y hora específicos.
-- **Ruta**: `/institutes/{instituteId}/sessions/{sessionId}`
-- **Campos**:
-  - `dayOfWeek`: (string) 'Lunes', 'Martes', etc.
-  - `time`: (string) 'HH:mm'.
-  - `instructorId`: (string) **Relación N-a-1 con `specialists`**.
-  - `actividadId`: (string) **Relación N-a-1 con `actividades`**.
-  - `spaceId`: (string) **Relación N-a-1 con `spaces`**.
-  - `levelId`: (string, opcional) **Relación N-a-1 con `levels`**.
-  - `personIds`: (array de strings) **Relación M-a-M con `people`**. IDs de los alumnos inscritos de forma fija.
-  - `waitlistPersonIds`: (array de strings, opcional) Alumnos en lista de espera.
-
----
-
-#### **`attendance` (Asistencias)**
-- **Propósito**: Registra la asistencia para una sesión en una fecha concreta. Se crea un documento por cada día que se pasa lista para una clase.
-- **Ruta**: `/institutes/{instituteId}/attendance/{attendanceId}`
-- **Campos**:
-  - `sessionId`: (string) **Relación con `sessions`**.
-  - `date`: (string) 'YYYY-MM-DD'.
-  - `presentIds`, `absentIds`, `justifiedAbsenceIds`: (array de strings) **Relación con `people`**.
-  - `oneTimeAttendees`: (array de strings, opcional) Alumnos que asisten solo ese día (ej. para recuperar una clase).
-
----
-
-#### **`payments` (Pagos)**
-- **Propósito**: Un registro histórico de cada pago realizado.
-- **Ruta**: `/institutes/{instituteId}/payments/{paymentId}`
-- **Campos**:
-  - `personId`: (string) **Relación con `people`**.
-  - `date`: (Timestamp) Fecha del pago.
-  - `months`: (number) Cantidad de meses pagados.
-
----
-
-#### **`tariffs` (Aranceles/Planes)**
-- **Propósito**: Define los planes de precios.
-- **Ruta**: `/institutes/{instituteId}/tariffs/{tariffId}`
-- **Campos**:
-  - `name`, `description`: (string).
-  - `price`: (number).
-  - `frequency`: (number, opcional) Frecuencia semanal (ej. 2 para "2 veces por semana").
-  - `isIndividual`: (boolean, opcional) Si es para clases individuales/diarias.
-
----
-
-#### **`levels` (Niveles de Práctica)**
-- **Propósito**: Define los niveles de dificultad (Principiante, Avanzado, etc.).
-- **Ruta**: `/institutes/{instituteId}/levels/{levelId}`
-- **Campos**: `name`: (string).
+-   **`users` (Raíz)**: Gestiona las cuentas de usuario de la app (administradores), su estado (`pending`, `active`) y a qué `instituteId` pertenecen.
+-   **`people`**: Almacena la información de los alumnos/clientes.
+-   **`specialists`**: Gestiona a los instructores.
+-   **`actividades`**: Define los tipos de clases o servicios ofrecidos.
+-   **`spaces`**: Define las salas físicas donde se imparten las clases.
+-   **`sessions`**: Representa una clase recurrente en un día y hora específicos. Es el núcleo del horario.
+-   **`attendance`**: Registra la asistencia para una sesión en una fecha concreta.
+-   **`payments`**: Historial de todos los pagos realizados.
+-   **`tariffs`**: Define los planes de precios.
+-   **`levels`**: Define los niveles de práctica (Principiante, Avanzado, etc.).
 
 ## 4. Lógica de la Aplicación
 
-### 4.1. `StudioContext.tsx` - El Cerebro de la App
+-   **`src/context/AuthContext.tsx`**: Gestiona el ciclo de vida de la autenticación del usuario (login, signup, logout) y su perfil.
+-   **`src/context/StudioContext.tsx`**: Es el cerebro de la aplicación. Centraliza toda la lógica de negocio y la interacción con Firestore, como añadir/modificar/eliminar datos, inscribir alumnos, registrar pagos, etc.
+-   **`src/lib/firestore-actions.ts`**: Contiene las funciones puras que ejecutan las operaciones de base de datos, separadas de la lógica del contexto.
 
-Este contexto de React es el punto central para toda la lógica de negocio y la interacción con Firestore.
-- **Fetching de Datos**: Utiliza `onSnapshot` de Firestore para escuchar cambios en tiempo real en todas las colecciones del instituto y actualizar el estado de la aplicación.
-- **Operaciones CRUD**: Contiene todas las funciones para `Añadir`, `Actualizar` y `Eliminar` documentos en cada colección (ej: `addPerson`, `updateSession`, `deleteSpecialist`).
-- **Lógica de Negocio Compleja**:
-  - `enrollPersonInSessions`: Gestiona la inscripción de un alumno en múltiples clases, actualizando todos los documentos de sesión necesarios en una sola operación (batch).
-  - `recordPayment`: Crea un nuevo documento de pago y actualiza el campo `lastPaymentDate` en el documento de la persona.
-  - `saveAttendance`: Crea o actualiza el registro de asistencia para una clase en el día actual.
-  - `deactivatePerson`: Cambia el estado de una persona a 'inactive' y la desinscribe de todas sus clases.
+## 5. Cómo Exportar y Ejecutar en Otro Lugar
 
-### 4.2. `AuthContext.tsx` - Gestión de Autenticación
+Puedes descargar el código y ejecutarlo en tu computadora o en otro servicio de hosting.
 
-Este contexto gestiona el ciclo de vida del usuario.
-- **Login/Signup**: Envuelve las funciones de Firebase `signInWithEmailAndPassword` y `createUserWithEmailAndPassword`, añadiendo manejo de errores y notificaciones (toasts).
-- **Creación de Perfil de Usuario**: Al registrar un nuevo usuario, crea un documento asociado en la colección `users` con `status: 'pending'` y `instituteId: null`.
-- **Protección de Rutas**: El componente `AppShell.tsx` utiliza este contexto para redirigir a los usuarios:
-  - Si no está logueado -> a `/login`.
-  - Si está logueado pero su perfil es `pending` o no tiene `instituteId` -> a pantallas de espera/error.
-  - Si está logueado y activo -> a `/dashboard`.
+1.  **Descargar el Código**: Usa la opción "Descargar Código" en la interfaz de Firebase Studio para obtener un archivo ZIP.
 
-### 4.3. `lib/utils.ts` - Lógica de Cálculo
+2.  **Configurar el Entorno**:
+    *   Descomprime el archivo.
+    *   Abre una terminal en la carpeta raíz del proyecto (donde está `package.json`).
+    *   Instala las dependencias: `npm install`
 
-- **`getStudentPaymentStatus`**: Determina si un alumno está 'Al día' o 'Atrasado'.
-- **`getNextPaymentDate`**: Calcula la fecha del próximo vencimiento basándose en la `lastPaymentDate` y el `joinDate` del alumno, y teniendo en cuenta los períodos de vacaciones.
+3.  **Configurar Credenciales**:
+    *   En la raíz del proyecto, copia el archivo `.env.local.example` y renómbralo a `.env.local`.
+    *   Abre el nuevo `.env.local` y rellena las variables con tus credenciales de Firebase. Las encontrarás en la configuración de tu proyecto en la consola de Firebase.
 
-## 5. UI y Sistema de Diseño
+4.  **Ejecutar la Aplicación**:
+    *   Inicia el servidor de desarrollo: `npm run dev`
+    *   Abre tu navegador y ve a `http://localhost:3000`.
 
-### 5.1. Paleta de Colores (`globals.css`)
+## 6. Despliegue en Firebase App Hosting
 
-El diseño se basa en un sistema de variables CSS con HSL, lo que permite un theming fácil para modo claro y oscuro.
-
-- **`--primary`**: `hsl(269 35% 62%)` - Un púrpura apagado, usado para elementos principales, botones y acentos.
-- **`--secondary`**: Usado para elementos de apoyo como badges.
-- **`--accent`**: `hsl(275 29% 85%)` - Un lavanda suave, usado para fondos sutiles o estados "hover".
-- **`--background`**:
-  - **Claro**: `hsl(260 20% 96.1%)` - Un gris muy claro con un toque violáceo.
-  - **Oscuro**: `hsl(260 10% 10%)` - Un gris oscuro profundo.
-- **`--destructive`**: Rojo estándar para acciones de eliminación o peligro.
-
-### 5.2. Estética General
-
-- **Componentes**: Se utilizan los componentes pre-construidos de `ShadCN UI` (`Card`, `Button`, `Dialog`, `Select`, etc.).
-- **Estilos**:
-  - **Bordes redondeados**: Se usa un radio grande (`--radius: 1rem`), visible en tarjetas y diálogos, para una apariencia suave y moderna.
-  - **Sombras**: Las tarjetas tienen `shadow-lg` para darles profundidad y hacerlas "flotar" sobre el fondo.
-  - **Fondos con Gradiente**: El `body` de la página tiene un gradiente sutil (`from-blue-100 via-purple-200 to-violet-200`) para un look más dinámico y agradable.
-  - **Efecto "Glassmorphism"**: Muchas tarjetas usan `bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl`, lo que les da una apariencia de vidrio esmerilado translúcido, dejando ver el gradiente del fondo.
-
-## 6. Flujos Clave
-
-- **Alta de un Alumno**:
-  1. Admin hace clic en "Añadir Persona".
-  2. Se abre un diálogo (`Dialog`) para introducir los datos.
-  3. `StudioContext.addPerson` crea el documento en Firestore con `status: 'active'`.
-  4. La lista de alumnos se actualiza en tiempo real.
-
-- **Programar una Clase**:
-  1. Admin va a "Horarios" y hace clic en "Añadir Sesión".
-  2. Un diálogo pide `Actividad`, `Especialista`, `Espacio`, `Día` y `Hora`.
-  3. El formulario tiene validación en tiempo real para evitar conflictos de horario para un mismo especialista o un mismo espacio.
-  4. `StudioContext.addSession` crea el documento de la sesión.
-
-- **Pasar Lista**:
-  1. Admin va al "Dashboard" o "Horarios" y busca la clase del día.
-  2. Hace clic en "Asistencia". Se abre un `Sheet` (panel lateral).
-  3. Muestra la lista de alumnos inscritos para ese día (incluyendo recuperos).
-  4. El admin marca 'Presente', 'Ausente' o 'Justificado'.
-  5. `StudioContext.saveAttendance` guarda el registro para esa sesión y esa fecha. Si un alumno justifica, se incrementa su saldo de clases a recuperar.
-
-## 7. Despliegue
-
-- La aplicación está configurada para **Firebase App Hosting**.
-- El archivo `apphosting.yaml` define los comandos de construcción (`npm run build`) y ejecución (`npm run start`).
-- El proceso de despliegue empaqueta la aplicación Next.js en un contenedor optimizado que Firebase gestiona automáticamente.
-- **Importante:** Para que el despliegue en Firebase App Hosting funcione, la cuenta de Firebase debe tener la facturación activada.
+-   El archivo `apphosting.yaml` configura el proceso de construcción y ejecución para el despliegue.
+-   **Requisito de Facturación**: Para que el despliegue en Firebase App Hosting funcione, la cuenta de Firebase asociada al proyecto debe tener la facturación activada. Este es un requisito de Google Cloud, sobre el cual esta aplicación no tiene control.
