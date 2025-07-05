@@ -198,14 +198,22 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
 
 export const deleteWithUsageCheckAction = async (collectionRefs: { [key: string]: CollectionReference }, entityId: string, checks: { collection: string; field: string; label: string }[]) => {
     for (const check of checks) {
-        const q = query(collectionRefs[check.collection], where(check.field, 'array-contains', entityId));
-        const snapshotArray = await getDocs(q);
+        const qArray = query(collectionRefs[check.collection], where(check.field, 'array-contains', entityId));
+        const snapshotArray = await getDocs(qArray);
         if (!snapshotArray.empty) {
-            throw new Error(`No se puede eliminar. Está en uso por ${snapshotArray.size} ${check.label}(s) (array).`);
+            throw new Error(`No se puede eliminar. Está en uso por ${snapshotArray.size} ${check.label}(s).`);
         }
         
-        const q2 = query(collectionRefs[check.collection], where(check.field, '==', entityId));
-        const snapshotSingle = await getDocs(q2);
+        const queryConstraints = [where(check.field, '==', entityId)];
+        
+        // If we are checking the 'people' collection, we should only consider 'active' people as being "in use".
+        // This solves the issue of inactive people blocking the deletion of entities like levels.
+        if (check.collection === 'people') {
+            queryConstraints.push(where('status', '==', 'active'));
+        }
+
+        const qSingle = query(collectionRefs[check.collection], ...queryConstraints);
+        const snapshotSingle = await getDocs(qSingle);
         if (!snapshotSingle.empty) {
             throw new Error(`No se puede eliminar. Está en uso por ${snapshotSingle.size} ${check.label}(s).`);
         }
