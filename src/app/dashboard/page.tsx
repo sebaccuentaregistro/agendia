@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -44,7 +43,12 @@ function AppNotifications() {
                         const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
                         if (!session || !person || !actividad) {
-                            return null;
+                            return (
+                                <div key={notification.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 text-sm">
+                                    <p className="text-muted-foreground">Esta notificación ya no es válida.</p>
+                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                                </div>
+                            );
                         }
 
                         return (
