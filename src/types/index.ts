@@ -38,7 +38,6 @@ export type VacationPeriod = {
 export type Person = {
   id: string;
   name: string;
-  email?: string; // Added for password resets
   phone: string;
   joinDate: Date;
   membershipType: 'Mensual' | 'Diario';
