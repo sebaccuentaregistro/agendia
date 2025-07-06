@@ -5,7 +5,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session, Payment, Tariff } from '@/types';
-import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, Signal, DollarSign, Notebook, FilterX } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, Signal, DollarSign, Notebook, FilterX, KeyRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -36,10 +36,13 @@ import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Input } from '@/components/ui/input';
+import { doSendPasswordReset } from '@/lib/firebase-auth';
+import { useToast } from '@/hooks/use-toast';
 
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
+  email: z.string().email({ message: 'Por favor, introduce un email válido.' }),
   phone: z.string().regex(/^\d+$/, { message: 'El teléfono solo debe contener números (sin espacios ni guiones).' }).min(10, { message: 'El teléfono debe tener al menos 10 dígitos.' }),
   membershipType: z.enum(['Mensual', 'Diario'], { required_error: 'Debes seleccionar un tipo de membresía.' }),
   healthInfo: z.string().optional(),
@@ -510,6 +513,7 @@ const formatPrice = (price: number) => {
 
 export default function StudentsPage() {
   const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance, levels, tariffs } = useStudio();
+  const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
@@ -518,6 +522,7 @@ export default function StudentsPage() {
   const [personForAttendance, setPersonForAttendance] = useState<Person | null>(null);
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [filters, setFilters] = useState({
     searchTerm: '',
     actividadId: 'all',
@@ -696,22 +701,37 @@ export default function StudentsPage() {
     return { title: "No hay personas que mostrar", description: "No hay personas que coincidan con los filtros actuales." };
   }, [people, filters]);
 
-  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none', notes: '' }});
+  const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', email: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none', notes: '' }});
 
   const getPaymentStatusBadge = (status: 'Al día' | 'Atrasado') => {
     if (status === 'Al día') return <Badge className="bg-white/90 text-green-700 hover:bg-white/90 font-bold border-green-200"><CheckCircle2 className="h-4 w-4 mr-1.5" />Al día</Badge>;
     return <Badge variant="destructive" className="font-bold border-destructive/50"><XCircle className="h-4 w-4 mr-1.5" />Atrasado</Badge>;
   };
 
+  async function handlePasswordReset(email: string | undefined) {
+    if (!email) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Esta persona no tiene un email registrado.' });
+      return;
+    }
+    setIsResettingPassword(true);
+    const result = await doSendPasswordReset(email);
+    if (result.success) {
+      toast({ title: 'Correo enviado', description: `Se ha enviado un correo para restablecer la contraseña a ${email}.` });
+    } else {
+       toast({ variant: 'destructive', title: 'Error', description: 'No se pudo enviar el correo. Verifica que el email sea correcto y que el usuario exista en el sistema de autenticación.' });
+    }
+    setIsResettingPassword(false);
+  }
+
   function handleEdit(person: Person) {
     setSelectedPerson(person);
-    form.reset({ name: person.name, phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '', levelId: person.levelId || 'none', notes: person.notes || '' });
+    form.reset({ name: person.name, email: person.email || '', phone: person.phone, membershipType: person.membershipType, healthInfo: person.healthInfo || '', levelId: person.levelId || 'none', notes: person.notes || '' });
     setIsDialogOpen(true);
   }
 
   function handleAdd() {
     setSelectedPerson(undefined);
-    form.reset({ name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none', notes: '' });
+    form.reset({ name: '', email: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none', notes: '' });
     setIsDialogOpen(true);
   }
 
@@ -739,6 +759,7 @@ export default function StudentsPage() {
   const handleExportPeople = () => {
     const headers = {
         name: 'Nombre',
+        email: 'Email',
         phone: 'Teléfono',
         membershipType: 'Membresía',
         paymentStatus: 'Estado de Pago',
@@ -794,6 +815,7 @@ export default function StudentsPage() {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                   <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nombre</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)}/>
+                  <FormField control={form.control} name="email" render={({ field }) => (<FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                   <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>)}/>
                   <FormField control={form.control} name="membershipType" render={({ field }) => (
                     <FormItem><FormLabel>Membresía</FormLabel><FormControl>
@@ -1080,7 +1102,7 @@ export default function StudentsPage() {
                                         )}
                                     </div>
                                     <div className="flex items-center gap-2 text-white/80 text-sm">
-                                        <span>{person.phone}</span>
+                                        <span className="truncate">{person.email || 'Sin email'}</span>
                                         <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
                                             <WhatsAppIcon className="text-white hover:text-white/80 transition-colors" />
                                         </a>
@@ -1098,6 +1120,9 @@ export default function StudentsPage() {
                                         <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForAttendance(person)}><ClipboardCheck className="mr-2 h-4 w-4" />Ver Historial de Asistencia</DropdownMenuItem>
                                         <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => handlePasswordReset(person.email)} disabled={!person.email || isResettingPassword}>
+                                            <KeyRound className="mr-2 h-4 w-4" />Restablecer Contraseña
+                                        </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForJustification(person)}><CalendarClock className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
                                         <DropdownMenuSeparator />

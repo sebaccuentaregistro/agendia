@@ -38,6 +38,7 @@ export type VacationPeriod = {
 export type Person = {
   id: string;
   name: string;
+  email?: string; // Added for password resets
   phone: string;
   joinDate: Date;
   membershipType: 'Mensual' | 'Diario';
@@ -67,7 +68,6 @@ export type Payment = {
   personId: string;
   date: Date; // The actual date the payment was recorded
   months: number;
-  cycleStartDate: Date; // The date this payment cycle starts from
 };
 
 export type Space = {
