@@ -5,7 +5,7 @@
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod } from '@/types';
 import { db } from './firebase';
-import { format as formatDate } from 'date-fns';
+import { format as formatDate, addMonths } from 'date-fns';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
 const cleanDataForFirestore = (data: any) => {
@@ -42,7 +42,8 @@ export const addPersonAction = async (collectionRef: CollectionReference, person
     const newPerson = {
         ...personData,
         joinDate: now,
-        lastPaymentDate: now,
+        // The lastPaymentDate field now stores the date the membership is valid until.
+        lastPaymentDate: addMonths(now, 1),
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     };
@@ -79,33 +80,30 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 };
 
 
-export const recordPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, newCycleStartDate: Date, previousCycleStartDate: Date) => {
+export const recordPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, newExpiryDate: Date) => {
     const paymentRecord = {
         personId: personId,
         date: new Date(), // The actual transaction date
-        months: 1,
-        cycleStartDate: previousCycleStartDate, // Store the start date of the cycle this payment is for
+        months: 1, // We simplified this to always be 1 month
     };
     const batch = writeBatch(db);
 
-    // Create a new payment record
     const paymentRef = doc(paymentsRef);
     batch.set(paymentRef, paymentRecord);
     
-    // Update the person's lastPaymentDate to the start of the new paid cycle
     const personRef = doc(peopleRef, personId);
-    batch.update(personRef, { lastPaymentDate: newCycleStartDate });
+    batch.update(personRef, { lastPaymentDate: newExpiryDate });
 
     return await batch.commit();
 };
 
-export const undoLastPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, lastPayment: any, dateToRestore: Date) => {
+export const undoLastPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, paymentToDelete: any, previousExpiryDate: Date) => {
     const batch = writeBatch(db);
-    const paymentRef = doc(paymentsRef, lastPayment.id);
+    const paymentRef = doc(paymentsRef, paymentToDelete.id);
     batch.delete(paymentRef);
 
     const personRef = doc(peopleRef, personId);
-    batch.update(personRef, { lastPaymentDate: dateToRestore });
+    batch.update(personRef, { lastPaymentDate: previousExpiryDate });
 
     return await batch.commit();
 };
@@ -211,24 +209,24 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
 
 export const deleteWithUsageCheckAction = async (collectionRefs: { [key: string]: CollectionReference }, entityId: string, checks: { collection: string; field: string; label: string }[], people: Person[]) => {
     for (const check of checks) {
-        // Handle array-contains for IDs in an array
-        const qArray = query(collectionRefs[check.collection], where(check.field, 'array-contains', entityId));
-        const snapshotArray = await getDocs(qArray);
-        if (!snapshotArray.empty) {
-            throw new Error(`No se puede eliminar. Está en uso por ${snapshotArray.size} ${check.label}(s).`);
-        }
-        
-        // Handle direct equality for single ID fields
-        const qSingle = query(collectionRefs[check.collection], where(check.field, '==', entityId));
-        const snapshotSingle = await getDocs(qSingle);
-        
-        if(check.collection === 'people') {
+        if (check.collection === 'people') {
              const activePeopleUsingIt = people.filter(p => p.levelId === entityId);
              if (activePeopleUsingIt.length > 0) {
                  throw new Error(`No se puede eliminar. Está asignado a ${activePeopleUsingIt.length} persona(s) activa(s).`);
              }
-        } else if (!snapshotSingle.empty) {
-            throw new Error(`No se puede eliminar. Está en uso por ${snapshotSingle.size} ${check.label}(s).`);
+             continue; // Continue to next check
+        }
+        
+        let queryToRun;
+        if (check.field.endsWith('Ids')) { // Heuristic for array fields
+            queryToRun = query(collectionRefs[check.collection], where(check.field, 'array-contains', entityId));
+        } else {
+            queryToRun = query(collectionRefs[check.collection], where(check.field, '==', entityId));
+        }
+        
+        const snapshot = await getDocs(queryToRun);
+        if (!snapshot.empty) {
+            throw new Error(`No se puede eliminar. Está en uso por ${snapshot.size} ${check.label}(s).`);
         }
     }
 };

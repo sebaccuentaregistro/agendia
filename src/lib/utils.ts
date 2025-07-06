@@ -1,4 +1,5 @@
 
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
@@ -13,35 +14,9 @@ export function getNextPaymentDate(person: Person): Date | null {
   if (person.membershipType === 'Diario') {
     return null;
   }
-
-  const lastPayment = person.lastPaymentDate;
-  const joinDay = person.joinDate.getDate();
-
-  const dueDateInPaymentMonth = set(lastPayment, {
-    date: joinDay,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-    milliseconds: 0,
-  });
-  
-  let dueDate = addMonths(dueDateInPaymentMonth, 1);
-  
-  // Adjust for vacations that overlap with the calculated due date
-  const vacations = person.vacationPeriods?.sort((a,b) => a.startDate.getTime() - b.startDate.getTime()) || [];
-  for (const vacation of vacations) {
-    const vacationStart = set(vacation.startDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-    const vacationEnd = set(vacation.endDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-
-    // Check if the due date falls within this vacation period.
-    // The range is inclusive: [vacationStart, vacationEnd]
-    if (dueDate >= vacationStart && dueDate <= vacationEnd) {
-      const vacationDuration = differenceInDays(vacationEnd, vacationStart) + 1;
-      dueDate = addDays(dueDate, vacationDuration);
-    }
-  }
-
-  return dueDate;
+  // The 'lastPaymentDate' field now stores the date the membership is valid until.
+  // This date is effectively the next payment date.
+  return person.lastPaymentDate;
 }
 
 // This function checks if a person's payment is up-to-date.

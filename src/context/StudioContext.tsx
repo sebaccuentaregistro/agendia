@@ -201,20 +201,41 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
                 toast({ variant: 'destructive', title: 'Error', description: 'Persona no encontrada.' });
                 return;
             }
-            const previousCycleStartDate = person.lastPaymentDate;
-            const newCycleStartDate = getNextPaymentDate(person) || person.joinDate;
-            handleAction(Actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, personId, newCycleStartDate, previousCycleStartDate), 'Pago registrado.');
+        
+            // The date up to which the person is currently paid.
+            const currentExpiry = person.lastPaymentDate;
+            
+            // The next expiry date is one month from the current one.
+            // We must respect the original join day.
+            const joinDay = person.joinDate.getDate();
+        
+            // Set the day of the month on the current expiry date to the join day, then add a month.
+            // This handles cases where the expiry date might have shifted due to vacations.
+            const baseDateForNextMonth = set(currentExpiry, { date: joinDay });
+            const newExpiryDate = addMonths(baseDateForNextMonth, 1);
+        
+            handleAction(Actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, personId, newExpiryDate), 'Pago registrado.');
         },
         undoLastPayment: (personId) => {
-            const personPayments = payments.filter(p => p.personId === personId);
+            const person = people.find(p => p.id === personId);
+            if (!person) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Persona no encontrada.' });
+                return;
+            }
+            const personPayments = payments.filter(p => p.personId === personId); // Already sorted by date desc
+        
             if (personPayments.length > 0) {
-                const lastPayment = personPayments[0]; // Already sorted by date desc
-                const dateToRestore = lastPayment.cycleStartDate || people.find(p => p.id === personId)?.joinDate;
-                if (!dateToRestore) {
-                    toast({ variant: 'destructive', title: 'Error', description: 'No se pudo encontrar la fecha de ciclo anterior para restaurar.' });
-                    return;
-                }
-                handleAction(Actions.undoLastPaymentAction(collectionRefs.payments, collectionRefs.people, personId, lastPayment, dateToRestore), 'Último pago deshecho.');
+                const paymentToDelete = personPayments[0];
+                
+                // To revert, we simply go back one month from the current expiry date,
+                // while still respecting the original join day.
+                const currentExpiry = person.lastPaymentDate;
+                const joinDay = person.joinDate.getDate();
+        
+                const baseDateForPreviousMonth = set(currentExpiry, { date: joinDay });
+                const previousExpiryDate = addMonths(baseDateForPreviousMonth, -1);
+        
+                handleAction(Actions.undoLastPaymentAction(collectionRefs.payments, collectionRefs.people, personId, paymentToDelete, previousExpiryDate), 'Último pago deshecho.');
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: 'No hay pagos para deshacer.' });
             }
