@@ -1,4 +1,5 @@
 
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference } from 'firebase/firestore';
@@ -78,18 +79,21 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 };
 
 
-export const recordPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, months: number) => {
-    const newPayment = {
+export const recordPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, newLastPaymentDate: Date) => {
+    const paymentRecord = {
         personId: personId,
-        date: new Date(),
-        months,
+        date: new Date(), // The actual transaction date
+        months: 1,
     };
     const batch = writeBatch(db);
+
+    // Create a new payment record
     const paymentRef = doc(paymentsRef);
-    batch.set(paymentRef, newPayment);
+    batch.set(paymentRef, paymentRecord);
     
+    // Update the person's lastPaymentDate to the start of the new paid cycle
     const personRef = doc(peopleRef, personId);
-    batch.update(personRef, { lastPaymentDate: newPayment.date });
+    batch.update(personRef, { lastPaymentDate: newLastPaymentDate });
 
     return await batch.commit();
 };
@@ -204,17 +208,25 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
     return await batch.commit();
 };
 
-export const deleteWithUsageCheckAction = async (collectionRefs: { [key: string]: CollectionReference }, entityId: string, checks: { collection: string; field: string; label: string }[]) => {
+export const deleteWithUsageCheckAction = async (collectionRefs: { [key: string]: CollectionReference }, entityId: string, checks: { collection: string; field: string; label: string }[], people: Person[]) => {
     for (const check of checks) {
+        // Handle array-contains for IDs in an array
         const qArray = query(collectionRefs[check.collection], where(check.field, 'array-contains', entityId));
         const snapshotArray = await getDocs(qArray);
         if (!snapshotArray.empty) {
             throw new Error(`No se puede eliminar. Está en uso por ${snapshotArray.size} ${check.label}(s).`);
         }
         
+        // Handle direct equality for single ID fields
         const qSingle = query(collectionRefs[check.collection], where(check.field, '==', entityId));
         const snapshotSingle = await getDocs(qSingle);
-        if (!snapshotSingle.empty) {
+        
+        if(check.collection === 'people') {
+             const activePeopleUsingIt = people.filter(p => p.status === 'active' && p.levelId === entityId);
+             if (activePeopleUsingIt.length > 0) {
+                 throw new Error(`No se puede eliminar. Está asignado a ${activePeopleUsingIt.length} persona(s) activa(s).`);
+             }
+        } else if (!snapshotSingle.empty) {
             throw new Error(`No se puede eliminar. Está en uso por ${snapshotSingle.size} ${check.label}(s).`);
         }
     }

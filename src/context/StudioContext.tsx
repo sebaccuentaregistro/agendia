@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
@@ -8,6 +9,7 @@ import { set, addMonths, differenceInDays, addDays, format as formatDate } from 
 import { db } from '@/lib/firebase';
 import { collection, onSnapshot, doc, query, where, getDocs, Timestamp, orderBy, CollectionReference, getDoc, setDoc } from 'firebase/firestore';
 import * as Actions from '@/lib/firestore-actions';
+import { getNextPaymentDate } from '@/lib/utils';
 
 // Helper function to convert Firestore Timestamps to Dates in nested objects
 const convertTimestamps = (data: any) => {
@@ -45,7 +47,7 @@ interface StudioContextType {
   addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => void;
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
-  recordPayment: (personId: string, months: number) => void;
+  recordPayment: (personId: string) => void;
   undoLastPayment: (personId: string) => void;
   addSpace: (space: Omit<Space, 'id'>) => void;
   updateSpace: (space: Space) => void;
@@ -133,7 +135,8 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     ];
 
     const unsubscribes = collectionsToFetch.map(({ name, setter, ref }) => {
-        return onSnapshot(ref, (snapshot) => {
+        const q = query(ref, orderBy('name', 'asc'));
+        return onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(d => ({ id: d.id, ...convertTimestamps(d.data()) })) as any[];
             setter(data);
         }, (error) => {
@@ -168,14 +171,13 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
 
   const deleteWithUsageCheck = useCallback(async (entityId: string, checks: { collection: string; field: string; label: string }[], collectionName: string) => {
       try {
-          const refs: { [key: string]: CollectionReference } = collectionRefs;
-          await Actions.deleteWithUsageCheckAction(refs, entityId, checks);
-          await Actions.deleteEntity(doc(refs[collectionName], entityId));
+          await Actions.deleteWithUsageCheckAction(collectionRefs, entityId, checks, people);
+          await Actions.deleteEntity(doc(collectionRefs[collectionName], entityId));
           toast({ title: 'Éxito', description: 'Elemento eliminado correctamente.' });
       } catch (error: any) {
           handleAction(Promise.reject(error), '');
       }
-  }, [collectionRefs, handleAction, toast]);
+  }, [collectionRefs, people, handleAction, toast]);
   
   return (
     <StudioContext.Provider value={{ 
@@ -190,7 +192,16 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         addPerson: (data) => handleAction(Actions.addPersonAction(collectionRefs.people, data), 'Persona añadida.'),
         updatePerson: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.people, data.id), data), 'Persona actualizada.'),
         deletePerson: (id) => handleAction(Actions.deletePersonAction(collectionRefs.sessions, collectionRefs.people, id), 'Persona eliminada.'),
-        recordPayment: (id, months) => handleAction(Actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, id, months), 'Pago registrado.'),
+        recordPayment: (personId) => {
+            const person = people.find(p => p.id === personId);
+            if (!person) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Persona no encontrada.' });
+                return;
+            }
+            // The new "lastPaymentDate" for calculation purposes should be the current due date.
+            const newLastPaymentDate = getNextPaymentDate(person) || person.joinDate;
+            handleAction(Actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, personId, newLastPaymentDate), 'Pago registrado.');
+        },
         undoLastPayment: (personId) => {
             const personPayments = payments.filter(p => p.personId === personId).sort((a, b) => b.date.getTime() - a.date.getTime());
             if (personPayments.length > 0) {

@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Person, Session, Payment } from '@/types';
+import type { Person, Session, Payment, Tariff } from '@/types';
 import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, Signal, DollarSign, Notebook, FilterX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -63,7 +64,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
         
         const activeEnrolledCount = session.personIds.filter(pid => {
             const p = people.find(p => p.id === pid);
-            return p && !isPersonOnVacation(p, new Date());
+            return p;
         }).length;
         
         return {
@@ -678,7 +679,7 @@ export default function StudentsPage() {
       return nameMatch && specialistMatch && actividadMatch && spaceMatch;
     });
     
-    return peopleList.sort((a,b) => a.name.localeCompare(b.name));
+    return peopleList;
   }, [people, payments, attendance, tariffs, sessions, filters, isMounted, actividades, specialists, spaces, dashboardUrlFilter]);
 
   const emptyState = useMemo(() => {
@@ -1125,7 +1126,7 @@ export default function StudentsPage() {
                                                 size="sm"
                                                 variant="outline"
                                                 className="h-auto shrink-0 px-2 py-1 text-xs bg-white/20 text-white hover:bg-white/30 border-white/30"
-                                                onClick={() => recordPayment(person.id, 1)}
+                                                onClick={() => recordPayment(person.id)}
                                             >
                                                 <CreditCard className="mr-1.5 h-3 w-3" />
                                                 Registrar Pago
