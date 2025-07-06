@@ -62,12 +62,12 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
     // Regular attendees not on vacation today
     const regularAttendees = session.personIds
       .map(pid => people.find(p => p.id === pid))
-      .filter((p): p is Person => !!p && p.status === 'active' && !isPersonOnVacation(p, today));
+      .filter((p): p is Person => !!p && !isPersonOnVacation(p, today));
 
     // One-time attendees for today
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
-    const oneTimeAttendees = people.filter(p => p.status === 'active' && oneTimeAttendeeIds.has(p.id));
+    const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
 
     // Combine and remove duplicates
     const allAttendeesMap = new Map<string, Person>();
@@ -77,7 +77,7 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
     return Array.from(allAttendeesMap.values()).sort((a,b) => a.name.localeCompare(b.name));
   }, [session, people, isPersonOnVacation, today, attendance, todayStr]);
 
-  const actividad = actividades.find(a => a.id === session.actividadId);
+  constividad = actividades.find(a => a.id === session.actividadId);
 
   const handleCopyToClipboard = () => {
     navigator.clipboard.writeText(message);
@@ -136,7 +136,7 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
 
 function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, addOneTimeAttendee, actividades, attendance } = useStudio();
-  const actividad = actividades.find(a => a.id === session.actividadId);
+  constividad = actividades.find(a => a.id === session.actividadId);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
@@ -163,7 +163,7 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
     });
 
     return people
-      .filter(person => person.status === 'active' && balances[person.id] > 0)
+      .filter(person => balances[person.id] > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [people, attendance]);
 
@@ -277,14 +277,14 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
 
   const space = spaces.find(s => s.id === session.spaceId);
   const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
-  const actividad = actividades.find(a => a.id === session.actividadId);
+  constividad = actividades.find(a => a.id === session.actividadId);
 
   function onSubmit(data: { personIds: string[] }) {
     enrollPeopleInClass(session.id, data.personIds);
     onClose();
   }
 
-  const sortedPeople = people.filter(p => p.status === 'active').sort((a, b) => a.name.localeCompare(b.name));
+  const sortedPeople = people.sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
@@ -331,7 +331,7 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
                           </FormItem>
                         )}
                       />
-                    )) : <p className="text-center text-sm text-muted-foreground">No hay personas activas para inscribir.</p>}
+                    )) : <p className="text-center text-sm text-muted-foreground">No hay personas para inscribir.</p>}
                   </ScrollArea>
                   <FormMessage />
                 </FormItem>
@@ -360,10 +360,10 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
   const { people, actividades, spaces } = useStudio();
 
   const enrolledPeople = useMemo(() => {
-    return people.filter(p => p.status === 'active' && session.personIds.includes(p.id));
+    return people.filter(p => session.personIds.includes(p.id));
   }, [people, session]);
 
-  const actividad = useMemo(() => {
+  constividad = useMemo(() => {
     return actividades.find((s) => s.id === session.actividadId);
   }, [session, actividades]);
   
@@ -547,15 +547,15 @@ export default function SchedulePage() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     const level = levels.find((l) => l.id === session.levelId);
-    return { specialist, actividad, space, level };
+    return { specialist,ividad, space, level };
   };
 
   const handleAdd = () => {
     setSelectedSession(undefined);
-    form.reset({ instructorId: '', actividadId: '', spaceId: '', dayOfWeek: 'Lunes', time: '09:00', sessionType: 'Grupal', levelId: '' });
+    form.reset({ instructorId: '',ividadId: '', spaceId: '', dayOfWeek: 'Lunes', time: '09:00', sessionType: 'Grupal', levelId: '' });
     setIsDialogOpen(true);
   };
 
@@ -632,7 +632,7 @@ export default function SchedulePage() {
         capacidad: 'Capacidad'
     };
     const dataToExport = filteredSessions.map(session => {
-        const { specialist, actividad, space } = getSessionDetails(session);
+        const { specialist,ividad, space } = getSessionDetails(session);
         return {
             actividad: actividad?.name || 'N/A',
             especialista: specialist?.name || 'N/A',
@@ -853,10 +853,10 @@ export default function SchedulePage() {
                 sessions.length > 0 ? (
                   filteredSessions.length > 0 ? (
                       filteredSessions.map((session) => {
-                      const { specialist, actividad, space, level } = getSessionDetails(session);
+                      const { specialist,ividad, space, level } = getSessionDetails(session);
                       const isIndividual = session.sessionType === 'Individual';
                       const capacity = isIndividual ? 1 : space?.capacity || 0;
-                      const enrolledCount = session.personIds.filter(pid => people.some(p => p.id === pid && p.status === 'active')).length;
+                      const enrolledCount = session.personIds.filter(pid => people.some(p => p.id === pid)).length;
                       const availableSpots = capacity - enrolledCount;
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
                       const isFull = availableSpots <= 0;

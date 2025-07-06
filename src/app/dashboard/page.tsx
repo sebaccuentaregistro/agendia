@@ -41,7 +41,7 @@ function AppNotifications() {
                     if (notification.type === 'waitlist' && notification.sessionId) {
                         const session = sessions.find(s => s.id === notification.sessionId);
                         const person = people.find(p => p.id === notification.personId);
-                        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                        constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
                         if (!session || !person || !actividad) {
                             return null;
@@ -61,7 +61,7 @@ function AppNotifications() {
                     }
                     if (notification.type === 'churnRisk') {
                         const person = people.find(p => p.id === notification.personId);
-                        if (!person || person.status === 'inactive') return null;
+                        if (!person) return null;
 
                         return (
                             <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
@@ -98,21 +98,21 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
     
     const regularIds = session.personIds.filter(pid => {
         const person = people.find(p => p.id === pid);
-        return person && person.status === 'active' && !isPersonOnVacation(person, today);
+        return person && !isPersonOnVacation(person, today);
     });
     
     const allEnrolledIds = [...new Set([...regularIds, ...oneTimeIds])];
     
     return people
-      .filter(p => p.status === 'active' && allEnrolledIds.includes(p.id))
+      .filter(p => allEnrolledIds.includes(p.id))
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [people, session, attendance, todayStr, isPersonOnVacation, today]);
 
   const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist, actividad, space };
+    return { specialist,ividad, space };
   }, [session, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
@@ -184,21 +184,19 @@ function DashboardPageContent() {
   const searchParams = useSearchParams();
   const dashboardView = searchParams.get('view') === 'management' ? 'management' : 'main';
 
-  const activePeople = useMemo(() => people.filter(p => p.status === 'active'), [people]);
-
   const overdueCount = useMemo(() => {
     const now = new Date();
-    return activePeople.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
-  }, [activePeople]);
+    return people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
+  }, [people]);
 
   const onVacationCount = useMemo(() => {
     const now = new Date();
-    return activePeople.filter(p => isPersonOnVacation(p, now)).length;
-  }, [activePeople, isPersonOnVacation]);
+    return people.filter(p => isPersonOnVacation(p, now)).length;
+  }, [people, isPersonOnVacation]);
 
   const pendingRecoveryCount = useMemo(() => {
     const balances: Record<string, number> = {};
-    activePeople.forEach(p => (balances[p.id] = 0));
+    people.forEach(p => (balances[p.id] = 0));
 
     attendance.forEach(record => {
       record.justifiedAbsenceIds?.forEach(personId => {
@@ -210,7 +208,7 @@ function DashboardPageContent() {
     });
 
     return Object.values(balances).filter(balance => balance > 0).length;
-  }, [activePeople, attendance]);
+  }, [people, attendance]);
 
   const hasOverdue = overdueCount > 0;
   const hasOnVacation = onVacationCount > 0;
@@ -218,7 +216,7 @@ function DashboardPageContent() {
 
   const mainCards = [
     { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
-    { href: "/students", label: "Personas", icon: Users, count: activePeople.length },
+    { href: "/students", label: "Personas", icon: Users, count: people.length },
   ];
   
   const managementCards = [
@@ -255,7 +253,7 @@ function DashboardPageContent() {
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
         const activeRegulars = session.personIds.filter(pid => {
             const person = people.find(p => p.id === pid);
-            return person && person.status === 'active' && !isPersonOnVacation(person, today);
+            return person && !isPersonOnVacation(person, today);
         });
         return {
           ...session,
@@ -279,9 +277,9 @@ function DashboardPageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist, actividad, space };
+    return { specialist,ividad, space };
   };
 
   const formatTime = (time: string) => {
@@ -445,7 +443,7 @@ function DashboardPageContent() {
               filteredSessions.length > 0 ? (
                 <ul className="space-y-4">
                   {filteredSessions.map(session => {
-                    const { specialist, actividad, space } = getSessionDetails(session);
+                    const { specialist,ividad, space } = getSessionDetails(session);
                     const enrolledCount = (session as any).enrolledCount;
                     const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
                     const utilization = capacity > 0 ? enrolledCount / capacity : 0;

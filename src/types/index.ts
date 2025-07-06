@@ -43,9 +43,6 @@ export type Person = {
   membershipType: 'Mensual' | 'Diario';
   lastPaymentDate: Date;
   avatar: string;
-  status: 'active' | 'inactive';
-  cancellationReason?: string;
-  cancellationDate?: Date;
   vacationPeriods?: VacationPeriod[];
   healthInfo?: string;
   levelId?: string;

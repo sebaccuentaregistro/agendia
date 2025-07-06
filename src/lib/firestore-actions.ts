@@ -1,3 +1,4 @@
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference } from 'firebase/firestore';
@@ -35,24 +36,22 @@ export const deleteEntity = async (docRef: any) => {
 
 
 // Specific Actions
-export const addPersonAction = async (collectionRef: CollectionReference, personData: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'status' | 'cancellationReason' | 'cancellationDate'>) => {
+export const addPersonAction = async (collectionRef: CollectionReference, personData: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     const now = new Date();
     const newPerson = {
         ...personData,
         joinDate: now,
         lastPaymentDate: now,
         avatar: `https://placehold.co/100x100.png`,
-        status: 'active' as const,
         vacationPeriods: [],
     };
     return addEntity(collectionRef, newPerson);
 };
 
-export const deactivatePersonAction = async (peopleRef: CollectionReference, sessionsRef: CollectionReference, personId: string, reason: string) => {
+export const deletePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string) => {
     const batch = writeBatch(db);
-    const personRef = doc(peopleRef, personId);
-    batch.update(personRef, { status: 'inactive', cancellationDate: new Date(), cancellationReason: reason });
-    
+
+    // Remove person from all sessions they are enrolled in
     const personSessionsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
     const personSessionsSnap = await getDocs(personSessionsQuery);
     
@@ -62,13 +61,22 @@ export const deactivatePersonAction = async (peopleRef: CollectionReference, ses
         batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
     });
 
+    // Also remove from waitlists
+    const personWaitlistQuery = query(sessionsRef, where('waitlistPersonIds', 'array-contains', personId));
+    const personWaitlistSnap = await getDocs(personWaitlistQuery);
+    personWaitlistSnap.forEach(sessionDoc => {
+        const sessionData = sessionDoc.data() as Session;
+        const updatedWaitlistIds = (sessionData.waitlistPersonIds || []).filter(id => id !== personId);
+        batch.update(sessionDoc.ref, { waitlistPersonIds: updatedWaitlistIds });
+    });
+
+    // Delete the person document
+    const personRef = doc(peopleRef, personId);
+    batch.delete(personRef);
+
     return await batch.commit();
 };
 
-export const reactivatePersonAction = async (peopleRef: CollectionReference, personId: string) => {
-    const personDocRef = doc(peopleRef, personId);
-    return await setDoc(personDocRef, { status: 'active', cancellationDate: null, cancellationReason: null }, { merge: true });
-};
 
 export const recordPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, months: number) => {
     const newPayment = {
@@ -204,15 +212,7 @@ export const deleteWithUsageCheckAction = async (collectionRefs: { [key: string]
             throw new Error(`No se puede eliminar. Está en uso por ${snapshotArray.size} ${check.label}(s).`);
         }
         
-        const queryConstraints = [where(check.field, '==', entityId)];
-        
-        // If we are checking the 'people' collection, we should only consider 'active' people as being "in use".
-        // This solves the issue of inactive people blocking the deletion of entities like levels.
-        if (check.collection === 'people') {
-            queryConstraints.push(where('status', '==', 'active'));
-        }
-
-        const qSingle = query(collectionRefs[check.collection], ...queryConstraints);
+        const qSingle = query(collectionRefs[check.collection], where(check.field, '==', entityId));
         const snapshotSingle = await getDocs(qSingle);
         if (!snapshotSingle.empty) {
             throw new Error(`No se puede eliminar. Está en uso por ${snapshotSingle.size} ${check.label}(s).`);

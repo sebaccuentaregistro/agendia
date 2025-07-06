@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Person, Session, Tariff, Payment } from '@/types';
-import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, UserCheck, Signal, DollarSign, Notebook, FilterX } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, Signal, DollarSign, Notebook, FilterX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -34,7 +34,6 @@ import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 
 
@@ -55,7 +54,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
 
   const filteredSessions = sessions
       .filter(session => 
-        (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
+        (actividadFilter === 'all' || session.actividadId ===ividadFilter) &&
         (specialistFilter === 'all' || session.instructorId === specialistFilter)
       )
       .map(session => {
@@ -64,7 +63,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
         
         const activeEnrolledCount = session.personIds.filter(pid => {
             const p = people.find(p => p.id === pid);
-            return p && p.status === 'active' && !isPersonOnVacation(p, new Date());
+            return p && !isPersonOnVacation(p, new Date());
         }).length;
         
         return {
@@ -129,7 +128,7 @@ function EnrollDialog({ person, onOpenChange }: { person: Person; onOpenChange: 
                 <ScrollArea className="h-72 rounded-md border p-4">
                   <div className="space-y-4">
                     {filteredSessions.map((item) => {
-                      const { specialist, actividad, space, isPermanentlyFull, activeEnrolledCount, capacity } = item;
+                      const { specialist,ividad, space, isPermanentlyFull, activeEnrolledCount, capacity } = item;
                       if (!actividad || !specialist || !space) return null;
                       
                       const isEnrolledInForm = form.watch('sessionIds').includes(item.id);
@@ -226,7 +225,7 @@ function AttendanceHistorySheet({ person, onClose }: { person: Person; onClose: 
     return personHistory
       .map(entry => {
         const session = sessions.find(s => s.id === entry.sessionId);
-        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+        constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
         const dateObj = new Date(`${entry.date}T12:00:00Z`); // Avoid timezone issues
         return {
           ...entry,
@@ -563,94 +562,6 @@ function RecordPaymentDialog({ person, onClose }: { person: Person; onClose: () 
   );
 }
 
-const deactivationReasons = [
-  "Costo",
-  "Se mudó",
-  "Problemas de horario",
-  "No está conforme con las clases",
-  "Motivos personales",
-];
-
-const deactivationSchema = z.object({
-  reason: z.string().min(1, { message: "Debes seleccionar un motivo." }),
-  otherReason: z.string().optional(),
-}).refine(data => {
-  if (data.reason === 'Otro' && (!data.otherReason || data.otherReason.trim().length < 5)) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Por favor, especifica el otro motivo (mínimo 5 caracteres).",
-  path: ["otherReason"],
-});
-
-
-function DeactivationDialog({ person, onClose }: { person: Person; onClose: () => void; }) {
-  const { deactivatePerson } = useStudio();
-  const form = useForm<z.infer<typeof deactivationSchema>>({
-    resolver: zodResolver(deactivationSchema),
-    defaultValues: { reason: "", otherReason: "" },
-  });
-  const watchedReason = form.watch("reason");
-
-  function onSubmit(values: z.infer<typeof deactivationSchema>) {
-    const finalReason = values.reason === 'Otro' ? values.otherReason! : values.reason;
-    deactivatePerson(person.id, finalReason);
-    onClose();
-  }
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Dar de baja a {person.name}</DialogTitle>
-          <DialogDescription>
-            Esto marcará a la persona como inactiva y la desinscribirá de todas sus clases. Sus datos históricos se conservarán.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Motivo de la baja</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Selecciona un motivo..." /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      {deactivationReasons.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                      <SelectItem value="Otro">Otro...</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {watchedReason === 'Otro' && (
-              <FormField
-                control={form.control}
-                name="otherReason"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Por favor, especifica el motivo</FormLabel>
-                    <FormControl><Textarea {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit" variant="destructive">Confirmar Baja</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -660,17 +571,16 @@ const formatPrice = (price: number) => {
 };
 
 export default function StudentsPage() {
-  const { people, addPerson, updatePerson, deactivatePerson, reactivatePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance, levels, tariffs } = useStudio();
+  const { people, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, payments, sessions, specialists, actividades, spaces, removeVacationPeriod, isPersonOnVacation, attendance, levels, tariffs } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
-  const [personToDeactivate, setPersonToDeactivate] = useState<Person | null>(null);
+  const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [personToEnroll, setPersonToEnroll] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [personForAttendance, setPersonForAttendance] = useState<Person | null>(null);
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
   const [personToRecordPayment, setPersonToRecordPayment] = useState<Person | null>(null);
-  const [statusFilter, setStatusFilter] = useState('active');
   const [filters, setFilters] = useState({
     searchTerm: '',
     actividadId: 'all',
@@ -743,25 +653,23 @@ export default function StudentsPage() {
         const lastAttendance = personAttendanceRecords[0];
 
         let assignedTariff: Tariff | null = null;
-        if (p.status === 'active') {
-          if (p.membershipType === 'Diario') {
-            assignedTariff = tariffs.find(t => t.isIndividual) || null;
-          } else { // Mensual
-            const personSessions = sessions.filter(s => s.personIds.includes(p.id));
-            const frequency = new Set(personSessions.map(s => s.dayOfWeek)).size;
+        if (p.membershipType === 'Diario') {
+          assignedTariff = tariffs.find(t => t.isIndividual) || null;
+        } else { // Mensual
+          const personSessions = sessions.filter(s => s.personIds.includes(p.id));
+          const frequency = new Set(personSessions.map(s => s.dayOfWeek)).size;
 
-            if (frequency > 0) {
-              const frequencyTariffs = tariffs.filter(t => t.frequency).sort((a, b) => a.frequency! - b.frequency!);
-              let foundTariff = frequencyTariffs.find(t => t.frequency === frequency);
+          if (frequency > 0) {
+            const frequencyTariffs = tariffs.filter(t => t.frequency).sort((a, b) => a.frequency! - b.frequency!);
+            let foundTariff = frequencyTariffs.find(t => t.frequency === frequency);
 
-              if (!foundTariff) {
-                foundTariff = frequencyTariffs.find(t => t.frequency! > frequency);
-              }
-              if (!foundTariff && frequencyTariffs.length > 0) {
-                foundTariff = frequencyTariffs[frequencyTariffs.length - 1];
-              }
-              assignedTariff = foundTariff || null;
+            if (!foundTariff) {
+              foundTariff = frequencyTariffs.find(t => t.frequency! > frequency);
             }
+            if (!foundTariff && frequencyTariffs.length > 0) {
+              foundTariff = frequencyTariffs[frequencyTariffs.length - 1];
+            }
+            assignedTariff = foundTariff || null;
           }
         }
 
@@ -815,32 +723,27 @@ export default function StudentsPage() {
       }
     }
 
-    // Apply status tab filter
-    peopleList = peopleList.filter(p => p.status === statusFilter);
-
     // Apply local search/select filters
-    if (statusFilter === 'active') {
-      peopleList = peopleList.filter(p => {
-        const nameMatch = filters.searchTerm === '' || p.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
-        
-        const personEnrolledSessions = sessions.filter(s => s.personIds.includes(p.id));
+    peopleList = peopleList.filter(p => {
+      const nameMatch = filters.searchTerm === '' || p.name.toLowerCase().includes(filters.searchTerm.toLowerCase());
+      
+      const personEnrolledSessions = sessions.filter(s => s.personIds.includes(p.id));
 
-        if(personEnrolledSessions.length === 0 && (filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all')) {
-          return false;
-        }
+      if(personEnrolledSessions.length === 0 && (filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all')) {
+        return false;
+      }
 
-        const specialistMatch = filters.specialistId === 'all' || personEnrolledSessions.some(s => s.instructorId === filters.specialistId);
-        
-        const actividadMatch = filters.actividadId === 'all' || personEnrolledSessions.some(s => s.actividadId === filters.actividadId);
+      const specialistMatch = filters.specialistId === 'all' || personEnrolledSessions.some(s => s.instructorId === filters.specialistId);
+      
+      const actividadMatch = filters.actividadId === 'all' || personEnrolledSessions.some(s => s.actividadId === filters.actividadId);
 
-        const spaceMatch = filters.spaceId === 'all' || personEnrolledSessions.some(s => s.spaceId === filters.spaceId);
+      const spaceMatch = filters.spaceId === 'all' || personEnrolledSessions.some(s => s.spaceId === filters.spaceId);
 
-        return nameMatch && specialistMatch && actividadMatch && spaceMatch;
-      });
-    }
+      return nameMatch && specialistMatch &&ividadMatch && spaceMatch;
+    });
     
     return peopleList.sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, payments, attendance, statusFilter, tariffs, sessions, filters, isMounted, actividades, specialists, spaces, dashboardUrlFilter]);
+  }, [people, payments, attendance, tariffs, sessions, filters, isMounted, actividades, specialists, spaces, dashboardUrlFilter]);
 
   const emptyState = useMemo(() => {
     const hasActiveLocalFilters = filters.searchTerm.trim() !== '' || filters.actividadId !== 'all' || filters.specialistId !== 'all' || filters.spaceId !== 'all';
@@ -849,17 +752,12 @@ export default function StudentsPage() {
         return { title: "No se encontraron personas", description: "Prueba a cambiar o limpiar los filtros." };
     }
     
-    if (people.filter(p => p.status === statusFilter).length === 0) {
-      if (statusFilter === 'active') {
-        return { title: "No Hay Personas Activas", description: "Empieza añadiendo tu primera persona." };
-      } else { // inactive
-        return { title: "No hay personas dadas de baja", description: "Aquí se mostrarán las personas que des de baja." };
-      }
+    if (people.length === 0) {
+      return { title: "No Hay Personas", description: "Empieza añadiendo tu primera persona." };
     }
 
-    // Fallback if filters are active but the base list is empty
-    return { title: "No hay personas que mostrar", description: "No hay personas en esta categoría." };
-  }, [people, statusFilter, filters]);
+    return { title: "No hay personas que mostrar", description: "No hay personas que coincidan con los filtros actuales." };
+  }, [people, filters]);
 
   const form = useForm<z.infer<typeof formSchema>>({ resolver: zodResolver(formSchema), defaultValues: { name: '', phone: '', membershipType: 'Mensual', healthInfo: '', levelId: 'none', notes: '' }});
 
@@ -1063,15 +961,6 @@ export default function StudentsPage() {
                 </Select>
             </div>
         </Card>
-
-        <div>
-            <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-                <TabsList className="grid w-full max-w-[250px] grid-cols-2">
-                    <TabsTrigger value="active">Activos</TabsTrigger>
-                    <TabsTrigger value="inactive">Dados de Baja</TabsTrigger>
-                </TabsList>
-            </Tabs>
-        </div>
       </div>
 
       {!isMounted ? (
@@ -1088,7 +977,7 @@ export default function StudentsPage() {
                   .filter(record => record.justifiedAbsenceIds?.includes(person.id))
                   .map(record => {
                       const session = sessions.find(s => s.id === record.sessionId);
-                      const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                      constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
                       return {
                           date: record.date,
                           actividadName: actividad?.name || 'Clase eliminada'
@@ -1098,7 +987,7 @@ export default function StudentsPage() {
                 const level = person.levelId ? levels.find(l => l.id === person.levelId) : null;
 
                 return (
-                    <Card key={person.id} className={cn("flex flex-col rounded-2xl shadow-lg overflow-hidden border border-slate-200/60 dark:border-zinc-700/60 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card", person.status === 'inactive' && 'bg-slate-50 dark:bg-zinc-900/50 opacity-70')}>
+                    <Card key={person.id} className={cn("flex flex-col rounded-2xl shadow-lg overflow-hidden border border-slate-200/60 dark:border-zinc-700/60 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 bg-card")}>
                         <div className="p-4 bg-gradient-to-br from-primary to-fuchsia-600 text-primary-foreground">
                             <div className="flex flex-row items-start justify-between">
                                 <div className="flex-grow">
@@ -1107,7 +996,7 @@ export default function StudentsPage() {
                                         <Badge className="bg-white/90 text-primary hover:bg-white/90 font-bold border-primary/20 gap-1.5">
                                             <Signal className="h-3 w-3" /> {level ? level.name : 'Sin Nivel'}
                                         </Badge>
-                                        {(person as any).recoveryBalance > 0 && person.status === 'active' && (
+                                        {(person as any).recoveryBalance > 0 && (
                                             <Popover>
                                                 <PopoverTrigger asChild>
                                                     <button className="flex items-center gap-1 rounded-full bg-amber-400 px-2 py-0.5 text-xs font-bold text-amber-900 shadow-sm cursor-pointer hover:bg-amber-500 transition-colors">
@@ -1272,75 +1161,61 @@ export default function StudentsPage() {
                                         <DropdownMenuItem onClick={() => setPersonForHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setPersonForAttendance(person)}><ClipboardCheck className="mr-2 h-4 w-4" />Ver Historial de Asistencia</DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        {person.status === 'active' ? (
-                                            <>
-                                                <DropdownMenuItem onClick={() => setPersonForJustification(person)}><CalendarClock className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}>
-                                                  <Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago
-                                                </DropdownMenuItem>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setPersonToDeactivate(person)}><Trash2 className="mr-2 h-4 w-4" />Dar de baja</DropdownMenuItem>
-                                            </>
-                                        ) : (
-                                            <DropdownMenuItem onClick={() => reactivatePerson(person.id)}><UserCheck className="mr-2 h-4 w-4" />Reactivar Persona</DropdownMenuItem>
-                                        )}
+                                        <DropdownMenuItem onClick={() => setPersonForJustification(person)}><CalendarClock className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setPersonForVacation(person)}><Plane className="mr-2 h-4 w-4" />Registrar Vacaciones</DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem onClick={() => undoLastPayment(person.id)} disabled={!hasPayments}>
+                                          <Undo2 className="mr-2 h-4 w-4" />Deshacer Último Pago
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setPersonToDelete(person)}><Trash2 className="mr-2 h-4 w-4" />Eliminar Persona</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>
-                            {person.status === 'active' ? (
-                                <div className="mt-4 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        {getPaymentStatusBadge((person as any).paymentStatus)}
-                                        {(person as any).assignedTariff ? (
-                                          <p className="font-bold">{(person as any).assignedTariff.name}</p>
-                                        ) : (
-                                          <p className="font-bold">{person.membershipType}</p>
+                            <div className="mt-4 space-y-3">
+                                <div className="flex items-center justify-between">
+                                    {getPaymentStatusBadge((person as any).paymentStatus)}
+                                    {(person as any).assignedTariff ? (
+                                      <p className="font-bold">{(person as any).assignedTariff.name}</p>
+                                    ) : (
+                                      <p className="font-bold">{person.membershipType}</p>
+                                    )}
+                                </div>
+                        
+                                <div className="flex items-end justify-between">
+                                    <div className="flex items-center gap-3">
+                                        {person.membershipType === 'Mensual' && (
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="h-auto shrink-0 px-2 py-1 text-xs bg-white/20 text-white hover:bg-white/30 border-white/30"
+                                                onClick={() => setPersonToRecordPayment(person)}
+                                            >
+                                                <CreditCard className="mr-1.5 h-3 w-3" />
+                                                Registrar Pago
+                                            </Button>
                                         )}
-                                    </div>
-                            
-                                    <div className="flex items-end justify-between">
-                                        <div className="flex items-center gap-3">
-                                            {person.membershipType === 'Mensual' && (
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    className="h-auto shrink-0 px-2 py-1 text-xs bg-white/20 text-white hover:bg-white/30 border-white/30"
-                                                    onClick={() => setPersonToRecordPayment(person)}
-                                                >
-                                                    <CreditCard className="mr-1.5 h-3 w-3" />
-                                                    Registrar Pago
-                                                </Button>
-                                            )}
-                                            
-                                            {(person as any).assignedTariff && (
-                                                <span className="text-2xl font-bold">{formatPrice((person as any).assignedTariff.price)}</span>
-                                            )}
-                                        </div>
                                         
-                                        {(person as any).nextPaymentDate && person.membershipType === 'Mensual' && (
-                                            <div className="text-right text-xs text-yellow-300 uppercase font-bold">
-                                                <p>PROX. PAGO</p>
-                                                <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
-                                            </div>
+                                        {(person as any).assignedTariff && (
+                                            <span className="text-2xl font-bold">{formatPrice((person as any).assignedTariff.price)}</span>
                                         )}
                                     </div>
+                                    
+                                    {(person as any).nextPaymentDate && person.membershipType === 'Mensual' && (
+                                        <div className="text-right text-xs text-yellow-300 uppercase font-bold">
+                                            <p>PROX. PAGO</p>
+                                            <p>{format((person as any).nextPaymentDate, 'dd/MM/yyyy')}</p>
+                                        </div>
+                                    )}
                                 </div>
-                            ) : (
-                                <div className="mt-4 text-sm">
-                                    <p className="font-bold">DADO DE BAJA</p>
-                                    {person.cancellationDate && <p className="text-xs opacity-80">Dado de baja el {format(person.cancellationDate, 'dd/MM/yyyy')}</p>}
-                                    {person.cancellationReason && <p className="text-xs opacity-80 mt-1">Motivo: {person.cancellationReason}</p>}
-                                </div>
-                            )}
+                            </div>
                         </div>
                         <CardContent className="flex flex-col flex-grow space-y-4 p-4">
                             <div className="space-y-2 flex flex-col flex-grow">
                                 {enrolledSessions.length > 0 ? (
                                     <div className="flex-grow space-y-3">
                                         {enrolledSessions.map(session => {
-                                            const actividad = actividades.find(a => a.id === session.actividadId);
+                                            constividad = actividades.find(a => a.id === session.actividadId);
                                             const specialist = specialists.find(s => s.id === session.instructorId);
                                             const space = spaces.find(s => s.id === session.spaceId);
                                             return (
@@ -1368,7 +1243,7 @@ export default function StudentsPage() {
                                     <div className="flex flex-grow items-center justify-center rounded-lg border border-dashed border-slate-200 dark:border-zinc-700 h-24">
                                         <div className="text-center text-muted-foreground">
                                           <CalendarIcon className="mx-auto h-8 w-8 opacity-50"/>
-                                          <p className="text-sm mt-1">{person.status === 'active' ? 'Sin horarios.' : 'Sin horarios.'}</p>
+                                          <p className="text-sm mt-1">Sin horarios.</p>
                                         </div>
                                     </div>
                                 )}
@@ -1410,41 +1285,37 @@ export default function StudentsPage() {
                                     </div>
                                 )}
                             </div>
-                            {person.status === 'active' && (
-                                <div className="border-t border-slate-100 dark:border-zinc-700/80 pt-4">
-                                    <h4 className="text-sm font-semibold flex items-center gap-2 mb-3 text-slate-700 dark:text-slate-300">
-                                        <ClipboardCheck className="h-4 w-4 text-slate-500"/>
-                                        Asistencias del Mes
-                                    </h4>
-                                    {(person as any).monthlyAttendance.presentes > 0 || (person as any).monthlyAttendance.ausencias > 0 ? (
-                                        <div className="grid grid-cols-3 text-center gap-2">
-                                            <div>
-                                                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{(person as any).monthlyAttendance.presentes}</p>
-                                                <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">Presentes</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{(person as any).monthlyAttendance.ausencias}</p>
-                                                <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">Ausencias</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-xl font-bold text-green-600">{(person as any).monthlyAttendance.porcentaje}%</p>
-                                                <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">Asistencia</p>
-                                            </div>
+                            <div className="border-t border-slate-100 dark:border-zinc-700/80 pt-4">
+                                <h4 className="text-sm font-semibold flex items-center gap-2 mb-3 text-slate-700 dark:text-slate-300">
+                                    <ClipboardCheck className="h-4 w-4 text-slate-500"/>
+                                    Asistencias del Mes
+                                </h4>
+                                {(person as any).monthlyAttendance.presentes > 0 || (person as any).monthlyAttendance.ausencias > 0 ? (
+                                    <div className="grid grid-cols-3 text-center gap-2">
+                                        <div>
+                                            <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{(person as any).monthlyAttendance.presentes}</p>
+                                            <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">Presentes</p>
                                         </div>
-                                    ) : (
-                                        <p className="text-xs text-center text-muted-foreground py-2">Sin registros de asistencia este mes.</p>
-                                    )}
-                                </div>
-                            )}
+                                        <div>
+                                            <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{(person as any).monthlyAttendance.ausencias}</p>
+                                            <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">Ausencias</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xl font-bold text-green-600">{(person as any).monthlyAttendance.porcentaje}%</p>
+                                            <p className="text-[10px] uppercase text-muted-foreground font-medium tracking-wider">Asistencia</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-center text-muted-foreground py-2">Sin registros de asistencia este mes.</p>
+                                )}
+                            </div>
                         </CardContent>
-                        {person.status === 'active' && (
-                            <CardFooter className="p-4 border-t border-slate-100 dark:border-zinc-700/80 mt-auto">
-                                <Button className="w-full bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95 font-bold" onClick={() => setPersonToEnroll(person)}>
-                                    <CalendarPlus className="mr-2 h-4 w-4" />
-                                    Asignar Sesión
-                                </Button>
-                            </CardFooter>
-                        )}
+                        <CardFooter className="p-4 border-t border-slate-100 dark:border-zinc-700/80 mt-auto">
+                            <Button className="w-full bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95 font-bold" onClick={() => setPersonToEnroll(person)}>
+                                <CalendarPlus className="mr-2 h-4 w-4" />
+                                Asignar Sesión
+                            </Button>
+                        </CardFooter>
                     </Card>
                 )
             })}
@@ -1472,7 +1343,31 @@ export default function StudentsPage() {
       {personForVacation && <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />}
       {personForJustification && <JustifyAbsenceDialog person={personForJustification} onClose={() => setPersonForJustification(null)} />}
       {personToRecordPayment && <RecordPaymentDialog person={personToRecordPayment} onClose={() => setPersonToRecordPayment(null)} />}
-      {personToDeactivate && <DeactivationDialog person={personToDeactivate} onClose={() => setPersonToDeactivate(null)} />}
+
+      <AlertDialog open={!!personToDelete} onOpenChange={(open) => !open && setPersonToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro de eliminar a {personToDelete?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente el registro de la persona y se desinscribirá de todas sus clases.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90"
+              onClick={() => {
+                if (personToDelete) {
+                  deletePerson(personToDelete.id);
+                  setPersonToDelete(null);
+                }
+              }}
+            >
+              Sí, eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Sheet open={!!personForHistory} onOpenChange={(open) => !open && setPersonForHistory(null)}>
         <SheetContent>

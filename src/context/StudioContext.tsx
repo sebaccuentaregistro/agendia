@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useMemo } from 'react';
@@ -41,10 +42,9 @@ interface StudioContextType {
   addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
   updateSpecialist: (specialist: Specialist) => void;
   deleteSpecialist: (specialistId: string) => void;
-  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'status' | 'cancellationReason' | 'cancellationDate'>) => void;
+  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => void;
   updatePerson: (person: Person) => void;
-  deactivatePerson: (personId: string, reason: string) => void;
-  reactivatePerson: (personId: string) => void;
+  deletePerson: (personId: string) => void;
   recordPayment: (personId: string, months: number) => void;
   undoLastPayment: (personId: string) => void;
   addSpace: (space: Omit<Space, 'id'>) => void;
@@ -189,8 +189,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         deleteSpecialist: (id) => deleteWithUsageCheck(id, [{collection: 'sessions', field: 'instructorId', label: 'sesión'}], 'specialists'),
         addPerson: (data) => handleAction(Actions.addPersonAction(collectionRefs.people, data), 'Persona añadida.'),
         updatePerson: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.people, data.id), data), 'Persona actualizada.'),
-        deactivatePerson: (id, reason) => handleAction(Actions.deactivatePersonAction(collectionRefs.people, collectionRefs.sessions, id, reason), 'Persona dada de baja.'),
-        reactivatePerson: (id) => handleAction(Actions.reactivatePersonAction(collectionRefs.people, id), 'Persona reactivada.'),
+        deletePerson: (id) => handleAction(Actions.deletePersonAction(collectionRefs.sessions, collectionRefs.people, id), 'Persona eliminada.'),
         recordPayment: (id, months) => handleAction(Actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, id, months), 'Pago registrado.'),
         undoLastPayment: (personId) => {
             const personPayments = payments.filter(p => p.personId === personId).sort((a, b) => b.date.getTime() - a.date.getTime());
