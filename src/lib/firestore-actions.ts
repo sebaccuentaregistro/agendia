@@ -79,11 +79,12 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 };
 
 
-export const recordPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, newLastPaymentDate: Date) => {
+export const recordPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, newCycleStartDate: Date, previousCycleStartDate: Date) => {
     const paymentRecord = {
         personId: personId,
         date: new Date(), // The actual transaction date
         months: 1,
+        cycleStartDate: previousCycleStartDate, // Store the start date of the cycle this payment is for
     };
     const batch = writeBatch(db);
 
@@ -93,18 +94,18 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, peop
     
     // Update the person's lastPaymentDate to the start of the new paid cycle
     const personRef = doc(peopleRef, personId);
-    batch.update(personRef, { lastPaymentDate: newLastPaymentDate });
+    batch.update(personRef, { lastPaymentDate: newCycleStartDate });
 
     return await batch.commit();
 };
 
-export const undoLastPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, lastPayment: any, newLastPaymentDate: Date) => {
+export const undoLastPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, personId: string, lastPayment: any, dateToRestore: Date) => {
     const batch = writeBatch(db);
     const paymentRef = doc(paymentsRef, lastPayment.id);
     batch.delete(paymentRef);
 
     const personRef = doc(peopleRef, personId);
-    batch.update(personRef, { lastPaymentDate: newLastPaymentDate });
+    batch.update(personRef, { lastPaymentDate: dateToRestore });
 
     return await batch.commit();
 };
@@ -222,7 +223,7 @@ export const deleteWithUsageCheckAction = async (collectionRefs: { [key: string]
         const snapshotSingle = await getDocs(qSingle);
         
         if(check.collection === 'people') {
-             const activePeopleUsingIt = people.filter(p => p.status === 'active' && p.levelId === entityId);
+             const activePeopleUsingIt = people.filter(p => p.levelId === entityId);
              if (activePeopleUsingIt.length > 0) {
                  throw new Error(`No se puede eliminar. Está asignado a ${activePeopleUsingIt.length} persona(s) activa(s).`);
              }

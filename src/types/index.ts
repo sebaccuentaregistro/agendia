@@ -65,8 +65,9 @@ export type Session = {
 export type Payment = {
   id:string;
   personId: string;
-  date: Date;
+  date: Date; // The actual date the payment was recorded
   months: number;
+  cycleStartDate: Date; // The date this payment cycle starts from
 };
 
 export type Space = {

@@ -135,7 +135,10 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     ];
 
     const unsubscribes = collectionsToFetch.map(({ name, setter, ref }) => {
-        const q = query(ref, orderBy('name', 'asc'));
+        const q = name === 'payments' 
+            ? query(ref, orderBy('date', 'desc')) 
+            : query(ref, orderBy('name', 'asc'));
+
         return onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(d => ({ id: d.id, ...convertTimestamps(d.data()) })) as any[];
             setter(data);
@@ -198,15 +201,20 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
                 toast({ variant: 'destructive', title: 'Error', description: 'Persona no encontrada.' });
                 return;
             }
-            // The new "lastPaymentDate" for calculation purposes should be the current due date.
-            const newLastPaymentDate = getNextPaymentDate(person) || person.joinDate;
-            handleAction(Actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, personId, newLastPaymentDate), 'Pago registrado.');
+            const previousCycleStartDate = person.lastPaymentDate;
+            const newCycleStartDate = getNextPaymentDate(person) || person.joinDate;
+            handleAction(Actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, personId, newCycleStartDate, previousCycleStartDate), 'Pago registrado.');
         },
         undoLastPayment: (personId) => {
-            const personPayments = payments.filter(p => p.personId === personId).sort((a, b) => b.date.getTime() - a.date.getTime());
+            const personPayments = payments.filter(p => p.personId === personId);
             if (personPayments.length > 0) {
-                const newLastDate = personPayments.length > 1 ? personPayments[1].date : people.find(p => p.id === personId)?.joinDate || new Date();
-                handleAction(Actions.undoLastPaymentAction(collectionRefs.payments, collectionRefs.people, personId, personPayments[0], newLastDate), 'Último pago deshecho.');
+                const lastPayment = personPayments[0]; // Already sorted by date desc
+                const dateToRestore = lastPayment.cycleStartDate || people.find(p => p.id === personId)?.joinDate;
+                if (!dateToRestore) {
+                    toast({ variant: 'destructive', title: 'Error', description: 'No se pudo encontrar la fecha de ciclo anterior para restaurar.' });
+                    return;
+                }
+                handleAction(Actions.undoLastPaymentAction(collectionRefs.payments, collectionRefs.people, personId, lastPayment, dateToRestore), 'Último pago deshecho.');
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: 'No hay pagos para deshacer.' });
             }
