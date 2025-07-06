@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import type { Person, Session, Tariff, Payment } from '@/types';
+import type { Person, Session, Payment } from '@/types';
 import { MoreHorizontal, PlusCircle, CreditCard, Undo2, History, CalendarPlus, FileDown, ClipboardCheck, CheckCircle2, XCircle, CalendarClock, Plane, Users, MapPin, Calendar as CalendarIcon, Clock, HeartPulse, UserPlus, Trash2, Signal, DollarSign, Notebook, FilterX } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
@@ -499,69 +499,6 @@ function JustifyAbsenceDialog({ person, onClose }: { person: Person; onClose: ()
   );
 }
 
-const paymentMonthsSchema = z.object({
-  months: z.coerce.number().int().min(1, "Debe ser al menos 1 mes.").max(12, "No se pueden registrar más de 12 meses."),
-});
-
-function RecordPaymentDialog({ person, onClose }: { person: Person; onClose: () => void; }) {
-  const { recordPayment } = useStudio();
-
-  const form = useForm<z.infer<typeof paymentMonthsSchema>>({
-    resolver: zodResolver(paymentMonthsSchema),
-    defaultValues: { months: 1 },
-  });
-
-  function onSubmit(values: z.infer<typeof paymentMonthsSchema>) {
-    recordPayment(person.id, values.months);
-    onClose();
-  }
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-xs">
-        <DialogHeader>
-          <DialogTitle>Registrar Pago</DialogTitle>
-          <DialogDescription>
-            Selecciona cuántos meses de membresía quieres registrar para {person.name}.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
-              name="months"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Cantidad de Meses</FormLabel>
-                  <Select onValueChange={(val) => field.onChange(Number(val))} defaultValue={String(field.value)}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
-                        <SelectItem key={month} value={String(month)}>
-                          {month} {month === 1 ? 'mes' : 'meses'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-              <Button type="submit">Registrar</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 const formatPrice = (price: number) => {
     return new Intl.NumberFormat('es-AR', {
       style: 'currency',
@@ -580,7 +517,6 @@ export default function StudentsPage() {
   const [personForAttendance, setPersonForAttendance] = useState<Person | null>(null);
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForJustification, setPersonForJustification] = useState<Person | null>(null);
-  const [personToRecordPayment, setPersonToRecordPayment] = useState<Person | null>(null);
   const [filters, setFilters] = useState({
     searchTerm: '',
     actividadId: 'all',
@@ -1189,7 +1125,7 @@ export default function StudentsPage() {
                                                 size="sm"
                                                 variant="outline"
                                                 className="h-auto shrink-0 px-2 py-1 text-xs bg-white/20 text-white hover:bg-white/30 border-white/30"
-                                                onClick={() => setPersonToRecordPayment(person)}
+                                                onClick={() => recordPayment(person.id, 1)}
                                             >
                                                 <CreditCard className="mr-1.5 h-3 w-3" />
                                                 Registrar Pago
@@ -1342,7 +1278,6 @@ export default function StudentsPage() {
       {personToEnroll && (<EnrollDialog person={personToEnroll} onOpenChange={(open) => !open && setPersonToEnroll(null)}/>)}
       {personForVacation && <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />}
       {personForJustification && <JustifyAbsenceDialog person={personForJustification} onClose={() => setPersonForJustification(null)} />}
-      {personToRecordPayment && <RecordPaymentDialog person={personToRecordPayment} onClose={() => setPersonToRecordPayment(null)} />}
 
       <AlertDialog open={!!personToDelete} onOpenChange={(open) => !open && setPersonToDelete(null)}>
         <AlertDialogContent>

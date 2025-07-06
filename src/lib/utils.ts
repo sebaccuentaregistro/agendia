@@ -16,20 +16,17 @@ export function getNextPaymentDate(person: Person): Date | null {
 
   const lastPayment = person.lastPaymentDate;
   const joinDay = person.joinDate.getDate();
-  let dueDate = set(lastPayment, {
+
+  const dueDateInPaymentMonth = set(lastPayment, {
     date: joinDay,
     hours: 0,
     minutes: 0,
     seconds: 0,
     milliseconds: 0,
   });
-
-  // If payment was made on or after the due day, the next payment is one month after.
-  // If payment was made before the due day, the due date is in the same month.
-  if (lastPayment.getDate() >= joinDay) {
-    dueDate = addMonths(dueDate, 1);
-  }
-
+  
+  let dueDate = addMonths(dueDateInPaymentMonth, 1);
+  
   // Adjust for vacations that overlap with the calculated due date
   const vacations = person.vacationPeriods?.sort((a,b) => a.startDate.getTime() - b.startDate.getTime()) || [];
   for (const vacation of vacations) {
