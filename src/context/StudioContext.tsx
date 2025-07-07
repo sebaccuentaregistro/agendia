@@ -135,9 +135,15 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     ];
 
     const unsubscribes = collectionsToFetch.map(({ name, setter, ref }) => {
-        const q = name === 'payments' 
-            ? query(ref, orderBy('date', 'desc')) 
-            : query(ref, orderBy('name', 'asc'));
+        let q;
+        if (name === 'payments') {
+            q = query(ref, orderBy('date', 'desc'));
+        } else if (['sessions', 'attendance', 'notifications'].includes(name)) {
+            q = query(ref); // No specific ordering for these collections
+        } else {
+            // Default for collections with a 'name' field
+            q = query(ref, orderBy('name', 'asc')); 
+        }
 
         return onSnapshot(q, (snapshot) => {
             const data = snapshot.docs.map(d => ({ id: d.id, ...convertTimestamps(d.data()) })) as any[];
@@ -176,18 +182,22 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
   }, []);
 
-  const deleteWithUsageCheck = useCallback(async (entityId: string, entityName: string, checks: { collection: string; field: string; label: string, type?: 'array' }[], collectionName: string) => {
+  const deleteWithUsageCheck = useCallback(async (
+    entityId: string,
+    entityName: string,
+    checks: { collection: string; field: string; label: string, type?: 'array' }[]
+  ) => {
     try {
         await Actions.deleteWithUsageCheckAction(entityId, checks, collectionRefs, allData);
-        await Actions.deleteEntity(doc(collectionRefs[collectionName as keyof typeof collectionRefs], entityId));
-        toast({ title: 'Éxito', description: 'Elemento eliminado correctamente.' });
     } catch (error: any) {
-        console.error(`Error deleting entity from ${collectionName}:`, error);
+        console.error(`Error deleting entity:`, error);
         toast({
             variant: "destructive",
             title: `No se puede eliminar "${entityName}"`,
-            description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 whitespace-pre-wrap"><code className="text-white">{error.message}</code></pre>
+            description: <pre className="mt-2 w-full max-w-[340px] rounded-md bg-slate-950 p-4 text-white whitespace-pre-wrap">{error.message}</pre>,
+            duration: 10000,
         });
+        throw error; // Re-throw to prevent deletion
     }
   }, [collectionRefs, allData, toast]);
   
@@ -197,20 +207,28 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, 
         addActividad: (data) => handleAction(Actions.addEntity(collectionRefs.actividades, data), 'Actividad añadida.'),
         updateActividad: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.actividades, data.id), data), 'Actividad actualizada.'),
-        deleteActividad: (id) => {
+        deleteActividad: async (id) => {
             const actividad = actividades.find(a => a.id === id);
             if (!actividad) return;
-            deleteWithUsageCheck(id, actividad.name, [
-                {collection: 'specialists', field: 'actividadIds', label: 'especialista', type: 'array'}, 
-                {collection: 'sessions', field: 'actividadId', label: 'sesión'}
-            ], 'actividades');
+            try {
+                await deleteWithUsageCheck(id, actividad.name, [
+                    {collection: 'specialists', field: 'actividadIds', label: 'especialista', type: 'array'}, 
+                    {collection: 'sessions', field: 'actividadId', label: 'sesión'}
+                ]);
+                await Actions.deleteEntity(doc(collectionRefs.actividades, id));
+                toast({ title: 'Éxito', description: 'Actividad eliminada correctamente.' });
+            } catch {} // Error is already handled by toast in deleteWithUsageCheck
         },
         addSpecialist: (data) => handleAction(Actions.addEntity(collectionRefs.specialists, {...data, avatar: `https://placehold.co/100x100.png`}), 'Especialista añadido.'),
         updateSpecialist: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.specialists, data.id), data), 'Especialista actualizado.'),
-        deleteSpecialist: (id) => {
+        deleteSpecialist: async (id) => {
             const specialist = specialists.find(s => s.id === id);
             if (!specialist) return;
-            deleteWithUsageCheck(id, specialist.name, [{collection: 'sessions', field: 'instructorId', label: 'sesión'}], 'specialists');
+            try {
+                await deleteWithUsageCheck(id, specialist.name, [{collection: 'sessions', field: 'instructorId', label: 'sesión'}]);
+                await Actions.deleteEntity(doc(collectionRefs.specialists, id));
+                toast({ title: 'Éxito', description: 'Especialista eliminado correctamente.' });
+            } catch {}
         },
         addPerson: (data) => handleAction(Actions.addPersonAction(collectionRefs.people, data), 'Persona añadida.'),
         updatePerson: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.people, data.id), data), 'Persona actualizada.'),
@@ -262,14 +280,18 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         },
         addSpace: (data) => handleAction(Actions.addEntity(collectionRefs.spaces, data), 'Espacio añadido.'),
         updateSpace: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.spaces, data.id), data), 'Espacio actualizado.'),
-        deleteSpace: (id) => {
+        deleteSpace: async (id) => {
             const space = spaces.find(s => s.id === id);
             if (!space) return;
-            deleteWithUsageCheck(id, space.name, [{collection: 'sessions', field: 'spaceId', label: 'sesión'}], 'spaces');
+            try {
+                await deleteWithUsageCheck(id, space.name, [{collection: 'sessions', field: 'spaceId', label: 'sesión'}]);
+                await Actions.deleteEntity(doc(collectionRefs.spaces, id));
+                toast({ title: 'Éxito', description: 'Espacio eliminado correctamente.' });
+            } catch {}
         },
         addSession: (data) => handleAction(Actions.addEntity(collectionRefs.sessions, {...data, personIds: [], waitlistPersonIds: []}), 'Sesión añadida.'),
         updateSession: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.sessions, data.id), data), 'Sesión actualizada.'),
-        deleteSession: (id) => {
+        deleteSession: async (id) => {
             const session = sessions.find(s => s.id === id);
             if (!session) return;
             const sessionName = `${actividades.find(a => a.id === session.actividadId)?.name || 'Sesión'} (${session.dayOfWeek} ${session.time})`;
@@ -283,7 +305,12 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
                 });
                 return;
             }
-            deleteWithUsageCheck(id, sessionName, [], 'sessions');
+
+            try {
+                await deleteWithUsageCheck(id, sessionName, []);
+                await Actions.deleteEntity(doc(collectionRefs.sessions, id));
+                toast({ title: 'Éxito', description: 'Sesión eliminada correctamente.' });
+            } catch {}
         },
         enrollPersonInSessions: (personId, sessionIds) => handleAction(Actions.enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds, sessions), 'Inscripciones actualizadas.'),
         enrollPeopleInClass: (sessionId, personIds) => handleAction(Actions.enrollPeopleInClassAction(doc(collectionRefs.sessions, sessionId), personIds), 'Inscripciones actualizadas.'),
@@ -309,19 +336,27 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         dismissNotification: (id) => handleAction(Actions.deleteEntity(doc(collectionRefs.notifications, id)), 'Notificación descartada.'),
         addTariff: (data) => handleAction(Actions.addEntity(collectionRefs.tariffs, data), 'Arancel añadido.'),
         updateTariff: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.tariffs, data.id), data), 'Arancel actualizado.'),
-        deleteTariff: (tariffId: string) => {
+        deleteTariff: async (tariffId: string) => {
             const tariff = tariffs.find(t => t.id === tariffId);
-            deleteWithUsageCheck(tariffId, tariff?.name || 'Arancel', [], 'tariffs');
+            try {
+                await deleteWithUsageCheck(tariffId, tariff?.name || 'Arancel', []);
+                await Actions.deleteEntity(doc(collectionRefs.tariffs, tariffId));
+                toast({ title: 'Éxito', description: 'Arancel eliminado correctamente.' });
+            } catch {}
         },
         addLevel: (data) => handleAction(Actions.addEntity(collectionRefs.levels, data), 'Nivel añadido.'),
         updateLevel: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.levels, data.id), data), 'Nivel actualizado.'),
-        deleteLevel: (id) => {
+        deleteLevel: async (id) => {
             const level = levels.find(l => l.id === id);
             if (!level) return;
-            deleteWithUsageCheck(id, level.name, [
-                {collection: 'people', field: 'levelId', label: 'persona'}, 
-                {collection: 'sessions', field: 'levelId', label: 'sesión'}
-            ], 'levels');
+            try {
+                await deleteWithUsageCheck(id, level.name, [
+                    {collection: 'people', field: 'levelId', label: 'persona'}, 
+                    {collection: 'sessions', field: 'levelId', label: 'sesión'}
+                ]);
+                 await Actions.deleteEntity(doc(collectionRefs.levels, id));
+                 toast({ title: 'Éxito', description: 'Nivel eliminado correctamente.' });
+            } catch {}
         },
     }}>
       {children}
