@@ -173,14 +173,15 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   }, []);
 
   const deleteWithUsageCheck = useCallback(async (entityId: string, checks: { collection: string; field: string; label: string }[], collectionName: string) => {
-      try {
-          await Actions.deleteWithUsageCheckAction(collectionRefs, entityId, checks, people);
-          await Actions.deleteEntity(doc(collectionRefs[collectionName], entityId));
-          toast({ title: 'Éxito', description: 'Elemento eliminado correctamente.' });
-      } catch (error: any) {
-          handleAction(Promise.reject(error), '');
-      }
-  }, [collectionRefs, people, handleAction, toast]);
+    try {
+        await Actions.deleteWithUsageCheckAction(collectionRefs, entityId, checks, people);
+        await Actions.deleteEntity(doc(collectionRefs[collectionName], entityId));
+        toast({ title: 'Éxito', description: 'Elemento eliminado correctamente.' });
+    } catch (error: any) {
+        console.error(`Error deleting entity from ${collectionName}:`, error);
+        toast({ variant: "destructive", title: "Error al eliminar", description: error.message || "La operación no se pudo completar." });
+    }
+  }, [collectionRefs, people, toast]);
   
   return (
     <StudioContext.Provider value={{ 
@@ -245,7 +246,14 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         deleteSpace: (id) => deleteWithUsageCheck(id, [{collection: 'sessions', field: 'spaceId', label: 'sesión'}], 'spaces'),
         addSession: (data) => handleAction(Actions.addEntity(collectionRefs.sessions, {...data, personIds: [], waitlistPersonIds: []}), 'Sesión añadida.'),
         updateSession: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.sessions, data.id), data), 'Sesión actualizada.'),
-        deleteSession: (id) => deleteWithUsageCheck(id, [], 'sessions'),
+        deleteSession: (id) => {
+            const session = sessions.find(s => s.id === id);
+            if (session && session.personIds.length > 0) {
+                toast({ variant: 'destructive', title: 'Error al eliminar', description: `No se puede eliminar. Esta sesión tiene ${session.personIds.length} persona(s) inscripta(s).` });
+                return;
+            }
+            deleteWithUsageCheck(id, [], 'sessions');
+        },
         enrollPersonInSessions: (personId, sessionIds) => handleAction(Actions.enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds, sessions), 'Inscripciones actualizadas.'),
         enrollPeopleInClass: (sessionId, personIds) => handleAction(Actions.enrollPeopleInClassAction(doc(collectionRefs.sessions, sessionId), personIds), 'Inscripciones actualizadas.'),
         saveAttendance: (sessionId, presentIds, absentIds, justifiedIds) => handleAction(Actions.saveAttendanceAction(collectionRefs.attendance, sessionId, presentIds, absentIds, justifiedIds), 'Asistencia guardada.'),
