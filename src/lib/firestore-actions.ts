@@ -3,7 +3,7 @@
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths } from 'date-fns';
 
@@ -207,26 +207,52 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
     return await batch.commit();
 };
 
-export const deleteWithUsageCheckAction = async (collectionRefs: { [key: string]: CollectionReference }, entityId: string, checks: { collection: string; field: string; label: string }[], people: Person[]) => {
+type AllDataContext = {
+    sessions: Session[];
+    people: Person[];
+    actividades: Actividad[];
+    specialists: Specialist[];
+    spaces: Space[];
+    levels: Level[];
+};
+
+export const deleteWithUsageCheckAction = async (
+    entityId: string,
+    checks: { collection: string; field: string; label: string }[],
+    allData: AllDataContext
+) => {
+    const usageMessages: string[] = [];
+
     for (const check of checks) {
-        if (check.collection === 'people') {
-             const activePeopleUsingIt = people.filter(p => p.levelId === entityId);
-             if (activePeopleUsingIt.length > 0) {
-                 throw new Error(`No se puede eliminar. Está asignado a ${activePeopleUsingIt.length} persona(s) activa(s).`);
-             }
-             continue; // Continue to next check
+        const itemsInUse: any[] = allData[check.collection as keyof AllDataContext]?.filter(item => {
+            const fieldValue = item[check.field as keyof typeof item];
+            if (Array.isArray(fieldValue)) {
+                return fieldValue.includes(entityId);
+            }
+            return fieldValue === entityId;
+        }) || [];
+
+        if (itemsInUse.length > 0) {
+            let details = '';
+            if (check.collection === 'sessions') {
+                details = itemsInUse.map(s => {
+                    const actividad = allData.actividades.find(a => a.id === s.actividadId);
+                    return `- ${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`;
+                }).join('\n');
+                usageMessages.push(`Está asignado a ${itemsInUse.length} sesión(es):\n${details}`);
+            } else if (check.collection === 'people') {
+                 details = itemsInUse.map(p => `- ${p.name}`).join('\n');
+                 usageMessages.push(`Está asignado a ${itemsInUse.length} persona(s):\n${details}`);
+            } else if (check.collection === 'specialists') {
+                 details = itemsInUse.map(s => `- ${s.name}`).join('\n');
+                 usageMessages.push(`Está asignado a ${itemsInUse.length} especialista(s):\n${details}`);
+            } else {
+                usageMessages.push(`Está en uso por ${itemsInUse.length} ${check.label}(s).`);
+            }
         }
-        
-        let queryToRun;
-        if (check.field.endsWith('Ids')) { // Heuristic for array fields
-            queryToRun = query(collectionRefs[check.collection], where(check.field, 'array-contains', entityId));
-        } else {
-            queryToRun = query(collectionRefs[check.collection], where(check.field, '==', entityId));
-        }
-        
-        const snapshot = await getDocs(queryToRun);
-        if (!snapshot.empty) {
-            throw new Error(`No se puede eliminar. Está en uso por ${snapshot.size} ${check.label}(s).`);
-        }
+    }
+
+    if (usageMessages.length > 0) {
+        throw new Error(usageMessages.join('\n\n'));
     }
 };

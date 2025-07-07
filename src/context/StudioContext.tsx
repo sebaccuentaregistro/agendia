@@ -151,6 +151,10 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     return () => unsubscribes.forEach(unsub => unsub());
   }, [instituteId, collectionRefs, toast]);
   
+  const allData = useMemo(() => ({
+    actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, levels
+  }), [actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, levels]);
+
   const handleAction = useCallback(async (action: Promise<any>, successMessage: string) => {
       try {
           await action;
@@ -172,16 +176,20 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
   }, []);
 
-  const deleteWithUsageCheck = useCallback(async (entityId: string, checks: { collection: string; field: string; label: string }[], collectionName: string) => {
+  const deleteWithUsageCheck = useCallback(async (entityId: string, entityName: string, checks: { collection: string; field: string; label: string }[], collectionName: string) => {
     try {
-        await Actions.deleteWithUsageCheckAction(collectionRefs, entityId, checks, people);
-        await Actions.deleteEntity(doc(collectionRefs[collectionName], entityId));
+        await Actions.deleteWithUsageCheckAction(entityId, checks, allData);
+        await Actions.deleteEntity(doc(collectionRefs[collectionName as keyof typeof collectionRefs], entityId));
         toast({ title: 'Éxito', description: 'Elemento eliminado correctamente.' });
     } catch (error: any) {
         console.error(`Error deleting entity from ${collectionName}:`, error);
-        toast({ variant: "destructive", title: "Error al eliminar", description: error.message || "La operación no se pudo completar." });
+        toast({
+            variant: "destructive",
+            title: `No se puede eliminar "${entityName}"`,
+            description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 whitespace-pre-wrap"><code className="text-white">{error.message}</code></pre>
+        });
     }
-  }, [collectionRefs, people, toast]);
+  }, [collectionRefs, allData, toast]);
   
   return (
     <StudioContext.Provider value={{ 
@@ -189,10 +197,18 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, 
         addActividad: (data) => handleAction(Actions.addEntity(collectionRefs.actividades, data), 'Actividad añadida.'),
         updateActividad: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.actividades, data.id), data), 'Actividad actualizada.'),
-        deleteActividad: (id) => deleteWithUsageCheck(id, [{collection: 'specialists', field: 'actividadIds', label: 'especialista'}, {collection: 'sessions', field: 'actividadId', label: 'sesión'}], 'actividades'),
+        deleteActividad: (id) => {
+            const actividad = actividades.find(a => a.id === id);
+            if (!actividad) return;
+            deleteWithUsageCheck(id, actividad.name, [{collection: 'specialists', field: 'actividadIds', label: 'especialista'}, {collection: 'sessions', field: 'actividadId', label: 'sesión'}], 'actividades')
+        },
         addSpecialist: (data) => handleAction(Actions.addEntity(collectionRefs.specialists, {...data, avatar: `https://placehold.co/100x100.png`}), 'Especialista añadido.'),
         updateSpecialist: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.specialists, data.id), data), 'Especialista actualizado.'),
-        deleteSpecialist: (id) => deleteWithUsageCheck(id, [{collection: 'sessions', field: 'instructorId', label: 'sesión'}], 'specialists'),
+        deleteSpecialist: (id) => {
+            const specialist = specialists.find(s => s.id === id);
+            if (!specialist) return;
+            deleteWithUsageCheck(id, specialist.name, [{collection: 'sessions', field: 'instructorId', label: 'sesión'}], 'specialists');
+        },
         addPerson: (data) => handleAction(Actions.addPersonAction(collectionRefs.people, data), 'Persona añadida.'),
         updatePerson: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.people, data.id), data), 'Persona actualizada.'),
         deletePerson: (id) => handleAction(Actions.deletePersonAction(collectionRefs.sessions, collectionRefs.people, id), 'Persona eliminada.'),
@@ -243,16 +259,28 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         },
         addSpace: (data) => handleAction(Actions.addEntity(collectionRefs.spaces, data), 'Espacio añadido.'),
         updateSpace: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.spaces, data.id), data), 'Espacio actualizado.'),
-        deleteSpace: (id) => deleteWithUsageCheck(id, [{collection: 'sessions', field: 'spaceId', label: 'sesión'}], 'spaces'),
+        deleteSpace: (id) => {
+            const space = spaces.find(s => s.id === id);
+            if (!space) return;
+            deleteWithUsageCheck(id, space.name, [{collection: 'sessions', field: 'spaceId', label: 'sesión'}], 'spaces');
+        },
         addSession: (data) => handleAction(Actions.addEntity(collectionRefs.sessions, {...data, personIds: [], waitlistPersonIds: []}), 'Sesión añadida.'),
         updateSession: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.sessions, data.id), data), 'Sesión actualizada.'),
         deleteSession: (id) => {
             const session = sessions.find(s => s.id === id);
-            if (session && session.personIds.length > 0) {
-                toast({ variant: 'destructive', title: 'Error al eliminar', description: `No se puede eliminar. Esta sesión tiene ${session.personIds.length} persona(s) inscripta(s).` });
+            if (!session) return;
+            const sessionName = `${actividades.find(a => a.id === session.actividadId)?.name || 'Sesión'} (${session.dayOfWeek} ${session.time})`;
+
+            if (session.personIds.length > 0) {
+                const peopleInSession = session.personIds.map(pid => `\n- ${people.find(p => p.id === pid)?.name || 'Persona desconocida'}`).join('');
+                toast({
+                    variant: 'destructive',
+                    title: `No se puede eliminar "${sessionName}"`,
+                    description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 whitespace-pre-wrap"><code className="text-white">{`Tiene ${session.personIds.length} persona(s) inscripta(s):${peopleInSession}`}</code></pre>
+                });
                 return;
             }
-            deleteWithUsageCheck(id, [], 'sessions');
+            deleteWithUsageCheck(id, sessionName, [], 'sessions');
         },
         enrollPersonInSessions: (personId, sessionIds) => handleAction(Actions.enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds, sessions), 'Inscripciones actualizadas.'),
         enrollPeopleInClass: (sessionId, personIds) => handleAction(Actions.enrollPeopleInClassAction(doc(collectionRefs.sessions, sessionId), personIds), 'Inscripciones actualizadas.'),
@@ -278,10 +306,17 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         dismissNotification: (id) => handleAction(Actions.deleteEntity(doc(collectionRefs.notifications, id)), 'Notificación descartada.'),
         addTariff: (data) => handleAction(Actions.addEntity(collectionRefs.tariffs, data), 'Arancel añadido.'),
         updateTariff: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.tariffs, data.id), data), 'Arancel actualizado.'),
-        deleteTariff: (id) => handleAction(Actions.deleteEntity(doc(collectionRefs.tariffs, id)), 'Arancel eliminado.'),
+        deleteTariff: (tariffId: string) => {
+            const tariff = tariffs.find(t => t.id === tariffId);
+            deleteWithUsageCheck(tariffId, tariff?.name || 'Arancel', [], 'tariffs');
+        },
         addLevel: (data) => handleAction(Actions.addEntity(collectionRefs.levels, data), 'Nivel añadido.'),
         updateLevel: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.levels, data.id), data), 'Nivel actualizado.'),
-        deleteLevel: (id) => deleteWithUsageCheck(id, [{collection: 'people', field: 'levelId', label: 'persona'}, {collection: 'sessions', field: 'levelId', label: 'sesión'}], 'levels'),
+        deleteLevel: (id) => {
+            const level = levels.find(l => l.id === id);
+            if (!level) return;
+            deleteWithUsageCheck(id, level.name, [{collection: 'people', field: 'levelId', label: 'persona'}, {collection: 'sessions', field: 'levelId', label: 'sesión'}], 'levels');
+        },
     }}>
       {children}
     </StudioContext.Provider>
