@@ -1,5 +1,3 @@
-
-
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference } from 'firebase/firestore';
@@ -218,25 +216,33 @@ type AllDataContext = {
 
 export const deleteWithUsageCheckAction = async (
     entityId: string,
-    checks: { collection: string; field: string; label: string }[],
-    allData: AllDataContext
+    checks: { collection: string; field: string; label: string, type?: 'array' }[],
+    collectionRefs: Record<string, CollectionReference>,
+    allDataForMessages: AllDataContext
 ) => {
     const usageMessages: string[] = [];
 
     for (const check of checks) {
-        const itemsInUse: any[] = allData[check.collection as keyof AllDataContext]?.filter(item => {
-            const fieldValue = item[check.field as keyof typeof item];
-            if (Array.isArray(fieldValue)) {
-                return fieldValue.includes(entityId);
-            }
-            return fieldValue === entityId;
-        }) || [];
+        const collectionToCheckRef = collectionRefs[check.collection];
+        if (!collectionToCheckRef) {
+            console.warn(`Collection reference not found for: ${check.collection}`);
+            continue;
+        }
 
-        if (itemsInUse.length > 0) {
+        const fieldToCheck = check.field;
+        const q = check.type === 'array'
+            ? query(collectionToCheckRef, where(fieldToCheck, 'array-contains', entityId))
+            : query(collectionToCheckRef, where(fieldToCheck, '==', entityId));
+        
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+            const itemsInUse = snapshot.docs.map(d => d.data());
             let details = '';
+            
             if (check.collection === 'sessions') {
                 details = itemsInUse.map(s => {
-                    const actividad = allData.actividades.find(a => a.id === s.actividadId);
+                    const actividad = allDataForMessages.actividades.find(a => a.id === s.actividadId);
                     return `- ${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`;
                 }).join('\n');
                 usageMessages.push(`Está asignado a ${itemsInUse.length} sesión(es):\n${details}`);

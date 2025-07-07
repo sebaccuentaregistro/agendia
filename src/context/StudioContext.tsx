@@ -176,9 +176,9 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
   }, []);
 
-  const deleteWithUsageCheck = useCallback(async (entityId: string, entityName: string, checks: { collection: string; field: string; label: string }[], collectionName: string) => {
+  const deleteWithUsageCheck = useCallback(async (entityId: string, entityName: string, checks: { collection: string; field: string; label: string, type?: 'array' }[], collectionName: string) => {
     try {
-        await Actions.deleteWithUsageCheckAction(entityId, checks, allData);
+        await Actions.deleteWithUsageCheckAction(entityId, checks, collectionRefs, allData);
         await Actions.deleteEntity(doc(collectionRefs[collectionName as keyof typeof collectionRefs], entityId));
         toast({ title: 'Éxito', description: 'Elemento eliminado correctamente.' });
     } catch (error: any) {
@@ -200,7 +200,10 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         deleteActividad: (id) => {
             const actividad = actividades.find(a => a.id === id);
             if (!actividad) return;
-            deleteWithUsageCheck(id, actividad.name, [{collection: 'specialists', field: 'actividadIds', label: 'especialista'}, {collection: 'sessions', field: 'actividadId', label: 'sesión'}], 'actividades')
+            deleteWithUsageCheck(id, actividad.name, [
+                {collection: 'specialists', field: 'actividadIds', label: 'especialista', type: 'array'}, 
+                {collection: 'sessions', field: 'actividadId', label: 'sesión'}
+            ], 'actividades');
         },
         addSpecialist: (data) => handleAction(Actions.addEntity(collectionRefs.specialists, {...data, avatar: `https://placehold.co/100x100.png`}), 'Especialista añadido.'),
         updateSpecialist: (data) => handleAction(Actions.updateEntity(doc(collectionRefs.specialists, data.id), data), 'Especialista actualizado.'),
@@ -315,7 +318,10 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         deleteLevel: (id) => {
             const level = levels.find(l => l.id === id);
             if (!level) return;
-            deleteWithUsageCheck(id, level.name, [{collection: 'people', field: 'levelId', label: 'persona'}, {collection: 'sessions', field: 'levelId', label: 'sesión'}], 'levels');
+            deleteWithUsageCheck(id, level.name, [
+                {collection: 'people', field: 'levelId', label: 'persona'}, 
+                {collection: 'sessions', field: 'levelId', label: 'sesión'}
+            ], 'levels');
         },
     }}>
       {children}
