@@ -296,12 +296,18 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
             if (!session) return;
             const sessionName = `${actividades.find(a => a.id === session.actividadId)?.name || 'Sesión'} (${session.dayOfWeek} ${session.time})`;
 
-            if (session.personIds.length > 0) {
-                const peopleInSession = session.personIds.map(pid => `\n- ${people.find(p => p.id === pid)?.name || 'Persona desconocida'}`).join('');
+            if (session.personIds && session.personIds.length > 0) {
+                const peopleInSession = session.personIds
+                    .map(pid => people.find(p => p.id === pid)?.name || null)
+                    .filter(Boolean);
+                
+                const errorMessage = `Tiene ${peopleInSession.length} persona(s) inscripta(s):\n\n- ${peopleInSession.join('\n- ')}\n\nPor favor, quita a estas personas de la sesión antes de eliminarla.`;
+
                 toast({
-                    variant: 'destructive',
+                    variant: "destructive",
                     title: `No se puede eliminar "${sessionName}"`,
-                    description: <pre className="mt-2 w-[340px] rounded-md bg-slate-950 p-4 whitespace-pre-wrap"><code className="text-white">{`Tiene ${session.personIds.length} persona(s) inscripta(s):${peopleInSession}`}</code></pre>
+                    description: <pre className="mt-2 w-full max-w-[340px] rounded-md bg-slate-950 p-4 text-white whitespace-pre-wrap">{errorMessage}</pre>,
+                    duration: 10000,
                 });
                 return;
             }
