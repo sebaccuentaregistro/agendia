@@ -41,7 +41,7 @@ function AppNotifications() {
                     if (notification.type === 'waitlist' && notification.sessionId) {
                         const session = sessions.find(s => s.id === notification.sessionId);
                         const person = people.find(p => p.id === notification.personId);
-                        constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
                         if (!session || !person || !actividad) {
                             return null;
@@ -110,9 +110,9 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 
   const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist,ividad, space };
+    return { specialist, actividad, space };
   }, [session, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
@@ -277,9 +277,9 @@ function DashboardPageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist,ividad, space };
+    return { specialist, actividad, space };
   };
 
   const formatTime = (time: string) => {
@@ -443,7 +443,7 @@ function DashboardPageContent() {
               filteredSessions.length > 0 ? (
                 <ul className="space-y-4">
                   {filteredSessions.map(session => {
-                    const { specialist,ividad, space } = getSessionDetails(session);
+                    const { specialist, actividad, space } = getSessionDetails(session);
                     const enrolledCount = (session as any).enrolledCount;
                     const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
                     const utilization = capacity > 0 ? enrolledCount / capacity : 0;

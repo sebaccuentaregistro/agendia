@@ -139,7 +139,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         if (name === 'payments') {
             q = query(ref, orderBy('date', 'desc'));
         } else if (['sessions', 'attendance', 'notifications'].includes(name)) {
-            q = query(ref); // No specific ordering for these collections
+            q = query(ref); 
         } else {
             // Default for collections with a 'name' field
             q = query(ref, orderBy('name', 'asc')); 
@@ -240,15 +240,8 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
                 return;
             }
         
-            // The date up to which the person is currently paid.
             const currentExpiry = person.lastPaymentDate;
-            
-            // The next expiry date is one month from the current one.
-            // We must respect the original join day.
             const joinDay = person.joinDate.getDate();
-        
-            // Set the day of the month on the current expiry date to the join day, then add a month.
-            // This handles cases where the expiry date might have shifted due to vacations.
             const baseDateForNextMonth = set(currentExpiry, { date: joinDay });
             const newExpiryDate = addMonths(baseDateForNextMonth, 1);
         
@@ -264,9 +257,6 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         
             if (personPayments.length > 0) {
                 const paymentToDelete = personPayments[0];
-                
-                // To revert, we simply go back one month from the current expiry date,
-                // while still respecting the original join day.
                 const currentExpiry = person.lastPaymentDate;
                 const joinDay = person.joinDate.getDate();
         

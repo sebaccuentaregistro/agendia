@@ -1,4 +1,5 @@
 
+
 import type { Person, Specialist, Actividad, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level } from '@/types';
 
 // This file contains initial data for demonstration purposes when not connected to a database.
@@ -36,11 +37,10 @@ const daysAgo = (days: number): Date => {
 };
 
 export const people: Person[] = [
-  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(340), membershipType: 'Mensual', lastPaymentDate: daysAgo(40), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Lesión lumbar crónica. Evitar torsiones profundas.', status: 'active', levelId: 'level-2', notes: 'Prefiere usar su propio mat.' },
-  { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(275), membershipType: 'Mensual', lastPaymentDate: daysAgo(15), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Hipertensión. Controlar la intensidad.', status: 'active', levelId: 'level-2' },
-  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: daysAgo(185), membershipType: 'Diario', lastPaymentDate: daysAgo(2), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Embarazo de 5 meses. Adaptar posturas.', status: 'active', levelId: 'level-1' },
-  { id: 'stu-16', name: 'Logan Wilson', phone: '555-0116', joinDate: daysAgo(35), membershipType: 'Mensual', lastPaymentDate: daysAgo(4), avatar: `https://placehold.co/100x100.png`, status: 'active', levelId: 'level-1' },
-  { id: 'stu-9', name: 'Isabella Garcia', phone: '555-0109', joinDate: daysAgo(125), membershipType: 'Mensual', lastPaymentDate: daysAgo(35), avatar: `https://placehold.co/100x100.png`, status: 'inactive', cancellationDate: daysAgo(5), cancellationReason: 'Se mudó' },
+  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(340), membershipType: 'Mensual', lastPaymentDate: daysAgo(40), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Lesión lumbar crónica. Evitar torsiones profundas.', levelId: 'level-2', notes: 'Prefiere usar su propio mat.' },
+  { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(275), membershipType: 'Mensual', lastPaymentDate: daysAgo(15), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Hipertensión. Controlar la intensidad.', levelId: 'level-2' },
+  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: daysAgo(185), membershipType: 'Diario', lastPaymentDate: daysAgo(2), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Embarazo de 5 meses. Adaptar posturas.', levelId: 'level-1' },
+  { id: 'stu-16', name: 'Logan Wilson', phone: '555-0116', joinDate: daysAgo(35), membershipType: 'Mensual', lastPaymentDate: daysAgo(4), avatar: `https://placehold.co/100x100.png`, levelId: 'level-1' },
 ];
 
 export const spaces: Space[] = [
@@ -62,7 +62,6 @@ export const payments: Payment[] = [
   { id: 'pay-2', personId: 'stu-2', date: daysAgo(15), months: 1 },
   { id: 'pay-3', personId: 'stu-5', date: daysAgo(2), months: 1 },
   { id: 'pay-4', personId: 'stu-16', date: daysAgo(4), months: 1 },
-  { id: 'pay-5', personId: 'stu-9', date: daysAgo(35), months: 1 },
 ];
 
 export const attendance: SessionAttendance[] = [];
