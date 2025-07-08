@@ -30,7 +30,7 @@ function FullscreenLoader() {
     );
 }
 
-function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
+function ErrorShell({ title, description }: { title: string, description: string }) {
     const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
@@ -71,46 +71,45 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     const publicRoutes = ['/login', '/signup', '/terms'];
     const isPublicRoute = publicRoutes.includes(pathname);
-    const instituteId = userProfile?.instituteId;
 
+    // This effect handles all redirects based on auth state.
+    // It's designed to be simple and robust.
     useEffect(() => {
-        // This effect handles routing based on auth state.
-        // It waits until the initial loading is complete.
         if (loading) return;
 
-        if (!user && !isPublicRoute) {
-            router.push('/login');
-        }
-        
         if (user && isPublicRoute) {
             router.push('/dashboard');
         }
-    }, [user, loading, isPublicRoute, router, pathname]);
+        if (!user && !isPublicRoute) {
+            router.push('/login');
+        }
+    }, [user, isPublicRoute, loading, router]);
 
+    // This block handles what to render based on the current state.
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    if (isPublicRoute) {
-        // If we are on a public route and not loading, show the content.
-        // This covers the case where the user is not logged in.
-        // The routing effect will redirect logged-in users away from here.
-        return <>{children}</>;
+    if (!user) {
+        // If not logged in, only render public routes.
+        // For private routes, the useEffect is redirecting, so we show a loader.
+        return isPublicRoute ? <>{children}</> : <FullscreenLoader />;
     }
     
-    // From here on, we are on a protected route and not loading.
-    // We must have a user object to be on a protected route (due to the routing effect).
-    if (!user) {
-        // This is a fallback, the routing effect should prevent this.
+    // From here, we know `user` exists.
+    if (isPublicRoute) {
+        // User is logged in but on a public route.
+        // The useEffect is redirecting them, so we show a loader.
         return <FullscreenLoader />;
     }
 
-    // Now check the user's profile status.
+    // Now we are on a private route and the user is logged in.
+    // We can safely check the profile.
     if (!userProfile) {
         return (
-            <ErrorShell
+            <ErrorShell 
                 title="Error de Perfil de Usuario"
-                description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil. Esto puede ocurrir si el registro inicial no se completó. Por favor, cierra sesión y contacta a soporte."
+                description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil. Esto puede ocurrir si el registro inicial no se completó. Por favor, cierra sesión y contacta a soporte." 
             />
         );
     }
@@ -119,7 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         return <PendingApprovalShell />;
     }
 
-    if (userProfile.status === 'active' && !instituteId) {
+    if (userProfile.status === 'active' && !userProfile.instituteId) {
         return (
             <ErrorShell 
                 title="Cuenta no Asignada"
@@ -128,9 +127,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
     
-    if (userProfile.status === 'active' && instituteId) {
+    if (userProfile.status === 'active' && userProfile.instituteId) {
+        // This is the "happy path" where everything is correct.
         return (
-            <StudioProvider instituteId={instituteId}>
+            <StudioProvider instituteId={userProfile.instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
                     <AppHeader />
                     <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
@@ -142,6 +142,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
 
-    // Fallback for any unhandled state.
+    // This is a fallback for any unexpected state, though it shouldn't be reached
+    // with the logic above.
     return <FullscreenLoader />;
 }
