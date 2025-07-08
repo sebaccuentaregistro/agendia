@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
+import { Skeleton } from '@/components/ui/skeleton';
 
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -168,15 +169,15 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
-  const [isInitialCheckDone, setIsInitialCheckDone] = useState(false);
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
+    setIsClient(true);
     if (typeof window !== 'undefined') {
       const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
       if (!tutorialCompleted) {
         openTutorial();
       }
-      setIsInitialCheckDone(true);
     }
   }, [openTutorial]);
 
@@ -289,239 +290,250 @@ function DashboardPageContent() {
 
   return (
     <div className="space-y-8">
-      {isInitialCheckDone && <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />}
-
-      <AppNotifications />
+      {isClient && <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />}
       
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-        {dashboardView === 'main' ? (
-          <>
-            <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
-              <Card className={cn(
-                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
-                  hasOverdue ? "hover:!border-destructive" : "hover:!border-green-500"
-              )}>
-                  <div className={cn(
-                      "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                      hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
-                  )}>
-                      <AlertTriangle className="h-4 w-4" />
-                  </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
-                      Atrasados
-                  </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
-              </Card>
-            </Link>
-            <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
-              <Card className={cn(
-                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
-                  hasPendingRecovery ? "hover:!border-yellow-500" : "hover:!border-green-500"
-              )}>
-                  <div className={cn(
-                      "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                      hasPendingRecovery ? "bg-yellow-100 text-yellow-600" : "bg-green-100 text-green-600"
-                  )}>
-                      <CalendarClock className="h-4 w-4" />
-                  </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
-                      Recuperos
-                  </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
-              </Card>
-            </Link>
-            <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
-              <Card className={cn(
-                  "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
-                  hasOnVacation ? "hover:!border-blue-500" : "hover:!border-green-500"
-              )}>
-                  <div className={cn(
-                      "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                      hasOnVacation ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
-                  )}>
-                      <Plane className="h-4 w-4" />
-                  </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
-                      Vacaciones
-                  </CardTitle>
-                  <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
-              </Card>
-            </Link>
-            {mainCards.map((item) => (
-              <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
-                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <item.icon className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
-                    {item.count !== null && (
-                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
-                    )}
-                </Card>
-              </Link>
-            ))}
-            <Link href="/dashboard?view=management" className="transition-transform hover:-translate-y-1">
-              <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <Settings className="h-4 w-4" />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
-                   <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-              </Card>
-            </Link>
-          </>
-        ) : (
-          <>
-            {managementCards.map((item) => (
-              <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
-                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <item.icon className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
-                    {item.count !== null ? (
-                      <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
-                    ) : (
-                      <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-                    )}
-                </Card>
-              </Link>
-            ))}
-          </>
-        )}
-      </div>
-
-      {dashboardView === 'main' && (
-        <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border-white/20">
-          <CardHeader>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
-              <div className="flex flex-wrap items-center gap-2">
-                <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                    <SelectValue placeholder="Especialista" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Especialista</SelectItem>
-                    {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                    <SelectValue placeholder="Actividad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Actividades</SelectItem>
-                    {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                    <SelectValue placeholder="Espacio" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Espacios</SelectItem>
-                    {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                    <SelectValue placeholder="Horario" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todo el Día</SelectItem>
-                    <SelectItem value="Mañana">Mañana</SelectItem>
-                    <SelectItem value="Tarde">Tarde</SelectItem>
-                    <SelectItem value="Noche">Noche</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="flex-grow">
-            {todaysSessions.length > 0 ? (
-              filteredSessions.length > 0 ? (
-                <ul className="space-y-4">
-                  {filteredSessions.map(session => {
-                    const { specialist, actividad, space } = getSessionDetails(session);
-                    const enrolledCount = (session as any).enrolledCount;
-                    const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
-                    const utilization = capacity > 0 ? enrolledCount / capacity : 0;
-                    const isFull = utilization >= 1;
-                    const isNearlyFull = utilization >= 0.8 && !isFull;
-
-                    const now = new Date();
-                    const [hour, minute] = session.time.split(':').map(Number);
-                    const sessionStartTime = new Date();
-                    sessionStartTime.setHours(hour, minute, 0, 0);
-                    const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
-                    const isAttendanceAllowed = now >= attendanceWindowStart;
-                    const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes de la clase.";
-
-                    return (
-                      <li 
-                        key={session.id}
-                        className={cn(
-                          "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/50 dark:bg-zinc-800/50 border-white/20 shadow-md hover:shadow-lg",
-                          isFull && "bg-pink-500/20 border-pink-500/30",
-                          isNearlyFull && "bg-amber-500/10 border-amber-500/20"
-                        )}
-                      >
-                        <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
-                          <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Sesión'}</p>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
-                            <span className="flex items-center gap-1.5"><UserIcon className="h-4 w-4" />{specialist?.name || 'N/A'}</span>
-                            <span className="flex items-center gap-1.5"><DoorOpen className="h-4 w-4" />{space?.name || 'N/A'}</span>
-                          </div>
+      {isClient ? (
+        <>
+            <AppNotifications />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {dashboardView === 'main' ? (
+                <>
+                    <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
+                    <Card className={cn(
+                        "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
+                        hasOverdue ? "hover:!border-destructive" : "hover:!border-green-500"
+                    )}>
+                        <div className={cn(
+                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                            hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
+                        )}>
+                            <AlertTriangle className="h-4 w-4" />
                         </div>
-                        <div className="flex items-center gap-2 text-right">
-                            <div>
-                              <p className="font-bold text-primary">{formatTime(session.time)}</p>
-                              <p className={cn(
-                                "text-base font-semibold",
-                                isFull 
-                                  ? "text-pink-600 dark:text-pink-400" 
-                                  : isNearlyFull 
-                                  ? "text-amber-600 dark:text-amber-500" 
-                                  : "text-slate-700 dark:text-slate-200"
-                              )}>
-                                {enrolledCount}/{capacity} inscriptos
-                              </p>
+                        <CardTitle className={cn("text-lg font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                            Atrasados
+                        </CardTitle>
+                        <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
+                    </Card>
+                    </Link>
+                    <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
+                    <Card className={cn(
+                        "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
+                        hasPendingRecovery ? "hover:!border-yellow-500" : "hover:!border-green-500"
+                    )}>
+                        <div className={cn(
+                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                            hasPendingRecovery ? "bg-yellow-100 text-yellow-600" : "bg-green-100 text-green-600"
+                        )}>
+                            <CalendarClock className="h-4 w-4" />
+                        </div>
+                        <CardTitle className={cn("text-lg font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                            Recuperos
+                        </CardTitle>
+                        <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
+                    </Card>
+                    </Link>
+                    <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
+                    <Card className={cn(
+                        "group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 aspect-square",
+                        hasOnVacation ? "hover:!border-blue-500" : "hover:!border-green-500"
+                    )}>
+                        <div className={cn(
+                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                            hasOnVacation ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                        )}>
+                            <Plane className="h-4 w-4" />
+                        </div>
+                        <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                            Vacaciones
+                        </CardTitle>
+                        <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
+                    </Card>
+                    </Link>
+                    {mainCards.map((item) => (
+                    <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
+                        <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                            <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <item.icon className="h-4 w-4" />
                             </div>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span tabIndex={0}>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
-                                      <ClipboardCheck className="h-5 w-5" />
-                                      <span className="sr-only">Pasar Lista</span>
-                                    </Button>
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>{tooltipMessage}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                            {item.count !== null && (
+                            <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                            )}
+                        </Card>
+                    </Link>
+                    ))}
+                    <Link href="/dashboard?view=management" className="transition-transform hover:-translate-y-1">
+                    <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                        <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <Settings className="h-4 w-4" />
                         </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
-                  <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No se encontraron sesiones</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</p>
-                </div>
-              )
-            ) : (
-              <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
-                  <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No hay sesiones hoy</h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">¡Día libre! Disfruta del descanso.</p>
-              </div>
+                        <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">Gestión</CardTitle>
+                        <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                    </Card>
+                    </Link>
+                </>
+                ) : (
+                <>
+                    {managementCards.map((item) => (
+                    <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
+                        <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
+                            <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <item.icon className="h-4 w-4" />
+                            </div>
+                            <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-200">{item.label}</CardTitle>
+                            {item.count !== null ? (
+                            <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{item.count}</p>
+                            ) : (
+                            <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                            )}
+                        </Card>
+                    </Link>
+                    ))}
+                </>
+                )}
+            </div>
+
+            {dashboardView === 'main' && (
+                <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border-white/20">
+                <CardHeader>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <CardTitle className="text-lg text-slate-800 dark:text-slate-100">Sesiones de Hoy - {todayName}</CardTitle>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
+                        <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                            <SelectValue placeholder="Especialista" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Especialista</SelectItem>
+                            {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
+                        <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                            <SelectValue placeholder="Actividad" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Actividades</SelectItem>
+                            {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
+                        <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                            <SelectValue placeholder="Espacio" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Espacios</SelectItem>
+                            {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                        </Select>
+                        <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
+                        <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                            <SelectValue placeholder="Horario" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todo el Día</SelectItem>
+                            <SelectItem value="Mañana">Mañana</SelectItem>
+                            <SelectItem value="Tarde">Tarde</SelectItem>
+                            <SelectItem value="Noche">Noche</SelectItem>
+                        </SelectContent>
+                        </Select>
+                    </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="flex-grow">
+                    {todaysSessions.length > 0 ? (
+                    filteredSessions.length > 0 ? (
+                        <ul className="space-y-4">
+                        {filteredSessions.map(session => {
+                            const { specialist, actividad, space } = getSessionDetails(session);
+                            const enrolledCount = (session as any).enrolledCount;
+                            const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+                            const utilization = capacity > 0 ? enrolledCount / capacity : 0;
+                            const isFull = utilization >= 1;
+                            const isNearlyFull = utilization >= 0.8 && !isFull;
+
+                            const now = new Date();
+                            const [hour, minute] = session.time.split(':').map(Number);
+                            const sessionStartTime = new Date();
+                            sessionStartTime.setHours(hour, minute, 0, 0);
+                            const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
+                            const isAttendanceAllowed = now >= attendanceWindowStart;
+                            const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes de la clase.";
+
+                            return (
+                            <li 
+                                key={session.id}
+                                className={cn(
+                                "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/50 dark:bg-zinc-800/50 border-white/20 shadow-md hover:shadow-lg",
+                                isFull && "bg-pink-500/20 border-pink-500/30",
+                                isNearlyFull && "bg-amber-500/10 border-amber-500/20"
+                                )}
+                            >
+                                <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
+                                <p className="font-semibold text-slate-800 dark:text-slate-100">{actividad?.name || 'Sesión'}</p>
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600 dark:text-slate-400">
+                                    <span className="flex items-center gap-1.5"><UserIcon className="h-4 w-4" />{specialist?.name || 'N/A'}</span>
+                                    <span className="flex items-center gap-1.5"><DoorOpen className="h-4 w-4" />{space?.name || 'N/A'}</span>
+                                </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-right">
+                                    <div>
+                                    <p className="font-bold text-primary">{formatTime(session.time)}</p>
+                                    <p className={cn(
+                                        "text-base font-semibold",
+                                        isFull 
+                                        ? "text-pink-600 dark:text-pink-400" 
+                                        : isNearlyFull 
+                                        ? "text-amber-600 dark:text-amber-500" 
+                                        : "text-slate-700 dark:text-slate-200"
+                                    )}>
+                                        {enrolledCount}/{capacity} inscriptos
+                                    </p>
+                                    </div>
+                                    <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                        <span tabIndex={0}>
+                                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                            <ClipboardCheck className="h-5 w-5" />
+                                            <span className="sr-only">Pasar Lista</span>
+                                            </Button>
+                                        </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                        <p>{tooltipMessage}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                    </TooltipProvider>
+                                </div>
+                            </li>
+                            );
+                        })}
+                        </ul>
+                    ) : (
+                        <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
+                        <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No se encontraron sesiones</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Prueba a cambiar o limpiar los filtros.</p>
+                        </div>
+                    )
+                    ) : (
+                    <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-white/30 p-10 text-center bg-white/20 backdrop-blur-sm">
+                        <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-200">No hay sesiones hoy</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">¡Día libre! Disfruta del descanso.</p>
+                    </div>
+                    )}
+                </CardContent>
+                </Card>
             )}
-          </CardContent>
-        </Card>
+        </>
+      ) : (
+        <div className="space-y-8">
+            <Skeleton className="h-24 w-full rounded-2xl" />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {[...Array(7)].map((_, i) => <Skeleton key={i} className="aspect-square w-full rounded-xl" />)}
+            </div>
+            <Skeleton className="h-[500px] w-full rounded-2xl" />
+        </div>
       )}
 
       {selectedSessionForStudents && (

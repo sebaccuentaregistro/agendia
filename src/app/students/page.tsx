@@ -28,6 +28,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -101,7 +102,7 @@ function PersonDialog({ person, onOpenChange, open }: { person?: Person; onOpenC
                 </Select><FormMessage /></FormItem>
               )}/>
                <FormField control={form.control} name="levelId" render={({ field }) => (
-                <FormItem><FormLabel>Nivel</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}>
+                <FormItem><FormLabel>Nivel</FormLabel><Select onValueChange={field.onChange} value={field.value || 'none'}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="none">Sin nivel</SelectItem>
@@ -199,6 +200,11 @@ function StudentsPageContent() {
   const [isVacationDialogOpen, setIsVacationDialogOpen] = useState(false);
   const [selectedPersonForVacation, setSelectedPersonForVacation] = useState<Person | null>(null);
 
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const formVacation = useForm<z.infer<typeof vacationFormSchema>>({
     resolver: zodResolver(vacationFormSchema),
   });
@@ -289,11 +295,12 @@ function StudentsPageContent() {
         </div>
       </Card>
 
-      {filteredPeople.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredPeople.map((person) => <PersonCard key={person.id} person={person} />)}
-        </div>
-      ) : (
+      {isClient ? (
+        filteredPeople.length > 0 ? (
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filteredPeople.map((person) => <PersonCard key={person.id} person={person} />)}
+          </div>
+        ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
               <CardTitle className="text-slate-800 dark:text-slate-100">{searchTerm || activeFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
@@ -310,7 +317,13 @@ function StudentsPageContent() {
                )}
             </CardContent>
           </Card>
+        )
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[218px] w-full rounded-2xl" />)}
+        </div>
       )}
+
 
       <PersonDialog onOpenChange={setIsPersonDialogOpen} open={isPersonDialogOpen} />
     </div>
