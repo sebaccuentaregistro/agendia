@@ -1,5 +1,6 @@
 
 
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
@@ -11,9 +12,6 @@ export function cn(...inputs: ClassValue[]) {
 
 // This function determines the next billing date based on the last payment.
 export function getNextPaymentDate(person: Person): Date | null {
-  if (person.membershipType === 'Diario') {
-    return null;
-  }
   // The 'lastPaymentDate' field now stores the date the membership is valid until.
   // This date is effectively the next payment date.
   return person.lastPaymentDate;
@@ -21,16 +19,14 @@ export function getNextPaymentDate(person: Person): Date | null {
 
 // This function checks if a person's payment is up-to-date.
 export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
-  if (person.membershipType === 'Diario') {
-    return 'Al día';
-  }
-
   const nextDueDate = getNextPaymentDate(person);
   if (!nextDueDate) {
+    // If there's no due date (e.g., for certain tariff types), assume they are up-to-date.
     return 'Al día';
   }
   
   const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+  // We consider the payment overdue if today is strictly after the due date.
   return isAfter(today, nextDueDate) ? 'Atrasado' : 'Al día';
 }
 

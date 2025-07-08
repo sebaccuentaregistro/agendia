@@ -1,14 +1,24 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { set, addMonths, format as formatDate } from 'date-fns';
+import { set, addMonths, format as formatDate, subDays } from 'date-fns';
 import * as StaticData from '@/lib/data';
 
 // Helper function to create a deep copy
-const deepCopy = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj));
+const deepCopy = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj, (key, value) => {
+    if (key.endsWith('Date') && typeof value === 'string') {
+        const date = new Date(value);
+        if (!isNaN(date.getTime())) {
+            return date;
+        }
+    }
+    return value;
+}));
+
+type PersonFormData = Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>
 
 interface StudioContextType {
   actividades: Actividad[];
@@ -27,7 +37,7 @@ interface StudioContextType {
   addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
   updateSpecialist: (specialist: Specialist) => void;
   deleteSpecialist: (specialistId: string) => void;
-  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => void;
+  addPerson: (person: PersonFormData) => void;
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
   recordPayment: (personId: string) => void;
@@ -74,15 +84,23 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const [payments, setPayments] = useState<Payment[]>(() => deepCopy(StaticData.payments).map(p => ({ ...p, date: new Date(p.date) })));
   const [spaces, setSpaces] = useState<Space[]>(deepCopy(StaticData.spaces));
   const [attendance, setAttendance] = useState<SessionAttendance[]>(deepCopy(StaticData.attendance));
-  const [notifications, setNotifications] = useState<AppNotification[]>(deepCopy(StaticData.notifications));
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [tariffs, setTariffs] = useState<Tariff[]>(deepCopy(StaticData.tariffs));
   const [levels, setLevels] = useState<Level[]>(deepCopy(StaticData.levels));
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
-  const closeTutorial = useCallback(() => setIsTutorialOpen(false), []);
+  const closeTutorial = useCallback(() => {
+      setIsTutorialOpen(false);
+      try {
+        localStorage.setItem('agendia-tutorial-completed', 'true');
+      } catch (e) {
+        console.warn("Could not save tutorial state to localStorage.");
+      }
+  }, []);
 
-  const showSuccessToast = (description: string) => toast({ title: 'Éxito', description: `${description} (Los datos no se guardan en modo local).`});
+  const showSuccessToast = (description: string) => toast({ title: 'Éxito', description});
+  const showErrorToast = (description: string) => toast({ variant: 'destructive', title: 'Error', description});
 
   const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
@@ -94,8 +112,33 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const checkForChurnRisk = useCallback((personId: string, newAttendance: SessionAttendance[]) => {
+      const personAttendance = newAttendance.filter(a => (a.absentIds?.includes(personId) || a.justifiedAbsenceIds?.includes(personId)));
+      if (personAttendance.length < 3) return;
+
+      const sortedAttendance = personAttendance.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,3);
+      if (sortedAttendance.length < 3) return;
+
+      const lastThreeAreAbsences = sortedAttendance.every(a => a.absentIds.includes(personId));
+
+      if (lastThreeAreAbsences && !notifications.some(n => n.personId === personId && n.type === 'churnRisk')) {
+          const newNotification: AppNotification = {
+              id: `notif-${Date.now()}`,
+              type: 'churnRisk',
+              personId: personId,
+              createdAt: new Date().toISOString(),
+          }
+          setNotifications(prev => [...prev, newNotification]);
+      }
+  }, [notifications]);
+
+  useEffect(() => {
+    people.forEach(p => checkForChurnRisk(p.id, attendance));
+  }, [people, attendance, checkForChurnRisk]);
+
+
   // CRUD operations implemented locally
-  const addPerson = (personData: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+  const addPerson = (personData: PersonFormData) => {
     const now = new Date();
     const newPerson: Person = {
         ...personData,
@@ -164,9 +207,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   }
 
   const undoLastPayment = (personId: string) => {
-    const personPayments = payments.filter(p => p.personId === personId).sort((a,b) => b.date.getTime() - a.date.getTime());
+    const personPayments = payments.filter(p => p.personId === personId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     if (personPayments.length === 0) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No hay pagos para deshacer.' });
+      showErrorToast('No hay pagos para deshacer.');
       return;
     }
     const lastPaymentId = personPayments[0].id;
@@ -232,6 +275,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
       const dateStr = formatDate(new Date(), 'yyyy-MM-dd');
+      let updatedAttendance: SessionAttendance[] = [];
       setAttendance(prev => {
           const existingRecordIndex = prev.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
           const newRecord: SessionAttendance = {
@@ -245,10 +289,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           if (existingRecordIndex > -1) {
               const updated = [...prev];
               updated[existingRecordIndex] = { ...updated[existingRecordIndex], ...newRecord };
+              updatedAttendance = updated;
               return updated;
           }
-          return [...prev, newRecord];
+          updatedAttendance = [...prev, newRecord];
+          return updatedAttendance;
       });
+      absentIds.forEach(pid => checkForChurnRisk(pid, updatedAttendance));
+      justifiedAbsenceIds.forEach(pid => checkForChurnRisk(pid, updatedAttendance));
       showSuccessToast('Asistencia guardada.');
   }
 
@@ -329,7 +377,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   }
   const dismissNotification = (id: string) => {
       setNotifications(prev => prev.filter(n => n.id !== id));
-      showSuccessToast('Notificación descartada.');
   }
 
   const addTariff = (data: Omit<Tariff, 'id'>) => {

@@ -1,5 +1,6 @@
 
 
+
 import type { Person, Specialist, Actividad, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level } from '@/types';
 
 // This file contains initial data for demonstration purposes when not connected to a database.
@@ -36,11 +37,19 @@ const daysAgo = (days: number): Date => {
   return date;
 };
 
+export const tariffs: Tariff[] = [
+  { id: 'tariff-1', name: 'Clase Individual', price: 2500, description: 'Valor por una única clase (drop-in).', isIndividual: true },
+  { id: 'tariff-2', name: '1 vez por semana', price: 8000, description: 'Plan mensual.', frequency: 1 },
+  { id: 'tariff-3', name: '2 veces por semana', price: 12000, description: 'Plan mensual.', frequency: 2 },
+  { id: 'tariff-4', name: '3 veces por semana', price: 15000, description: 'Plan mensual.', frequency: 3 },
+  { id: 'tariff-5', name: 'Pase Libre', price: 18000, description: 'Acceso ilimitado a clases grupales.', frequency: 5 },
+];
+
 export const people: Person[] = [
-  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(340), membershipType: 'Mensual', lastPaymentDate: daysAgo(40), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Lesión lumbar crónica. Evitar torsiones profundas.', levelId: 'level-2', notes: 'Prefiere usar su propio mat.' },
-  { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(275), membershipType: 'Mensual', lastPaymentDate: daysAgo(15), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Hipertensión. Controlar la intensidad.', levelId: 'level-2' },
-  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: daysAgo(185), membershipType: 'Diario', lastPaymentDate: daysAgo(2), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Embarazo de 5 meses. Adaptar posturas.', levelId: 'level-1' },
-  { id: 'stu-16', name: 'Logan Wilson', phone: '555-0116', joinDate: daysAgo(35), membershipType: 'Mensual', lastPaymentDate: daysAgo(4), avatar: `https://placehold.co/100x100.png`, levelId: 'level-1' },
+  { id: 'stu-1', name: 'Sophia Loren', phone: '555-0101', joinDate: daysAgo(340), tariffId: 'tariff-3', lastPaymentDate: daysAgo(40), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Lesión lumbar crónica. Evitar torsiones profundas.', levelId: 'level-2', notes: 'Prefiere usar su propio mat.' },
+  { id: 'stu-2', name: 'Liam Gallagher', phone: '555-0102', joinDate: daysAgo(275), tariffId: 'tariff-5', lastPaymentDate: daysAgo(15), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Hipertensión. Controlar la intensidad.', levelId: 'level-2' },
+  { id: 'stu-5', name: 'Olivia Martinez', phone: '555-0105', joinDate: daysAgo(185), tariffId: 'tariff-1', lastPaymentDate: daysAgo(2), avatar: `https://placehold.co/100x100.png`, healthInfo: 'Embarazo de 5 meses. Adaptar posturas.', levelId: 'level-1' },
+  { id: 'stu-16', name: 'Logan Wilson', phone: '555-0116', joinDate: daysAgo(35), tariffId: 'tariff-2', lastPaymentDate: daysAgo(4), avatar: `https://placehold.co/100x100.png`, levelId: 'level-1' },
 ];
 
 export const spaces: Space[] = [
@@ -67,12 +76,4 @@ export const payments: Payment[] = [
 export const attendance: SessionAttendance[] = [];
 
 export const notifications: AppNotification[] = [];
-
-export const tariffs: Tariff[] = [
-  { id: 'tariff-1', name: 'Clase Individual', price: 2500, description: 'Valor por una única clase (drop-in).', isIndividual: true },
-  { id: 'tariff-2', name: '1 vez por semana', price: 8000, description: 'Plan mensual.', frequency: 1 },
-  { id: 'tariff-3', name: '2 veces por semana', price: 12000, description: 'Plan mensual.', frequency: 2 },
-  { id: 'tariff-4', name: '3 veces por semana', price: 15000, description: 'Plan mensual.', frequency: 3 },
-  { id: 'tariff-5', name: 'Pase Libre', price: 18000, description: 'Acceso ilimitado a clases grupales.', frequency: 5 },
-];
     

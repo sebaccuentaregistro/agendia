@@ -31,13 +31,18 @@ function FullscreenLoader() {
 }
 
 function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
+    const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
             <div className="flex flex-col items-center gap-4 text-center">
                 <AlertTriangle className="h-12 w-12 text-destructive" />
                 <h1 className="text-2xl font-bold text-destructive">{title}</h1>
                 <p className="max-w-md text-muted-foreground">{description}</p>
-                 {children}
+                 {children || (
+                    <Button variant="outline" onClick={logout} className="mt-4">
+                        Cerrar Sesión
+                    </Button>
+                 )}
             </div>
         </div>
     );
@@ -62,11 +67,11 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, userProfile, loading } = useAuth();
+    const { user, userProfile, loading, logout } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
-    const publicRoutes = ['/login', '/signup'];
+    const publicRoutes = ['/login', '/signup', '/terms'];
     const instituteId = userProfile?.instituteId;
 
     useEffect(() => {
@@ -83,9 +88,25 @@ export function AppShell({ children }: { children: ReactNode }) {
             }
         }
     }, [user, userProfile, loading, router, pathname, instituteId]);
-
+    
+    // This handles the case where the user profile hasn't loaded yet.
     if (loading) {
         return <FullscreenLoader />;
+    }
+    
+    // User is logged in but hasn't completed their profile or is on a public route
+    if (user && publicRoutes.includes(pathname)) {
+        if (userProfile?.status === 'active' && instituteId) {
+            // This prevents an active user from seeing login/signup again
+            // router.push is already handling this, so we show a loader to avoid flicker
+            return <FullscreenLoader />;
+        }
+        return <>{children}</>;
+    }
+    
+    // User is not logged in and is on a public route
+    if (!user && publicRoutes.includes(pathname)) {
+        return <>{children}</>;
     }
 
     if (user && userProfile?.status === 'pending') {
@@ -99,11 +120,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         />;
     }
 
-    if (!user && publicRoutes.includes(pathname)) {
-        return <>{children}</>;
-    }
-
-    if (user && instituteId && !publicRoutes.includes(pathname)) {
+    // This is the main case for a logged-in, active user with an institute
+    if (user && userProfile?.status === 'active' && instituteId) {
         return (
             <StudioProvider instituteId={instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
@@ -117,5 +135,15 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
     
+    // Fallback for any other state (e.g. user but no profile)
+    // This prevents redirect loops by providing a stable exit point.
+    if (!publicRoutes.includes(pathname)) {
+         return <ErrorShell 
+            title="Error Inesperado"
+            description="Ha ocurrido un error al cargar tu perfil. Por favor, intenta cerrar sesión y volver a ingresar."
+        />;
+    }
+
+    // Default loader for any unhandled edge case
     return <FullscreenLoader />;
 }

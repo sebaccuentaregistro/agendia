@@ -1,5 +1,6 @@
 
 
+
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -40,7 +41,7 @@ export type Person = {
   name: string;
   phone: string;
   joinDate: Date;
-  membershipType: 'Mensual' | 'Diario';
+  tariffId?: string;
   lastPaymentDate: Date;
   avatar: string;
   vacationPeriods?: VacationPeriod[];
