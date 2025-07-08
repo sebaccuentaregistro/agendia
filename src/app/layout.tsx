@@ -1,14 +1,10 @@
 
 import type { Metadata } from 'next';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
-import { ThemeProvider } from '@/components/theme-provider';
-import { AuthProvider } from '@/context/AuthContext';
-import { AppShell } from '@/components/layout/app-shell';
 
 export const metadata: Metadata = {
-  title: 'Agendia',
-  description: 'Gestiona tu centro de bienestar de forma sencilla y eficiente.',
+  title: 'Agendia - Modo de Recuperación',
+  description: 'Aplicación en modo de recuperación.',
 };
 
 export default function RootLayout({
@@ -17,24 +13,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className="antialiased bg-gradient-to-br from-blue-100 via-purple-200 to-violet-200 dark:from-slate-900 dark:via-purple-950 dark:to-blue-950">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <AppShell>
-              {children}
-            </AppShell>
-            <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
+    <html lang="es">
+      <body>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh', 
+          fontFamily: 'sans-serif', 
+          textAlign: 'center',
+          backgroundColor: '#f0f2f5'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', color: '#172b4d' }}>Aplicación en modo de recuperación.</h1>
+            <p style={{ fontSize: '1.1rem', color: '#5e6c84' }}>Por favor, confirma que puedes ver este mensaje. La web volverá en el siguiente paso.</p>
+            {/* Ocultamos el contenido problemático temporalmente */}
+            <div style={{ display: 'none' }}>{children}</div>
+          </div>
+        </div>
       </body>
     </html>
   );
 }
-
-    
