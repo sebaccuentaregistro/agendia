@@ -1,9 +1,10 @@
+'use client';
+
 import './globals.css';
 import type { ReactNode } from 'react';
 import { Poppins } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
-import { AuthProvider } from '@/context/AuthContext';
 import { Toaster } from '@/components/ui/toaster';
 import { AppShell } from '@/components/layout/app-shell';
 
@@ -12,11 +13,6 @@ const poppins = Poppins({
   weight: ['300', '400', '500', '600', '700'],
   variable: '--font-poppins',
 });
-
-export const metadata = {
-  title: 'Agendia',
-  description: 'Gestión inteligente para tu estudio de bienestar.',
-};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -28,10 +24,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-            <Toaster />
-          </AuthProvider>
+          <AppShell>{children}</AppShell>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>
