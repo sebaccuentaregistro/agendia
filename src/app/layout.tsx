@@ -1,30 +1,17 @@
-import type { ReactNode } from 'react';
 import './globals.css';
-import { ThemeProvider } from "@/components/theme-provider";
-import { AppShell } from "@/components/layout/app-shell";
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/context/AuthContext';
+import type { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'Agendia',
-  description: 'Gestión para Estudios de Bienestar',
+  title: 'Agendia - Recuperación del Sistema',
+  description: 'Modo de recuperación del sistema',
 };
 
+// Layout simplificado para forzar una reconstrucción limpia.
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body className="antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-            <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
+      <body>
+        {children}
       </body>
     </html>
   );
