@@ -4,18 +4,14 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doLogout, doLoginWithEmailAndPassword, doSignupWithEmailAndPassword, type SignupCredentials } from '@/lib/firebase-auth';
-import { doc, getDoc, setDoc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
-interface AppUserProfile {
-  email: string;
-  status: 'pending' | 'active';
-  instituteId: string | null;
-}
+// This context will ONLY handle the user's authentication state (the raw Firebase user object).
+// Profile data will be handled separately in AppShell to avoid race conditions.
 
 interface AuthContextType {
   user: User | null;
-  userProfile: AppUserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (credentials: SignupCredentials) => Promise<void>;
@@ -26,7 +22,6 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -61,27 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      try {
-        setUser(currentUser);
-        if (currentUser) {
-          const userDocRef = doc(db, 'users', currentUser.uid);
-          const docSnap = await getDoc(userDocRef);
-          if (docSnap.exists()) {
-            setUserProfile(docSnap.data() as AppUserProfile);
-          } else {
-            setUserProfile(null);
-          }
-        } else {
-          setUserProfile(null);
-        }
-      } catch (error) {
-        console.error("Critical error in onAuthStateChanged:", error);
-        setUser(null);
-        setUserProfile(null);
-      } finally {
-        setLoading(false);
-      }
+    // This listener only cares about the user object from Firebase Auth.
+    // It sets the loading state to false once the initial check is complete.
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -136,7 +115,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const value = {
     user,
-    userProfile,
     loading,
     login,
     signup,
