@@ -3,17 +3,14 @@ import { initializeApp, getApp, getApps, type FirebaseApp } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
 
-// Your web app's Firebase configuration is now read from environment variables.
-// These variables are automatically provided by Firebase App Hosting during deployment.
-// For local development, you can create a `.env.local` file at the root of your
-// project and add the configuration values there. See the `.env.local.example` file.
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  apiKey: "AIzaSyDMlnGw4QdX8TmRy-uGQr0iseudb9cy4TM",
+  authDomain: "yogaflow-manager-uqjpc.firebaseapp.com",
+  projectId: "yogaflow-manager-uqjpc",
+  storageBucket: "yogaflow-manager-uqjpc.firebasestorage.app",
+  messagingSenderId: "230355743596",
+  appId: "1:230355743596:web:8c8fa565063b913fd8b949"
 };
 
 
