@@ -62,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setLoading(true); // Start loading whenever auth state might change
       setUser(currentUser);
       if (currentUser) {
         try {
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setUserProfile(null);
       }
-      setLoading(false);
+      setLoading(false); // Stop loading after all async operations are done
     });
     return () => unsubscribe();
   }, [toast]);
@@ -90,8 +91,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await doLoginWithEmailAndPassword(email, password);
     if (result.error) {
       handleAuthError(result.error, 'login');
-      setLoading(false);
+      // setLoading will be set to false by the onAuthStateChanged effect
     }
+    // On success, onAuthStateChanged will trigger and handle the rest
   };
 
   const signup = async (credentials: SignupCredentials) => {
@@ -121,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             title: '¡Bienvenido/a a Agendia!',
             description: 'Tu cuenta y tu estudio han sido creados.',
         });
+        // onAuthStateChanged will handle the rest
       } catch (dbError) {
         console.error("Error creating user profile and institute:", dbError);
         toast({ variant: 'destructive', title: 'Error de Perfil', description: 'Tu cuenta fue creada, pero no pudimos configurar tu estudio. Contacta a soporte.' });
@@ -135,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setLoading(true);
     await doLogout();
+    // onAuthStateChanged will handle the rest
   };
 
   const value = {
