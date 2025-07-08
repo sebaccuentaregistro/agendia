@@ -12,4 +12,4 @@ Este documento establece la garantía fundamental que rige mi colaboración como
 
 Mi proceso de trabajo está diseñado para hacer cumplir esta regla de forma técnica:
 
-1.  **Yo Propongo:** Mi única función es analizar las peticiones y proponer un plan de cambios. Este plan se presenta siempre en un formato XML estructurado (`<changes>...</changes>)
+1.  **Yo Propongo:** Mi única función es analizar las peticiones y proponer un plan de cambios. Este plan se presenta siempre en un formato XML estructurado (`<changes>...</changes>
