@@ -1,26 +1,15 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useReducer, useMemo } from 'react';
+import { collection, doc, onSnapshot, Unsubscribe, DocumentReference, CollectionReference } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
+import * as actions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
-import { set, addMonths, format as formatDate, subDays } from 'date-fns';
-import * as StaticData from '@/lib/data';
+import { addMonths, subDays } from 'date-fns';
 
-// Helper function to create a deep copy
-const deepCopy = <T,>(obj: T): T => JSON.parse(JSON.stringify(obj, (key, value) => {
-    if (key.endsWith('Date') && typeof value === 'string') {
-        const date = new Date(value);
-        if (!isNaN(date.getTime())) {
-            return date;
-        }
-    }
-    return value;
-}));
-
-type PersonFormData = Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>
-
-interface StudioContextType {
+type State = {
   actividades: Actividad[];
   specialists: Specialist[];
   people: Person[];
@@ -31,13 +20,69 @@ interface StudioContextType {
   notifications: AppNotification[];
   tariffs: Tariff[];
   levels: Level[];
+  loading: boolean;
+  error: Error | null;
+};
+
+type Action = { type: 'SET_DATA'; payload: { collection: keyof Omit<State, 'loading' | 'error'>, data: any[] } }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: Error };
+
+const initialState: State = {
+  actividades: [],
+  specialists: [],
+  people: [],
+  sessions: [],
+  payments: [],
+  spaces: [],
+  attendance: [],
+  notifications: [],
+  tariffs: [],
+  levels: [],
+  loading: true,
+  error: null,
+};
+
+function dataReducer(state: State, action: Action): State {
+  switch (action.type) {
+    case 'SET_DATA':
+      return { ...state, [action.payload.collection]: action.payload.data };
+    case 'SET_LOADING':
+      return { ...state, loading: action.payload };
+    case 'SET_ERROR':
+      return { ...state, error: action.payload, loading: false };
+    default:
+      return state;
+  }
+}
+
+// Helper to convert Firestore timestamps to Dates
+const processDoc = (doc: any) => {
+    const data = doc.data();
+    for (const key in data) {
+        if (data[key] instanceof Object && 'seconds' in data[key] && 'nanoseconds' in data[key]) {
+            data[key] = data[key].toDate();
+        }
+        if (key === 'vacationPeriods' && Array.isArray(data[key])) {
+            data[key] = data[key].map((period: any) => ({
+                ...period,
+                startDate: period.startDate.toDate(),
+                endDate: period.endDate.toDate()
+            }));
+        }
+    }
+    return { id: doc.id, ...data };
+};
+
+
+interface StudioContextType extends State {
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
   updateActividad: (actividad: Actividad) => void;
   deleteActividad: (actividadId: string) => void;
   addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
   updateSpecialist: (specialist: Specialist) => void;
   deleteSpecialist: (specialistId: string) => void;
-  addPerson: (person: PersonFormData) => void;
+  addPerson: (person: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => void;
   updatePerson: (person: Person) => void;
   deletePerson: (personId: string) => void;
   recordPayment: (personId: string) => void;
@@ -72,23 +117,11 @@ interface StudioContextType {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
-// In this local mode, we'll manage the state entirely within React.
-export function StudioProvider({ children }: { children: ReactNode }) {
+export function StudioProvider({ children, instituteId }: { children: ReactNode, instituteId: string }) {
+  const [state, dispatch] = useReducer(dataReducer, initialState);
   const { toast } = useToast();
   
-  // Initialize state with static data
-  const [actividades, setActividades] = useState<Actividad[]>(deepCopy(StaticData.actividades));
-  const [specialists, setSpecialists] = useState<Specialist[]>(deepCopy(StaticData.specialists));
-  const [people, setPeople] = useState<Person[]>(() => deepCopy(StaticData.people).map(p => ({ ...p, joinDate: new Date(p.joinDate), lastPaymentDate: new Date(p.lastPaymentDate) })));
-  const [sessions, setSessions] = useState<Session[]>(deepCopy(StaticData.sessions));
-  const [payments, setPayments] = useState<Payment[]>(() => deepCopy(StaticData.payments).map(p => ({ ...p, date: new Date(p.date) })));
-  const [spaces, setSpaces] = useState<Space[]>(deepCopy(StaticData.spaces));
-  const [attendance, setAttendance] = useState<SessionAttendance[]>(deepCopy(StaticData.attendance));
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [tariffs, setTariffs] = useState<Tariff[]>(deepCopy(StaticData.tariffs));
-  const [levels, setLevels] = useState<Level[]>(deepCopy(StaticData.levels));
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
   const closeTutorial = useCallback(() => {
       setIsTutorialOpen(false);
@@ -99,329 +132,211 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       }
   }, []);
 
-  const showSuccessToast = (description: string) => toast({ title: 'Éxito', description});
-  const showErrorToast = (description: string) => toast({ variant: 'destructive', title: 'Error', description});
+  const collectionRefs = useMemo(() => ({
+      actividades: collection(db, 'institutes', instituteId, 'actividades'),
+      specialists: collection(db, 'institutes', instituteId, 'specialists'),
+      people: collection(db, 'institutes', instituteId, 'people'),
+      sessions: collection(db, 'institutes', instituteId, 'sessions'),
+      payments: collection(db, 'institutes', instituteId, 'payments'),
+      spaces: collection(db, 'institutes', instituteId, 'spaces'),
+      attendance: collection(db, 'institutes', instituteId, 'attendance'),
+      notifications: collection(db, 'institutes', instituteId, 'notifications'),
+      tariffs: collection(db, 'institutes', instituteId, 'tariffs'),
+      levels: collection(db, 'institutes', instituteId, 'levels'),
+  }), [instituteId]);
 
-  const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
-    if (!person.vacationPeriods) return false;
-    const checkDate = set(date, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-    return person.vacationPeriods.some(period => {
-        const startDate = set(new Date(period.startDate), { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-        const endDate = set(new Date(period.endDate), { hours: 23, minutes: 59, seconds: 59, milliseconds: 999 });
-        return checkDate >= startDate && checkDate <= endDate;
-    });
-  }, []);
-
-  const checkForChurnRisk = useCallback((personId: string, newAttendance: SessionAttendance[]) => {
-      const personAttendance = newAttendance.filter(a => (a.absentIds?.includes(personId) || a.justifiedAbsenceIds?.includes(personId)));
-      if (personAttendance.length < 3) return;
-
-      const sortedAttendance = personAttendance.sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0,3);
-      if (sortedAttendance.length < 3) return;
-
-      const lastThreeAreAbsences = sortedAttendance.every(a => a.absentIds.includes(personId));
-
-      if (lastThreeAreAbsences && !notifications.some(n => n.personId === personId && n.type === 'churnRisk')) {
-          const newNotification: AppNotification = {
-              id: `notif-${Date.now()}`,
-              type: 'churnRisk',
-              personId: personId,
-              createdAt: new Date().toISOString(),
-          }
-          setNotifications(prev => [...prev, newNotification]);
-      }
-  }, [notifications]);
 
   useEffect(() => {
-    people.forEach(p => checkForChurnRisk(p.id, attendance));
-  }, [people, attendance, checkForChurnRisk]);
+    dispatch({ type: 'SET_LOADING', payload: true });
+    const unsubscribes: Unsubscribe[] = [];
 
+    (Object.keys(collectionRefs) as Array<keyof typeof collectionRefs>).forEach(key => {
+      const unsubscribe = onSnapshot(collectionRefs[key], (snapshot) => {
+        const data = snapshot.docs.map(processDoc);
+        dispatch({ type: 'SET_DATA', payload: { collection: key, data } });
+      }, (error) => {
+        console.error(`Error fetching ${key}:`, error);
+        dispatch({ type: 'SET_ERROR', payload: error });
+      });
+      unsubscribes.push(unsubscribe);
+    });
+    
+    dispatch({ type: 'SET_LOADING', payload: false });
 
-  // CRUD operations implemented locally
-  const addPerson = (personData: PersonFormData) => {
-    const now = new Date();
-    const newPerson: Person = {
-        ...personData,
-        id: `person-${Date.now()}`,
-        joinDate: now,
-        lastPaymentDate: addMonths(now, 1),
-        avatar: `https://placehold.co/100x100.png`,
-        vacationPeriods: [],
-    };
-    setPeople(prev => [...prev, newPerson]);
-    showSuccessToast('Persona añadida.');
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [collectionRefs]);
+  
+  const showSuccessToast = (description: string) => toast({ title: 'Éxito', description});
+  const showErrorToast = (description: string) => toast({ variant: 'destructive', title: 'Error', description});
+  
+  const executeAction = async (action: Promise<any>, successMessage: string, errorMessagePrefix: string) => {
+    try {
+      await action;
+      showSuccessToast(successMessage);
+    } catch (error: any) {
+      console.error(errorMessagePrefix, error);
+      showErrorToast(`${errorMessagePrefix}: ${error.message}`);
+    }
   };
 
-  const updatePerson = (updatedPerson: Person) => {
-    setPeople(prev => prev.map(p => p.id === updatedPerson.id ? updatedPerson : p));
-    showSuccessToast('Persona actualizada.');
+  const executeDeleteWithUsageCheck = async (entityId: string, checks: any[], collectionName: keyof typeof collectionRefs, successMessage: string) => {
+      try {
+        await actions.deleteWithUsageCheckAction(entityId, checks, collectionRefs, {
+            sessions: state.sessions, people: state.people, actividades: state.actividades, specialists: state.specialists, spaces: state.spaces, levels: state.levels
+        });
+        await actions.deleteEntity(doc(collectionRefs[collectionName], entityId));
+        showSuccessToast(successMessage);
+      } catch (error: any) {
+        console.error(`Error deleting ${collectionName}:`, error);
+        showErrorToast(error.message);
+      }
   };
-  
-  const deletePerson = (personId: string) => {
-    setSessions(prev => prev.map(s => ({
-        ...s,
-        personIds: s.personIds.filter(id => id !== personId),
-    })));
-    setPeople(prev => prev.filter(p => p.id !== personId));
-    showSuccessToast('Persona eliminada.');
-  };
-  
-  const addActividad = (data: Omit<Actividad, 'id'>) => {
-    const newActividad = { ...data, id: `actividad-${Date.now()}` };
-    setActividades(prev => [...prev, newActividad]);
-    showSuccessToast('Actividad añadida.');
-  }
-  const updateActividad = (data: Actividad) => {
-    setActividades(prev => prev.map(a => a.id === data.id ? data : a));
-    showSuccessToast('Actividad actualizada.');
-  }
-  const deleteActividad = (id: string) => {
-    setActividades(prev => prev.filter(a => a.id !== id));
-    showSuccessToast('Actividad eliminada.');
-  }
-  
-  const addSpecialist = (data: Omit<Specialist, 'id' | 'avatar'>) => {
-    const newSpecialist = { ...data, id: `specialist-${Date.now()}`, avatar: `https://placehold.co/100x100.png` };
-    setSpecialists(prev => [...prev, newSpecialist]);
-    showSuccessToast('Especialista añadido.');
-  }
-  const updateSpecialist = (data: Specialist) => {
-    setSpecialists(prev => prev.map(s => s.id === data.id ? data : s));
-    showSuccessToast('Especialista actualizado.');
-  }
-  const deleteSpecialist = (id: string) => {
-    setSpecialists(prev => prev.filter(s => s.id !== id));
-    showSuccessToast('Especialista eliminado.');
-  }
 
+
+  const addActividad = (data: Omit<Actividad, 'id'>) => executeAction(actions.addEntity(collectionRefs.actividades, data), 'Actividad añadida.', 'Error al añadir actividad');
+  const updateActividad = (data: Actividad) => executeAction(actions.updateEntity(doc(collectionRefs.actividades, data.id), data), 'Actividad actualizada.', 'Error al actualizar actividad');
+  const deleteActividad = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'sessions', field: 'actividadId', label: 'sesión' }, { collection: 'specialists', field: 'actividadIds', label: 'especialista', type: 'array' }], 'actividades', 'Actividad eliminada.');
+
+  const addSpecialist = (data: Omit<Specialist, 'id' | 'avatar'>) => executeAction(actions.addEntity(collectionRefs.specialists, {...data, avatar: `https://placehold.co/100x100.png`}), 'Especialista añadido.', 'Error al añadir especialista');
+  const updateSpecialist = (data: Specialist) => executeAction(actions.updateEntity(doc(collectionRefs.specialists, data.id), data), 'Especialista actualizado.', 'Error al actualizar especialista');
+  const deleteSpecialist = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'sessions', field: 'instructorId', label: 'sesión' }], 'specialists', 'Especialista eliminado.');
+
+  const addPerson = (data: any) => executeAction(actions.addPersonAction(collectionRefs.people, data), 'Persona añadida.', 'Error al añadir persona');
+  const updatePerson = (data: Person) => executeAction(actions.updateEntity(doc(collectionRefs.people, data.id), data), 'Persona actualizada.', 'Error al actualizar persona');
+  const deletePerson = (id: string) => executeAction(actions.deletePersonAction(collectionRefs.sessions, collectionRefs.people, id), 'Persona eliminada.', 'Error al eliminar persona');
+
+  const addSpace = (data: Omit<Space, 'id'>) => executeAction(actions.addEntity(collectionRefs.spaces, data), 'Espacio añadido.', 'Error al añadir espacio');
+  const updateSpace = (data: Space) => executeAction(actions.updateEntity(doc(collectionRefs.spaces, data.id), data), 'Espacio actualizado.', 'Error al actualizar espacio');
+  const deleteSpace = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'sessions', field: 'spaceId', label: 'sesión' }], 'spaces', 'Espacio eliminado.');
+
+  const addSession = (data: Omit<Session, 'id' | 'personIds' | 'waitlistPersonIds'>) => executeAction(actions.addEntity(collectionRefs.sessions, {...data, personIds: [], waitlistPersonIds: []}), 'Sesión añadida.', 'Error al añadir sesión');
+  const updateSession = (data: Session) => executeAction(actions.updateEntity(doc(collectionRefs.sessions, data.id), data), 'Sesión actualizada.', 'Error al actualizar sesión');
+  const deleteSession = (id: string) => {
+    const session = state.sessions.find(s => s.id === id);
+    if (session && session.personIds.length > 0) {
+        showErrorToast("No se puede eliminar una sesión con personas inscriptas.");
+        return;
+    }
+    executeAction(actions.deleteEntity(doc(collectionRefs.sessions, id)), 'Sesión eliminada.', 'Error al eliminar sesión');
+  };
+  
+  const addTariff = (data: Omit<Tariff, 'id'>) => executeAction(actions.addEntity(collectionRefs.tariffs, data), 'Arancel añadido.', 'Error al añadir arancel');
+  const updateTariff = (data: Tariff) => executeAction(actions.updateEntity(doc(collectionRefs.tariffs, data.id), data), 'Arancel actualizado.', 'Error al actualizar arancel');
+  const deleteTariff = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'people', field: 'tariffId', label: 'persona' }], 'tariffs', 'Arancel eliminado.');
+  
+  const addLevel = (data: Omit<Level, 'id'>) => executeAction(actions.addEntity(collectionRefs.levels, data), 'Nivel añadido.', 'Error al añadir nivel');
+  const updateLevel = (data: Level) => executeAction(actions.updateEntity(doc(collectionRefs.levels, data.id), data), 'Nivel actualizado.', 'Error al actualizar nivel');
+  const deleteLevel = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'sessions', field: 'levelId', label: 'sesión' }, { collection: 'people', field: 'levelId', label: 'persona' }], 'levels', 'Nivel eliminado.');
+  
   const recordPayment = (personId: string) => {
-    const newPayment: Payment = { id: `payment-${Date.now()}`, personId, date: new Date(), months: 1 };
-    setPayments(prev => [...prev, newPayment]);
-    setPeople(prev => prev.map(p => {
-        if (p.id === personId) {
-            return { ...p, lastPaymentDate: addMonths(p.lastPaymentDate, 1) };
-        }
-        return p;
-    }));
-    showSuccessToast('Pago registrado.');
-  }
+    const person = state.people.find(p => p.id === personId);
+    if (!person) return showErrorToast("Persona no encontrada.");
+    const newExpiryDate = addMonths(person.lastPaymentDate, 1);
+    executeAction(actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, personId, newExpiryDate), 'Pago registrado.', 'Error al registrar pago');
+  };
 
-  const undoLastPayment = (personId: string) => {
-    const personPayments = payments.filter(p => p.personId === personId).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const undoLastPayment = async (personId: string) => {
+    const person = state.people.find(p => p.id === personId);
+    if (!person) return showErrorToast("Persona no encontrada.");
+
+    const personPayments = state.payments
+      .filter(p => p.personId === personId)
+      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
     if (personPayments.length === 0) {
       showErrorToast('No hay pagos para deshacer.');
       return;
     }
-    const lastPaymentId = personPayments[0].id;
-    setPayments(prev => prev.filter(p => p.id !== lastPaymentId));
-    setPeople(prev => prev.map(p => {
-        if (p.id === personId) {
-            return { ...p, lastPaymentDate: addMonths(p.lastPaymentDate, -1) };
-        }
-        return p;
-    }));
-    showSuccessToast('Último pago deshecho.');
-  }
-  
-  const addSpace = (data: Omit<Space, 'id'>) => {
-      setSpaces(prev => [...prev, { ...data, id: `space-${Date.now()}` }]);
-      showSuccessToast('Espacio añadido.');
-  }
-  const updateSpace = (data: Space) => {
-      setSpaces(prev => prev.map(s => s.id === data.id ? data : s));
-      showSuccessToast('Espacio actualizado.');
-  }
-  const deleteSpace = (id: string) => {
-      setSpaces(prev => prev.filter(s => s.id !== id));
-      showSuccessToast('Espacio eliminado.');
-  }
-
-  const addSession = (data: Omit<Session, 'id' | 'personIds' | 'waitlistPersonIds'>) => {
-      setSessions(prev => [...prev, { ...data, id: `session-${Date.now()}`, personIds: [], waitlistPersonIds: [] }]);
-      showSuccessToast('Sesión añadida.');
-  }
-  const updateSession = (data: Session) => {
-      setSessions(prev => prev.map(s => s.id === data.id ? data : s));
-      showSuccessToast('Sesión actualizada.');
-  }
-  const deleteSession = (id: string) => {
-      setSessions(prev => prev.filter(s => s.id !== id));
-      showSuccessToast('Sesión eliminada.');
-  }
-
-  const enrollPeopleInClass = (sessionId: string, personIds: string[]) => {
-      setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, personIds } : s));
-      showSuccessToast('Inscripciones actualizadas.');
-  }
-  
-  const enrollPersonInSessions = (personId: string, newSessionIds: string[]) => {
-      setSessions(prevSessions => {
-          const sessionsWithPerson = prevSessions.filter(s => s.personIds.includes(personId)).map(s => s.id);
-          const sessionsToRemoveFrom = sessionsWithPerson.filter(id => !newSessionIds.includes(id));
-          const sessionsToAddTo = newSessionIds.filter(id => !sessionsWithPerson.includes(id));
-
-          return prevSessions.map(session => {
-              if (sessionsToRemoveFrom.includes(session.id)) {
-                  return { ...session, personIds: session.personIds.filter(id => id !== personId) };
-              }
-              if (sessionsToAddTo.includes(session.id)) {
-                  return { ...session, personIds: [...session.personIds, personId] };
-              }
-              return session;
-          });
-      });
-      showSuccessToast('Inscripciones de la persona actualizadas.');
+    const paymentToDelete = personPayments[0];
+    const previousExpiryDate = addMonths(person.lastPaymentDate, -1);
+    executeAction(actions.undoLastPaymentAction(collectionRefs.payments, collectionRefs.people, personId, paymentToDelete, previousExpiryDate), 'Último pago deshecho.', 'Error al deshacer pago');
   };
 
-  const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
-      const dateStr = formatDate(new Date(), 'yyyy-MM-dd');
-      let updatedAttendance: SessionAttendance[] = [];
-      setAttendance(prev => {
-          const existingRecordIndex = prev.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
-          const newRecord: SessionAttendance = {
-              id: `att-${Date.now()}`,
-              sessionId,
-              date: dateStr,
-              presentIds,
-              absentIds,
-              justifiedAbsenceIds,
-          };
-          if (existingRecordIndex > -1) {
-              const updated = [...prev];
-              updated[existingRecordIndex] = { ...updated[existingRecordIndex], ...newRecord };
-              updatedAttendance = updated;
-              return updated;
-          }
-          updatedAttendance = [...prev, newRecord];
-          return updatedAttendance;
-      });
-      absentIds.forEach(pid => checkForChurnRisk(pid, updatedAttendance));
-      justifiedAbsenceIds.forEach(pid => checkForChurnRisk(pid, updatedAttendance));
-      showSuccessToast('Asistencia guardada.');
+  const enrollPeopleInClass = (sessionId: string, personIds: string[]) => executeAction(actions.enrollPeopleInClassAction(doc(collectionRefs.sessions, sessionId), personIds), 'Inscripciones actualizadas.', 'Error al inscribir');
+  const enrollPersonInSessions = (personId: string, sessionIds: string[]) => executeAction(actions.enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds, state.sessions), 'Inscripciones actualizadas.', 'Error al inscribir');
+  const saveAttendance = (...args: Parameters<typeof actions.saveAttendanceAction>) => executeAction(actions.saveAttendanceAction(collectionRefs.attendance, ...args), 'Asistencia guardada.', 'Error al guardar asistencia');
+  const addOneTimeAttendee = (...args: Parameters<typeof actions.addOneTimeAttendeeAction>) => executeAction(actions.addOneTimeAttendeeAction(collectionRefs.attendance, ...args), 'Asistente puntual añadido.', 'Error al añadir asistente');
+  const addJustifiedAbsence = (...args: Parameters<typeof actions.addJustifiedAbsenceAction>) => executeAction(actions.addJustifiedAbsenceAction(collectionRefs.attendance, ...args), 'Ausencia justificada.', 'Error al justificar ausencia');
+
+  const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
+    const person = state.people.find(p => p.id === personId);
+    if (!person) return;
+    executeAction(actions.addVacationPeriodAction(doc(collectionRefs.people, personId), person, startDate, endDate), 'Período de vacaciones añadido.', 'Error al añadir vacaciones');
   }
 
-  const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
-    const dateStr = formatDate(date, 'yyyy-MM-dd');
-    setAttendance(prev => {
-        const existingRecordIndex = prev.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
-        if (existingRecordIndex > -1) {
-            const updated = [...prev];
-            const record = updated[existingRecordIndex];
-            record.oneTimeAttendees = Array.from(new Set([...(record.oneTimeAttendees || []), personId]));
-            return updated;
-        }
-        return [...prev, { id: `att-${dateStr}-${sessionId}`, sessionId, date: dateStr, presentIds: [], absentIds: [], oneTimeAttendees: [personId] }];
-    });
-    showSuccessToast('Asistente puntual añadido.');
-  }
-  
-  const addJustifiedAbsence = (personId: string, sessionId: string, date: Date) => {
-    const dateStr = formatDate(date, 'yyyy-MM-dd');
-    setAttendance(prev => {
-        const existingRecordIndex = prev.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
-        if (existingRecordIndex > -1) {
-            const updated = [...prev];
-            const record = updated[existingRecordIndex];
-            record.justifiedAbsenceIds = Array.from(new Set([...(record.justifiedAbsenceIds || []), personId]));
-            return updated;
-        }
-        return [...prev, { id: `att-${dateStr}-${sessionId}`, sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [personId] }];
-    });
-    showSuccessToast('Ausencia justificada.');
-  }
-  
-  const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
-    setPeople(prev => prev.map(p => {
-      if (p.id === personId) {
-        const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
-        return { ...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation] };
-      }
-      return p;
-    }));
-    showSuccessToast('Período de vacaciones añadido.');
-  }
-  
   const removeVacationPeriod = (personId: string, vacationId: string) => {
-    setPeople(prev => prev.map(p => {
-      if (p.id === personId) {
-        return { ...p, vacationPeriods: (p.vacationPeriods || []).filter(v => v.id !== vacationId) };
-      }
-      return p;
-    }));
-    showSuccessToast('Período de vacaciones eliminado.');
+    const person = state.people.find(p => p.id === personId);
+    if (!person) return;
+    executeAction(actions.removeVacationPeriodAction(doc(collectionRefs.people, personId), person, vacationId), 'Período de vacaciones eliminado.', 'Error al eliminar vacaciones');
   }
 
   const addToWaitlist = (sessionId: string, personId: string) => {
-      setSessions(prev => prev.map(s => {
-          if (s.id === sessionId) {
-              return { ...s, waitlistPersonIds: Array.from(new Set([...(s.waitlistPersonIds || []), personId])) };
-          }
-          return s;
-      }));
-      showSuccessToast('Anotado en lista de espera.');
+    const session = state.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    executeAction(actions.addToWaitlistAction(doc(collectionRefs.sessions, sessionId), session, personId), 'Anotado en lista de espera.', 'Error en lista de espera');
   }
 
   const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
-      setSessions(prev => prev.map(s => {
-          if (s.id === sessionId) {
-              return { 
-                  ...s, 
-                  personIds: Array.from(new Set([...s.personIds, personId])),
-                  waitlistPersonIds: (s.waitlistPersonIds || []).filter(id => id !== personId)
-              };
-          }
-          return s;
-      }));
-      setNotifications(prev => prev.filter(n => n.id !== notificationId));
-      showSuccessToast('Inscrito desde lista de espera.');
-  }
-  const dismissNotification = (id: string) => {
-      setNotifications(prev => prev.filter(n => n.id !== id));
+    const session = state.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    executeAction(actions.enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, notificationId, sessionId, personId, session), 'Inscrito desde lista de espera.', 'Error al inscribir desde lista de espera');
   }
 
-  const addTariff = (data: Omit<Tariff, 'id'>) => {
-      setTariffs(prev => [...prev, { ...data, id: `tariff-${Date.now()}` }]);
-      showSuccessToast('Arancel añadido.');
-  }
-  const updateTariff = (data: Tariff) => {
-      setTariffs(prev => prev.map(t => t.id === data.id ? data : t));
-      showSuccessToast('Arancel actualizado.');
-  }
-  const deleteTariff = (id: string) => {
-      setTariffs(prev => prev.filter(t => t.id !== id));
-      showSuccessToast('Arancel eliminado.');
-  }
+  const dismissNotification = (notificationId: string) => executeAction(actions.deleteEntity(doc(collectionRefs.notifications, notificationId)), 'Notificación descartada.', 'Error al descartar notificación');
+
+  const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
+    if (!person.vacationPeriods) return false;
+    const checkDate = new Date(date.setHours(0, 0, 0, 0));
+    return person.vacationPeriods.some(period => {
+        const startDate = new Date(new Date(period.startDate).setHours(0, 0, 0, 0));
+        const endDate = new Date(new Date(period.endDate).setHours(23, 59, 59, 999));
+        return checkDate >= startDate && checkDate <= endDate;
+    });
+  }, []);
   
-  const addLevel = (data: Omit<Level, 'id'>) => {
-      setLevels(prev => [...prev, { ...data, id: `level-${Date.now()}` }]);
-      showSuccessToast('Nivel añadido.');
-  }
-  const updateLevel = (data: Level) => {
-      setLevels(prev => prev.map(l => l.id === data.id ? data : l));
-      showSuccessToast('Nivel actualizado.');
-  }
-  const deleteLevel = (id: string) => {
-      setLevels(prev => prev.filter(l => l.id !== id));
-      showSuccessToast('Nivel eliminado.');
-  }
-  
+  const contextValue: StudioContextType = {
+    ...state,
+    addActividad,
+    updateActividad,
+    deleteActividad,
+    addSpecialist,
+    updateSpecialist,
+    deleteSpecialist,
+    addPerson,
+    updatePerson,
+    deletePerson,
+    recordPayment,
+    undoLastPayment,
+    addSpace,
+    updateSpace,
+    deleteSpace,
+    addSession,
+    updateSession,
+    deleteSession,
+    enrollPersonInSessions,
+    enrollPeopleInClass,
+    saveAttendance,
+    addOneTimeAttendee,
+    addJustifiedAbsence,
+    addVacationPeriod,
+    removeVacationPeriod,
+    isPersonOnVacation,
+    addToWaitlist,
+    enrollFromWaitlist,
+    dismissNotification,
+    addTariff,
+    updateTariff,
+    deleteTariff,
+    addLevel,
+    updateLevel,
+    deleteLevel,
+    isTutorialOpen,
+    openTutorial,
+    closeTutorial
+  };
+
   return (
-    <StudioContext.Provider value={{ 
-        actividades, specialists, people, sessions, payments, spaces, attendance, notifications, tariffs, levels,
-        isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, 
-        addActividad, updateActividad, deleteActividad,
-        addSpecialist, updateSpecialist, deleteSpecialist,
-        addPerson, updatePerson, deletePerson,
-        recordPayment, undoLastPayment,
-        addSpace, updateSpace, deleteSpace,
-        addSession, updateSession, deleteSession,
-        enrollPeopleInClass, enrollPersonInSessions,
-        saveAttendance, addOneTimeAttendee, addJustifiedAbsence,
-        addVacationPeriod, removeVacationPeriod,
-        addToWaitlist, enrollFromWaitlist, dismissNotification,
-        addTariff, updateTariff, deleteTariff,
-        addLevel, updateLevel, deleteLevel,
-    }}>
+    <StudioContext.Provider value={contextValue}>
       {children}
     </StudioContext.Provider>
   );
