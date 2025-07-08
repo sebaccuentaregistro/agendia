@@ -144,5 +144,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     // This is a fallback for any unexpected state, though it shouldn't be reached
     // with the logic above.
-    return <FullscreenLoader />;
+    return <ErrorShell 
+        title="Estado Inesperado" 
+        description="La aplicación se encuentra en un estado inesperado. Por favor, intenta cerrar sesión y volver a ingresar."
+    />;
 }
