@@ -2,6 +2,10 @@
 # ADVERTENCIA: Este script borrará permanentemente todos los cambios locales que no estén en GitHub.
 # Úsalo para restaurar el proyecto a un estado limpio desde el repositorio.
 
+echo ">>> PASO CLAVE: Eliminando la carpeta 'workspace' para evitar conflictos de compilación..."
+# Este paso es crucial y está documentado en el README del proyecto.
+rm -rf workspace/
+
 echo ">>> Paso 1: Obteniendo la última versión de tu código desde GitHub..."
 git fetch --all
 
@@ -10,10 +14,10 @@ echo ">>> Paso 2: Forzando la restauración de tus archivos a la versión de Git
 git reset --hard origin/main
 
 echo ">>> Paso 3: Limpiando cualquier archivo extra o basura que se haya creado..."
-# Esto elimina cualquier archivo que no esté en tu repositorio de GitHub.
+# Esto elimina cualquier archivo que no esté en tu repositorio de GitHub, incluido el .next corrupto.
 git clean -dfx
 
 echo ""
 echo "✅✅✅ ¡Restauración Completa! ✅✅✅"
 echo "Tu proyecto ha sido restaurado a la versión de GitHub."
-echo "Es posible que necesites recargar la página o reiniciar el servidor si sigue en ejecución."
+echo "El entorno debería reinstalar las dependencias y reconstruir la aplicación automáticamente. Por favor, recarga la página en unos momentos."
