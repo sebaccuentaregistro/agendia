@@ -77,13 +77,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (loading) return;
 
+        // If user is logged in, they should not be on a public route.
         if (user && isPublicRoute) {
             router.push('/dashboard');
         }
+        // If user is not logged in, they must be on a public route.
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
-    }, [user, isPublicRoute, loading, router]);
+    }, [user, isPublicRoute, loading, router, pathname]);
 
     // This block handles what to render based on the current state.
     if (loading) {
@@ -92,7 +94,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     if (!user) {
         // If not logged in, only render public routes.
-        // For private routes, the useEffect is redirecting, so we show a loader.
+        // For private routes, the useEffect is redirecting, so we show a loader to avoid flicker.
         return isPublicRoute ? <>{children}</> : <FullscreenLoader />;
     }
     
@@ -106,6 +108,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     // Now we are on a private route and the user is logged in.
     // We can safely check the profile.
     if (!userProfile) {
+        // This is the CRITICAL case. Logged in, but profile is missing.
         return (
             <ErrorShell 
                 title="Error de Perfil de Usuario"
