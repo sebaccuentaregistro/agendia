@@ -30,7 +30,7 @@ function FullscreenLoader() {
     );
 }
 
-function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
+function ErrorShell({ title, description }: { title: string, description: string }) {
     const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
@@ -41,7 +41,6 @@ function ErrorShell({ title, description, children }: { title: string, descripti
                 <Button variant="outline" onClick={logout} className="mt-4">
                     Cerrar Sesión
                 </Button>
-                 {children}
             </div>
         </div>
     );
@@ -82,12 +81,18 @@ export function AppShell({ children }: { children: ReactNode }) {
         if (isPublicRoute) {
             return <>{children}</>;
         }
-        router.push('/login');
+        if (typeof window !== 'undefined') {
+            router.push('/login');
+        }
         return <FullscreenLoader />;
     }
     
+    // From here, user is authenticated
+    
     if (isPublicRoute) {
-        router.push('/dashboard');
+        if (typeof window !== 'undefined') {
+            router.push('/dashboard');
+        }
         return <FullscreenLoader />;
     }
 
@@ -95,7 +100,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         return (
             <ErrorShell 
                 title="Error de Perfil de Usuario"
-                description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil de datos. Esto puede ocurrir si el registro inicial no se completó correctamente. Por favor, intenta cerrar sesión y volver a registrarte."
+                description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil de datos. Esto puede ocurrir si el registro inicial no se completó correctamente. Por favor, cierra sesión y vuelve a registrarte."
             />
         );
     }
