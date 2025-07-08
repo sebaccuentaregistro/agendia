@@ -2,20 +2,12 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { type ReactNode, useEffect, useState } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 import { AlertTriangle, Clock } from 'lucide-react';
 import { Button } from '../ui/button';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-
-interface AppUserProfile {
-  email: string;
-  status: 'pending' | 'active';
-  instituteId: string | null;
-}
 
 function FullscreenLoader() {
     return (
@@ -73,115 +65,83 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, loading: authLoading } = useAuth();
+    const { user, userProfile, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
-    const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
-    const [profileLoading, setProfileLoading] = useState(true);
-
     const publicRoutes = ['/login', '/signup', '/terms'];
     const isPublicRoute = publicRoutes.includes(pathname);
+    const instituteId = userProfile?.instituteId;
 
-    // Effect for fetching user profile
     useEffect(() => {
-        if (authLoading) return; // Wait for auth state to be resolved
-        if (!user) {
-            setProfileLoading(false); // No user, no profile to load
-            return;
-        }
-
-        let isMounted = true;
-        const fetchProfile = async () => {
-            setProfileLoading(true);
-            try {
-                const userDocRef = doc(db, 'users', user.uid);
-                const docSnap = await getDoc(userDocRef);
-                if (isMounted) {
-                    if (docSnap.exists()) {
-                        setUserProfile(docSnap.data() as AppUserProfile);
-                    } else {
-                        setUserProfile(null); // Explicitly set to null if not found
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to fetch user profile:", error);
-                if (isMounted) {
-                    setUserProfile(null);
-                }
-            } finally {
-                if (isMounted) {
-                    setProfileLoading(false);
-                }
-            }
-        };
-
-        fetchProfile();
-
-        return () => {
-            isMounted = false;
-        };
-    }, [user, authLoading]);
-    
-    // Effect for routing
-    useEffect(() => {
-        if (authLoading) return; // Don't route until we know the auth state
+        // This effect handles routing based on auth state.
+        // It waits until the initial loading is complete.
+        if (loading) return;
 
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
+        
         if (user && isPublicRoute) {
             router.push('/dashboard');
         }
-    }, [user, authLoading, isPublicRoute, router, pathname]);
+    }, [user, loading, isPublicRoute, router, pathname]);
 
-    // ---- Render logic ----
-    
-    // Show loader while auth state or profile is loading on a protected route
-    if (authLoading || (user && profileLoading && !isPublicRoute)) {
+    if (loading) {
         return <FullscreenLoader />;
     }
 
-    // Unauthenticated user on a public route
-    if (!user && isPublicRoute) {
+    if (isPublicRoute) {
+        // If we are on a public route and not loading, show the content.
+        // This covers the case where the user is not logged in.
+        // The routing effect will redirect logged-in users away from here.
         return <>{children}</>;
     }
+    
+    // From here on, we are on a protected route and not loading.
+    // We must have a user object to be on a protected route (due to the routing effect).
+    if (!user) {
+        // This is a fallback, the routing effect should prevent this.
+        return <FullscreenLoader />;
+    }
 
-    // Authenticated user, but on a protected route. Now we check the profile.
-    if (user && !isPublicRoute) {
-        if (!userProfile) {
-            return <ErrorShell
+    // Now check the user's profile status.
+    if (!userProfile) {
+        return (
+            <ErrorShell
                 title="Error de Perfil de Usuario"
                 description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil. Esto puede ocurrir si el registro inicial no se completó. Por favor, cierra sesión y contacta a soporte."
-            />;
-        }
-        
-        if (userProfile.status === 'pending') {
-            return <PendingApprovalShell />;
-        }
-
-        if (userProfile.status === 'active' && !userProfile.instituteId) {
-            return <ErrorShell 
-                title="Cuenta no Asignada"
-                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-            />;
-        }
-
-        if (userProfile.status === 'active' && userProfile.instituteId) {
-            return (
-                <StudioProvider instituteId={userProfile.instituteId}>
-                    <div className="flex min-h-screen w-full flex-col">
-                        <AppHeader />
-                        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
-                            {children}
-                        </main>
-                        <MobileBottomNav />
-                    </div>
-                </StudioProvider>
-            );
-        }
+            />
+        );
     }
     
-    // Fallback loader for any other state (e.g., redirecting)
+    if (userProfile.status === 'pending') {
+        return <PendingApprovalShell />;
+    }
+
+    if (userProfile.status === 'active' && !instituteId) {
+        return (
+            <ErrorShell 
+                title="Cuenta no Asignada"
+                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+            />
+        );
+    }
+    
+    if (userProfile.status === 'active' && instituteId) {
+        return (
+            <StudioProvider instituteId={instituteId}>
+                <div className="flex min-h-screen w-full flex-col">
+                    <AppHeader />
+                    <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+                        {children}
+                    </main>
+                    <MobileBottomNav />
+                </div>
+            </StudioProvider>
+        );
+    }
+
+    // Fallback for any unhandled state.
     return <FullscreenLoader />;
 }

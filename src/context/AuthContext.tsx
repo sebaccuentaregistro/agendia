@@ -4,14 +4,20 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doLogout, doLoginWithEmailAndPassword, doSignupWithEmailAndPassword, type SignupCredentials } from '@/lib/firebase-auth';
-import { doc, setDoc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, collection, writeBatch, getDoc, DocumentData } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
-// This context will ONLY handle the user's authentication state (the raw Firebase user object).
-// Profile data will be handled separately in AppShell to avoid race conditions.
+// This context will now manage both the raw Firebase user and their associated application profile.
+
+interface AppUserProfile {
+  email: string;
+  status: 'pending' | 'active';
+  instituteId: string | null;
+}
 
 interface AuthContextType {
   user: User | null;
+  userProfile: AppUserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (credentials: SignupCredentials) => Promise<void>;
@@ -22,6 +28,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<AppUserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -54,33 +61,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     toast({ variant: 'destructive', title, description });
   };
 
-
   useEffect(() => {
-    // This listener only cares about the user object from Firebase Auth.
-    // It sets the loading state to false once the initial check is complete.
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        // User is signed in, fetch their profile from Firestore.
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        try {
+          const docSnap = await getDoc(userDocRef);
+          if (docSnap.exists()) {
+            setUserProfile(docSnap.data() as AppUserProfile);
+          } else {
+            // This case can happen if the user document creation failed during signup.
+            console.error("User profile document not found in Firestore for UID:", currentUser.uid);
+            setUserProfile(null);
+          }
+        } catch (error) {
+          console.error("Error fetching user profile:", error);
+          setUserProfile(null);
+          toast({ variant: 'destructive', title: 'Error de Perfil', description: 'No pudimos cargar tu perfil de usuario.' });
+        }
+      } else {
+        // User is signed out.
+        setUserProfile(null);
+      }
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const login = async (email: string, password: string) => {
+    setLoading(true);
     const result = await doLoginWithEmailAndPassword(email, password);
     if (result.error) {
       handleAuthError(result.error, 'login');
+      setLoading(false);
     }
+    // The onAuthStateChanged listener will handle success state changes.
   };
 
   const signup = async (credentials: SignupCredentials) => {
+    setLoading(true);
     const result = await doSignupWithEmailAndPassword(credentials);
     if (result.success && result.userCredential?.user) {
       const user = result.userCredential.user;
       const batch = writeBatch(db);
       const newInstituteRef = doc(collection(db, 'institutes'));
       batch.set(newInstituteRef, {
-        name: 'Agendia',
+        name: 'Mi Estudio',
         ownerId: user.uid,
         createdAt: serverTimestamp(),
       });
@@ -106,15 +135,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else if (result.error) {
       handleAuthError(result.error, 'signup');
     }
+    setLoading(false); // The onAuthStateChanged listener will also fire, but this provides quicker feedback.
   };
 
-
   const logout = async () => {
+    setLoading(true);
     await doLogout();
+    // The onAuthStateChanged listener will set user and profile to null and loading to false.
   };
 
   const value = {
     user,
+    userProfile,
     loading,
     login,
     signup,
