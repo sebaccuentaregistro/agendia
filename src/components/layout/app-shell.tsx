@@ -96,7 +96,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         return isPublicRoute ? <>{children}</> : <FullscreenLoader />;
     }
 
-    // 3. If user IS authenticated, but profile is missing.
+    // 3. If user IS authenticated, but profile is missing. THIS IS THE KEY FIX.
     if (!userProfile) {
         return (
             <ErrorShell 
