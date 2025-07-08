@@ -6,8 +6,6 @@ import { Poppins } from 'next/font/google';
 import { cn } from '@/lib/utils';
 import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
-import { AppShell } from '@/components/layout/app-shell';
-import { AuthProvider } from '@/context/AuthContext';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -15,6 +13,7 @@ const poppins = Poppins({
   variable: '--font-poppins',
 });
 
+// This is a temporary layout for stabilization
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="es" suppressHydrationWarning>
@@ -25,10 +24,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         )}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-          </AuthProvider>
-          <Toaster />
+            {children}
+            <Toaster />
         </ThemeProvider>
       </body>
     </html>
