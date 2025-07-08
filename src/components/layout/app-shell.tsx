@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { type ReactNode } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
@@ -38,7 +38,7 @@ function ErrorShell({ title, description }: { title: string, description: string
                 <AlertTriangle className="h-12 w-12 text-destructive" />
                 <h1 className="text-2xl font-bold text-destructive">{title}</h1>
                 <p className="max-w-md text-muted-foreground">{description}</p>
-                <Button variant="outline" onClick={logout} className="mt-4">
+                 <Button variant="outline" onClick={logout} className="mt-4">
                     Cerrar Sesión
                 </Button>
             </div>
@@ -71,71 +71,72 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     const publicRoutes = ['/login', '/signup', '/terms'];
     const isPublicRoute = publicRoutes.includes(pathname);
-    const instituteId = userProfile?.instituteId;
 
+    useEffect(() => {
+        // This effect ONLY handles routing, not rendering decisions.
+        if (loading) return;
+
+        if (!user && !isPublicRoute) {
+            router.push('/login');
+        }
+        if (user && isPublicRoute) {
+            router.push('/dashboard');
+        }
+    }, [user, loading, isPublicRoute, router]);
+
+    // Render logic based on current state
     if (loading) {
         return <FullscreenLoader />;
     }
 
     if (!user) {
-        if (isPublicRoute) {
-            return <>{children}</>;
-        }
-        if (typeof window !== 'undefined') {
-            router.push('/login');
-        }
-        return <FullscreenLoader />;
-    }
-    
-    // From here, user is authenticated
-    
-    if (isPublicRoute) {
-        if (typeof window !== 'undefined') {
-            router.push('/dashboard');
-        }
-        return <FullscreenLoader />;
+        // If no user, only render public routes. Otherwise, loader will show while redirecting.
+        return isPublicRoute ? <>{children}</> : <FullscreenLoader />;
     }
 
+    // User is authenticated.
+    if (isPublicRoute) {
+        // User is on a public route, show loader while redirecting to dashboard.
+        return <FullscreenLoader />;
+    }
+    
+    // User is on a protected route.
     if (!userProfile) {
+        // This is the critical missing case. User exists, but profile doesn't.
+        return <ErrorShell
+            title="Error de Perfil de Usuario"
+            description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil. Esto puede ocurrir si el registro inicial no se completó. Por favor, cierra sesión y contacta a soporte."
+        />;
+    }
+
+    if (userProfile.status === 'pending') {
+        return <PendingApprovalShell />;
+    }
+
+    if (userProfile.status === 'active' && !userProfile.instituteId) {
+        return <ErrorShell 
+            title="Cuenta no Asignada"
+            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+        />;
+    }
+
+    if (userProfile.status === 'active' && userProfile.instituteId) {
         return (
-            <ErrorShell 
-                title="Error de Perfil de Usuario"
-                description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil de datos. Esto puede ocurrir si el registro inicial no se completó correctamente. Por favor, cierra sesión y vuelve a registrarte."
-            />
+            <StudioProvider instituteId={userProfile.instituteId}>
+                <div className="flex min-h-screen w-full flex-col">
+                    <AppHeader />
+                    <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+                        {children}
+                    </main>
+                    <MobileBottomNav />
+                </div>
+            </StudioProvider>
         );
     }
-
-    switch (userProfile.status) {
-        case 'pending':
-            return <PendingApprovalShell />;
-        
-        case 'active':
-            if (!instituteId) {
-                return (
-                    <ErrorShell 
-                        title="Cuenta no Asignada"
-                        description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso."
-                    />
-                );
-            }
-            return (
-                <StudioProvider instituteId={instituteId}>
-                    <div className="flex min-h-screen w-full flex-col">
-                        <AppHeader />
-                        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
-                            {children}
-                        </main>
-                        <MobileBottomNav />
-                    </div>
-                </StudioProvider>
-            );
-
-        default:
-            return (
-                 <ErrorShell 
-                    title="Estado de Cuenta Desconocido"
-                    description="No podemos determinar el estado de tu cuenta. Por favor, contacta al administrador."
-                />
-            );
-    }
+    
+    // Fallback for any other unexpected state
+    return <ErrorShell 
+        title="Estado de Cuenta Desconocido"
+        description="No podemos determinar el estado de tu cuenta. Por favor, contacta al administrador."
+    />;
 }
