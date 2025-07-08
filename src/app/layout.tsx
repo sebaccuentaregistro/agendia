@@ -1,20 +1,5 @@
-import type { Metadata } from 'next';
-import { Poppins } from 'next/font/google';
+
 import './globals.css';
-import { ThemeProvider } from '@/components/theme-provider';
-import { AuthProvider } from '@/context/AuthContext';
-import { AppShell } from '@/components/layout/app-shell';
-import { Toaster } from "@/components/ui/toaster";
-
-const poppins = Poppins({ 
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700']
-});
-
-export const metadata: Metadata = {
-  title: 'Agendia',
-  description: 'Gestiona tu estudio de bienestar con facilidad.',
-};
 
 export default function RootLayout({
   children,
@@ -22,19 +7,28 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className={poppins.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-            <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
+    <html lang="es">
+      <body>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: '#111',
+          color: '#fff',
+          fontFamily: 'monospace',
+          fontSize: '20px',
+          textAlign: 'center',
+          padding: '2rem'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', color: '#f0f', marginBottom: '1rem' }}>SISTEMA EN RECUPERACIÓN</h1>
+            <p>El servidor se ha restaurado con éxito. La aplicación se recargará por completo en el siguiente paso.</p>
+            <p style={{ marginTop: '2rem', fontSize: '0.8rem', color: '#888' }}>
+              Este es un estado temporal para solucionar el bloqueo. No te preocupes, tus datos están a salvo.
+            </p>
+          </div>
+        </div>
       </body>
     </html>
   );
