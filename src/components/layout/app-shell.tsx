@@ -1,22 +1,141 @@
-import { Heart } from 'lucide-react';
-import type { ReactNode } from 'react';
+'use client';
 
-export function AppShell({ children }: { children: ReactNode }) {
+import { useAuth } from '@/context/AuthContext';
+import { usePathname, useRouter } from 'next/navigation';
+import { useEffect, type ReactNode } from 'react';
+import { AppHeader } from './app-header';
+import { MobileBottomNav } from './mobile-bottom-nav';
+import { StudioProvider } from '@/context/StudioContext';
+import { AlertTriangle, Clock } from 'lucide-react';
+import { Button } from '../ui/button';
+
+function FullscreenLoader() {
     return (
-        <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-red-100 via-orange-200 to-yellow-200 dark:from-slate-900 dark:via-red-950 dark:to-orange-950 p-4 text-center">
-            <div className="rounded-2xl bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl shadow-lg border border-white/20 p-8 max-w-lg">
-                <Heart className="mx-auto h-12 w-12 text-destructive mb-4" />
-                <h1 className="text-xl font-bold text-destructive">Modo de Recuperación de Emergencia</h1>
-                 <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mt-4">Agendia</h2>
-                <p className="mt-2 text-slate-600 dark:text-slate-300">
-                    La autenticación ha sido desactivada forzosamente para devolver el control de la web. Mis disculpas por los fallos anteriores. La aplicación está ahora en un estado estable.
-                </p>
-                <p className="mt-4 font-semibold text-slate-700 dark:text-slate-200">
-                    Por favor, avísame que ves esta pantalla para proceder con la solución definitiva.
-                </p>
-            </div>
-             {/* We render children so Next.js doesn't throw a 404, but we hide it. */}
-             <div style={{ display: 'none' }}>{children}</div>
+        <div className="flex h-screen w-screen items-center justify-center bg-background">
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="48"
+                height="48"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="animate-spin text-primary"
+            >
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
         </div>
     );
+}
+
+function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
+    return (
+        <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
+            <div className="flex flex-col items-center gap-4 text-center">
+                <AlertTriangle className="h-12 w-12 text-destructive" />
+                <h1 className="text-2xl font-bold text-destructive">{title}</h1>
+                <p className="max-w-md text-muted-foreground">{description}</p>
+                 {children}
+            </div>
+        </div>
+    );
+}
+
+function PendingApprovalShell() {
+    const { logout } = useAuth();
+    return (
+        <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
+            <div className="flex flex-col items-center gap-4 text-center">
+                <Clock className="h-12 w-12 text-primary" />
+                <h1 className="text-2xl font-bold text-primary">Cuenta Pendiente de Aprobación</h1>
+                <p className="max-w-md text-muted-foreground">
+                    Gracias por registrarte. Tu cuenta está siendo revisada por un administrador. Recibirás una notificación cuando sea aprobada.
+                </p>
+                <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
+            </div>
+        </div>
+    );
+}
+
+
+export function AppShell({ children }: { children: ReactNode }) {
+    const { user, userProfile, loading, logout } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
+
+    const publicRoutes = ['/login', '/signup', '/terms'];
+    const isPublicRoute = publicRoutes.includes(pathname);
+    const instituteId = userProfile?.instituteId;
+
+    useEffect(() => {
+        if (loading) return;
+
+        if (!user && !isPublicRoute) {
+            router.push('/login');
+        }
+
+        if (user && isPublicRoute) {
+            if (userProfile?.status === 'active' && instituteId) {
+                router.push('/dashboard');
+            }
+        }
+    }, [user, userProfile, loading, router, pathname, isPublicRoute, instituteId]);
+
+
+    // === RENDER LOGIC ===
+    if (loading) {
+        return <FullscreenLoader />;
+    }
+
+    if (!user && isPublicRoute) {
+        return <>{children}</>;
+    }
+    
+    if (user) {
+        if (!userProfile) {
+            return <ErrorShell 
+                title="Error Crítico del Perfil"
+                description="Tu usuario está autenticado, pero no hemos podido encontrar tu perfil en la base de datos. Esto puede ser un problema temporal o de configuración."
+            >
+                <Button variant="destructive" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
+            </ErrorShell>;
+        }
+
+        if (userProfile.status === 'pending') {
+            return <PendingApprovalShell />;
+        }
+
+        if (userProfile.status === 'active' && !instituteId) {
+            return <ErrorShell 
+                title="Cuenta no Asignada"
+                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador." 
+            >
+                 <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
+            </ErrorShell>;
+        }
+
+        if (userProfile.status === 'active' && instituteId && !isPublicRoute) {
+             return (
+                <StudioProvider instituteId={instituteId}>
+                    <div className="flex min-h-screen w-full flex-col">
+                        <AppHeader />
+                        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+                            {children}
+                        </main>
+                        <MobileBottomNav />
+                    </div>
+                </StudioProvider>
+            );
+        }
+    }
+    
+    return <FullscreenLoader />;
 }
