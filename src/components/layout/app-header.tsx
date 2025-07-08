@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -94,4 +93,3 @@ export function AppHeader() {
     </header>
   );
 }
-    
