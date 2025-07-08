@@ -55,7 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             break;
         default:
              console.error(`Unhandled Auth Error (${action}):`, error.code, error.message);
-             // The generic description defined above will be used.
              break;
     }
     toast({ variant: 'destructive', title, description });
@@ -64,24 +63,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        try {
+      try {
+        setUser(currentUser);
+        if (currentUser) {
+          const userDocRef = doc(db, 'users', currentUser.uid);
           const docSnap = await getDoc(userDocRef);
           if (docSnap.exists()) {
             setUserProfile(docSnap.data() as AppUserProfile);
           } else {
+            // User is authenticated in Firebase Auth, but has no profile document in Firestore.
             setUserProfile(null);
           }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
+        } else {
+          // User is logged out.
           setUserProfile(null);
-        } finally {
-          setLoading(false);
         }
-      } else {
+      } catch (error) {
+        console.error("Critical error in onAuthStateChanged:", error);
+        // If something fails catastrophically, reset to a clean, logged-out state.
+        setUser(null);
         setUserProfile(null);
+      } finally {
+        // This is crucial: guarantee that the loading state is always turned off.
         setLoading(false);
       }
     });
