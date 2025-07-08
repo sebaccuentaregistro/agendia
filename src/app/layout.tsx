@@ -1,10 +1,20 @@
-
 import type { Metadata } from 'next';
+import { Poppins } from 'next/font/google';
 import './globals.css';
+import { ThemeProvider } from '@/components/theme-provider';
+import { AuthProvider } from '@/context/AuthContext';
+import { AppShell } from '@/components/layout/app-shell';
+import { Toaster } from '@/components/ui/toaster';
+
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins',
+});
 
 export const metadata: Metadata = {
-  title: 'Agendia - Modo de Recuperación',
-  description: 'Aplicación en modo de recuperación.',
+  title: 'Agendia',
+  description: 'Gestión para tu estudio de bienestar.',
 };
 
 export default function RootLayout({
@@ -13,24 +23,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh', 
-          fontFamily: 'sans-serif', 
-          textAlign: 'center',
-          backgroundColor: '#f0f2f5'
-        }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', color: '#172b4d' }}>Aplicación en modo de recuperación.</h1>
-            <p style={{ fontSize: '1.1rem', color: '#5e6c84' }}>Por favor, confirma que puedes ver este mensaje. La web volverá en el siguiente paso.</p>
-            {/* Ocultamos el contenido problemático temporalmente */}
-            <div style={{ display: 'none' }}>{children}</div>
-          </div>
-        </div>
+    <html lang="es" suppressHydrationWarning>
+      <body className={poppins.className}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <AppShell>{children}</AppShell>
+            <Toaster />
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
