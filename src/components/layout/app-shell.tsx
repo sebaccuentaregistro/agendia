@@ -66,63 +66,73 @@ export function AppShell({ children }: { children: ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
-    const publicRoutes = ['/login', '/signup', '/terms'];
-    const instituteId = userProfile?.instituteId;
+    const isPublicRoute = ['/login', '/signup', '/terms'].some(route => pathname.startsWith(route));
 
+    // --- Redirection Logic ---
     useEffect(() => {
-        if (loading) return;
-        const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+        if (loading) return; 
+
+        if (user && userProfile?.status === 'active' && userProfile.instituteId && isPublicRoute) {
+            router.push('/dashboard');
+        }
 
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
+    }, [user, userProfile, loading, router, pathname, isPublicRoute]);
 
-        if (user && isPublicRoute) {
-            if (userProfile?.status === 'active' && instituteId) {
-                router.push('/dashboard');
-            }
-        }
-    }, [user, userProfile, loading, router, pathname, instituteId]);
 
+    // --- Rendering Logic ---
+
+    // 1. Still loading auth state
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
-
+    // 2. Not logged in, on a public route (e.g., /login) -> Show the page
     if (!user && isPublicRoute) {
         return <>{children}</>;
     }
-    
-    if (user && !userProfile) {
-        return <ErrorShell
-            title="Error de Perfil de Usuario"
-            description="Hemos podido autenticarte, pero no encontramos los datos de tu perfil. Esto puede deberse a un problema durante el registro. Por favor, cierra sesión y contacta a soporte."
-        >
-            <Button onClick={logout} className="mt-4">
-                Cerrar Sesión
-            </Button>
-        </ErrorShell>
-    }
 
+    // --- From here, we handle all states for a logged-in user ---
+
+    // 3. Logged in, but profile is missing. THIS IS THE CRITICAL ERROR CASE.
+    if (user && !userProfile) {
+        return (
+            <ErrorShell 
+                title="Error de Perfil de Usuario"
+                description="Hemos podido autenticarte, pero no encontramos los datos de tu perfil. Esto puede deberse a un problema durante el registro. Por favor, cierra sesión y contacta a soporte."
+            >
+                <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
+            </ErrorShell>
+        );
+    }
+    
+    // 4. Logged in, profile exists, but status is pending.
     if (user && userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
-
-    if (user && userProfile?.status === 'active' && !instituteId) {
-        return <ErrorShell 
-            title="Cuenta no activada"
-            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-        >
-             <Button onClick={logout} className="mt-4">
-                Cerrar Sesión
-            </Button>
-        </ErrorShell>;
+    
+    // 5. Logged in, profile active, but no institute assigned.
+    if (user && userProfile?.status === 'active' && !userProfile.instituteId) {
+        return (
+            <ErrorShell 
+                title="Cuenta no activada"
+                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+            >
+                <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
+            </ErrorShell>
+        );
     }
     
-    if (user && instituteId && !isPublicRoute) {
+    // 6. The "golden path": User logged in, profile active, institute assigned, on a protected route.
+    if (user && userProfile?.status === 'active' && userProfile.instituteId && !isPublicRoute) {
         return (
-            <StudioProvider instituteId={instituteId}>
+            <StudioProvider instituteId={userProfile.instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
                     <AppHeader />
                     <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
@@ -134,6 +144,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
     
-    // Fallback loader for all other cases (e.g., redirecting from /login to /dashboard)
+    // 7. Fallback loader for any other transient state (e.g., during redirects).
     return <FullscreenLoader />;
 }
