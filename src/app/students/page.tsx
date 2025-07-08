@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, HeartPulse, StickyNote } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -264,6 +264,20 @@ function PersonCard({ person, recoveryBalance, onManageVacations }: { person: Pe
                         {level && <Badge variant="outline">{level.name}</Badge>}
                         {recoveryBalance > 0 && <Badge variant="outline" className="border-yellow-500 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10"><CalendarClock className="mr-1.5 h-3 w-3"/>{recoveryBalance} recupero(s)</Badge>}
                     </div>
+                     {(person.healthInfo || person.notes) && <div className="space-y-2 pt-2 border-t border-white/20 mt-3">
+                        {person.healthInfo && (
+                            <div className="flex items-start gap-2.5 text-amber-700 dark:text-amber-400">
+                                <HeartPulse className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                <p className="text-xs">{person.healthInfo}</p>
+                            </div>
+                        )}
+                        {person.notes && (
+                            <div className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400">
+                                <StickyNote className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                                <p className="text-xs">{person.notes}</p>
+                            </div>
+                        )}
+                    </div>}
                 </CardContent>
                 <CardFooter className="p-4 pt-0">
                      <Badge variant={paymentStatus === 'Al día' ? 'default' : 'destructive'} className={cn(paymentStatus === 'Al día' && 'bg-green-600 hover:bg-green-700')}>
