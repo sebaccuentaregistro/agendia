@@ -62,7 +62,7 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, userProfile, loading } = useAuth();
+    const { user, userProfile, loading, logout } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -73,49 +73,88 @@ export function AppShell({ children }: { children: ReactNode }) {
         if (loading) return;
         const isPublicRoute = publicRoutes.includes(pathname);
 
+        // Redirect to login if not authenticated and on a private route
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
 
-        if (user && isPublicRoute) {
-            if (userProfile?.status === 'active' && instituteId) {
-                router.push('/dashboard');
-            }
+        // Redirect to dashboard if authenticated, profile is OK, and on a public route
+        if (user && userProfile?.status === 'active' && instituteId && isPublicRoute) {
+            router.push('/dashboard');
         }
     }, [user, userProfile, loading, router, pathname, instituteId]);
 
+    // 1. Loading state
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    if (user && userProfile?.status === 'pending') {
-        return <PendingApprovalShell />;
+    // 2. Not Logged In
+    if (!user) {
+        // The useEffect will handle redirect from private routes.
+        // If we are on a public route, show the page content.
+        if (publicRoutes.includes(pathname)) {
+             return <>{children}</>;
+        }
+        // Otherwise, show loader while redirecting.
+        return <FullscreenLoader />;
     }
 
-    if (user && userProfile?.status === 'active' && !instituteId) {
-        return <ErrorShell 
-            title="Cuenta no activada"
-            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-        />;
-    }
-
-    if (!user && publicRoutes.includes(pathname)) {
-        return <>{children}</>;
-    }
-
-    if (user && instituteId && !publicRoutes.includes(pathname)) {
+    // 3. Logged In (user is not null)
+    // Profile is missing
+    if (!userProfile) {
         return (
-            <StudioProvider instituteId={instituteId}>
-                <div className="flex min-h-screen w-full flex-col">
-                    <AppHeader />
-                    <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
-                        {children}
-                    </main>
-                    <MobileBottomNav />
-                </div>
-            </StudioProvider>
+            <ErrorShell 
+                title="Error de Perfil"
+                description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil en la base de datos. Por favor, contacta a soporte o intenta cerrar sesión y volver a registrarte."
+            >
+                <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
+            </ErrorShell>
         );
     }
     
+    // Profile is pending
+    if (userProfile.status === 'pending') {
+        return <PendingApprovalShell />;
+    }
+
+    // Profile is active but no institute
+    if (userProfile.status === 'active' && !instituteId) {
+        return (
+             <ErrorShell 
+                title="Cuenta no activada"
+                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso."
+            >
+                 <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
+            </ErrorShell>
+        );
+    }
+
+    // Profile is active and OK
+    if (userProfile.status === 'active' && instituteId) {
+        // The useEffect will handle redirect from public routes.
+        // If we are on a private route, show the app content.
+        if (!publicRoutes.includes(pathname)) {
+            return (
+                <StudioProvider instituteId={instituteId}>
+                    <div className="flex min-h-screen w-full flex-col">
+                        <AppHeader />
+                        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+                            {children}
+                        </main>
+                        <MobileBottomNav />
+                    </div>
+                </StudioProvider>
+            );
+        }
+        // Otherwise, show loader while redirecting.
+        return <FullscreenLoader />;
+    }
+
+    // Fallback for any unhandled state (should not be reached)
     return <FullscreenLoader />;
 }
