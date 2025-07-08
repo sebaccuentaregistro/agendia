@@ -72,29 +72,41 @@ export function AppShell({ children }: { children: ReactNode }) {
     const isPublicRoute = publicRoutes.includes(pathname);
 
     useEffect(() => {
-        if (loading) return;
+        // Don't do anything until the auth state is fully resolved.
+        if (loading) {
+            return;
+        }
 
+        // If not logged in and trying to access a protected route, redirect to login.
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
 
+        // If logged in and on a public route, redirect to the dashboard.
         if (user && isPublicRoute) {
             router.push('/dashboard');
         }
-    }, [user, loading, isPublicRoute, router]);
-    
+
+    }, [user, loading, isPublicRoute, pathname, router]);
+
+    // Now, handle the RENDERING based on the current state, without redirection logic.
     if (loading) {
         return <FullscreenLoader />;
     }
 
+    // If we're on a public route, let it render. 
+    // The useEffect will handle redirecting away if the user is logged in.
     if (isPublicRoute) {
         return <>{children}</>;
     }
-    
+
+    // If we reach here, we are on a PROTECTED route.
+    // If there's no user, the useEffect is redirecting them, so show a loader.
     if (!user) {
         return <FullscreenLoader />;
     }
     
+    // User exists, check profile status.
     if (userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
@@ -105,7 +117,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
         />;
     }
-
+    
     if (userProfile?.status === 'active' && userProfile.instituteId) {
         return (
             <StudioProvider instituteId={userProfile.instituteId}>
@@ -119,11 +131,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             </StudioProvider>
         );
     }
-
-    return (
-      <ErrorShell
-        title="Error de Perfil de Usuario"
-        description="No pudimos cargar los detalles de tu cuenta. Por favor, intenta cerrar sesión y volver a ingresar. Si el problema persiste, contacta al soporte."
-      />
-    );
+    
+    // This is the fallback for when `user` exists but `userProfile` is not yet loaded or invalid.
+    // Instead of an error, let's just show the loader. This is a more graceful "in-between" state.
+    return <FullscreenLoader />;
 }
