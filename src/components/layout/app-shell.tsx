@@ -89,58 +89,65 @@ export function AppShell({ children }: { children: ReactNode }) {
         }
     }, [user, userProfile, loading, router, pathname, isPublicRoute, instituteId]);
 
+    // This block handles what to RENDER based on the current state.
+    // It is a clear, sequential check to prevent race conditions.
+
+    // 1. Initial Loading State: covers both auth check and profile fetch.
     if (loading) {
         return <FullscreenLoader />;
     }
-    
-    // Public pages are accessible if user is not logged in
-    if (!user && isPublicRoute) {
-        return <>{children}</>;
-    }
 
-    // If user is logged in, we check their state
-    if (user) {
-        // If they are on a public page but logged in, useEffect will redirect them.
-        // Show a loader while that happens.
+    // 2. User is not logged in.
+    if (!user) {
+        // If they are on a public route, show the public page (login/signup).
         if (isPublicRoute) {
-            return <FullscreenLoader />;
+            return <>{children}</>;
         }
-        
-        // This is the critical case that caused the infinite loop
-        if (!userProfile) {
-            return <ErrorShell 
-                title="Error al Cargar Perfil"
-                description="No pudimos encontrar los datos de tu perfil. Esto puede ser un error temporal o un problema durante el registro. Por favor, cierra la sesión y vuelve a intentarlo."
-            />;
-        }
+        // Otherwise, the useEffect is already redirecting them. Show loader.
+        return <FullscreenLoader />;
+    }
 
-        if (userProfile.status === 'pending') {
-            return <PendingApprovalShell />;
-        }
-
-        if (userProfile.status === 'active' && !instituteId) {
-            return <ErrorShell 
-                title="Cuenta no Asignada"
-                description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-            />;
-        }
-
-        // If all checks pass, render the app
-        if (instituteId) {
-            return (
-                <StudioProvider instituteId={instituteId}>
-                    <div className="flex min-h-screen w-full flex-col">
-                        <AppHeader />
-                        <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
-                            {children}
-                        </main>
-                        <MobileBottomNav />
-                    </div>
-                </StudioProvider>
-            );
-        }
+    // 3. User is logged in. Now we can safely check their profile status.
+    // This is the critical case that caused the infinite loop.
+    // If user object exists from Auth, but their profile doc doesn't exist in Firestore.
+    if (!userProfile) {
+        return <ErrorShell 
+            title="Error al Cargar Perfil"
+            description="No pudimos encontrar los datos de tu perfil. Esto puede ser un error temporal o un problema durante el registro. Por favor, cierra la sesión y vuelve a intentarlo."
+        />;
     }
     
-    // Default fallback loader for any edge cases and during redirection
-    return <FullscreenLoader />;
+    // Profile exists, check its status.
+    switch (userProfile.status) {
+        case 'pending':
+            return <PendingApprovalShell />;
+        case 'active':
+            if (!instituteId) {
+                 return <ErrorShell 
+                    title="Cuenta no Asignada"
+                    description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+                />;
+            }
+            // SUCCESS CASE: User is active and has an institute.
+            if (!isPublicRoute) {
+                 return (
+                    <StudioProvider instituteId={instituteId}>
+                        <div className="flex min-h-screen w-full flex-col">
+                            <AppHeader />
+                            <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
+                                {children}
+                            </main>
+                            <MobileBottomNav />
+                        </div>
+                    </StudioProvider>
+                );
+            }
+            // If they are on a public route, the useEffect will redirect them. Show loader in the meantime.
+            return <FullscreenLoader />;
+        default:
+            return <ErrorShell 
+                title="Estado de Cuenta Desconocido"
+                description="El estado de tu cuenta no es válido. Por favor, contacta con el administrador."
+            />;
+    }
 }

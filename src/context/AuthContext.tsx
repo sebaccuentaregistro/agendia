@@ -62,23 +62,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
       if (currentUser) {
-        setUser(currentUser);
-        const userDocRef = doc(db, 'users', currentUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          setUserProfile(userDocSnap.data() as UserProfile);
-        } else {
-          setUserProfile(null); 
+        try {
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+              setUserProfile(userDocSnap.data() as UserProfile);
+            } else {
+              setUserProfile(null); 
+            }
+        } catch (error) {
+            console.error("Error fetching user profile:", error);
+            setUserProfile(null);
+            toast({ variant: 'destructive', title: 'Error de Perfil', description: 'No se pudo cargar tu perfil. Intenta refrescar la página.' });
         }
       } else {
-        setUser(null);
         setUserProfile(null);
       }
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [toast]);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -119,11 +124,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (dbError) {
         console.error("Error creating user profile and institute:", dbError);
         toast({ variant: 'destructive', title: 'Error de Perfil', description: 'Tu cuenta fue creada, pero no pudimos configurar tu estudio. Contacta a soporte.' });
+        setLoading(false);
       }
     } else if (result.error) {
       handleAuthError(result.error, 'signup');
-    }
-    setLoading(false); 
+      setLoading(false);
+    } 
   };
 
   const logout = async () => {
