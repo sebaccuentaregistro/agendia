@@ -30,14 +30,17 @@ function FullscreenLoader() {
     );
 }
 
-function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
+function ErrorShell({ title, description }: { title: string, description: string }) {
+    const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
             <div className="flex flex-col items-center gap-4 text-center">
                 <AlertTriangle className="h-12 w-12 text-destructive" />
                 <h1 className="text-2xl font-bold text-destructive">{title}</h1>
                 <p className="max-w-md text-muted-foreground">{description}</p>
-                 {children}
+                 <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
             </div>
         </div>
     );
@@ -65,47 +68,47 @@ export function AppShell({ children }: { children: ReactNode }) {
     const { user, userProfile, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
-
     const publicRoutes = ['/login', '/signup', '/terms'];
-    const instituteId = userProfile?.instituteId;
+    const isPublicRoute = publicRoutes.includes(pathname);
 
     useEffect(() => {
         if (loading) return;
-        const isPublicRoute = publicRoutes.includes(pathname);
 
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
 
         if (user && isPublicRoute) {
-            if (userProfile?.status === 'active' && instituteId) {
-                router.push('/dashboard');
-            }
+            router.push('/dashboard');
         }
-    }, [user, userProfile, loading, router, pathname, instituteId]);
-
+    }, [user, loading, isPublicRoute, router]);
+    
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    if (user && userProfile?.status === 'pending') {
+    if (isPublicRoute) {
+        return <>{children}</>;
+    }
+    
+    if (!user) {
+        return <FullscreenLoader />;
+    }
+    
+    if (userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
 
-    if (user && userProfile?.status === 'active' && !instituteId) {
+    if (userProfile?.status === 'active' && !userProfile.instituteId) {
         return <ErrorShell 
             title="Cuenta no activada"
             description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
         />;
     }
 
-    if (!user && publicRoutes.includes(pathname)) {
-        return <>{children}</>;
-    }
-
-    if (user && instituteId && !publicRoutes.includes(pathname)) {
+    if (userProfile?.status === 'active' && userProfile.instituteId) {
         return (
-            <StudioProvider instituteId={instituteId}>
+            <StudioProvider instituteId={userProfile.instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
                     <AppHeader />
                     <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
@@ -116,7 +119,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             </StudioProvider>
         );
     }
-    
-    // Fallback loader for edge cases during redirection.
-    return <FullscreenLoader />;
+
+    return (
+      <ErrorShell
+        title="Error de Perfil de Usuario"
+        description="No pudimos cargar los detalles de tu cuenta. Por favor, intenta cerrar sesión y volver a ingresar. Si el problema persiste, contacta al soporte."
+      />
+    );
 }

@@ -29,7 +29,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -42,18 +41,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUserProfile(userDocSnap.data() as UserProfile);
           } else {
             console.warn("User document not found in Firestore for UID:", firebaseUser.uid);
-            setUserProfile(null); // User exists in Auth, but not in Firestore DB.
+            setUserProfile(null);
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
           setUserProfile(null);
           toast({ variant: 'destructive', title: 'Error de Perfil', description: 'No se pudo cargar tu perfil de usuario.' });
+        } finally {
+          setLoading(false);
         }
       } else {
         setUser(null);
         setUserProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -90,16 +91,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           title: '¡Registro Exitoso!',
           description: "Tu cuenta ha sido creada. Ahora un administrador debe aprobarla.",
         });
-        // The onAuthStateChanged listener will handle setting user state and redirecting.
     }
   };
 
   const logout = async () => {
     setLoading(true);
     await doLogout();
-    setUser(null);
-    setUserProfile(null);
-    // No need to setLoading(false) here because the onAuthStateChanged will trigger and do it.
   };
 
   const value = { user, userProfile, loading, login, signup, logout };
