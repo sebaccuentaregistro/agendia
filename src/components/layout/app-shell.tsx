@@ -3,7 +3,7 @@
 
 import { useAuth } from '@/context/AuthContext';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
@@ -32,12 +32,16 @@ function FullscreenLoader() {
 }
 
 function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
+    const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
             <div className="flex flex-col items-center gap-4 text-center">
                 <AlertTriangle className="h-12 w-12 text-destructive" />
                 <h1 className="text-2xl font-bold text-destructive">{title}</h1>
                 <p className="max-w-md text-muted-foreground">{description}</p>
+                <Button variant="outline" onClick={logout} className="mt-4">
+                    Cerrar Sesión
+                </Button>
                  {children}
             </div>
         </div>
@@ -71,46 +75,43 @@ export function AppShell({ children }: { children: ReactNode }) {
     const isPublicRoute = publicRoutes.includes(pathname);
     const instituteId = userProfile?.instituteId;
 
-    useEffect(() => {
-        if (loading) return;
-
-        // Redirect to login if not authenticated and trying to access a private route.
-        if (!user && !isPublicRoute) {
-            router.push('/login');
-        }
-
-        // Redirect to dashboard if authenticated and trying to access a public route.
-        if (user && userProfile && isPublicRoute) {
-            router.push('/dashboard');
-        }
-    }, [user, userProfile, loading, router, pathname, isPublicRoute]);
-
-    // 1. Show loader while auth state is being determined.
+    // 1. GATE: Show loader while auth state is being determined.
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    // 2. If user is NOT authenticated.
+    // 2. GATE: Handle unauthenticated users.
     if (!user) {
-        // If on a public route, show the page. Otherwise, show loader during redirect.
-        return isPublicRoute ? <>{children}</> : <FullscreenLoader />;
+        if (isPublicRoute) {
+            return <>{children}</>; // Render the public page as is.
+        }
+        // For private routes, redirect to login.
+        router.push('/login');
+        return <FullscreenLoader />; // Show loader during redirection.
+    }
+    
+    // FROM THIS POINT, 'user' is guaranteed to exist.
+
+    // 3. GATE: Handle authenticated user who is on a public route (e.g., /login).
+    // Redirect them to the dashboard.
+    if (isPublicRoute) {
+        router.push('/dashboard');
+        return <FullscreenLoader />;
     }
 
-    // 3. If user IS authenticated, but profile is missing. THIS IS THE KEY FIX.
+    // 4. GATE: Handle authenticated user without a profile (critical edge case).
     if (!userProfile) {
         return (
             <ErrorShell 
-                title="Error de Perfil"
-                description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil. Esto puede ocurrir si el registro no se completó. Por favor, contacta a soporte o intenta cerrar sesión y volver a registrarte."
-            >
-                <Button variant="outline" onClick={logout} className="mt-4">
-                    Cerrar Sesión
-                </Button>
-            </ErrorShell>
+                title="Error de Perfil de Usuario"
+                description="Tu cuenta está autenticada, pero no pudimos encontrar tu perfil de datos. Esto puede ocurrir si el registro inicial no se completó correctamente. Por favor, intenta cerrar sesión y volver a registrarte."
+            />
         );
     }
-    
-    // 4. Handle different profile statuses.
+
+    // FROM THIS POINT, 'user' and 'userProfile' are guaranteed to exist.
+
+    // 5. GATE: Handle different user profile statuses.
     switch (userProfile.status) {
         case 'pending':
             return <PendingApprovalShell />;
@@ -121,18 +122,10 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <ErrorShell 
                         title="Cuenta no Asignada"
                         description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso."
-                    >
-                        <Button variant="outline" onClick={logout} className="mt-4">
-                            Cerrar Sesión
-                        </Button>
-                    </ErrorShell>
+                    />
                 );
             }
-            // If profile is active and has an institute, show the app.
-            // If on a public route, the useEffect will redirect, so we show a loader.
-            if (isPublicRoute) {
-                return <FullscreenLoader />;
-            }
+            // This is the main, successful path. Render the app.
             return (
                 <StudioProvider instituteId={instituteId}>
                     <div className="flex min-h-screen w-full flex-col">
@@ -146,16 +139,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             );
 
         default:
-            // Fallback for any unknown status.
             return (
                  <ErrorShell 
                     title="Estado de Cuenta Desconocido"
                     description="No podemos determinar el estado de tu cuenta. Por favor, contacta al administrador."
-                >
-                    <Button variant="outline" onClick={logout} className="mt-4">
-                        Cerrar Sesión
-                    </Button>
-                </ErrorShell>
+                />
             );
     }
 }
