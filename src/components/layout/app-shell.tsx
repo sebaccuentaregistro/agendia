@@ -30,7 +30,7 @@ function FullscreenLoader() {
     );
 }
 
-function ErrorShell({ title, description }: { title: string, description: string }) {
+function ErrorShell({ title, description, children }: { title: string, description: string, children?: ReactNode }) {
     const { logout } = useAuth();
     return (
         <div className="flex h-screen w-screen items-center justify-center bg-background p-4">
@@ -72,53 +72,38 @@ export function AppShell({ children }: { children: ReactNode }) {
     const isPublicRoute = publicRoutes.includes(pathname);
 
     useEffect(() => {
-        // Don't do anything until the auth state is fully resolved.
-        if (loading) {
-            return;
-        }
+        if (loading) return;
 
-        // If not logged in and trying to access a protected route, redirect to login.
+        // If user is not logged in and is on a protected route, redirect to login.
         if (!user && !isPublicRoute) {
             router.push('/login');
         }
 
-        // If logged in and on a public route, redirect to the dashboard.
-        if (user && isPublicRoute) {
+        // If user is logged in and on a public route, redirect to dashboard.
+        // This should only happen once the user profile is confirmed to be active.
+        if (user && isPublicRoute && userProfile?.status === 'active' && userProfile.instituteId) {
             router.push('/dashboard');
         }
+    }, [user, userProfile, loading, isPublicRoute, router, pathname]);
 
-    }, [user, loading, isPublicRoute, pathname, router]);
-
-    // Now, handle the RENDERING based on the current state, without redirection logic.
+    // Render logic is a simple state machine, preventing loops.
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    // If we're on a public route, let it render. 
-    // The useEffect will handle redirecting away if the user is logged in.
-    if (isPublicRoute) {
-        return <>{children}</>;
+    if (!user) {
+        // If not logged in, only render children if it's a public route.
+        // Otherwise, show loader while useEffect redirects.
+        return isPublicRoute ? <>{children}</> : <FullscreenLoader />;
     }
 
-    // If we reach here, we are on a PROTECTED route.
-    // If there's no user, the useEffect is redirecting them, so show a loader.
-    if (!user) {
-        return <FullscreenLoader />;
-    }
-    
-    // User exists, check profile status.
+    // From here, we know a user object exists.
     if (userProfile?.status === 'pending') {
         return <PendingApprovalShell />;
     }
 
-    if (userProfile?.status === 'active' && !userProfile.instituteId) {
-        return <ErrorShell 
-            title="Cuenta no activada"
-            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
-        />;
-    }
-    
     if (userProfile?.status === 'active' && userProfile.instituteId) {
+        // This is the main success path. Render the protected app.
         return (
             <StudioProvider instituteId={userProfile.instituteId}>
                 <div className="flex min-h-screen w-full flex-col">
@@ -132,7 +117,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
     
-    // This is the fallback for when `user` exists but `userProfile` is not yet loaded or invalid.
-    // Instead of an error, let's just show the loader. This is a more graceful "in-between" state.
+    if (userProfile?.status === 'active' && !userProfile.instituteId) {
+        // Edge case: User is active but not assigned to an institute.
+        return <ErrorShell 
+            title="Cuenta no activada"
+            description="Tu cuenta ha sido aprobada, pero aún no está asignada a ningún instituto. Por favor, contacta al administrador para completar el proceso." 
+        />;
+    }
+
+    // This is the crucial fallback state.
+    // It handles the case where `user` exists, but `userProfile` is still null (loading) or has an invalid state.
+    // By showing a loader here, we prevent the redirect loop.
     return <FullscreenLoader />;
 }
