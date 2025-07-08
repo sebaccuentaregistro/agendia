@@ -1,21 +1,5 @@
-import type { Metadata } from 'next';
-import { Poppins } from 'next/font/google';
+
 import './globals.css';
-import { ThemeProvider } from '@/components/theme-provider';
-import { AuthProvider } from '@/context/AuthContext';
-import { AppShell } from '@/components/layout/app-shell';
-import { Toaster } from '@/components/ui/toaster';
-
-const poppins = Poppins({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  variable: '--font-poppins',
-});
-
-export const metadata: Metadata = {
-  title: 'Agendia',
-  description: 'Gestión para tu estudio de bienestar.',
-};
 
 export default function RootLayout({
   children,
@@ -23,19 +7,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" suppressHydrationWarning>
-      <body className={poppins.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AuthProvider>
-            <AppShell>{children}</AppShell>
-            <Toaster />
-          </AuthProvider>
-        </ThemeProvider>
+    <html lang="es">
+      <body>
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          height: '100vh',
+          backgroundColor: '#f0f0f0',
+          fontFamily: 'sans-serif',
+          color: '#333',
+          textAlign: 'center',
+          padding: '2rem'
+        }}>
+          <div>
+            <h1 style={{ fontSize: '2rem', fontWeight: 'bold' }}>Servidor Recuperado</h1>
+            <p style={{ fontSize: '1.2rem', marginTop: '1rem' }}>
+              El servidor de la vista previa está nuevamente en línea. En el siguiente paso, restauraremos la aplicación por completo.
+            </p>
+          </div>
+        </div>
       </body>
     </html>
   );
