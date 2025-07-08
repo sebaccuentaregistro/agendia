@@ -32,7 +32,7 @@ import { es } from 'date-fns/locale';
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   phone: z.string().min(7, { message: 'Por favor, introduce un número de teléfono válido.' }),
-  levelId: z.string().optional(),
+  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
@@ -101,9 +101,12 @@ function PersonDialog({ person, onOpenChange, open }: { person?: Person; onOpenC
                 </Select><FormMessage /></FormItem>
               )}/>
                <FormField control={form.control} name="levelId" render={({ field }) => (
-                <FormItem><FormLabel>Nivel</FormLabel><Select onValueChange={field.onChange} value={field.value}>
+                <FormItem><FormLabel>Nivel</FormLabel><Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                    <SelectContent><SelectItem value="">Sin nivel</SelectItem>{levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}</SelectContent>
+                    <SelectContent>
+                      <SelectItem value="none">Sin nivel</SelectItem>
+                      {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                    </SelectContent>
                 </Select><FormMessage /></FormItem>
               )}/>
             </div>
@@ -322,5 +325,3 @@ export default function StudentsPage() {
     </React.Suspense>
   );
 }
-
-    
