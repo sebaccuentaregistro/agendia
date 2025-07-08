@@ -19,8 +19,28 @@ Agendia es una aplicación web moderna construida con Next.js y diseñada para l
 - **Tipografía**: Poppins
 - **Iconos**: Lucide-react
 
-## 🚀 Despliegue
+---
 
-Esta aplicación está desplegada en Firebase App Hosting.
+## 🚀 Despliegue Final en Producción
 
-_Estado del proyecto: en desarrollo activo._
+¡Has llegado al último paso! Para poner tu aplicación en línea, sigue estas instrucciones en la **Terminal** de Firebase Studio.
+
+**Paso 1: Limpieza del Proyecto**
+
+Ejecuta el siguiente comando para eliminar la carpeta `workspace`, que contiene código experimental y fue la causa de errores de compilación anteriores. Esto asegura un despliegue limpio y seguro.
+
+```bash
+rm -rf workspace/
+```
+
+**Paso 2: Despliegue a Internet**
+
+Ahora, ejecuta el comando principal. Firebase construirá tu aplicación y, si todo está correcto, la publicará en la web.
+
+```bash
+firebase deploy
+```
+
+Al finalizar, la terminal te mostrará la URL pública de tu aplicación (normalmente `https://[tu-id-de-proyecto].web.app`).
+
+¡Felicitaciones! Tu aplicación estará en producción.
