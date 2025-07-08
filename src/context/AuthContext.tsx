@@ -77,11 +77,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           console.error("Error fetching user profile:", error);
           setUserProfile(null);
+        } finally {
+          setLoading(false);
         }
       } else {
         setUserProfile(null);
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
