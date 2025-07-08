@@ -3,15 +3,20 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, setDoc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
 import { doLogout, doLoginWithEmailAndPassword, doSignupWithEmailAndPassword, type SignupCredentials } from '@/lib/firebase-auth';
-import { doc, setDoc, serverTimestamp, collection, writeBatch } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
-// This context ONLY manages the raw Firebase user authentication state.
-// Profile data is handled separately in the AppShell.
+interface UserProfile {
+    email: string;
+    status: 'pending' | 'active';
+    instituteId: string;
+    createdAt: any;
+}
 
 interface AuthContextType {
   user: User | null;
+  userProfile: UserProfile | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (credentials: SignupCredentials) => Promise<void>;
@@ -22,6 +27,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -55,9 +61,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    // This effect simply tracks the user's authentication state.
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          setUserProfile(userDocSnap.data() as UserProfile);
+        } else {
+          setUserProfile(null); 
+        }
+      } else {
+        setUser(null);
+        setUserProfile(null);
+      }
       setLoading(false);
     });
     return () => unsubscribe();
@@ -70,7 +87,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       handleAuthError(result.error, 'login');
       setLoading(false);
     }
-    // The onAuthStateChanged listener will handle success state changes.
   };
 
   const signup = async (credentials: SignupCredentials) => {
@@ -89,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userDocRef = doc(db, 'users', user.uid);
       batch.set(userDocRef, {
         email: user.email,
-        status: 'active', // All new signups are active immediately
+        status: 'active',
         instituteId: newInstituteRef.id,
         createdAt: serverTimestamp(),
       });
@@ -113,11 +129,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setLoading(true);
     await doLogout();
-    // The onAuthStateChanged listener will set user to null and loading to false.
   };
 
   const value = {
     user,
+    userProfile,
     loading,
     login,
     signup,
