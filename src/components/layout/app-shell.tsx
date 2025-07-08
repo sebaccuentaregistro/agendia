@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useAuth } from '@/context/AuthContext';
@@ -67,7 +66,7 @@ function PendingApprovalShell() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { user, userProfile, loading, logout } = useAuth();
+    const { user, userProfile, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
 
@@ -75,31 +74,23 @@ export function AppShell({ children }: { children: ReactNode }) {
     const isPublicRoute = publicRoutes.includes(pathname);
     const instituteId = userProfile?.instituteId;
 
-    // 1. GATE: Show loader while auth state is being determined.
     if (loading) {
         return <FullscreenLoader />;
     }
 
-    // 2. GATE: Handle unauthenticated users.
     if (!user) {
         if (isPublicRoute) {
-            return <>{children}</>; // Render the public page as is.
+            return <>{children}</>;
         }
-        // For private routes, redirect to login.
         router.push('/login');
-        return <FullscreenLoader />; // Show loader during redirection.
+        return <FullscreenLoader />;
     }
     
-    // FROM THIS POINT, 'user' is guaranteed to exist.
-
-    // 3. GATE: Handle authenticated user who is on a public route (e.g., /login).
-    // Redirect them to the dashboard.
     if (isPublicRoute) {
         router.push('/dashboard');
         return <FullscreenLoader />;
     }
 
-    // 4. GATE: Handle authenticated user without a profile (critical edge case).
     if (!userProfile) {
         return (
             <ErrorShell 
@@ -109,9 +100,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         );
     }
 
-    // FROM THIS POINT, 'user' and 'userProfile' are guaranteed to exist.
-
-    // 5. GATE: Handle different user profile statuses.
     switch (userProfile.status) {
         case 'pending':
             return <PendingApprovalShell />;
@@ -125,7 +113,6 @@ export function AppShell({ children }: { children: ReactNode }) {
                     />
                 );
             }
-            // This is the main, successful path. Render the app.
             return (
                 <StudioProvider instituteId={instituteId}>
                     <div className="flex min-h-screen w-full flex-col">

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
@@ -71,20 +70,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (docSnap.exists()) {
             setUserProfile(docSnap.data() as AppUserProfile);
           } else {
-            // User is authenticated in Firebase Auth, but has no profile document in Firestore.
             setUserProfile(null);
           }
         } else {
-          // User is logged out.
           setUserProfile(null);
         }
       } catch (error) {
         console.error("Critical error in onAuthStateChanged:", error);
-        // If something fails catastrophically, reset to a clean, logged-out state.
         setUser(null);
         setUserProfile(null);
       } finally {
-        // This is crucial: guarantee that the loading state is always turned off.
         setLoading(false);
       }
     });
