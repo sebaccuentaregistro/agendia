@@ -2,7 +2,7 @@
 // It simulates a logged-in, active user.
 
 'use client';
-import React, { createContext, useContext, ReactNode, useState } from 'react';
+import React, { createContext, useContext, ReactNode, useState, useMemo } from 'react';
 
 type UserProfile = {
   status: 'active' | 'pending';
@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     instituteId: 'yogaflow-manager-uqjpc' 
   });
 
-  const value: AuthContextType = {
+  const value = useMemo(() => ({
     user: dummyUser,
     userProfile: dummyProfile,
     loading: false, // Set loading to false so the app renders immediately
@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log("Signup function called (simulated).");
       return Promise.resolve();
     },
-  };
+  }), [dummyUser, dummyProfile]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

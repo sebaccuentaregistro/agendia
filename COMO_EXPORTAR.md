@@ -40,3 +40,4 @@ npm run dev
 ```
 
 Abre tu navegador y ve a `http://localhost:3000`. ¡Deberías ver tu aplicación funcionando!
+
