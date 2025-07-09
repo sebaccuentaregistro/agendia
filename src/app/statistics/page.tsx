@@ -41,7 +41,7 @@ export default function StatisticsPage() {
     }).reverse();
 
     const memberCounts = people.reduce<Record<string, number>>((acc, person) => {
-      if (!(person.joinDate instanceof Date) || isNaN(person.joinDate.getTime())) {
+      if (!person.joinDate || !(person.joinDate instanceof Date) || isNaN(person.joinDate.getTime())) {
         return acc; 
       }
       const monthKey = format(person.joinDate, 'yyyy-MM');
@@ -60,11 +60,15 @@ export default function StatisticsPage() {
   const retentionData = useMemo(() => {
     const now = new Date();
     
+    // Helper to filter people by join date cohort
+    const getCohort = (startDate: Date, endDate: Date) => 
+      people.filter(p => p.joinDate && p.joinDate >= startDate && p.joinDate <= endDate);
+
     // 3-Month Cohort
     const threeMonthsAgo = subMonths(now, 3);
     const startOfThreeMonthCohort = startOfMonth(threeMonthsAgo);
     const endOfThreeMonthCohort = endOfMonth(threeMonthsAgo);
-    const threeMonthCohortPeople = people.filter(p => p.joinDate >= startOfThreeMonthCohort && p.joinDate <= endOfThreeMonthCohort);
+    const threeMonthCohortPeople = getCohort(startOfThreeMonthCohort, endOfThreeMonthCohort);
     const activeInThreeMonthCohort = threeMonthCohortPeople.filter(p => getStudentPaymentStatus(p, now) === 'Al día').length;
     const retentionRate3Months = threeMonthCohortPeople.length > 0 ? (activeInThreeMonthCohort / threeMonthCohortPeople.length) * 100 : 0;
 
@@ -72,7 +76,7 @@ export default function StatisticsPage() {
     const sixMonthsAgo = subMonths(now, 6);
     const startOfSixMonthCohort = startOfMonth(sixMonthsAgo);
     const endOfSixMonthCohort = endOfMonth(sixMonthsAgo);
-    const sixMonthCohortPeople = people.filter(p => p.joinDate >= startOfSixMonthCohort && p.joinDate <= endOfSixMonthCohort);
+    const sixMonthCohortPeople = getCohort(startOfSixMonthCohort, endOfSixMonthCohort);
     const activeInSixMonthCohort = sixMonthCohortPeople.filter(p => getStudentPaymentStatus(p, now) === 'Al día').length;
     const retentionRate6Months = sixMonthCohortPeople.length > 0 ? (activeInSixMonthCohort / sixMonthCohortPeople.length) * 100 : 0;
 
@@ -90,7 +94,7 @@ export default function StatisticsPage() {
         label: format(startOfSixMonthCohort, 'MMMM yyyy', { locale: es }),
       },
     };
-}, [people]);
+  }, [people]);
 
   const activityPopularity = useMemo(() => {
     const popularity: Record<string, number> = sessions.reduce((acc, session) => {

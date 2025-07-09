@@ -59,45 +59,52 @@ function dataReducer(state: State, action: Action): State {
   }
 }
 
-const processDoc = (doc: any) => {
-    const data = doc.data();
-    const dateFields = ['joinDate', 'lastPaymentDate', 'date', 'createdAt'];
-
-    const parseDateValue = (value: any): Date | any => {
-        if (!value) return value;
-        // Handle Firestore Timestamps
+const parseDateValue = (value: any): Date | null => {
+    if (!value) return null;
+    try {
         if (value instanceof Timestamp) return value.toDate();
-        // Handle objects that look like Timestamps (e.g., from serialization)
-        if (value.toDate && typeof value.toDate === 'function') return value.toDate();
-        if (typeof value === 'object' && 'seconds' in value && 'nanoseconds' in value) {
-            return new Timestamp(value.seconds, value.nanoseconds).toDate();
+        if (value.toDate && typeof value.toDate === 'function') {
+            const d = value.toDate();
+            return !isNaN(d.getTime()) ? d : null;
         }
-        // Handle ISO strings
+        if (typeof value === 'object' && 'seconds' in value && 'nanoseconds' in value) {
+            const d = new Timestamp(value.seconds, value.nanoseconds).toDate();
+            return !isNaN(d.getTime()) ? d : null;
+        }
         if (typeof value === 'string') {
             const parsed = new Date(value);
             if (!isNaN(parsed.getTime())) return parsed;
         }
-        // Return original value if it's not a recognizable date format
-        return value;
-    };
+    } catch (e) {
+        console.warn("Could not parse date value:", value, e);
+        return null;
+    }
+    return null;
+};
 
-    for (const key in data) {
-        // Process top-level date fields
+
+const processDoc = (doc: any) => {
+    const data = doc.data();
+    if (!data) return { id: doc.id };
+
+    const dateFields = ['joinDate', 'lastPaymentDate', 'date', 'createdAt'];
+
+    Object.keys(data).forEach(key => {
         if (dateFields.includes(key)) {
             data[key] = parseDateValue(data[key]);
         }
-        
-        // Process nested date fields in vacationPeriods
         if (key === 'vacationPeriods' && Array.isArray(data[key])) {
             data[key] = data[key].map((period: any) => {
                 if (!period) return period;
-                const newPeriod = { ...period };
-                newPeriod.startDate = parseDateValue(period.startDate);
-                newPeriod.endDate = parseDateValue(period.endDate);
-                return newPeriod;
+                return {
+                    ...period,
+                    startDate: parseDateValue(period.startDate),
+                    endDate: parseDateValue(period.endDate),
+                };
             });
         }
-    }
+    });
+
     return { id: doc.id, ...data };
 };
 
@@ -188,7 +195,6 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         });
 
         dispatch({ type: 'SET_ALL_DATA', payload: allData });
-        dispatch({ type: 'SET_LOADING', payload: false });
         
         // After initial load, set up listeners for real-time updates
         const unsubscribes = collectionKeys.map(key => {
@@ -201,6 +207,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
             });
         });
 
+        dispatch({ type: 'SET_LOADING', payload: false });
         return () => unsubscribes.forEach(unsub => unsub());
 
       } catch (error: any) {
@@ -264,8 +271,8 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   
   const recordPayment = useCallback((personId: string) => {
     const person = state.people.find(p => p.id === personId);
-    if (!person) {
-      toast({ variant: 'destructive', title: 'Error', description: "Persona no encontrada." });
+    if (!person || !person.lastPaymentDate) {
+      toast({ variant: 'destructive', title: 'Error', description: "Persona o fecha de pago no encontrada." });
       return;
     }
     const newExpiryDate = addMonths(person.lastPaymentDate, 1);
@@ -274,13 +281,13 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   
   const undoLastPayment = useCallback(async (personId: string) => {
     const person = state.people.find(p => p.id === personId);
-    if (!person) {
-      toast({ variant: 'destructive', title: 'Error', description: "Persona no encontrada." });
+    if (!person || !person.lastPaymentDate) {
+      toast({ variant: 'destructive', title: 'Error', description: "Persona o fecha de pago no encontrada." });
       return;
     }
     const personPayments = state.payments
       .filter(p => p.personId === personId)
-      .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
     if (personPayments.length === 0) {
       toast({ variant: 'destructive', title: 'Error', description: 'No hay pagos para deshacer.' });
       return;
@@ -312,6 +319,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     if (!person.vacationPeriods) return false;
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
     return person.vacationPeriods.some(period => {
+        if (!period.startDate || !period.endDate) return false;
         const startDate = new Date(new Date(period.startDate).setHours(0, 0, 0, 0));
         const endDate = new Date(new Date(period.endDate).setHours(23, 59, 59, 999));
         return checkDate >= startDate && checkDate <= endDate;

@@ -1,3 +1,4 @@
+
 // This is a placeholder AuthContext to restore app functionality without a real login.
 // It simulates a logged-in, active user.
 

@@ -2,7 +2,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
-import { set, isBefore, addMonths, isAfter, differenceInDays, addDays } from "date-fns";
+import { set, isBefore, addMonths, isAfter, differenceInDays, addDays, format } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -18,8 +18,9 @@ export function getNextPaymentDate(person: Person): Date | null {
 // This function checks if a person's payment is up-to-date.
 export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
   const nextDueDate = getNextPaymentDate(person);
+  
+  // A person needs a due date to have a status. If not, they are up to date by default.
   if (!nextDueDate) {
-    // If there's no due date (e.g., for certain tariff types), assume they are up-to-date.
     return 'Al día';
   }
   
@@ -59,12 +60,7 @@ export function exportToCsv(filename: string, data: Record<string, any>[], heade
           let cell = row[key] === null || row[key] === undefined ? '' : row[key];
 
           if (cell instanceof Date) {
-            // Consistently format dates, e.g., "15/07/2024, 10:00:00"
-            cell = cell.toLocaleString('es-ES', {
-              year: 'numeric',
-              month: '2-digit',
-              day: '2-digit',
-            });
+            cell = format(cell, 'dd/MM/yyyy');
           }
 
           let cellString = String(cell);

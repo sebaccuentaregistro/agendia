@@ -1,6 +1,4 @@
 
-
-
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -13,7 +11,7 @@ export type Institute = {
 };
 
 export type Actividad = {
-  id: string;
+  id:string;
   name: string;
 };
 
@@ -32,17 +30,17 @@ export type Specialist = {
 
 export type VacationPeriod = {
   id: string;
-  startDate: Date;
-  endDate: Date;
+  startDate: Date | null;
+  endDate: Date | null;
 };
 
 export type Person = {
   id: string;
   name: string;
   phone: string;
-  joinDate: Date;
+  joinDate: Date | null;
   tariffId?: string;
-  lastPaymentDate: Date;
+  lastPaymentDate: Date | null;
   avatar: string;
   vacationPeriods?: VacationPeriod[];
   healthInfo?: string;
@@ -66,7 +64,7 @@ export type Session = {
 export type Payment = {
   id:string;
   personId: string;
-  date: Date; // The actual date the payment was recorded
+  date: Date | null; // The actual date the payment was recorded
   months: number;
 };
 
@@ -93,7 +91,7 @@ export type AppNotification = {
   type: 'waitlist' | 'churnRisk';
   sessionId?: string;
   personId: string; // The person from the waitlist or at risk
-  createdAt: string; // ISO string
+  createdAt: Date | null; // ISO string
 };
 
 export type Tariff = {
@@ -104,4 +102,3 @@ export type Tariff = {
   frequency?: number;
   isIndividual?: boolean;
 };
-    

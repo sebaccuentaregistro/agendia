@@ -83,7 +83,7 @@ function VacationDialog({ person, onClose }: { person: Person | null; onClose: (
                         {person.vacationPeriods && person.vacationPeriods.length > 0 ? (
                             person.vacationPeriods.map(vac => (
                                 <div key={vac.id} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
-                                    <span>{format(new Date(vac.startDate), 'dd/MM/yy')} - {format(new Date(vac.endDate), 'dd/MM/yy')}</span>
+                                    <span>{vac.startDate ? format(vac.startDate, 'dd/MM/yy') : 'N/A'} - {vac.endDate ? format(vac.endDate, 'dd/MM/yy') : 'N/A'}</span>
                                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeVacationPeriod(person.id, vac.id)}>
                                         <X className="h-4 w-4" />
                                     </Button>
@@ -341,8 +341,8 @@ function StudentsPageContent() {
         telefono: p.phone,
         arancel: tariffs.find(t => t.id === p.tariffId)?.name || 'N/A',
         estado_pago: getStudentPaymentStatus(p, new Date()),
-        fecha_ingreso: format(new Date(p.joinDate), 'dd/MM/yyyy'),
-        vencimiento_pago: format(new Date(p.lastPaymentDate), 'dd/MM/yyyy'),
+        fecha_ingreso: p.joinDate ? format(p.joinDate, 'dd/MM/yyyy') : 'N/A',
+        vencimiento_pago: p.lastPaymentDate ? format(p.lastPaymentDate, 'dd/MM/yyyy') : 'N/A',
     }));
     const headers = {
         nombre: "Nombre",
