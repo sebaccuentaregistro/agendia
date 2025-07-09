@@ -23,5 +23,3 @@ export function useAuth() {
         logout: () => {}, // A no-op function for compatibility.
     };
 }
-
-    
