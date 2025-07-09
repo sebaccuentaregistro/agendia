@@ -175,42 +175,43 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
-  // State for client-side calculated data
+  // State to prevent hydration errors
   const [isClient, setIsClient] = useState(false);
-  const [overdueCount, setOverdueCount] = useState(0);
-  const [onVacationCount, setOnVacationCount] = useState(0);
-  const [pendingRecoveryCount, setPendingRecoveryCount] = useState(0);
-  const [todaysSessions, setTodaysSessions] = useState<any[]>([]);
-  const [todayName, setTodayName] = useState("...");
-
   useEffect(() => {
-    // This effect runs only on the client, after the initial render.
     setIsClient(true);
+  }, []);
+
+  const clientSideData = useMemo(() => {
+    if (!isClient) {
+      return {
+        overdueCount: 0,
+        onVacationCount: 0,
+        pendingRecoveryCount: 0,
+        todaysSessions: [],
+        todayName: '...',
+        hasOverdue: false,
+        hasOnVacation: false,
+        hasPendingRecovery: false,
+      };
+    }
 
     const now = new Date();
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
-    
-    // Calculate overdue count
-    setOverdueCount(people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length);
+    const currentTodayName = dayMap[now.getDay()];
+    const todayStr = format(now, 'yyyy-MM-dd');
 
-    // Calculate on vacation count
-    setOnVacationCount(people.filter(p => isPersonOnVacation(p, now)).length);
+    const overdueCount = people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
+    const onVacationCount = people.filter(p => isPersonOnVacation(p, now)).length;
 
-    // Calculate pending recovery count
     const balances: Record<string, number> = {};
     people.forEach(p => (balances[p.id] = 0));
     attendance.forEach(record => {
       record.justifiedAbsenceIds?.forEach(personId => { if (balances[personId] !== undefined) balances[personId]++; });
       record.oneTimeAttendees?.forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
     });
-    setPendingRecoveryCount(Object.values(balances).filter(balance => balance > 0).length);
+    const pendingRecoveryCount = Object.values(balances).filter(balance => balance > 0).length;
 
-    // Calculate today's sessions
-    const currentTodayName = dayMap[now.getDay()];
-    setTodayName(currentTodayName);
-    const todayStr = format(now, 'yyyy-MM-dd');
-
-    const sessionsForToday = sessions
+    const todaysSessions = sessions
       .filter(session => session.dayOfWeek === currentTodayName)
       .map(session => {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
@@ -225,26 +226,42 @@ function DashboardPageContent() {
         };
       })
       .sort((a, b) => a.time.localeCompare(b.time));
-    setTodaysSessions(sessionsForToday);
 
-  }, [people, sessions, attendance, isPersonOnVacation]);
+    return {
+      overdueCount,
+      onVacationCount,
+      pendingRecoveryCount,
+      todaysSessions,
+      todayName: currentTodayName,
+      hasOverdue: overdueCount > 0,
+      hasOnVacation: onVacationCount > 0,
+      hasPendingRecovery: pendingRecoveryCount > 0,
+    };
+  }, [isClient, people, sessions, attendance, isPersonOnVacation]);
+
+  const {
+    overdueCount,
+    onVacationCount,
+    pendingRecoveryCount,
+    todaysSessions,
+    todayName,
+    hasOverdue,
+    hasOnVacation,
+    hasPendingRecovery,
+  } = clientSideData;
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (isClient) {
       const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
       if (!tutorialCompleted) {
         openTutorial();
       }
     }
-  }, [openTutorial]);
+  }, [isClient, openTutorial]);
 
 
   const searchParams = useSearchParams();
   const dashboardView = searchParams.get('view') === 'management' ? 'management' : 'main';
-
-  const hasOverdue = overdueCount > 0;
-  const hasOnVacation = onVacationCount > 0;
-  const hasPendingRecovery = pendingRecoveryCount > 0;
 
   const mainCards = [
     { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
@@ -573,3 +590,5 @@ export default function DashboardPage() {
     </React.Suspense>
   );
 }
+
+    
