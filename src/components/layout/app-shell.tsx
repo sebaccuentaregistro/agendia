@@ -1,10 +1,9 @@
-
 'use client';
 
+import { useStudio } from '@/context/StudioContext';
 import type { ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
-import { useStudio } from '@/context/StudioContext';
 
 function FullscreenLoader() {
     return (
@@ -27,10 +26,9 @@ function FullscreenLoader() {
     );
 }
 
-
 export function AppShell({ children }: { children: ReactNode }) {
     const { loading } = useStudio();
-    
+
     if (loading) {
         return <FullscreenLoader />;
     }
