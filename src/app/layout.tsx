@@ -5,7 +5,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AppShell } from '@/components/layout/app-shell';
 import { Toaster } from "@/components/ui/toaster";
-import { StudioProvider } from '@/context/StudioContext';
+import { AuthProvider } from '@/context/AuthContext';
 
 const poppins = Poppins({ 
   subsets: ['latin'],
@@ -22,7 +22,6 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const instituteId = 'yogaflow-manager-uqjpc';
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={poppins.className}>
@@ -32,9 +31,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <StudioProvider instituteId={instituteId}>
+          <AuthProvider>
             <AppShell>{children}</AppShell>
-          </StudioProvider>
+          </AuthProvider>
           <Toaster />
         </ThemeProvider>
       </body>

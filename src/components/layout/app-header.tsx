@@ -1,14 +1,15 @@
 
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Info } from 'lucide-react';
+import { Heart, Info, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '../theme-toggle';
+import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
   { href: "/dashboard", label: "Inicio" },
@@ -25,6 +26,14 @@ const navItems = [
 export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial } = useStudio();
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await logout();
+    // In a real app, you might redirect, but here we just call the (mocked) logout function.
+    // The mock does nothing, so the user stays on the page, which is fine.
+  };
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-transparent px-4 backdrop-blur-xl sm:px-6">
@@ -69,6 +78,19 @@ export function AppHeader() {
           </TooltipProvider>
         )}
         <ThemeToggle />
+        <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-white/10">
+                  <LogOut className="h-5 w-5" />
+                  <span className="sr-only">Cerrar sesión</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Cerrar sesión</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
       </div>
     </header>
   );

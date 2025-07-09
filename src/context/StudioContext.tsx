@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
-import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level } from '@/types';
 import { 
     actividades as staticActividades, 
     specialists as staticSpecialists,
@@ -16,29 +16,44 @@ import {
     levels as staticLevels
 } from '@/lib/data';
 
-// This context loads static data to restore app functionality.
-// Database interactions are disabled.
+// This context loads static data to prevent any database-related issues and ensure the app loads.
 
+/**
+ * Parses different date formats (Date object, Firestore Timestamp, string, number)
+ * into a valid Date object. Returns null if the date is invalid.
+ */
 const parseDate = (date: any): Date | null => {
     if (!date) return null;
     if (date instanceof Date) return date;
-    if (date.toDate && typeof date.toDate === 'function') return date.toDate(); // Firestore Timestamp
+    // Handle Firestore Timestamps
+    if (date.toDate && typeof date.toDate === 'function') {
+        return date.toDate();
+    }
+    // Handle strings or numbers
     if (typeof date === 'string' || typeof date === 'number') {
         const parsed = new Date(date);
-        if (!isNaN(parsed.getTime())) return parsed;
+        if (!isNaN(parsed.getTime())) {
+            return parsed;
+        }
     }
-    return null; // Return null for invalid dates
+    console.warn("Could not parse date:", date);
+    return null; // Return null for invalid or unparseable dates
 };
 
-
+/**
+ * Processes an array of data, converting specified fields into Date objects.
+ * This is crucial for ensuring data consistency within the app.
+ */
 const processData = (data: any[], dateFields: string[], nestedDateFields: {path: string, fields: string[]}[] = []) => {
   return data.map(item => {
     const newItem = { ...item };
+    // Process top-level date fields
     dateFields.forEach(field => {
       if (newItem[field]) {
         newItem[field] = parseDate(newItem[field]);
       }
     });
+    // Process date fields within nested arrays (e.g., vacationPeriods in people)
     nestedDateFields.forEach(nested => {
         if (newItem[nested.path] && Array.isArray(newItem[nested.path])) {
             newItem[nested.path] = newItem[nested.path].map((subItem: any) => {
@@ -56,7 +71,6 @@ const processData = (data: any[], dateFields: string[], nestedDateFields: {path:
   });
 };
 
-
 type State = {
   actividades: Actividad[];
   specialists: Specialist[];
@@ -71,7 +85,7 @@ type State = {
   loading: boolean;
 };
 
-// All action functions are now dummies.
+// All action functions are now dummies that log to the console.
 const dummyAction = (name: string) => (...args: any[]) => {
     console.log(`Action "${name}" called, but the app is in read-only mode.`, args);
 };
@@ -122,7 +136,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   const [state, setState] = useState<State>({
     actividades: [], specialists: [], people: [], sessions: [],
     payments: [], spaces: [], attendance: [], notifications: [],
-    tariffs: [], levels: [], loading: true,
+    tariffs: [], levels: [], loading: true, // Start in loading state
   });
 
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -135,7 +149,9 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   }, []);
 
   useEffect(() => {
+    // Simulate loading data to ensure a stable startup sequence.
     const timer = setTimeout(() => {
+      // Process all static data to ensure dates are correctly formatted
       const processedPeople = processData(staticPeople, ['joinDate', 'lastPaymentDate'], [{path: 'vacationPeriods', fields: ['startDate', 'endDate']}]);
       const processedPayments = processData(staticPayments, ['date']);
       const processedNotifications = processData(staticNotifications, ['createdAt']);
@@ -151,9 +167,9 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         notifications: processedNotifications,
         tariffs: staticTariffs,
         levels: staticLevels,
-        loading: false,
+        loading: false, // Set loading to false only after all data is processed
       });
-    }, 500); 
+    }, 500); // A small delay to mimic a real network request.
 
     return () => clearTimeout(timer);
   }, [instituteId]);
@@ -163,8 +179,11 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
     return person.vacationPeriods.some(period => {
         if (!period.startDate || !period.endDate) return false;
-        const startDate = new Date(period.startDate);
-        const endDate = new Date(period.endDate);
+        // Ensure period dates are valid Date objects before comparison
+        const startDate = parseDate(period.startDate);
+        const endDate = parseDate(period.endDate);
+        if (!startDate || !endDate) return false;
+        
         return checkDate >= new Date(startDate.setHours(0,0,0,0)) && checkDate <= new Date(endDate.setHours(23,59,59,999));
     });
   }, []);
