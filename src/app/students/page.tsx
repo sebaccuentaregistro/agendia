@@ -210,15 +210,10 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   );
 }
 
-function PersonCard({ person, recoveryBalance, onManageVacations }: { person: Person, recoveryBalance: number, onManageVacations: (person: Person) => void }) {
+function PersonCard({ person, recoveryBalance, onManageVacations, onEdit }: { person: Person, recoveryBalance: number, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void }) {
     const { tariffs, levels, deletePerson, recordPayment, undoLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
     
-    // These states are not used but need a dummy setter for the dialog
-    const [activeFilter, setActiveFilter] = useState('all');
-    const [searchTerm, setSearchTerm] = useState('');
-
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const level = levels.find(l => l.id === person.levelId);
     const paymentStatus = getStudentPaymentStatus(person, new Date());
@@ -243,7 +238,7 @@ function PersonCard({ person, recoveryBalance, onManageVacations }: { person: Pe
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreVertical className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => setIsPersonDialogOpen(true)}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
                              <DropdownMenuItem onSelect={() => onManageVacations(person)}>
                                 <Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones
                             </DropdownMenuItem>
@@ -285,8 +280,6 @@ function PersonCard({ person, recoveryBalance, onManageVacations }: { person: Pe
                     </Badge>
                 </CardFooter>
             </Card>
-
-            <PersonDialog person={person} onOpenChange={setIsPersonDialogOpen} open={isPersonDialogOpen} setActiveFilter={setActiveFilter} setSearchTerm={setSearchTerm} />
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
@@ -371,6 +364,11 @@ function StudentsPageContent() {
     setIsPersonDialogOpen(true);
   }
 
+  const handleEditClick = (person: Person) => {
+    setSelectedPerson(person);
+    setIsPersonDialogOpen(true);
+  }
+
   return (
     <div className="space-y-8">
       <PageHeader title="Personas">
@@ -411,6 +409,7 @@ function StudentsPageContent() {
                     person={person}
                     recoveryBalance={recoveryBalances[person.id] || 0}
                     onManageVacations={setPersonForVacation}
+                    onEdit={handleEditClick}
                 />
             ))}
           </div>

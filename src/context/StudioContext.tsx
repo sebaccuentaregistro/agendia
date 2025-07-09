@@ -1,13 +1,12 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useReducer, useMemo } from 'react';
-import { collection, doc, onSnapshot, Unsubscribe, DocumentReference, CollectionReference } from 'firebase/firestore';
+import { collection, doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import * as actions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
-import { addMonths, subDays } from 'date-fns';
+import { addMonths } from 'date-fns';
 
 type State = {
   actividades: Actividad[];
@@ -56,7 +55,6 @@ function dataReducer(state: State, action: Action): State {
   }
 }
 
-// Helper to convert Firestore timestamps to Dates
 const processDoc = (doc: any) => {
     const data = doc.data();
     for (const key in data) {
@@ -166,124 +164,97 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     return () => unsubscribes.forEach(unsub => unsub());
   }, [collectionRefs]);
   
-  const showSuccessToast = (description: string) => toast({ title: 'Éxito', description});
-  const showErrorToast = (description: string) => toast({ variant: 'destructive', title: 'Error', description});
-  
-  const executeAction = async (action: Promise<any>, successMessage: string, errorMessagePrefix: string) => {
+  const executeAction = useCallback(async (action: Promise<any>, successMessage: string, errorMessagePrefix: string) => {
     try {
       await action;
-      showSuccessToast(successMessage);
+      toast({ title: 'Éxito', description: successMessage });
     } catch (error: any) {
       console.error(errorMessagePrefix, error);
-      showErrorToast(`${errorMessagePrefix}: ${error.message}`);
+      toast({ variant: 'destructive', title: 'Error', description: `${errorMessagePrefix}: ${error.message}` });
     }
-  };
-
-  const executeDeleteWithUsageCheck = async (entityId: string, checks: any[], collectionName: keyof typeof collectionRefs, successMessage: string) => {
-      try {
-        await actions.deleteWithUsageCheckAction(entityId, checks, collectionRefs, {
-            sessions: state.sessions, people: state.people, actividades: state.actividades, specialists: state.specialists, spaces: state.spaces, levels: state.levels
-        });
-        await actions.deleteEntity(doc(collectionRefs[collectionName], entityId));
-        showSuccessToast(successMessage);
-      } catch (error: any) {
-        console.error(`Error deleting ${collectionName}:`, error);
-        showErrorToast(error.message);
-      }
-  };
-
-
-  const addActividad = (data: Omit<Actividad, 'id'>) => executeAction(actions.addEntity(collectionRefs.actividades, data), 'Actividad añadida.', 'Error al añadir actividad');
-  const updateActividad = (data: Actividad) => executeAction(actions.updateEntity(doc(collectionRefs.actividades, data.id), data), 'Actividad actualizada.', 'Error al actualizar actividad');
-  const deleteActividad = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'sessions', field: 'actividadId', label: 'sesión' }, { collection: 'specialists', field: 'actividadIds', label: 'especialista', type: 'array' }], 'actividades', 'Actividad eliminada.');
-
-  const addSpecialist = (data: Omit<Specialist, 'id' | 'avatar'>) => executeAction(actions.addEntity(collectionRefs.specialists, {...data, avatar: `https://placehold.co/100x100.png`}), 'Especialista añadido.', 'Error al añadir especialista');
-  const updateSpecialist = (data: Specialist) => executeAction(actions.updateEntity(doc(collectionRefs.specialists, data.id), data), 'Especialista actualizado.', 'Error al actualizar especialista');
-  const deleteSpecialist = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'sessions', field: 'instructorId', label: 'sesión' }], 'specialists', 'Especialista eliminado.');
-
-  const addPerson = (data: any) => executeAction(actions.addPersonAction(collectionRefs.people, data), 'Persona añadida.', 'Error al añadir persona');
-  const updatePerson = (data: Person) => executeAction(actions.updateEntity(doc(collectionRefs.people, data.id), data), 'Persona actualizada.', 'Error al actualizar persona');
-  const deletePerson = (id: string) => executeAction(actions.deletePersonAction(collectionRefs.sessions, collectionRefs.people, id), 'Persona eliminada.', 'Error al eliminar persona');
-
-  const addSpace = (data: Omit<Space, 'id'>) => executeAction(actions.addEntity(collectionRefs.spaces, data), 'Espacio añadido.', 'Error al añadir espacio');
-  const updateSpace = (data: Space) => executeAction(actions.updateEntity(doc(collectionRefs.spaces, data.id), data), 'Espacio actualizado.', 'Error al actualizar espacio');
-  const deleteSpace = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'sessions', field: 'spaceId', label: 'sesión' }], 'spaces', 'Espacio eliminado.');
-
-  const addSession = (data: Omit<Session, 'id' | 'personIds' | 'waitlistPersonIds'>) => executeAction(actions.addEntity(collectionRefs.sessions, {...data, personIds: [], waitlistPersonIds: []}), 'Sesión añadida.', 'Error al añadir sesión');
-  const updateSession = (data: Session) => executeAction(actions.updateEntity(doc(collectionRefs.sessions, data.id), data), 'Sesión actualizada.', 'Error al actualizar sesión');
-  const deleteSession = (id: string) => {
+  }, [toast]);
+  
+  const addActividad = useCallback((data: Omit<Actividad, 'id'>) => executeAction(actions.addEntity(collectionRefs.actividades, data), 'Actividad añadida.', 'Error al añadir actividad'), [executeAction, collectionRefs.actividades]);
+  const updateActividad = useCallback((data: Actividad) => executeAction(actions.updateEntity(doc(collectionRefs.actividades, data.id), data), 'Actividad actualizada.', 'Error al actualizar actividad'), [executeAction, collectionRefs.actividades]);
+  const deleteActividad = useCallback((id: string) => executeAction(actions.deleteWithUsageCheckAction(id, [{ collection: 'sessions', field: 'actividadId', label: 'sesión' }, { collection: 'specialists', field: 'actividadIds', label: 'especialista', type: 'array' }], collectionRefs, state), 'Actividad eliminada.', 'Error al eliminar actividad'), [executeAction, collectionRefs, state]);
+  
+  const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => executeAction(actions.addEntity(collectionRefs.specialists, {...data, avatar: `https://placehold.co/100x100.png`}), 'Especialista añadido.', 'Error al añadir especialista'), [executeAction, collectionRefs.specialists]);
+  const updateSpecialist = useCallback((data: Specialist) => executeAction(actions.updateEntity(doc(collectionRefs.specialists, data.id), data), 'Especialista actualizado.', 'Error al actualizar especialista'), [executeAction, collectionRefs.specialists]);
+  const deleteSpecialist = useCallback((id: string) => executeAction(actions.deleteWithUsageCheckAction(id, [{ collection: 'sessions', field: 'instructorId', label: 'sesión' }], collectionRefs, state), 'Especialista eliminado.', 'Error al eliminar especialista'), [executeAction, collectionRefs, state]);
+  
+  const addPerson = useCallback((data: any) => executeAction(actions.addPersonAction(collectionRefs.people, data), 'Persona añadida.', 'Error al añadir persona'), [executeAction, collectionRefs.people]);
+  const updatePerson = useCallback((data: Person) => executeAction(actions.updateEntity(doc(collectionRefs.people, data.id), data), 'Persona actualizada.', 'Error al actualizar persona'), [executeAction, collectionRefs.people]);
+  const deletePerson = useCallback((id: string) => executeAction(actions.deletePersonAction(collectionRefs.sessions, collectionRefs.people, id), 'Persona eliminada.', 'Error al eliminar persona'), [executeAction, collectionRefs.sessions, collectionRefs.people]);
+  
+  const addSpace = useCallback((data: Omit<Space, 'id'>) => executeAction(actions.addEntity(collectionRefs.spaces, data), 'Espacio añadido.', 'Error al añadir espacio'), [executeAction, collectionRefs.spaces]);
+  const updateSpace = useCallback((data: Space) => executeAction(actions.updateEntity(doc(collectionRefs.spaces, data.id), data), 'Espacio actualizado.', 'Error al actualizar espacio'), [executeAction, collectionRefs.spaces]);
+  const deleteSpace = useCallback((id: string) => executeAction(actions.deleteWithUsageCheckAction(id, [{ collection: 'sessions', field: 'spaceId', label: 'sesión' }], collectionRefs, state), 'Espacio eliminado.', 'Error al eliminar espacio'), [executeAction, collectionRefs, state]);
+  
+  const addSession = useCallback((data: Omit<Session, 'id' | 'personIds' | 'waitlistPersonIds'>) => executeAction(actions.addEntity(collectionRefs.sessions, {...data, personIds: [], waitlistPersonIds: []}), 'Sesión añadida.', 'Error al añadir sesión'), [executeAction, collectionRefs.sessions]);
+  const updateSession = useCallback((data: Session) => executeAction(actions.updateEntity(doc(collectionRefs.sessions, data.id), data), 'Sesión actualizada.', 'Error al actualizar sesión'), [executeAction, collectionRefs.sessions]);
+  const deleteSession = useCallback((id: string) => {
     const session = state.sessions.find(s => s.id === id);
     if (session && session.personIds.length > 0) {
-        showErrorToast("No se puede eliminar una sesión con personas inscriptas.");
+        toast({ variant: 'destructive', title: 'Error', description: "No se puede eliminar una sesión con personas inscriptas." });
         return;
     }
     executeAction(actions.deleteEntity(doc(collectionRefs.sessions, id)), 'Sesión eliminada.', 'Error al eliminar sesión');
-  };
+  }, [state.sessions, executeAction, collectionRefs.sessions, toast]);
   
-  const addTariff = (data: Omit<Tariff, 'id'>) => executeAction(actions.addEntity(collectionRefs.tariffs, data), 'Arancel añadido.', 'Error al añadir arancel');
-  const updateTariff = (data: Tariff) => executeAction(actions.updateEntity(doc(collectionRefs.tariffs, data.id), data), 'Arancel actualizado.', 'Error al actualizar arancel');
-  const deleteTariff = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'people', field: 'tariffId', label: 'persona' }], 'tariffs', 'Arancel eliminado.');
+  const addTariff = useCallback((data: Omit<Tariff, 'id'>) => executeAction(actions.addEntity(collectionRefs.tariffs, data), 'Arancel añadido.', 'Error al añadir arancel'), [executeAction, collectionRefs.tariffs]);
+  const updateTariff = useCallback((data: Tariff) => executeAction(actions.updateEntity(doc(collectionRefs.tariffs, data.id), data), 'Arancel actualizado.', 'Error al actualizar arancel'), [executeAction, collectionRefs.tariffs]);
+  const deleteTariff = useCallback((id: string) => executeAction(actions.deleteWithUsageCheckAction(id, [{ collection: 'people', field: 'tariffId', label: 'persona' }], collectionRefs, state), 'Arancel eliminado.', 'Error al eliminar arancel'), [executeAction, collectionRefs, state]);
   
-  const addLevel = (data: Omit<Level, 'id'>) => executeAction(actions.addEntity(collectionRefs.levels, data), 'Nivel añadido.', 'Error al añadir nivel');
-  const updateLevel = (data: Level) => executeAction(actions.updateEntity(doc(collectionRefs.levels, data.id), data), 'Nivel actualizado.', 'Error al actualizar nivel');
-  const deleteLevel = (id: string) => executeDeleteWithUsageCheck(id, [{ collection: 'sessions', field: 'levelId', label: 'sesión' }, { collection: 'people', field: 'levelId', label: 'persona' }], 'levels', 'Nivel eliminado.');
+  const addLevel = useCallback((data: Omit<Level, 'id'>) => executeAction(actions.addEntity(collectionRefs.levels, data), 'Nivel añadido.', 'Error al añadir nivel'), [executeAction, collectionRefs.levels]);
+  const updateLevel = useCallback((data: Level) => executeAction(actions.updateEntity(doc(collectionRefs.levels, data.id), data), 'Nivel actualizado.', 'Error al actualizar nivel'), [executeAction, collectionRefs.levels]);
+  const deleteLevel = useCallback((id: string) => executeAction(actions.deleteWithUsageCheckAction(id, [{ collection: 'sessions', field: 'levelId', label: 'sesión' }, { collection: 'people', field: 'levelId', label: 'persona' }], collectionRefs, state), 'Nivel eliminado.', 'Error al eliminar nivel'), [executeAction, collectionRefs, state]);
   
-  const recordPayment = (personId: string) => {
+  const recordPayment = useCallback((personId: string) => {
     const person = state.people.find(p => p.id === personId);
-    if (!person) return showErrorToast("Persona no encontrada.");
+    if (!person) {
+      toast({ variant: 'destructive', title: 'Error', description: "Persona no encontrada." });
+      return;
+    }
     const newExpiryDate = addMonths(person.lastPaymentDate, 1);
     executeAction(actions.recordPaymentAction(collectionRefs.payments, collectionRefs.people, personId, newExpiryDate), 'Pago registrado.', 'Error al registrar pago');
-  };
-
-  const undoLastPayment = async (personId: string) => {
+  }, [state.people, collectionRefs.payments, collectionRefs.people, executeAction, toast]);
+  
+  const undoLastPayment = useCallback(async (personId: string) => {
     const person = state.people.find(p => p.id === personId);
-    if (!person) return showErrorToast("Persona no encontrada.");
-
+    if (!person) {
+      toast({ variant: 'destructive', title: 'Error', description: "Persona no encontrada." });
+      return;
+    }
     const personPayments = state.payments
       .filter(p => p.personId === personId)
       .sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
     if (personPayments.length === 0) {
-      showErrorToast('No hay pagos para deshacer.');
+      toast({ variant: 'destructive', title: 'Error', description: 'No hay pagos para deshacer.' });
       return;
     }
     const paymentToDelete = personPayments[0];
     const previousExpiryDate = addMonths(person.lastPaymentDate, -1);
     executeAction(actions.undoLastPaymentAction(collectionRefs.payments, collectionRefs.people, personId, paymentToDelete, previousExpiryDate), 'Último pago deshecho.', 'Error al deshacer pago');
-  };
-
-  const enrollPeopleInClass = (sessionId: string, personIds: string[]) => executeAction(actions.enrollPeopleInClassAction(doc(collectionRefs.sessions, sessionId), personIds), 'Inscripciones actualizadas.', 'Error al inscribir');
-  const enrollPersonInSessions = (personId: string, sessionIds: string[]) => executeAction(actions.enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds, state.sessions), 'Inscripciones actualizadas.', 'Error al inscribir');
-  const saveAttendance = (...args: Parameters<typeof actions.saveAttendanceAction>) => executeAction(actions.saveAttendanceAction(collectionRefs.attendance, ...args), 'Asistencia guardada.', 'Error al guardar asistencia');
-  const addOneTimeAttendee = (...args: Parameters<typeof actions.addOneTimeAttendeeAction>) => executeAction(actions.addOneTimeAttendeeAction(collectionRefs.attendance, ...args), 'Asistente puntual añadido.', 'Error al añadir asistente');
-  const addJustifiedAbsence = (...args: Parameters<typeof actions.addJustifiedAbsenceAction>) => executeAction(actions.addJustifiedAbsenceAction(collectionRefs.attendance, ...args), 'Ausencia justificada.', 'Error al justificar ausencia');
-
-  const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
+  }, [state.people, state.payments, collectionRefs.payments, collectionRefs.people, executeAction, toast]);
+  
+  const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => executeAction(actions.enrollPeopleInClassAction(doc(collectionRefs.sessions, sessionId), personIds), 'Inscripciones actualizadas.', 'Error al inscribir'), [executeAction, collectionRefs.sessions]);
+  const enrollPersonInSessions = useCallback((personId: string, sessionIds: string[]) => executeAction(actions.enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds, state.sessions), 'Inscripciones actualizadas.', 'Error al inscribir'), [executeAction, collectionRefs.sessions, state.sessions]);
+  const saveAttendance = useCallback((...args: Parameters<typeof actions.saveAttendanceAction>) => executeAction(actions.saveAttendanceAction(collectionRefs.attendance, ...args), 'Asistencia guardada.', 'Error al guardar asistencia'), [executeAction, collectionRefs.attendance]);
+  const addOneTimeAttendee = useCallback((...args: Parameters<typeof actions.addOneTimeAttendeeAction>) => executeAction(actions.addOneTimeAttendeeAction(collectionRefs.attendance, ...args), 'Asistente puntual añadido.', 'Error al añadir asistente'), [executeAction, collectionRefs.attendance]);
+  const addJustifiedAbsence = useCallback((...args: Parameters<typeof actions.addJustifiedAbsenceAction>) => executeAction(actions.addJustifiedAbsenceAction(collectionRefs.attendance, ...args), 'Ausencia justificada.', 'Error al justificar ausencia'), [executeAction, collectionRefs.attendance]);
+  
+  const addVacationPeriod = useCallback((personId: string, startDate: Date, endDate: Date) => {
     const person = state.people.find(p => p.id === personId);
     if (!person) return;
     executeAction(actions.addVacationPeriodAction(doc(collectionRefs.people, personId), person, startDate, endDate), 'Período de vacaciones añadido.', 'Error al añadir vacaciones');
-  }
-
-  const removeVacationPeriod = (personId: string, vacationId: string) => {
+  }, [state.people, collectionRefs.people, executeAction]);
+  
+  const removeVacationPeriod = useCallback((personId: string, vacationId: string) => {
     const person = state.people.find(p => p.id === personId);
     if (!person) return;
     executeAction(actions.removeVacationPeriodAction(doc(collectionRefs.people, personId), person, vacationId), 'Período de vacaciones eliminado.', 'Error al eliminar vacaciones');
-  }
-
-  const addToWaitlist = (sessionId: string, personId: string) => {
-    const session = state.sessions.find(s => s.id === sessionId);
-    if (!session) return;
-    executeAction(actions.addToWaitlistAction(doc(collectionRefs.sessions, sessionId), session, personId), 'Anotado en lista de espera.', 'Error en lista de espera');
-  }
-
-  const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
-    const session = state.sessions.find(s => s.id === sessionId);
-    if (!session) return;
-    executeAction(actions.enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, notificationId, sessionId, personId, session), 'Inscrito desde lista de espera.', 'Error al inscribir desde lista de espera');
-  }
-
-  const dismissNotification = (notificationId: string) => executeAction(actions.deleteEntity(doc(collectionRefs.notifications, notificationId)), 'Notificación descartada.', 'Error al descartar notificación');
-
+  }, [state.people, collectionRefs.people, executeAction]);
+  
   const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
@@ -294,46 +265,51 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
   }, []);
   
+  const addToWaitlist = useCallback((sessionId: string, personId: string) => {
+    const session = state.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    executeAction(actions.addToWaitlistAction(doc(collectionRefs.sessions, sessionId), session, personId), 'Anotado en lista de espera.', 'Error en lista de espera');
+  }, [state.sessions, executeAction, collectionRefs.sessions]);
+  
+  const enrollFromWaitlist = useCallback((notificationId: string, sessionId: string, personId: string) => {
+    const session = state.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    executeAction(actions.enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, notificationId, sessionId, personId, session), 'Inscrito desde lista de espera.', 'Error al inscribir desde lista de espera');
+  }, [state.sessions, executeAction, collectionRefs.sessions, collectionRefs.notifications]);
+  
+  const dismissNotification = useCallback((notificationId: string) => executeAction(actions.deleteEntity(doc(collectionRefs.notifications, notificationId)), 'Notificación descartada.', 'Error al descartar notificación'), [executeAction, collectionRefs.notifications]);
+
   const contextValue: StudioContextType = useMemo(() => ({
     ...state,
-    addActividad,
-    updateActividad,
-    deleteActividad,
-    addSpecialist,
-    updateSpecialist,
-    deleteSpecialist,
-    addPerson,
-    updatePerson,
-    deletePerson,
-    recordPayment,
-    undoLastPayment,
-    addSpace,
-    updateSpace,
-    deleteSpace,
-    addSession,
-    updateSession,
-    deleteSession,
-    enrollPersonInSessions,
-    enrollPeopleInClass,
-    saveAttendance,
-    addOneTimeAttendee,
-    addJustifiedAbsence,
-    addVacationPeriod,
-    removeVacationPeriod,
-    isPersonOnVacation,
-    addToWaitlist,
-    enrollFromWaitlist,
-    dismissNotification,
-    addTariff,
-    updateTariff,
-    deleteTariff,
-    addLevel,
-    updateLevel,
-    deleteLevel,
-    isTutorialOpen,
-    openTutorial,
-    closeTutorial
-  }), [state, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial]);
+    addActividad, updateActividad, deleteActividad,
+    addSpecialist, updateSpecialist, deleteSpecialist,
+    addPerson, updatePerson, deletePerson,
+    recordPayment, undoLastPayment,
+    addSpace, updateSpace, deleteSpace,
+    addSession, updateSession, deleteSession,
+    enrollPersonInSessions, enrollPeopleInClass,
+    saveAttendance, addOneTimeAttendee, addJustifiedAbsence,
+    addVacationPeriod, removeVacationPeriod, isPersonOnVacation,
+    addToWaitlist, enrollFromWaitlist, dismissNotification,
+    addTariff, updateTariff, deleteTariff,
+    addLevel, updateLevel, deleteLevel,
+    isTutorialOpen, openTutorial, closeTutorial
+  }), [
+    state,
+    addActividad, updateActividad, deleteActividad,
+    addSpecialist, updateSpecialist, deleteSpecialist,
+    addPerson, updatePerson, deletePerson,
+    recordPayment, undoLastPayment,
+    addSpace, updateSpace, deleteSpace,
+    addSession, updateSession, deleteSession,
+    enrollPersonInSessions, enrollPeopleInClass,
+    saveAttendance, addOneTimeAttendee, addJustifiedAbsence,
+    addVacationPeriod, removeVacationPeriod, isPersonOnVacation,
+    addToWaitlist, enrollFromWaitlist, dismissNotification,
+    addTariff, updateTariff, deleteTariff,
+    addLevel, updateLevel, deleteLevel,
+    isTutorialOpen, openTutorial, closeTutorial
+  ]);
 
   return (
     <StudioContext.Provider value={contextValue}>

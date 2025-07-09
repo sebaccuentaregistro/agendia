@@ -1,12 +1,11 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { doLoginWithEmailAndPassword, doSignupWithEmailAndPassword, doLogout, SignupCredentials } from '@/lib/firebase-auth';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
 
 type UserProfile = {
   instituteId: string;
@@ -32,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      setLoading(true);
       if (firebaseUser) {
         setUser(firebaseUser);
         try {
@@ -60,8 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => unsubscribe();
   }, [toast]);
 
-  const login = async (email: string, password: string) => {
-    setLoading(true);
+  const login = useCallback(async (email: string, password: string) => {
     const result = await doLoginWithEmailAndPassword(email, password);
     if (!result.success) {
       console.error("Login Error:", result.error?.code, result.error?.message);
@@ -72,12 +71,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description = 'Demasiados intentos de inicio de sesión fallidos. Por favor, intenta de nuevo más tarde.';
       }
       toast({ variant: 'destructive', title: 'Error de inicio de sesión', description });
-      setLoading(false);
     }
-  };
+  }, [toast]);
 
-  const signup = async (credentials: SignupCredentials) => {
-    setLoading(true);
+  const signup = useCallback(async (credentials: SignupCredentials) => {
     const result = await doSignupWithEmailAndPassword(credentials);
     if (!result.success) {
       let description = 'Ocurrió un error inesperado al crear tu cuenta.';
@@ -85,21 +82,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description = 'Este email ya está registrado. Por favor, intenta con otro.';
       }
       toast({ variant: 'destructive', title: 'Error de Registro', description });
-      setLoading(false);
     } else {
        toast({
           title: '¡Registro Exitoso!',
           description: "Tu cuenta ha sido creada. Ahora un administrador debe aprobarla.",
         });
     }
-  };
+  }, [toast]);
 
-  const logout = async () => {
-    setLoading(true);
+  const logout = useCallback(async () => {
     await doLogout();
-  };
+  }, []);
 
-  const value = useMemo(() => ({ user, userProfile, loading, login, signup, logout }), [user, userProfile, loading]);
+  const value = useMemo(() => ({ user, userProfile, loading, login, signup, logout }), [user, userProfile, loading, login, signup, logout]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
