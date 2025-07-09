@@ -162,15 +162,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   // --- Core State Manipulation Functions (Corrected with functional updates) ---
 
   const addEntity = useCallback(<T extends { id: string }>(key: keyof State, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
-      const newItem: T = {
-        id: `${key.toString().slice(0, -1)}-${Date.now()}-${Math.random()}`,
-        ...defaultValues,
-        ...itemData,
-      } as T;
-      setState(current => ({
-        ...current,
-        [key]: [...(current[key] as T[]), newItem],
-      }));
+      setState(current => {
+        const newItem: T = {
+          id: `${key.toString().slice(0, -1)}-${Date.now()}-${Math.random()}`,
+          ...defaultValues,
+          ...itemData,
+        } as T;
+        return {
+          ...current,
+          [key]: [...(current[key] as T[]), newItem],
+        };
+      });
   }, []);
 
   const updateEntity = useCallback(<T extends { id: string }>(key: keyof State, item: T) => {
@@ -181,30 +183,27 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteEntity = useCallback((key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
-    setState(current => {
-        for (const check of usageChecks) {
-            const collectionToCheck = current[check.collection] as any[];
-            const isUsed = collectionToCheck.some(item =>
-                check.type === 'array'
-                ? (item[check.field] as string[])?.includes(id)
-                : item[check.field] === id
-            );
-            if (isUsed) {
-                toast({
-                    title: 'Error al eliminar',
-                    description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
-                    variant: 'destructive',
-                });
-                return current; // Abort update, return original state
-            }
+    for (const check of usageChecks) {
+        const collectionToCheck = state[check.collection] as any[];
+        const isUsed = collectionToCheck.some(item =>
+            check.type === 'array'
+            ? (item[check.field] as string[])?.includes(id)
+            : item[check.field] === id
+        );
+        if (isUsed) {
+            toast({
+                title: 'Error al eliminar',
+                description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
+                variant: 'destructive',
+            });
+            return;
         }
-        // If all checks pass, proceed with deletion
-        return {
-          ...current,
-          [key]: (current[key] as any[]).filter(i => i.id !== id),
-        };
-    });
-  }, [toast]);
+    }
+    setState(current => ({
+      ...current,
+      [key]: (current[key] as any[]).filter(i => i.id !== id),
+    }));
+  }, [state, toast]);
   
   // --- Wrapper Functions for each data type ---
   
@@ -249,15 +248,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addEntity('sessions', data, { personIds: [], waitlistPersonIds: [] }), [addEntity]);
   const updateSession = useCallback((data: Session) => updateEntity('sessions', data), [updateEntity]);
   const deleteSession = useCallback((id: string) => {
-    setState(current => {
-      const session = current.sessions.find(s => s.id === id);
+    const session = state.sessions.find(s => s.id === id);
       if(session && session.personIds.length > 0) {
           toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
-          return current;
+          return;
       }
-      return {...current, sessions: current.sessions.filter(s => s.id !== id)};
-    });
-  }, [toast]);
+      setState(current => ({...current, sessions: current.sessions.filter(s => s.id !== id)}));
+  }, [state, toast]);
   
   const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
     setState(current => ({
@@ -407,7 +404,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     addLevel, updateLevel, deleteLevel,
     isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial,
   }), [
-    state,
+    state, toast, 
     addActividad, updateActividad, deleteActividad,
     addSpecialist, updateSpecialist, deleteSpecialist,
     addPerson, updatePerson, deletePerson,
