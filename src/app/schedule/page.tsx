@@ -284,7 +284,7 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
     onClose();
   }
 
-  const sortedPeople = people.sort((a, b) => a.name.localeCompare(b.name));
+  const sortedPeople = [...people].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>

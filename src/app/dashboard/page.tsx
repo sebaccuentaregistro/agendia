@@ -24,7 +24,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
-    const sortedNotifications = useMemo(() => notifications.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [notifications]);
+    const sortedNotifications = useMemo(() => [...notifications].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [notifications]);
 
 
     if (sortedNotifications.length === 0) return null;
