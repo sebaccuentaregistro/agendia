@@ -1,7 +1,7 @@
 
 'use client';
 
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, Info, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -27,12 +27,9 @@ export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial } = useStudio();
   const { logout } = useAuth();
-  const router = useRouter();
 
   const handleLogout = async () => {
     await logout();
-    // Since there's no real auth, we just log a message.
-    // In a real app, this would redirect to a login page.
     console.log("Logout action triggered.");
   };
 

@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, HeartPulse, StickyNote } from 'lucide-react';
@@ -300,8 +300,12 @@ function StudentsPageContent() {
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get('filter') || 'all';
   const [activeFilter, setActiveFilter] = useState(initialFilter);
-
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const recoveryBalances = useMemo(() => {
     const balances: Record<string, number> = {};
@@ -320,6 +324,8 @@ function StudentsPageContent() {
 
 
   const filteredPeople = useMemo(() => {
+    if (!isMounted) return [];
+    
     const now = new Date();
     const term = searchTerm.toLowerCase();
 
@@ -333,7 +339,7 @@ function StudentsPageContent() {
         return true;
       })
       .sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, searchTerm, activeFilter, isPersonOnVacation, recoveryBalances]);
+  }, [people, searchTerm, activeFilter, isPersonOnVacation, recoveryBalances, isMounted]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -363,6 +369,28 @@ function StudentsPageContent() {
   const handleEditClick = (person: Person) => {
     setSelectedPerson(person);
     setIsPersonDialogOpen(true);
+  }
+
+  if (!isMounted) {
+    return (
+        <div className="space-y-8">
+            <PageHeader title="Personas">
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" disabled><FileDown className="mr-2 h-4 w-4" />Exportar</Button>
+                    <Button disabled><PlusCircle className="mr-2 h-4 w-4" />Añadir Persona</Button>
+                </div>
+            </PageHeader>
+            <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                    <Skeleton className="h-10 flex-grow rounded-xl" />
+                    <Skeleton className="h-10 w-full sm:w-[380px] rounded-lg" />
+                </div>
+            </Card>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[218px] w-full rounded-2xl" />)}
+            </div>
+      </div>
+    )
   }
 
   return (
@@ -447,8 +475,8 @@ function StudentsPageContent() {
 
 export default function StudentsPage() {
   return (
-    <React.Suspense fallback={<div>Cargando...</div>}>
+    <Suspense fallback={<div>Cargando...</div>}>
       <StudentsPageContent />
-    </React.Suspense>
+    </Suspense>
   );
 }
