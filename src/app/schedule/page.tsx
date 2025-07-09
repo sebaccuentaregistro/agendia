@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal, UserX, Signal } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { Session, Person } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
@@ -1072,9 +1072,5 @@ function SchedulePageContent() {
 }
 
 export default function SchedulePage() {
-  return (
-    <React.Suspense fallback={<div>Cargando...</div>}>
-      <SchedulePageContent />
-    </React.Suspense>
-  )
+  return <SchedulePageContent />;
 }
