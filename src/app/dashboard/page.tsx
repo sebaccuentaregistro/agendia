@@ -175,6 +175,14 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
+  // FIX: Hydration Mismatch Correction
+  // Using new Date() directly causes server/client mismatches.
+  // We ensure this logic only runs on the client after hydration.
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
@@ -189,14 +197,16 @@ function DashboardPageContent() {
   const dashboardView = searchParams.get('view') === 'management' ? 'management' : 'main';
 
   const overdueCount = useMemo(() => {
+    if (!isClient) return 0;
     const now = new Date();
     return people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
-  }, [people]);
+  }, [people, isClient]);
 
   const onVacationCount = useMemo(() => {
+    if (!isClient) return 0;
     const now = new Date();
     return people.filter(p => isPersonOnVacation(p, now)).length;
-  }, [people, isPersonOnVacation]);
+  }, [people, isPersonOnVacation, isClient]);
 
   const pendingRecoveryCount = useMemo(() => {
     const balances: Record<string, number> = {};
@@ -237,6 +247,9 @@ function DashboardPageContent() {
   };
 
   const { todaysSessions, filteredSessions, todayName } = useMemo(() => {
+    if (!isClient) {
+        return { todaysSessions: [], filteredSessions: [], todayName: "..." };
+    }
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const today = new Date();
     const todayName = dayMap[today.getDay()];
@@ -277,7 +290,7 @@ function DashboardPageContent() {
     });
 
     return { todaysSessions, filteredSessions: filtered, todayName };
-  }, [sessions, filters, attendance, people, isPersonOnVacation]);
+  }, [sessions, filters, attendance, people, isPersonOnVacation, isClient]);
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
@@ -291,7 +304,7 @@ function DashboardPageContent() {
     return time;
   };
   
-  if (loading) {
+  if (loading || !isClient) {
     return (
         <div className="space-y-8">
             <Skeleton className="h-24 w-full rounded-2xl" />
@@ -563,8 +576,9 @@ export default function DashboardPage() {
   // We wrap the component in a Suspense boundary to avoid this.
   // This is a pattern recommended by the Next.js team.
   return (
-    <React.Suspense fallback={<div>Cargando...</div>}>
+    <React.Suspense fallback={<div className="p-8">Cargando...</div>}>
       <DashboardPageContent />
     </React.Suspense>
   );
 }
+
