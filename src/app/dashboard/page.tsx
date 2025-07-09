@@ -26,7 +26,6 @@ function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
     const sortedNotifications = useMemo(() => {
         return [...notifications].sort((a, b) => {
-            // Ensure createdAt is a Date object before comparing
             const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return dateB - dateA;
@@ -176,10 +175,59 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
+  // State for client-side calculated data
   const [isClient, setIsClient] = useState(false);
+  const [overdueCount, setOverdueCount] = useState(0);
+  const [onVacationCount, setOnVacationCount] = useState(0);
+  const [pendingRecoveryCount, setPendingRecoveryCount] = useState(0);
+  const [todaysSessions, setTodaysSessions] = useState<any[]>([]);
+  const [todayName, setTodayName] = useState("...");
+
   useEffect(() => {
+    // This effect runs only on the client, after the initial render.
     setIsClient(true);
-  }, []);
+
+    const now = new Date();
+    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
+    
+    // Calculate overdue count
+    setOverdueCount(people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length);
+
+    // Calculate on vacation count
+    setOnVacationCount(people.filter(p => isPersonOnVacation(p, now)).length);
+
+    // Calculate pending recovery count
+    const balances: Record<string, number> = {};
+    people.forEach(p => (balances[p.id] = 0));
+    attendance.forEach(record => {
+      record.justifiedAbsenceIds?.forEach(personId => { if (balances[personId] !== undefined) balances[personId]++; });
+      record.oneTimeAttendees?.forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
+    });
+    setPendingRecoveryCount(Object.values(balances).filter(balance => balance > 0).length);
+
+    // Calculate today's sessions
+    const currentTodayName = dayMap[now.getDay()];
+    setTodayName(currentTodayName);
+    const todayStr = format(now, 'yyyy-MM-dd');
+
+    const sessionsForToday = sessions
+      .filter(session => session.dayOfWeek === currentTodayName)
+      .map(session => {
+        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        const activeRegulars = session.personIds.filter(pid => {
+            const person = people.find(p => p.id === pid);
+            return person && !isPersonOnVacation(person, now);
+        });
+        return {
+          ...session,
+          enrolledCount: activeRegulars.length + oneTimeAttendees.length,
+        };
+      })
+      .sort((a, b) => a.time.localeCompare(b.time));
+    setTodaysSessions(sessionsForToday);
+
+  }, [people, sessions, attendance, isPersonOnVacation]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -193,34 +241,6 @@ function DashboardPageContent() {
 
   const searchParams = useSearchParams();
   const dashboardView = searchParams.get('view') === 'management' ? 'management' : 'main';
-
-  const overdueCount = useMemo(() => {
-    if (!isClient) return 0;
-    const now = new Date();
-    return people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
-  }, [people, isClient]);
-
-  const onVacationCount = useMemo(() => {
-    if (!isClient) return 0;
-    const now = new Date();
-    return people.filter(p => isPersonOnVacation(p, now)).length;
-  }, [people, isPersonOnVacation, isClient]);
-
-  const pendingRecoveryCount = useMemo(() => {
-    const balances: Record<string, number> = {};
-    people.forEach(p => (balances[p.id] = 0));
-
-    attendance.forEach(record => {
-      record.justifiedAbsenceIds?.forEach(personId => {
-        if (balances[personId] !== undefined) balances[personId]++;
-      });
-      record.oneTimeAttendees?.forEach(personId => {
-        if (balances[personId] !== undefined) balances[personId]--;
-      });
-    });
-
-    return Object.values(balances).filter(balance => balance > 0).length;
-  }, [people, attendance]);
 
   const hasOverdue = overdueCount > 0;
   const hasOnVacation = onVacationCount > 0;
@@ -244,15 +264,7 @@ function DashboardPageContent() {
     setFilters(prev => ({ ...prev, [filterName]: value }));
   };
 
-  const { todaysSessions, filteredSessions, todayName } = useMemo(() => {
-    if (!isClient) {
-        return { todaysSessions: [], filteredSessions: [], todayName: "..." };
-    }
-    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
-    const today = new Date();
-    const todayName = dayMap[today.getDay()];
-    const todayStr = format(today, 'yyyy-MM-dd');
-
+  const filteredSessions = useMemo(() => {
     const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
         if (!time) return 'Tarde';
         const hour = parseInt(time.split(':')[0], 10);
@@ -261,23 +273,7 @@ function DashboardPageContent() {
         return 'Noche';
     };
 
-    const todaysSessions = sessions
-      .filter(session => session.dayOfWeek === todayName)
-      .map(session => {
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-        const activeRegulars = session.personIds.filter(pid => {
-            const person = people.find(p => p.id === pid);
-            return person && !isPersonOnVacation(person, today);
-        });
-        return {
-          ...session,
-          enrolledCount: activeRegulars.length + oneTimeAttendees.length,
-        };
-      })
-      .sort((a, b) => a.time.localeCompare(b.time));
-
-    const filtered = todaysSessions.filter(session => {
+    return todaysSessions.filter(session => {
         const timeOfDay = getTimeOfDay(session.time);
         return (
             (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
@@ -286,9 +282,7 @@ function DashboardPageContent() {
             (filters.timeOfDay === 'all' || timeOfDay === filters.timeOfDay)
         );
     });
-
-    return { todaysSessions, filteredSessions: filtered, todayName };
-  }, [sessions, filters, attendance, people, isPersonOnVacation, isClient]);
+  }, [todaysSessions, filters]);
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
