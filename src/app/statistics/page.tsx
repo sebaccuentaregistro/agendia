@@ -83,11 +83,12 @@ function StatisticsPageContent() {
 
     const activityPopularity = (() => {
       const popularity: Record<string, number> = sessions.reduce((acc, session) => {
-        acc[session.actividadId] = (acc[session.actividadId] || 0) + session.personIds.length;
+        const actividadId = session.actividadId;
+        acc[actividadId] = (acc[actividadId] || 0) + session.personIds.length;
         return acc;
       }, {} as Record<string, number>);
       return Object.entries(popularity).map(([actividadId, count]) => ({
-        name: actividades.find(a => a.id ===ividadId)?.name || 'Desconocido',
+        name: actividades.find(a => a.id === actividadId)?.name || 'Desconocido',
         value: count,
       })).filter(item => item.value > 0).sort((a, b) => b.value - a.value);
     })();

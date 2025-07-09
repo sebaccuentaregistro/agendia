@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal, UserX, Signal } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import type { Session, Person } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
@@ -372,7 +372,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
     return people.filter(p => session.personIds.includes(p.id));
   }, [people, session]);
 
-  constividad = useMemo(() => {
+  const actividad = useMemo(() => {
     return actividades.find((s) => s.id === session.actividadId);
   }, [session, actividades]);
   
@@ -657,17 +657,18 @@ function SchedulePageContent() {
     exportToCsv('horarios.csv', dataToExport, headers);
   };
   
-  const { now, todayName, todayIndex, appDayOrder } = useMemo(() => {
-    if (!isMounted) {
-      return { now: null, todayName: '', todayIndex: -1, appDayOrder: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] };
-    }
+  const clientTimeData = useMemo(() => {
+    if (!isMounted) return { now: null, todayName: '', todayIndex: -1, appDayOrder: [] };
+    
     const now = new Date();
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const appDayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const todayName = dayMap[now.getDay()];
     const todayIndex = appDayOrder.indexOf(todayName);
+    
     return { now, todayName, todayIndex, appDayOrder };
   }, [isMounted]);
+
 
   if (!isMounted) {
     return (
@@ -910,28 +911,31 @@ function SchedulePageContent() {
                       const isFull = availableSpots <= 0;
                       const waitlistCount = session.waitlistPersonIds?.length || 0;
 
+                      const { now, todayIndex, appDayOrder } = clientTimeData;
                       const sessionIndex = appDayOrder.indexOf(session.dayOfWeek);
                       const isFutureDay = todayIndex !== -1 && sessionIndex > todayIndex;
                       const isToday = todayIndex !== -1 && sessionIndex === todayIndex;
 
                       let isAttendanceAllowed = true;
                       let tooltipMessage = "Pasar Lista";
-
-                      if (!now) {
+                      
+                      if (now) {
+                        if (isFutureDay) {
+                            isAttendanceAllowed = false;
+                            tooltipMessage = "No se puede pasar lista para una clase futura.";
+                        } else if (isToday) {
+                            const [hour, minute] = session.time.split(':').map(Number);
+                            const sessionStartTime = new Date(now);
+                            sessionStartTime.setHours(hour, minute, 0, 0);
+                            const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
+                            if (now < attendanceWindowStart) {
+                                isAttendanceAllowed = false;
+                                tooltipMessage = "La asistencia se habilita 20 minutos antes de la clase.";
+                            }
+                        }
+                      } else {
                           isAttendanceAllowed = false;
                           tooltipMessage = "Cargando disponibilidad...";
-                      } else if (isFutureDay) {
-                          isAttendanceAllowed = false;
-                          tooltipMessage = "No se puede pasar lista para una clase futura.";
-                      } else if (isToday) {
-                          const [hour, minute] = session.time.split(':').map(Number);
-                          const sessionStartTime = new Date(now);
-                          sessionStartTime.setHours(hour, minute, 0, 0);
-                          const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
-                          if (now < attendanceWindowStart) {
-                              isAttendanceAllowed = false;
-                              tooltipMessage = "La asistencia se habilita 20 minutos antes de la clase.";
-                          }
                       }
 
                       return (
@@ -1123,8 +1127,8 @@ function SchedulePageContent() {
 
 export default function SchedulePage() {
   return (
-    <React.Suspense fallback={<div>Cargando...</div>}>
+    <Suspense fallback={<div>Cargando...</div>}>
       <SchedulePageContent />
-    </React.Suspense>
+    </Suspense>
   );
 }

@@ -307,7 +307,12 @@ function StudentsPageContent() {
     setIsMounted(true);
   }, []);
 
-  const recoveryBalances = useMemo(() => {
+  const { recoveryBalances, filteredPeople } = useMemo(() => {
+    if (!isMounted) return { recoveryBalances: {}, filteredPeople: [] };
+    
+    const now = new Date();
+    const term = searchTerm.toLowerCase();
+
     const balances: Record<string, number> = {};
     people.forEach(p => (balances[p.id] = 0));
 
@@ -319,27 +324,20 @@ function StudentsPageContent() {
         if (balances[personId] !== undefined) balances[personId]--;
       });
     });
-    return balances;
-  }, [people, attendance]);
 
-
-  const filteredPeople = useMemo(() => {
-    if (!isMounted) return [];
-    
-    const now = new Date();
-    const term = searchTerm.toLowerCase();
-
-    return people
+    const finalFilteredPeople = people
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
       .filter(person => {
         if (activeFilter === 'all') return true;
         if (activeFilter === 'overdue') return getStudentPaymentStatus(person, now) === 'Atrasado';
         if (activeFilter === 'on-vacation') return isPersonOnVacation(person, now);
-        if (activeFilter === 'pending-recovery') return recoveryBalances[person.id] > 0;
+        if (activeFilter === 'pending-recovery') return balances[person.id] > 0;
         return true;
       })
       .sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, searchTerm, activeFilter, isPersonOnVacation, recoveryBalances, isMounted]);
+      
+    return { recoveryBalances: balances, filteredPeople: finalFilteredPeople };
+  }, [people, searchTerm, activeFilter, isPersonOnVacation, attendance, isMounted]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({

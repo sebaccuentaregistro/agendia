@@ -15,6 +15,7 @@ const AuthContext = createContext<any>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     // This provider now gives a static, "logged-in" state to the whole app.
+    // This removes the complex logic that was causing the application to freeze.
     const value = {
         user: dummyUser,
         userProfile: dummyProfile,

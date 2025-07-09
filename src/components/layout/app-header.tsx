@@ -29,7 +29,8 @@ export function AppHeader() {
   const { logout } = useAuth();
 
   const handleLogout = async () => {
-    await logout();
+    // In a real app, this would call the logout function.
+    // Here, we just log to the console as the auth system is a dummy.
     console.log("Logout action triggered.");
   };
 

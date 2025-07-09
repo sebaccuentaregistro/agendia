@@ -248,9 +248,13 @@ function DashboardPageContent() {
 
   useEffect(() => {
     if (!isMounted) return;
-    const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
-    if (!tutorialCompleted) {
-      openTutorial();
+    try {
+      const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
+      if (!tutorialCompleted) {
+        openTutorial();
+      }
+    } catch (e) {
+      console.warn("Could not access localStorage. Tutorial will not be shown automatically.");
     }
   }, [openTutorial, isMounted]);
 
@@ -298,7 +302,7 @@ function DashboardPageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   };
@@ -315,7 +319,7 @@ function DashboardPageContent() {
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-auto w-full rounded-xl aspect-square" />)}
         </div>
-        <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border-white/20">
+        <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
           <CardHeader>
             <Skeleton className="h-8 w-1/3 rounded-lg" />
           </CardHeader>
@@ -583,16 +587,10 @@ function DashboardPageContent() {
 }
 
 
-function DashboardPage() {
-  // We wrap the content in a Suspense boundary to ensure Next.js handles it correctly,
-  // but the component itself is now robust against hydration errors.
+export default function DashboardPage() {
   return (
     <Suspense fallback={<div>Cargando...</div>}>
       <DashboardPageContent />
     </Suspense>
   );
 }
-
-export default DashboardPage;
-
-    

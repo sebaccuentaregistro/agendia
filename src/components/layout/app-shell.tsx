@@ -9,7 +9,7 @@ import { StudioProvider } from '@/context/StudioContext';
 export function AppShell({ children }: { children: ReactNode }) {
     // This component now wraps the entire authenticated part of the app with StudioProvider,
     // ensuring all pages have access to the app's data and functions.
-    // We use a dummy instituteId because the full authentication system was causing freezes.
+    // The complex auth logic that caused freezes has been removed.
     return (
         <StudioProvider>
             <div className="flex min-h-screen w-full flex-col">
