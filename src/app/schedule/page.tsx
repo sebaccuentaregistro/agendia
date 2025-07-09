@@ -54,11 +54,19 @@ const oneTimeAttendeeSchema = z.object({
 function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
   const { people, isPersonOnVacation, actividades, attendance } = useStudio();
   const [message, setMessage] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
 
-  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
-  const today = useMemo(() => new Date(), []);
-  
-  const attendeesToNotify = useMemo(() => {
+  useEffect(() => {
+      setIsMounted(true);
+  }, []);
+
+  const { todayStr, today, attendeesToNotify } = useMemo(() => {
+    if (!isMounted) {
+      return { todayStr: '', today: new Date(), attendeesToNotify: [] };
+    }
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    
     // Regular attendees not on vacation today
     const regularAttendees = session.personIds
       .map(pid => people.find(p => p.id === pid))
@@ -74,8 +82,9 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
     regularAttendees.forEach(p => allAttendeesMap.set(p.id, p));
     oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, p));
 
-    return Array.from(allAttendeesMap.values()).sort((a,b) => a.name.localeCompare(b.name));
-  }, [session, people, isPersonOnVacation, today, attendance, todayStr]);
+    const attendees = Array.from(allAttendeesMap.values()).sort((a,b) => a.name.localeCompare(b.name));
+    return { todayStr, today, attendeesToNotify: attendees };
+  }, [isMounted, session, people, isPersonOnVacation, attendance]);
 
   const actividad = actividades.find(a => a.id === session.actividadId);
 
@@ -647,13 +656,49 @@ function SchedulePageContent() {
 
     exportToCsv('horarios.csv', dataToExport, headers);
   };
+  
+  const { now, todayName, todayIndex, appDayOrder } = useMemo(() => {
+    if (!isMounted) return { now: new Date(), todayName: '', todayIndex: -1, appDayOrder: [] };
+    const now = new Date();
+    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
+    const appDayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const todayName = dayMap[now.getDay()];
+    const todayIndex = appDayOrder.indexOf(todayName);
+    return { now, todayName, todayIndex, appDayOrder };
+  }, [isMounted]);
 
-  const now = new Date();
-  const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
-  const appDayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-  const todayName = dayMap[now.getDay()];
-  const todayIndex = appDayOrder.indexOf(todayName);
-
+  if (!isMounted) {
+    return (
+      <div className="space-y-8">
+        <PageHeader title="Horarios">
+          <div className="flex items-center gap-2">
+            <Button variant="outline" disabled><FileDown className="mr-2 h-4 w-4"/>Exportar</Button>
+            <Button size="icon" disabled><PlusCircle className="h-5 w-5" /></Button>
+          </div>
+        </PageHeader>
+        <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-6">
+          <Skeleton className="h-8 w-1/4 mb-4" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+          </div>
+        </Card>
+        <Tabs defaultValue="cards" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4 md:w-[300px]">
+            <TabsTrigger value="cards"><LayoutGrid className="mr-2 h-4 w-4" />Tarjetas</TabsTrigger>
+            <TabsTrigger value="calendar"><CalendarDays className="mr-2 h-4 w-4" />Calendario</TabsTrigger>
+          </TabsList>
+          <TabsContent value="cards">
+            <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
+              {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[22rem] w-full bg-white/30 rounded-2xl" />)}
+            </div>
+          </TabsContent>
+          <TabsContent value="calendar">
+            <Skeleton className="h-[500px] w-full bg-white/30 rounded-2xl" />
+          </TabsContent>
+        </Tabs>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -1078,3 +1123,5 @@ export default function SchedulePage() {
     </React.Suspense>
   );
 }
+
+    

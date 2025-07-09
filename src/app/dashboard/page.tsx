@@ -95,11 +95,19 @@ function AppNotifications() {
 // Helper function to render student cards inside the sheet
 function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, actividades, specialists, spaces, attendance, isPersonOnVacation } = useStudio();
+  const [isMounted, setIsMounted] = useState(false);
   
-  const todayStr = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
-  const today = useMemo(() => new Date(), []);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
-  const enrolledPeople = useMemo(() => {
+  const { todayStr, today, enrolledPeople, sessionDetails } = useMemo(() => {
+    if (!isMounted) {
+      return { todayStr: '', today: new Date(), enrolledPeople: [], sessionDetails: {} };
+    }
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
     
@@ -110,17 +118,16 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
     
     const allEnrolledIds = [...new Set([...regularIds, ...oneTimeIds])];
     
-    return people
+    const enrolledPeople = people
       .filter(p => allEnrolledIds.includes(p.id))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [people, session, attendance, todayStr, isPersonOnVacation, today]);
 
-  const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    return { specialist, actividad, space };
-  }, [session, specialists, actividades, spaces]);
+    
+    return { todayStr, today, enrolledPeople, sessionDetails: { specialist, actividad, space } };
+  }, [isMounted, people, session, attendance, isPersonOnVacation, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
@@ -128,11 +135,11 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Inscriptos en {sessionDetails.actividad?.name || 'Sesión'}</SheetTitle>
+          <SheetTitle>Inscriptos en {(sessionDetails as any).actividad?.name || 'Sesión'}</SheetTitle>
           <SheetDescription>
-            {session.dayOfWeek} a las {session.time} en {sessionDetails.space?.name || 'N/A'}.
+            {session.dayOfWeek} a las {session.time} en {(sessionDetails as any).space?.name || 'N/A'}.
             <br/>
-            {enrolledPeople.length} de {sessionDetails.space?.capacity || 0} personas inscriptas.
+            {enrolledPeople.length} de {(sessionDetails as any).space?.capacity || 0} personas inscriptas.
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="mt-4 space-y-4 h-[calc(100%-8rem)] pr-4">
@@ -174,8 +181,16 @@ function DashboardPageContent() {
   });
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const clientSideData = useMemo(() => {
+    if (!isMounted) {
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false };
+    }
     const now = new Date();
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const currentTodayName = dayMap[now.getDay()];
@@ -218,7 +233,7 @@ function DashboardPageContent() {
       hasOnVacation: onVacationCount > 0,
       hasPendingRecovery: pendingRecoveryCount > 0,
     };
-  }, [people, sessions, attendance, isPersonOnVacation]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted]);
 
   const {
     overdueCount,
@@ -232,11 +247,12 @@ function DashboardPageContent() {
   } = clientSideData;
 
   useEffect(() => {
+    if (!isMounted) return;
     const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
     if (!tutorialCompleted) {
       openTutorial();
     }
-  }, [openTutorial]);
+  }, [openTutorial, isMounted]);
 
 
   const searchParams = useSearchParams();
@@ -292,6 +308,27 @@ function DashboardPageContent() {
     return time;
   };
   
+  if (!isMounted) {
+    return (
+      <div className="space-y-8">
+        <Skeleton className="h-24 w-full rounded-2xl" />
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-auto w-full rounded-xl aspect-square" />)}
+        </div>
+        <Card className="flex flex-col bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border-white/20">
+          <CardHeader>
+            <Skeleton className="h-8 w-1/3 rounded-lg" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-xl" />)}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
       <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />
@@ -557,3 +594,5 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
+
+    
