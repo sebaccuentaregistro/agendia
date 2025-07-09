@@ -18,12 +18,15 @@ import {
 import { addMonths, format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
+// Helper function to parse dates robustly
 const parseDate = (date: any): Date | null => {
     if (!date) return null;
     if (date instanceof Date) return date;
+    // Handle Firestore Timestamps
     if (date.toDate && typeof date.toDate === 'function') {
         return date.toDate();
     }
+    // Handle ISO strings or numbers
     if (typeof date === 'string' || typeof date === 'number') {
         const parsed = new Date(date);
         if (!isNaN(parsed.getTime())) {
@@ -34,6 +37,7 @@ const parseDate = (date: any): Date | null => {
     return null;
 };
 
+// Helper function to process raw data and convert date fields
 const processData = (data: any[], dateFields: string[], nestedDateFields: {path: string, fields: string[]}[] = []) => {
   return data.map(item => {
     const newItem = { ...item };
@@ -112,6 +116,7 @@ interface StudioContextType extends State {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
+// Prepare initial state by processing dates from static data
 const processedPeople = processData(staticPeople, ['joinDate', 'lastPaymentDate'], [{path: 'vacationPeriods', fields: ['startDate', 'endDate']}]);
 const processedPayments = processData(staticPayments, ['date']);
 const processedNotifications = processData(staticNotifications, ['createdAt']);
@@ -131,10 +136,9 @@ const initialAppState: State = {
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initialAppState);
-  const loading = false; // Hardcoded to false to prevent loading spinners
   const { toast } = useToast();
-
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
   const closeTutorial = useCallback(() => {
       setIsTutorialOpen(false);
@@ -142,7 +146,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         localStorage.setItem('agendia-tutorial-completed', 'true');
       } catch (e) { console.warn("Could not save tutorial state."); }
   }, []);
-
+  
   const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
@@ -154,12 +158,12 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         return checkDate >= new Date(startDate.setHours(0,0,0,0)) && checkDate <= new Date(endDate.setHours(23,59,59,999));
     });
   }, []);
-
-  // --- Core State Manipulation Functions (Corrected) ---
+  
+  // --- Core State Manipulation Functions (Corrected with functional updates) ---
 
   const addEntity = useCallback(<T extends { id: string }>(key: keyof State, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
       const newItem: T = {
-        id: `${key.toString().slice(0, -1)}-${Date.now()}`,
+        id: `${key.toString().slice(0, -1)}-${Date.now()}-${Math.random()}`,
         ...defaultValues,
         ...itemData,
       } as T;
@@ -191,7 +195,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
                     variant: 'destructive',
                 });
-                return current; // Return current state without changes
+                return current; // Abort update, return original state
             }
         }
         // If all checks pass, proceed with deletion
@@ -201,7 +205,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         };
     });
   }, [toast]);
-
+  
   // --- Wrapper Functions for each data type ---
   
   // Actividades
@@ -389,7 +393,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo(() => ({
     ...state,
-    loading,
+    loading: false, // Hardcoded to false
     addActividad, updateActividad, deleteActividad,
     addSpecialist, updateSpecialist, deleteSpecialist,
     addPerson, updatePerson, deletePerson,
@@ -403,7 +407,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     addLevel, updateLevel, deleteLevel,
     isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial,
   }), [
-    state, loading, 
+    state,
     addActividad, updateActividad, deleteActividad,
     addSpecialist, updateSpecialist, deleteSpecialist,
     addPerson, updatePerson, deletePerson,
