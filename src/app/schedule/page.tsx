@@ -658,7 +658,9 @@ function SchedulePageContent() {
   };
   
   const { now, todayName, todayIndex, appDayOrder } = useMemo(() => {
-    if (!isMounted) return { now: new Date(), todayName: '', todayIndex: -1, appDayOrder: [] };
+    if (!isMounted) {
+      return { now: null, todayName: '', todayIndex: -1, appDayOrder: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'] };
+    }
     const now = new Date();
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const appDayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -909,18 +911,21 @@ function SchedulePageContent() {
                       const waitlistCount = session.waitlistPersonIds?.length || 0;
 
                       const sessionIndex = appDayOrder.indexOf(session.dayOfWeek);
-                      const isFutureDay = sessionIndex > todayIndex;
-                      const isToday = sessionIndex === todayIndex;
+                      const isFutureDay = todayIndex !== -1 && sessionIndex > todayIndex;
+                      const isToday = todayIndex !== -1 && sessionIndex === todayIndex;
 
                       let isAttendanceAllowed = true;
                       let tooltipMessage = "Pasar Lista";
 
-                      if (isFutureDay) {
+                      if (!now) {
+                          isAttendanceAllowed = false;
+                          tooltipMessage = "Cargando disponibilidad...";
+                      } else if (isFutureDay) {
                           isAttendanceAllowed = false;
                           tooltipMessage = "No se puede pasar lista para una clase futura.";
                       } else if (isToday) {
                           const [hour, minute] = session.time.split(':').map(Number);
-                          const sessionStartTime = new Date();
+                          const sessionStartTime = new Date(now);
                           sessionStartTime.setHours(hour, minute, 0, 0);
                           const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
                           if (now < attendanceWindowStart) {
@@ -1123,5 +1128,3 @@ export default function SchedulePage() {
     </React.Suspense>
   );
 }
-
-    
