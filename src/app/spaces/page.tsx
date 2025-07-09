@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, PlusCircle, Trash2, Warehouse, Users, Clock } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -34,12 +34,11 @@ const formSchema = z.object({
 });
 
 export default function SpacesPage() {
-  const { spaces, addSpace, updateSpace, deleteSpace, sessions } = useStudio();
+  const { spaces, addSpace, updateSpace, deleteSpace, sessions, loading } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSpace, setSelectedSpace] = useState<Space | undefined>(undefined);
   const [spaceToDelete, setSpaceToDelete] = useState<Space | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredSpaces = useMemo(() => {
@@ -50,8 +49,6 @@ export default function SpacesPage() {
       space.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [spaces, searchTerm]);
-
-  useEffect(() => { setIsMounted(true); }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -162,8 +159,11 @@ export default function SpacesPage() {
         />
       </div>
 
-      {isMounted ? (
-        filteredSpaces.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl bg-white/30" />)}
+        </div>
+      ) : filteredSpaces.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredSpaces.map((space) => (
               <Card key={space.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
@@ -215,12 +215,7 @@ export default function SpacesPage() {
                )}
             </CardContent>
           </Card>
-        )
-      ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl bg-white/30" />)}
-        </div>
-      )}
+        )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

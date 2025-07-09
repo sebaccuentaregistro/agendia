@@ -293,7 +293,7 @@ function PersonCard({ person, recoveryBalance, onManageVacations, onEdit }: { pe
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, loading } = useStudio();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
@@ -302,11 +302,6 @@ function StudentsPageContent() {
   const [activeFilter, setActiveFilter] = useState(initialFilter);
 
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
-
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const recoveryBalances = useMemo(() => {
     const balances: Record<string, number> = {};
@@ -401,8 +396,11 @@ function StudentsPageContent() {
         </div>
       </Card>
 
-      {isClient ? (
-        filteredPeople.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[218px] w-full rounded-2xl" />)}
+        </div>
+      ) : filteredPeople.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredPeople.map((person) => (
                 <PersonCard 
@@ -431,12 +429,7 @@ function StudentsPageContent() {
                )}
             </CardContent>
           </Card>
-        )
-      ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[218px] w-full rounded-2xl" />)}
-        </div>
-      )}
+        )}
 
       <PersonDialog 
         person={selectedPerson} 

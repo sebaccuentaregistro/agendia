@@ -148,11 +148,19 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
   useEffect(() => {
     dispatch({ type: 'SET_LOADING', payload: true });
     const unsubscribes: Unsubscribe[] = [];
+    const collectionsToLoad = new Set(Object.keys(collectionRefs));
 
     (Object.keys(collectionRefs) as Array<keyof typeof collectionRefs>).forEach(key => {
       const unsubscribe = onSnapshot(collectionRefs[key], (snapshot) => {
         const data = snapshot.docs.map(processDoc);
         dispatch({ type: 'SET_DATA', payload: { collection: key, data } });
+        
+        if (collectionsToLoad.has(key)) {
+            collectionsToLoad.delete(key);
+            if (collectionsToLoad.size === 0) {
+                dispatch({ type: 'SET_LOADING', payload: false });
+            }
+        }
       }, (error) => {
         console.error(`Error fetching ${key}:`, error);
         dispatch({ type: 'SET_ERROR', payload: error });
@@ -160,8 +168,6 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
       unsubscribes.push(unsubscribe);
     });
     
-    dispatch({ type: 'SET_LOADING', payload: false });
-
     return () => unsubscribes.forEach(unsub => unsub());
   }, [collectionRefs]);
   

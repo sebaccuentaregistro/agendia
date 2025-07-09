@@ -159,7 +159,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 }
 
 function DashboardPageContent() {
-  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels } = useStudio();
+  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels, loading } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -169,10 +169,7 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
-  const [isClient, setIsClient] = useState(false);
-
   useEffect(() => {
-    setIsClient(true);
     if (typeof window !== 'undefined') {
       const tutorialCompleted = localStorage.getItem('agendia-tutorial-completed');
       if (!tutorialCompleted) {
@@ -287,12 +284,23 @@ function DashboardPageContent() {
     if (!time || !time.includes(':')) return 'N/A';
     return time;
   };
+  
+  if (loading) {
+    return (
+        <div className="space-y-8">
+            <Skeleton className="h-24 w-full rounded-2xl" />
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {[...Array(7)].map((_, i) => <Skeleton key={i} className="aspect-square w-full rounded-xl" />)}
+            </div>
+            <Skeleton className="h-[500px] w-full rounded-2xl" />
+        </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
-      {isClient && <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />}
+      <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />
       
-      {isClient ? (
         <>
             <AppNotifications />
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -526,15 +534,7 @@ function DashboardPageContent() {
                 </Card>
             )}
         </>
-      ) : (
-        <div className="space-y-8">
-            <Skeleton className="h-24 w-full rounded-2xl" />
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                {[...Array(7)].map((_, i) => <Skeleton key={i} className="aspect-square w-full rounded-xl" />)}
-            </div>
-            <Skeleton className="h-[500px] w-full rounded-2xl" />
-        </div>
-      )}
+      
 
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 

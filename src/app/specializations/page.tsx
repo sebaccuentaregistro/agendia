@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, PlusCircle, Trash2, Star, ClipboardList, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -22,12 +22,11 @@ const formSchema = z.object({
 });
 
 export default function ActividadesPage() {
-  const { actividades, addActividad, updateActividad, deleteActividad, sessions, specialists } = useStudio();
+  const { actividades, addActividad, updateActividad, deleteActividad, sessions, specialists, loading } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedActividad, setSelectedActividad] = useState<Actividad | undefined>(undefined);
   const [actividadToDelete, setActividadToDelete] = useState<Actividad | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredActividades = useMemo(() => {
@@ -38,8 +37,6 @@ export default function ActividadesPage() {
       actividad.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [actividades, searchTerm]);
-
-  useEffect(() => { setIsMounted(true); }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -120,8 +117,11 @@ export default function ActividadesPage() {
         />
       </div>
       
-      {isMounted ? (
-        filteredActividades.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl bg-white/30" />)}
+        </div>
+      ) : filteredActividades.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredActividades.map((actividad) => {
               const usage = getUsageCount(actividad.id);
@@ -165,12 +165,7 @@ export default function ActividadesPage() {
                )}
             </CardContent>
           </Card>
-        )
-      ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-48 w-full rounded-2xl bg-white/30" />)}
-        </div>
-      )}
+        )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

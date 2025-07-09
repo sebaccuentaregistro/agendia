@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -28,7 +29,7 @@ const formSchema = z.object({
 });
 
 export default function SpecialistsPage() {
-  const { specialists, actividades, addSpecialist, updateSpecialist, deleteSpecialist } = useStudio();
+  const { specialists, actividades, addSpecialist, updateSpecialist, deleteSpecialist, loading } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSpecialist, setSelectedSpecialist] = useState<Specialist | undefined>(undefined);
@@ -194,7 +195,11 @@ export default function SpecialistsPage() {
         />
       </div>
 
-      {filteredSpecialists.length > 0 ? (
+      {loading ? (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[210px] w-full rounded-2xl bg-white/30" />)}
+        </div>
+      ) : filteredSpecialists.length > 0 ? (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredSpecialists.map((specialist) => (
             <Card key={specialist.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">

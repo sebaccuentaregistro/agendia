@@ -415,8 +415,8 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
   )
 }
 
-export default function SchedulePage() {
-  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people } = useStudio();
+function SchedulePageContent() {
+  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
@@ -426,7 +426,6 @@ export default function SchedulePage() {
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [sessionForPuntual, setSessionForPuntual] = useState<Session | null>(null);
   const [sessionToNotify, setSessionToNotify] = useState<Session | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
   const [filters, setFilters] = useState({
     specialistId: 'all',
     actividadId: 'all',
@@ -437,6 +436,7 @@ export default function SchedulePage() {
   });
   const searchParams = useSearchParams();
   const [conflictInfo, setConflictInfo] = useState<{ specialist: string | null; space: string | null, operatingHours: string | null }>({ specialist: null, space: null, operatingHours: null });
+  const [isMounted, setIsMounted] = useState(false);
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -849,8 +849,9 @@ export default function SchedulePage() {
         </TabsList>
         <TabsContent value="cards">
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
-              {isMounted ? (
-                sessions.length > 0 ? (
+              {loading ? (
+                [...Array(6)].map((_, i) => <Skeleton key={i} className="h-[22rem] w-full bg-white/30 rounded-2xl" />)
+              ) : sessions.length > 0 ? (
                   filteredSessions.length > 0 ? (
                       filteredSessions.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
@@ -1028,14 +1029,13 @@ export default function SchedulePage() {
                         </CardContent>
                       </Card>
                   </div>
-                )
-              ) : (
-                [...Array(6)].map((_, i) => <Skeleton key={i} className="h-[22rem] w-full bg-white/30 rounded-2xl" />)
-              )}
+                )}
             </div>
         </TabsContent>
         <TabsContent value="calendar">
-          {isMounted ? (
+          {loading ? (
+              <Skeleton className="h-[500px] w-full bg-white/30 rounded-2xl" />
+          ) : (
             <ScheduleCalendarView 
                 sessions={filteredSessions}
                 specialists={specialists}
@@ -1044,8 +1044,6 @@ export default function SchedulePage() {
                 levels={levels}
                 onSessionClick={setSessionForRoster}
             />
-          ) : (
-              <Skeleton className="h-[500px] w-full bg-white/30 rounded-2xl" />
           )}
         </TabsContent>
       </Tabs>
@@ -1071,4 +1069,12 @@ export default function SchedulePage() {
       {sessionToNotify && <NotifyAttendeesDialog session={sessionToNotify} onClose={() => setSessionToNotify(null)} />}
     </div>
   );
+}
+
+export default function SchedulePage() {
+  return (
+    <React.Suspense fallback={<div>Cargando...</div>}>
+      <SchedulePageContent />
+    </React.Suspense>
+  )
 }
