@@ -1,3 +1,4 @@
+
 'use client';
 
 // This file is intentionally simplified to disable the old, broken authentication system.
@@ -22,3 +23,5 @@ export function useAuth() {
         logout: () => {}, // A no-op function for compatibility.
     };
 }
+
+    

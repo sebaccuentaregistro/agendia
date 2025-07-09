@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import { 
     actividades as staticActividades, 
@@ -18,19 +18,19 @@ import {
 import { addMonths, format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 
-// Helper function to parse dates robustly
+// Helper to robustly parse dates from various formats
 const parseDate = (date: any): Date | null => {
     if (!date) return null;
     if (date instanceof Date) return date;
     if (date.toDate && typeof date.toDate === 'function') return date.toDate();
     if (typeof date === 'string' || typeof date === 'number') {
         const parsed = new Date(date);
-        if (!isNaN(parsed.getTime())) return parsed;
+        return isNaN(parsed.getTime()) ? null : parsed;
     }
     return null;
 };
 
-// Helper function to process raw data and convert date fields
+// Helper to process raw data arrays and convert date fields
 const processData = (data: any[], dateFields: string[], nestedDateFields: {path: string, fields: string[]}[] = []) => {
   return data.map(item => {
     const newItem = { ...item };
@@ -51,6 +51,7 @@ const processData = (data: any[], dateFields: string[], nestedDateFields: {path:
     return newItem;
   });
 };
+
 
 type State = {
   actividades: Actividad[];
@@ -105,6 +106,7 @@ interface StudioContextType extends State {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
+// Process the initial static data to convert date strings/timestamps into Date objects
 const processedPeople = processData(staticPeople, ['joinDate', 'lastPaymentDate'], [{path: 'vacationPeriods', fields: ['startDate', 'endDate']}]);
 const processedPayments = processData(staticPayments, ['date']);
 const processedNotifications = processData(staticNotifications, ['createdAt']);
@@ -122,10 +124,11 @@ const initialAppState: State = {
     levels: staticLevels,
 };
 
+// This is the main provider for the application's business logic and state.
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initialAppState);
-  const { toast } = useToast();
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const { toast } = useToast();
 
   const openTutorial = () => setIsTutorialOpen(true);
   const closeTutorial = () => {
@@ -133,6 +136,12 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       try {
         localStorage.setItem('agendia-tutorial-completed', 'true');
       } catch (e) { console.warn("Could not save tutorial state."); }
+  };
+  
+  // Use a functional update for any state change to ensure the latest state is used.
+  // This avoids issues with stale closures from useCallback with empty dependency arrays.
+  const performUpdate = (updateFn: (currentState: State) => State) => {
+    setState(currentState => updateFn(currentState));
   };
   
   const isPersonOnVacation = (person: Person, date: Date): boolean => {
@@ -147,7 +156,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const addEntity = <T extends { id: string }>(key: keyof State, data: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
-    setState(current => {
+    performUpdate(current => {
       const newItem: T = {
         id: `${key.toString().slice(0, -1)}-${Date.now()}-${Math.random()}`,
         ...defaultValues,
@@ -158,36 +167,35 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const updateEntity = <T extends { id: string }>(key: keyof State, item: T) => {
-    setState(current => ({
+    performUpdate(current => ({
       ...current,
       [key]: (current[key] as T[]).map(i => (i.id === item.id ? item : i)),
     }));
   };
 
   const deleteEntity = (key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
-    // Check for usages against the current state, not an initial/stale one
-    const currentState = (setState as any)._reactInternals.memoizedState as State;
-    
-    for (const check of usageChecks) {
-        const collectionToCheck = currentState[check.collection] as any[];
-        const isUsed = collectionToCheck.some(item =>
-            check.type === 'array'
-            ? (item[check.field] as string[])?.includes(id)
-            : item[check.field] === id
-        );
-        if (isUsed) {
-            toast({
-                title: 'Error al eliminar',
-                description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
-                variant: 'destructive',
-            });
-            return;
-        }
-    }
-    setState(current => ({
-      ...current,
-      [key]: (current[key] as any[]).filter(i => i.id !== id),
-    }));
+    performUpdate(current => {
+      for (const check of usageChecks) {
+          const collectionToCheck = current[check.collection] as any[];
+          const isUsed = collectionToCheck.some(item =>
+              check.type === 'array'
+              ? (item[check.field] as string[])?.includes(id)
+              : item[check.field] === id
+          );
+          if (isUsed) {
+              toast({
+                  title: 'Error al eliminar',
+                  description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
+                  variant: 'destructive',
+              });
+              return current; // Return current state without changes
+          }
+      }
+      return {
+        ...current,
+        [key]: (current[key] as any[]).filter(i => i.id !== id),
+      };
+    });
   };
   
   const addActividad = (data: Omit<Actividad, 'id'>) => addEntity('actividades', data);
@@ -225,7 +233,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const addSession = (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addEntity('sessions', data, { personIds: [], waitlistPersonIds: [] });
   const updateSession = (data: Session) => updateEntity('sessions', data);
   const deleteSession = (id: string) => {
-    setState(current => {
+    performUpdate(current => {
       const session = current.sessions.find(s => s.id === id);
       if(session && session.personIds.length > 0) {
           toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
@@ -236,7 +244,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
   
   const enrollPeopleInClass = (sessionId: string, personIds: string[]) => {
-    setState(current => ({
+    performUpdate(current => ({
         ...current,
         sessions: current.sessions.map(s => s.id === sessionId ? { ...s, personIds } : s)
     }));
@@ -253,7 +261,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
   const updatePerson = (data: Person) => updateEntity('people', data);
   const deletePerson = (id: string) => {
-    setState(current => {
+    performUpdate(current => {
         const newSessions = current.sessions.map(s => ({
             ...s,
             personIds: s.personIds.filter(pId => pId !== id),
@@ -265,7 +273,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
   
   const recordPayment = (personId: string) => {
-    setState(current => {
+    performUpdate(current => {
       const person = current.people.find(p => p.id === personId);
       if (!person) return current;
       const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
@@ -279,7 +287,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const undoLastPayment = (personId: string) => {
-    setState(current => {
+    performUpdate(current => {
       const lastPayment = [...current.payments].filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
       if (!lastPayment) return current;
       const person = current.people.find(p => p.id === personId);
@@ -295,7 +303,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
       const dateStr = format(new Date(), 'yyyy-MM-dd');
-      setState(current => {
+      performUpdate(current => {
           const newAttendance = [...current.attendance];
           const recordIndex = newAttendance.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
           const oneTimeAttendees = recordIndex > -1 ? newAttendance[recordIndex].oneTimeAttendees : [];
@@ -311,7 +319,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   
   const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
       const dateStr = format(date, 'yyyy-MM-dd');
-      setState(current => {
+      performUpdate(current => {
           const newAttendance = [...current.attendance];
           const recordIndex = newAttendance.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
           if (recordIndex > -1) {
@@ -335,21 +343,21 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
     const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
-    setState(current => ({
+    performUpdate(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation]} : p)
     }));
   };
   
   const removeVacationPeriod = (personId: string, vacationId: string) => {
-    setState(current => ({
+    performUpdate(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: p.vacationPeriods?.filter(v => v.id !== vacationId)} : p)
     }));
   };
   
   const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
-      setState(current => {
+      performUpdate(current => {
           const session = current.sessions.find(s => s.id === sessionId);
           if (!session) return current;
 
@@ -364,11 +372,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       });
   };
 
-  const dismissNotification = (id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)}));
+  const dismissNotification = (id: string) => performUpdate(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)}));
 
   const contextValue: StudioContextType = {
     ...state,
-    loading: false,
+    loading: false, // Set loading to false as data is handled statically
     addActividad,
     updateActividad,
     deleteActividad,
@@ -419,3 +427,5 @@ export function useStudio() {
   }
   return context;
 }
+
+    
