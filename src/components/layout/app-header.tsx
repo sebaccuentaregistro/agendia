@@ -28,10 +28,9 @@ export function AppHeader() {
   const { openTutorial } = useStudio();
   const { logout } = useAuth();
 
-  const handleLogout = async () => {
-    // In a real app, this would call the logout function.
-    // Here, we just log to the console as the auth system is a dummy.
-    console.log("Logout action triggered.");
+  const handleLogout = () => {
+    // This now calls the safe, no-op logout function from our simplified AuthContext.
+    logout();
   };
 
   return (
