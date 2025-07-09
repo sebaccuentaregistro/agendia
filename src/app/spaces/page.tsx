@@ -175,11 +175,6 @@ export default function SpacesPage() {
                 </CardHeader>
                 <CardContent className="flex-grow space-y-3 text-sm">
                   <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300"><Users className="h-4 w-4 text-slate-500" /> <span className="font-semibold text-slate-700 dark:text-slate-200">Capacidad:</span> {space.capacity} personas</p>
-                  <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                    <Clock className="h-4 w-4 text-slate-500" />
-                    <span className="font-semibold text-slate-700 dark:text-slate-200">Horario:</span>
-                    {space.operatingHoursStart && space.operatingHoursEnd ? `${space.operatingHoursStart} - ${space.operatingHoursEnd}` : 'Todo el día'}
-                  </p>
                   <Link href={`/schedule?spaceId=${space.id}`} className="transition-opacity hover:opacity-75">
                     <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                       <Warehouse className="h-4 w-4 text-slate-500" />
