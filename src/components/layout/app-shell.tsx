@@ -10,14 +10,13 @@ export function AppShell({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const publicRoutes = ['/login', '/signup', '/terms'];
 
-    // Esta es una medida temporal para omitir la autenticación para la depuración.
-    // Si se encuentra en una ruta pública, no se muestra el shell principal de la aplicación.
+    // Si la ruta es pública (como /login), se renderiza sola, sin la barra de navegación principal.
     if (publicRoutes.includes(pathname)) {
         return <>{children}</>;
     }
     
-    // Para todas las demás rutas, renderiza el shell de la aplicación con un ID de instituto codificado.
-    // Esto permite que el contexto de datos se cargue sin un usuario que haya iniciado sesión.
+    // Para todas las demás rutas, renderizamos la estructura principal de la aplicación.
+    // Se omite la autenticación y se usa un ID de instituto fijo para cargar los datos.
     return (
         <StudioProvider instituteId="yogaflow-manager-uqjpc">
             <div className="flex min-h-screen w-full flex-col">
