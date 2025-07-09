@@ -118,7 +118,7 @@ interface StudioContextType extends State {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
-export function StudioProvider({ children }: { children: ReactNode }) {
+export function StudioProvider({ children, instituteId }: { children: ReactNode, instituteId: string }) {
   const [state, setState] = useState<State>({
     actividades: [], specialists: [], people: [], sessions: [],
     payments: [], spaces: [], attendance: [], notifications: [],
@@ -156,7 +156,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }, 500); 
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [instituteId]);
 
   const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
