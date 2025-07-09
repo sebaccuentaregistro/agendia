@@ -131,7 +131,7 @@ const initialAppState: State = {
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initialAppState);
-  const [loading, setLoading] = useState(false);
+  const loading = false; // Hardcoded to false to prevent loading spinners
   const { toast } = useToast();
 
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -155,16 +155,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // --- Generic CRUD Functions ---
+  // --- Core State Manipulation Functions (Corrected) ---
 
-  const updateCollection = <T extends { id: string }>(key: keyof State, item: T) => {
-    setState(current => ({
-      ...current,
-      [key]: (current[key] as T[]).map(i => (i.id === item.id ? item : i)),
-    }));
-  };
-
-  const addToCollection = <T extends { id: string }>(key: keyof State, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
+  const addEntity = useCallback(<T extends { id: string }>(key: keyof State, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
       const newItem: T = {
         id: `${key.toString().slice(0, -1)}-${Date.now()}`,
         ...defaultValues,
@@ -174,98 +167,112 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...current,
         [key]: [...(current[key] as T[]), newItem],
       }));
-  };
+  }, []);
 
-  const deleteFromCollection = useCallback((key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
-    for (const check of usageChecks) {
-        const collectionToCheck = state[check.collection] as any[];
-        const isUsed = collectionToCheck.some(item => 
-            check.type === 'array' 
-            ? item[check.field]?.includes(id) 
-            : item[check.field] === id
-        );
-        if (isUsed) {
-            toast({
-                title: 'Error al eliminar',
-                description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
-                variant: 'destructive',
-            });
-            return;
-        }
-    }
+  const updateEntity = useCallback(<T extends { id: string }>(key: keyof State, item: T) => {
     setState(current => ({
       ...current,
-      [key]: (current[key] as any[]).filter(i => i.id !== id),
+      [key]: (current[key] as T[]).map(i => (i.id === item.id ? item : i)),
     }));
-  }, [state, toast]);
+  }, []);
 
+  const deleteEntity = useCallback((key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
+    setState(current => {
+        for (const check of usageChecks) {
+            const collectionToCheck = current[check.collection] as any[];
+            const isUsed = collectionToCheck.some(item =>
+                check.type === 'array'
+                ? (item[check.field] as string[])?.includes(id)
+                : item[check.field] === id
+            );
+            if (isUsed) {
+                toast({
+                    title: 'Error al eliminar',
+                    description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
+                    variant: 'destructive',
+                });
+                return current; // Return current state without changes
+            }
+        }
+        // If all checks pass, proceed with deletion
+        return {
+          ...current,
+          [key]: (current[key] as any[]).filter(i => i.id !== id),
+        };
+    });
+  }, [toast]);
+
+  // --- Wrapper Functions for each data type ---
+  
   // Actividades
-  const addActividad = (data: Omit<Actividad, 'id'>) => addToCollection('actividades', data);
-  const updateActividad = (data: Actividad) => updateCollection('actividades', data);
-  const deleteActividad = useCallback((id: string) => deleteFromCollection('actividades', id, [
+  const addActividad = useCallback((data: Omit<Actividad, 'id'>) => addEntity('actividades', data), [addEntity]);
+  const updateActividad = useCallback((data: Actividad) => updateEntity('actividades', data), [updateEntity]);
+  const deleteActividad = useCallback((id: string) => deleteEntity('actividades', id, [
     { collection: 'sessions', field: 'actividadId', label: 'Sesión' },
     { collection: 'specialists', field: 'actividadIds', label: 'Especialista', type: 'array' },
-  ]), [deleteFromCollection]);
+  ]), [deleteEntity]);
 
   // Levels
-  const addLevel = (data: Omit<Level, 'id'>) => addToCollection('levels', data);
-  const updateLevel = (data: Level) => updateCollection('levels', data);
-  const deleteLevel = useCallback((id: string) => deleteFromCollection('levels', id, [
+  const addLevel = useCallback((data: Omit<Level, 'id'>) => addEntity('levels', data), [addEntity]);
+  const updateLevel = useCallback((data: Level) => updateEntity('levels', data), [updateEntity]);
+  const deleteLevel = useCallback((id: string) => deleteEntity('levels', id, [
       { collection: 'sessions', field: 'levelId', label: 'Sesión' },
       { collection: 'people', field: 'levelId', label: 'Persona' },
-  ]), [deleteFromCollection]);
+  ]), [deleteEntity]);
 
   // Spaces
-  const addSpace = (data: Omit<Space, 'id'>) => addToCollection('spaces', data);
-  const updateSpace = (data: Space) => updateCollection('spaces', data);
-  const deleteSpace = useCallback((id: string) => deleteFromCollection('spaces', id, [
+  const addSpace = useCallback((data: Omit<Space, 'id'>) => addEntity('spaces', data), [addEntity]);
+  const updateSpace = useCallback((data: Space) => updateEntity('spaces', data), [updateEntity]);
+  const deleteSpace = useCallback((id: string) => deleteEntity('spaces', id, [
       { collection: 'sessions', field: 'spaceId', label: 'Sesión' }
-  ]), [deleteFromCollection]);
+  ]), [deleteEntity]);
 
   // Tariffs
-  const addTariff = (data: Omit<Tariff, 'id'>) => addToCollection('tariffs', data);
-  const updateTariff = (data: Tariff) => updateCollection('tariffs', data);
-  const deleteTariff = useCallback((id: string) => deleteFromCollection('tariffs', id, [
+  const addTariff = useCallback((data: Omit<Tariff, 'id'>) => addEntity('tariffs', data), [addEntity]);
+  const updateTariff = useCallback((data: Tariff) => updateEntity('tariffs', data), [updateEntity]);
+  const deleteTariff = useCallback((id: string) => deleteEntity('tariffs', id, [
       { collection: 'people', field: 'tariffId', label: 'Persona' }
-  ]), [deleteFromCollection]);
+  ]), [deleteEntity]);
 
   // Specialists
-  const addSpecialist = (data: Omit<Specialist, 'id' | 'avatar'>) => addToCollection('specialists', data, { avatar: `https://placehold.co/100x100.png` });
-  const updateSpecialist = (data: Specialist) => updateCollection('specialists', data);
-  const deleteSpecialist = useCallback((id: string) => deleteFromCollection('specialists', id, [
+  const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => addEntity('specialists', data, { avatar: `https://placehold.co/100x100.png` }), [addEntity]);
+  const updateSpecialist = useCallback((data: Specialist) => updateEntity('specialists', data), [updateEntity]);
+  const deleteSpecialist = useCallback((id: string) => deleteEntity('specialists', id, [
       { collection: 'sessions', field: 'instructorId', label: 'Sesión' }
-  ]), [deleteFromCollection]);
+  ]), [deleteEntity]);
 
   // Sessions
-  const addSession = (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addToCollection('sessions', data, { personIds: [], waitlistPersonIds: [] });
-  const updateSession = (data: Session) => updateCollection('sessions', data);
+  const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addEntity('sessions', data, { personIds: [], waitlistPersonIds: [] }), [addEntity]);
+  const updateSession = useCallback((data: Session) => updateEntity('sessions', data), [updateEntity]);
   const deleteSession = useCallback((id: string) => {
-    const session = state.sessions.find(s => s.id === id);
-    if(session && session.personIds.length > 0) {
-        toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
-        return;
-    }
-    deleteFromCollection('sessions', id, []);
-  }, [state.sessions, deleteFromCollection, toast]);
+    setState(current => {
+      const session = current.sessions.find(s => s.id === id);
+      if(session && session.personIds.length > 0) {
+          toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
+          return current;
+      }
+      return {...current, sessions: current.sessions.filter(s => s.id !== id)};
+    });
+  }, [toast]);
   
-  const enrollPeopleInClass = (sessionId: string, personIds: string[]) => {
+  const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
     setState(current => ({
         ...current,
         sessions: current.sessions.map(s => s.id === sessionId ? { ...s, personIds } : s)
     }));
-  };
+  }, []);
 
   // People
-  const addPerson = (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+  const addPerson = useCallback((data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     const now = new Date();
-    addToCollection('people', data, {
+    addEntity('people', data, {
         joinDate: now,
         lastPaymentDate: addMonths(now, 1),
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     });
-  };
-  const updatePerson = (data: Person) => updateCollection('people', data);
+  }, [addEntity]);
+  const updatePerson = useCallback((data: Person) => updateEntity('people', data), [updateEntity]);
   const deletePerson = useCallback((id: string) => {
     setState(current => {
         const newSessions = current.sessions.map(s => ({
@@ -278,7 +285,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     });
   }, []);
   
-  const recordPayment = (personId: string) => {
+  const recordPayment = useCallback((personId: string) => {
     setState(current => {
       const person = current.people.find(p => p.id === personId);
       if (!person) return current;
@@ -290,10 +297,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         payments: [...current.payments, newPayment]
       };
     });
-  };
-  const undoLastPayment = (personId: string) => {
+  }, []);
+
+  const undoLastPayment = useCallback((personId: string) => {
     setState(current => {
-      const lastPayment = current.payments.filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
+      const lastPayment = [...current.payments].filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
       if (!lastPayment) return current;
       const person = current.people.find(p => p.id === personId);
       if (!person || !person.lastPaymentDate) return current;
@@ -304,9 +312,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         payments: current.payments.filter(p => p.id !== lastPayment.id)
       }
     })
-  };
+  }, []);
 
-  const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
+  const saveAttendance = useCallback((sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
       const dateStr = format(new Date(), 'yyyy-MM-dd');
       setState(current => {
           const newAttendance = [...current.attendance];
@@ -320,9 +328,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           }
           return { ...current, attendance: newAttendance };
       });
-  };
+  }, []);
   
-  const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
+  const addOneTimeAttendee = useCallback((sessionId: string, personId: string, date: Date) => {
       const dateStr = format(date, 'yyyy-MM-dd');
       setState(current => {
           const newAttendance = [...current.attendance];
@@ -344,24 +352,24 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           }
           return { ...current, attendance: newAttendance };
       });
-  };
+  }, []);
 
-  const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
+  const addVacationPeriod = useCallback((personId: string, startDate: Date, endDate: Date) => {
     const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
     setState(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation]} : p)
     }));
-  };
+  }, []);
   
-  const removeVacationPeriod = (personId: string, vacationId: string) => {
+  const removeVacationPeriod = useCallback((personId: string, vacationId: string) => {
     setState(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: p.vacationPeriods?.filter(v => v.id !== vacationId)} : p)
     }));
-  };
+  }, []);
   
-  const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
+  const enrollFromWaitlist = useCallback((notificationId: string, sessionId: string, personId: string) => {
       setState(current => {
           const session = current.sessions.find(s => s.id === sessionId);
           if (!session) return current;
@@ -375,9 +383,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
               notifications: current.notifications.filter(n => n.id !== notificationId),
           };
       });
-  };
+  }, []);
 
-  const dismissNotification = (id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)}));
+  const dismissNotification = useCallback((id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)})), []);
 
   const contextValue = useMemo(() => ({
     ...state,
@@ -394,7 +402,21 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     addTariff, updateTariff, deleteTariff,
     addLevel, updateLevel, deleteLevel,
     isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial,
-  }), [state, loading, deleteFromCollection, deleteActividad, deleteLevel, deleteSpace, deleteTariff, deleteSpecialist, deleteSession, deletePerson, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial]);
+  }), [
+    state, loading, 
+    addActividad, updateActividad, deleteActividad,
+    addSpecialist, updateSpecialist, deleteSpecialist,
+    addPerson, updatePerson, deletePerson,
+    recordPayment, undoLastPayment,
+    addSpace, updateSpace, deleteSpace,
+    addSession, updateSession, deleteSession,
+    enrollPeopleInClass, saveAttendance, addOneTimeAttendee,
+    addVacationPeriod, removeVacationPeriod,
+    enrollFromWaitlist, dismissNotification,
+    addTariff, updateTariff, deleteTariff,
+    addLevel, updateLevel, deleteLevel,
+    isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial
+  ]);
 
   return (
     <StudioContext.Provider value={contextValue}>
