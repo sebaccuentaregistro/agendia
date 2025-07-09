@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, Warehouse, Users, Clock } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, Warehouse, Users, MoreHorizontal } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo } from 'react';
@@ -17,6 +17,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -101,17 +102,17 @@ export default function SpacesPage() {
 
   return (
     <div>
-      <PageHeader title="Espacios">
+      <PageHeader title="Gestionar Salas">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleAdd} size="icon">
-              <PlusCircle className="h-5 w-5" />
-              <span className="sr-only">Añadir Espacio</span>
+            <Button onClick={handleAdd}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Añadir Sala
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{selectedSpace ? 'Editar Espacio' : 'Añadir Nuevo Espacio'}</DialogTitle>
+              <DialogTitle>{selectedSpace ? 'Editar Sala' : 'Añadir Nueva Sala'}</DialogTitle>
               <DialogDescription>
                   Define los detalles de tus salas o áreas de trabajo.
               </DialogDescription>
@@ -167,46 +168,56 @@ export default function SpacesPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredSpaces.map((space) => (
               <Card key={space.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-slate-800 dark:text-slate-100">
-                    <Warehouse className="h-6 w-6 text-primary" />
-                    <span>{space.name}</span>
-                  </CardTitle>
+                <CardHeader className="flex flex-row items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="flex items-center gap-3 text-slate-800 dark:text-slate-100">
+                      <Warehouse className="h-6 w-6 text-primary" />
+                      <span>{space.name}</span>
+                    </CardTitle>
+                    <CardDescription className="flex items-center gap-2 pt-2"><Users className="h-4 w-4" /> Capacidad: {space.capacity} personas</CardDescription>
+                  </div>
+                   <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300">
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Más opciones</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => handleEdit(space)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        <span>Editar</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => openDeleteDialog(space)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Eliminar</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </CardHeader>
-                <CardContent className="flex-grow space-y-3 text-sm">
-                  <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300"><Users className="h-4 w-4 text-slate-500" /> <span className="font-semibold text-slate-700 dark:text-slate-200">Capacidad:</span> {space.capacity} personas</p>
-                  <Link href={`/schedule?spaceId=${space.id}`} className="transition-opacity hover:opacity-75">
-                    <p className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                <CardContent className="flex-grow">
+                   <Link href={`/schedule?spaceId=${space.id}`} className="transition-opacity hover:opacity-75">
+                    <p className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                       <Warehouse className="h-4 w-4 text-slate-500" />
                       <span className="font-semibold text-slate-700 dark:text-slate-200 underline-offset-4 hover:underline">Sesiones Programadas:</span>
                       {getUsageCount(space.id)}
                     </p>
                   </Link>
                 </CardContent>
-                <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-3">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(space)}>
-                    <Pencil className="h-4 w-4" />
-                    <span className="sr-only">Editar</span>
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(space)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Eliminar</span>
-                  </Button>
-                </CardFooter>
               </Card>
             ))}
           </div>
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle className="text-slate-800 dark:text-slate-100">{searchTerm ? "No se encontraron espacios" : "No Hay Espacios"}</CardTitle>
+              <CardTitle className="text-slate-800 dark:text-slate-100">{searchTerm ? "No se encontraron salas" : "No Hay Salas"}</CardTitle>
               <CardDescription className="text-slate-600 dark:text-slate-400">
-                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a organizar tu estudio añadiendo tu primer espacio."}
+                {searchTerm ? "Intenta con otro nombre o limpia la búsqueda." : "Empieza a organizar tu estudio añadiendo tu primera sala."}
               </CardDescription>
             </CardHeader>
             <CardContent>
                {!searchTerm && (
-                <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Espacio</Button>
+                <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Sala</Button>
                )}
             </CardContent>
           </Card>
@@ -216,14 +227,16 @@ export default function SpacesPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción no se puede deshacer. Asegúrate de que no haya sesiones programadas en este espacio antes de eliminarlo.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción no se puede deshacer. Asegúrate de que no haya sesiones programadas en esta sala antes de eliminarla.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setSpaceToDelete(null)}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Sí, eliminar espacio</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Sí, eliminar sala</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
   );
 }
+
+    
