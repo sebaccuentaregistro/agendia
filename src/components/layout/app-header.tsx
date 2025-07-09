@@ -1,14 +1,14 @@
 
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Heart, Info, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ThemeToggle } from '../theme-toggle';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/AuthContext';
 
 const navItems = [
@@ -27,10 +27,11 @@ export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial } = useStudio();
   const { logout } = useAuth();
+  const router = useRouter();
 
-  const handleLogout = () => {
-    // This now calls the safe, no-op logout function from our simplified AuthContext.
-    logout();
+  const handleLogout = async () => {
+    await logout();
+    router.push('/login');
   };
 
   return (
