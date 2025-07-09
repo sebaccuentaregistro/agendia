@@ -30,7 +30,6 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {/* StudioProvider envuelve a toda la aplicación para proveer datos y estilos correctamente */}
           <StudioProvider instituteId="yogaflow-manager-uqjpc">
             <AppShell>{children}</AppShell>
           </StudioProvider>
