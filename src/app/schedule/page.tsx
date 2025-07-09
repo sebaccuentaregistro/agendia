@@ -363,7 +363,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
     return people.filter(p => session.personIds.includes(p.id));
   }, [people, session]);
 
-  const actividad = useMemo(() => {
+  constividad = useMemo(() => {
     return actividades.find((s) => s.id === session.actividadId);
   }, [session, actividades]);
   
@@ -547,7 +547,7 @@ function SchedulePageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     const level = levels.find((l) => l.id === session.levelId);
     return { specialist, actividad, space, level };
@@ -1072,5 +1072,9 @@ function SchedulePageContent() {
 }
 
 export default function SchedulePage() {
-  return <SchedulePageContent />;
+  return (
+    <React.Suspense fallback={<div>Cargando...</div>}>
+      <SchedulePageContent />
+    </React.Suspense>
+  );
 }

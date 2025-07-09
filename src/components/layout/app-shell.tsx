@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ReactNode } from 'react';
@@ -10,7 +11,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     // ensuring all pages have access to the app's data and functions.
     // We use a dummy instituteId because the full authentication system was causing freezes.
     return (
-        <StudioProvider instituteId="dummy-institute-id">
+        <StudioProvider>
             <div className="flex min-h-screen w-full flex-col">
                 <AppHeader />
                 <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">

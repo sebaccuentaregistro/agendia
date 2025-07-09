@@ -1,3 +1,4 @@
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -30,7 +31,9 @@ export function AppHeader() {
 
   const handleLogout = async () => {
     await logout();
-    router.push('/login');
+    // Since there's no real auth, we just log a message.
+    // In a real app, this would redirect to a login page.
+    console.log("Logout action triggered.");
   };
 
   return (

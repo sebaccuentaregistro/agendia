@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -117,7 +117,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 
   const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   }, [session, specialists, actividades, spaces]);
@@ -282,7 +282,7 @@ function DashboardPageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   };
@@ -545,9 +545,15 @@ function DashboardPageContent() {
   );
 }
 
-export default function DashboardPage() {
-  // By removing the Suspense boundary, we force this page to be client-side rendered.
-  // This is a robust way to solve the hydration error that was causing the page to freeze,
-  // as it avoids any mismatch between server-rendered and client-rendered content.
-  return <DashboardPageContent />;
+
+function DashboardPage() {
+  // We wrap the content in a Suspense boundary to ensure Next.js handles it correctly,
+  // but the component itself is now robust against hydration errors.
+  return (
+    <Suspense fallback={<div>Cargando...</div>}>
+      <DashboardPageContent />
+    </Suspense>
+  );
 }
+
+export default DashboardPage;
