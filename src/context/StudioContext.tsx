@@ -162,14 +162,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...defaultValues,
         ...data,
       } as T;
-      return { ...current, [key]: [...(current[key] as T[]), newItem] };
+      return { ...current, [key]: [...(current[key] as any[]), newItem] };
     });
   }, [performUpdate]);
 
   const updateEntity = useCallback(<T extends { id: string }>(key: keyof State, item: T) => {
     performUpdate(current => ({
       ...current,
-      [key]: (current[key] as T[]).map(i => (i.id === item.id ? item : i)),
+      [key]: (current[key] as any[]).map(i => (i.id === item.id ? item : i)),
     }));
   }, [performUpdate]);
 
