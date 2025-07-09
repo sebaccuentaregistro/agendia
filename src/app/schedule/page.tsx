@@ -556,7 +556,7 @@ function SchedulePageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     const level = levels.find((l) => l.id === session.levelId);
     return { specialist, actividad, space, level };
