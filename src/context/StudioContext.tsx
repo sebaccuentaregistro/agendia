@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import { 
     actividades as staticActividades, 
@@ -22,18 +22,11 @@ import { useToast } from '@/hooks/use-toast';
 const parseDate = (date: any): Date | null => {
     if (!date) return null;
     if (date instanceof Date) return date;
-    // Handle Firestore Timestamps
-    if (date.toDate && typeof date.toDate === 'function') {
-        return date.toDate();
-    }
-    // Handle ISO strings or numbers
+    if (date.toDate && typeof date.toDate === 'function') return date.toDate();
     if (typeof date === 'string' || typeof date === 'number') {
         const parsed = new Date(date);
-        if (!isNaN(parsed.getTime())) {
-            return parsed;
-        }
+        if (!isNaN(parsed.getTime())) return parsed;
     }
-    console.warn("Could not parse date:", date);
     return null;
 };
 
@@ -42,18 +35,14 @@ const processData = (data: any[], dateFields: string[], nestedDateFields: {path:
   return data.map(item => {
     const newItem = { ...item };
     dateFields.forEach(field => {
-      if (newItem[field]) {
-        newItem[field] = parseDate(newItem[field]);
-      }
+      if (newItem[field]) newItem[field] = parseDate(newItem[field]);
     });
     nestedDateFields.forEach(nested => {
         if (newItem[nested.path] && Array.isArray(newItem[nested.path])) {
             newItem[nested.path] = newItem[nested.path].map((subItem: any) => {
                 const newSubItem = {...subItem};
                 nested.fields.forEach(field => {
-                    if (newSubItem[field]) {
-                        newSubItem[field] = parseDate(newSubItem[field]);
-                    }
+                    if (newSubItem[field]) newSubItem[field] = parseDate(newSubItem[field]);
                 });
                 return newSubItem;
             });
@@ -77,6 +66,7 @@ type State = {
 };
 
 interface StudioContextType extends State {
+    loading: boolean;
     addActividad: (data: Omit<Actividad, 'id'>) => void;
     updateActividad: (data: Actividad) => void;
     deleteActividad: (id: string) => void;
@@ -115,7 +105,6 @@ interface StudioContextType extends State {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
-// Prepare initial state by processing dates from static data
 const processedPeople = processData(staticPeople, ['joinDate', 'lastPaymentDate'], [{path: 'vacationPeriods', fields: ['startDate', 'endDate']}]);
 const processedPayments = processData(staticPayments, ['date']);
 const processedNotifications = processData(staticNotifications, ['createdAt']);
@@ -135,6 +124,7 @@ const initialAppState: State = {
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initialAppState);
+  const [loading, setLoading] = useState(false); // No global loading needed for now
   const { toast } = useToast();
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
@@ -150,38 +140,35 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     if (!person.vacationPeriods) return false;
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
     return person.vacationPeriods.some(period => {
-        if (!period.startDate || !period.endDate) return false;
         const startDate = parseDate(period.startDate);
         const endDate = parseDate(period.endDate);
         if (!startDate || !endDate) return false;
         return checkDate >= new Date(startDate.setHours(0,0,0,0)) && checkDate <= new Date(endDate.setHours(23,59,59,999));
     });
   }, []);
-  
-  const addEntity = useCallback(<T extends { id: string }>(key: keyof State, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
-      setState(current => {
-        const newItem: T = {
-          id: `${key.toString().slice(0, -1)}-${Date.now()}-${Math.random()}`,
-          ...defaultValues,
-          ...itemData,
-        } as T;
-        return {
-          ...current,
-          [key]: [...(current[key] as T[]), newItem],
-        };
-      });
-  }, []);
 
-  const updateEntity = useCallback(<T extends { id: string }>(key: keyof State, item: T) => {
+  const addEntity = <T extends { id: string }>(key: keyof State, data: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
+    setState(current => {
+      const newItem: T = {
+        id: `${key.toString().slice(0, -1)}-${Date.now()}-${Math.random()}`,
+        ...defaultValues,
+        ...data,
+      } as T;
+      return { ...current, [key]: [...(current[key] as T[]), newItem] };
+    });
+  };
+
+  const updateEntity = <T extends { id: string }>(key: keyof State, item: T) => {
     setState(current => ({
       ...current,
       [key]: (current[key] as T[]).map(i => (i.id === item.id ? item : i)),
     }));
-  }, []);
+  };
 
-  const deleteEntity = useCallback((key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
+  const deleteEntity = (key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
+    const currentState = state; // Read from the latest state for checks
     for (const check of usageChecks) {
-        const collectionToCheck = state[check.collection] as any[];
+        const collectionToCheck = currentState[check.collection] as any[];
         const isUsed = collectionToCheck.some(item =>
             check.type === 'array'
             ? (item[check.field] as string[])?.includes(id)
@@ -200,61 +187,59 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       ...current,
       [key]: (current[key] as any[]).filter(i => i.id !== id),
     }));
-  }, [state, toast]);
+  };
   
-  const addActividad = useCallback((data: Omit<Actividad, 'id'>) => addEntity('actividades', data), [addEntity]);
-  const updateActividad = useCallback((data: Actividad) => updateEntity('actividades', data), [updateEntity]);
-  const deleteActividad = useCallback((id: string) => deleteEntity('actividades', id, [
+  const addActividad = (data: Omit<Actividad, 'id'>) => addEntity('actividades', data);
+  const updateActividad = (data: Actividad) => updateEntity('actividades', data);
+  const deleteActividad = (id: string) => deleteEntity('actividades', id, [
     { collection: 'sessions', field: 'actividadId', label: 'Sesión' },
     { collection: 'specialists', field: 'actividadIds', label: 'Especialista', type: 'array' },
-  ]), [deleteEntity, state]);
+  ]);
 
-  const addLevel = useCallback((data: Omit<Level, 'id'>) => addEntity('levels', data), [addEntity]);
-  const updateLevel = useCallback((data: Level) => updateEntity('levels', data), [updateEntity]);
-  const deleteLevel = useCallback((id: string) => deleteEntity('levels', id, [
+  const addLevel = (data: Omit<Level, 'id'>) => addEntity('levels', data);
+  const updateLevel = (data: Level) => updateEntity('levels', data);
+  const deleteLevel = (id: string) => deleteEntity('levels', id, [
       { collection: 'sessions', field: 'levelId', label: 'Sesión' },
       { collection: 'people', field: 'levelId', label: 'Persona' },
-  ]), [deleteEntity, state]);
+  ]);
 
-  const addSpace = useCallback((data: Omit<Space, 'id'>) => addEntity('spaces', data), [addEntity]);
-  const updateSpace = useCallback((data: Space) => updateEntity('spaces', data), [updateEntity]);
-  const deleteSpace = useCallback((id: string) => deleteEntity('spaces', id, [
+  const addSpace = (data: Omit<Space, 'id'>) => addEntity('spaces', data);
+  const updateSpace = (data: Space) => updateEntity('spaces', data);
+  const deleteSpace = (id: string) => deleteEntity('spaces', id, [
       { collection: 'sessions', field: 'spaceId', label: 'Sesión' }
-  ]), [deleteEntity, state]);
+  ]);
 
-  const addTariff = useCallback((data: Omit<Tariff, 'id'>) => addEntity('tariffs', data), [addEntity]);
-  const updateTariff = useCallback((data: Tariff) => updateEntity('tariffs', data), [updateEntity]);
-  const deleteTariff = useCallback((id: string) => deleteEntity('tariffs', id, [
+  const addTariff = (data: Omit<Tariff, 'id'>) => addEntity('tariffs', data);
+  const updateTariff = (data: Tariff) => updateEntity('tariffs', data);
+  const deleteTariff = (id: string) => deleteEntity('tariffs', id, [
       { collection: 'people', field: 'tariffId', label: 'Persona' }
-  ]), [deleteEntity, state]);
+  ]);
 
-  const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => addEntity('specialists', data, { avatar: `https://placehold.co/100x100.png` }), [addEntity]);
-  const updateSpecialist = useCallback((data: Specialist) => updateEntity('specialists', data), [updateEntity]);
-  const deleteSpecialist = useCallback((id: string) => deleteEntity('specialists', id, [
+  const addSpecialist = (data: Omit<Specialist, 'id' | 'avatar'>) => addEntity('specialists', data, { avatar: `https://placehold.co/100x100.png` });
+  const updateSpecialist = (data: Specialist) => updateEntity('specialists', data);
+  const deleteSpecialist = (id: string) => deleteEntity('specialists', id, [
       { collection: 'sessions', field: 'instructorId', label: 'Sesión' }
-  ]), [deleteEntity, state]);
+  ]);
 
-  const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addEntity('sessions', data, { personIds: [], waitlistPersonIds: [] }), [addEntity]);
-  const updateSession = useCallback((data: Session) => updateEntity('sessions', data), [updateEntity]);
-  const deleteSession = useCallback((id: string) => {
-    setState(current => {
-        const session = current.sessions.find(s => s.id === id);
-        if(session && session.personIds.length > 0) {
-            toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
-            return current;
-        }
-        return {...current, sessions: current.sessions.filter(s => s.id !== id)};
-    });
-  }, [toast]);
+  const addSession = (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addEntity('sessions', data, { personIds: [], waitlistPersonIds: [] });
+  const updateSession = (data: Session) => updateEntity('sessions', data);
+  const deleteSession = (id: string) => {
+    const session = state.sessions.find(s => s.id === id);
+    if(session && session.personIds.length > 0) {
+        toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
+        return;
+    }
+    setState(current => ({...current, sessions: current.sessions.filter(s => s.id !== id)}));
+  };
   
-  const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
+  const enrollPeopleInClass = (sessionId: string, personIds: string[]) => {
     setState(current => ({
         ...current,
         sessions: current.sessions.map(s => s.id === sessionId ? { ...s, personIds } : s)
     }));
-  }, []);
+  };
 
-  const addPerson = useCallback((data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+  const addPerson = (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     const now = new Date();
     addEntity('people', data, {
         joinDate: now,
@@ -262,9 +247,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     });
-  }, [addEntity]);
-  const updatePerson = useCallback((data: Person) => updateEntity('people', data), [updateEntity]);
-  const deletePerson = useCallback((id: string) => {
+  };
+  const updatePerson = (data: Person) => updateEntity('people', data);
+  const deletePerson = (id: string) => {
     setState(current => {
         const newSessions = current.sessions.map(s => ({
             ...s,
@@ -274,9 +259,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         const newPeople = current.people.filter(p => p.id !== id);
         return { ...current, people: newPeople, sessions: newSessions };
     });
-  }, []);
+  };
   
-  const recordPayment = useCallback((personId: string) => {
+  const recordPayment = (personId: string) => {
     setState(current => {
       const person = current.people.find(p => p.id === personId);
       if (!person) return current;
@@ -288,9 +273,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         payments: [...current.payments, newPayment]
       };
     });
-  }, []);
+  };
 
-  const undoLastPayment = useCallback((personId: string) => {
+  const undoLastPayment = (personId: string) => {
     setState(current => {
       const lastPayment = [...current.payments].filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
       if (!lastPayment) return current;
@@ -303,9 +288,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         payments: current.payments.filter(p => p.id !== lastPayment.id)
       }
     })
-  }, []);
+  };
 
-  const saveAttendance = useCallback((sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
+  const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
       const dateStr = format(new Date(), 'yyyy-MM-dd');
       setState(current => {
           const newAttendance = [...current.attendance];
@@ -319,9 +304,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           }
           return { ...current, attendance: newAttendance };
       });
-  }, []);
+  };
   
-  const addOneTimeAttendee = useCallback((sessionId: string, personId: string, date: Date) => {
+  const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
       const dateStr = format(date, 'yyyy-MM-dd');
       setState(current => {
           const newAttendance = [...current.attendance];
@@ -343,24 +328,24 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           }
           return { ...current, attendance: newAttendance };
       });
-  }, []);
+  };
 
-  const addVacationPeriod = useCallback((personId: string, startDate: Date, endDate: Date) => {
+  const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
     const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
     setState(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation]} : p)
     }));
-  }, []);
+  };
   
-  const removeVacationPeriod = useCallback((personId: string, vacationId: string) => {
+  const removeVacationPeriod = (personId: string, vacationId: string) => {
     setState(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: p.vacationPeriods?.filter(v => v.id !== vacationId)} : p)
     }));
-  }, []);
+  };
   
-  const enrollFromWaitlist = useCallback((notificationId: string, sessionId: string, personId: string) => {
+  const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
       setState(current => {
           const session = current.sessions.find(s => s.id === sessionId);
           if (!session) return current;
@@ -374,39 +359,48 @@ export function StudioProvider({ children }: { children: ReactNode }) {
               notifications: current.notifications.filter(n => n.id !== notificationId),
           };
       });
-  }, []);
+  };
 
-  const dismissNotification = useCallback((id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)})), []);
+  const dismissNotification = (id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)}));
 
-  const contextValue = useMemo(() => ({
+  const contextValue: StudioContextType = {
     ...state,
-    addActividad, updateActividad, deleteActividad,
-    addSpecialist, updateSpecialist, deleteSpecialist,
-    addPerson, updatePerson, deletePerson,
-    recordPayment, undoLastPayment,
-    addSpace, updateSpace, deleteSpace,
-    addSession, updateSession, deleteSession,
-    enrollPeopleInClass, saveAttendance, addOneTimeAttendee,
-    addVacationPeriod, removeVacationPeriod,
-    enrollFromWaitlist, dismissNotification,
-    addTariff, updateTariff, deleteTariff,
-    addLevel, updateLevel, deleteLevel,
-    isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial,
-  }), [
-    state, toast, 
-    addActividad, updateActividad, deleteActividad,
-    addSpecialist, updateSpecialist, deleteSpecialist,
-    addPerson, updatePerson, deletePerson,
-    recordPayment, undoLastPayment,
-    addSpace, updateSpace, deleteSpace,
-    addSession, updateSession, deleteSession,
-    enrollPeopleInClass, saveAttendance, addOneTimeAttendee,
-    addVacationPeriod, removeVacationPeriod,
-    enrollFromWaitlist, dismissNotification,
-    addTariff, updateTariff, deleteTariff,
-    addLevel, updateLevel, deleteLevel,
-    isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial
-  ]);
+    loading,
+    addActividad,
+    updateActividad,
+    deleteActividad,
+    addSpecialist,
+    updateSpecialist,
+    deleteSpecialist,
+    addPerson,
+    updatePerson,
+    deletePerson,
+    recordPayment,
+    undoLastPayment,
+    addSpace,
+    updateSpace,
+    deleteSpace,
+    addSession,
+    updateSession,
+    deleteSession,
+    enrollPeopleInClass,
+    saveAttendance,
+    addOneTimeAttendee,
+    addVacationPeriod,
+    removeVacationPeriod,
+    enrollFromWaitlist,
+    dismissNotification,
+    addTariff,
+    updateTariff,
+    deleteTariff,
+    addLevel,
+    updateLevel,
+    deleteLevel,
+    isPersonOnVacation,
+    isTutorialOpen,
+    openTutorial,
+    closeTutorial,
+  };
 
   return (
     <StudioContext.Provider value={contextValue}>
