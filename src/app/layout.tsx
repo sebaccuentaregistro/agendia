@@ -4,7 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/theme-provider';
 import { AppShell } from '@/components/layout/app-shell';
 import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from '@/context/AuthContext';
+import { StudioProvider } from '@/context/StudioContext';
 
 const poppins = Poppins({ 
   subsets: ['latin'],
@@ -30,9 +30,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
+          {/* StudioProvider envuelve a toda la aplicación para proveer datos y estilos correctamente */}
+          <StudioProvider instituteId="yogaflow-manager-uqjpc">
             <AppShell>{children}</AppShell>
-          </AuthProvider>
+          </StudioProvider>
           <Toaster />
         </ThemeProvider>
       </body>
