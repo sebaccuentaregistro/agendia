@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useReducer, useMemo } from 'react';
-import { collection, doc, onSnapshot, Unsubscribe } from 'firebase/firestore';
+import { collection, doc, onSnapshot, Unsubscribe, getDocs, writeBatch, query, where, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import * as actions from '@/lib/firestore-actions';
@@ -26,7 +26,8 @@ type State = {
 
 type Action = { type: 'SET_DATA'; payload: { collection: keyof Omit<State, 'loading' | 'error'>, data: any[] } }
   | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: Error };
+  | { type: 'SET_ERROR'; payload: Error }
+  | { type: 'SET_ALL_DATA', payload: Partial<Omit<State, 'loading' | 'error'>> };
 
 const initialState: State = {
   actividades: [],
@@ -47,6 +48,8 @@ function dataReducer(state: State, action: Action): State {
   switch (action.type) {
     case 'SET_DATA':
       return { ...state, [action.payload.collection]: action.payload.data };
+    case 'SET_ALL_DATA':
+        return { ...state, ...action.payload };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
     case 'SET_ERROR':
@@ -59,15 +62,23 @@ function dataReducer(state: State, action: Action): State {
 const processDoc = (doc: any) => {
     const data = doc.data();
     for (const key in data) {
-        if (data[key] instanceof Object && 'seconds' in data[key] && 'nanoseconds' in data[key]) {
+        if (data[key] instanceof Timestamp) {
             data[key] = data[key].toDate();
+        } else if (data[key] instanceof Object && 'seconds' in data[key] && 'nanoseconds' in data[key]) {
+             data[key] = (data[key] as Timestamp).toDate();
         }
+        
         if (key === 'vacationPeriods' && Array.isArray(data[key])) {
-            data[key] = data[key].map((period: any) => ({
-                ...period,
-                startDate: period.startDate.toDate(),
-                endDate: period.endDate.toDate()
-            }));
+            data[key] = data[key].map((period: any) => {
+                const newPeriod = { ...period };
+                if (period.startDate instanceof Timestamp) {
+                    newPeriod.startDate = period.startDate.toDate();
+                }
+                if (period.endDate instanceof Timestamp) {
+                    newPeriod.endDate = period.endDate.toDate();
+                }
+                return newPeriod;
+            });
         }
     }
     return { id: doc.id, ...data };
@@ -146,29 +157,47 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
 
 
   useEffect(() => {
-    dispatch({ type: 'SET_LOADING', payload: true });
-    const unsubscribes: Unsubscribe[] = [];
-    const collectionsToLoad = new Set(Object.keys(collectionRefs));
+    const loadInitialDataAndSubscribe = async () => {
+      dispatch({ type: 'SET_LOADING', payload: true });
+      try {
+        const collectionKeys = Object.keys(collectionRefs) as Array<keyof typeof collectionRefs>;
+        const promises = collectionKeys.map(key => getDocs(collectionRefs[key]));
+        const snapshots = await Promise.all(promises);
 
-    (Object.keys(collectionRefs) as Array<keyof typeof collectionRefs>).forEach(key => {
-      const unsubscribe = onSnapshot(collectionRefs[key], (snapshot) => {
-        const data = snapshot.docs.map(processDoc);
-        dispatch({ type: 'SET_DATA', payload: { collection: key, data } });
+        const allData: Partial<Omit<State, 'loading' | 'error'>> = {};
+        snapshots.forEach((snapshot, index) => {
+          const key = collectionKeys[index];
+          allData[key] = snapshot.docs.map(processDoc);
+        });
+
+        dispatch({ type: 'SET_ALL_DATA', payload: allData });
+        dispatch({ type: 'SET_LOADING', payload: false });
         
-        if (collectionsToLoad.has(key)) {
-            collectionsToLoad.delete(key);
-            if (collectionsToLoad.size === 0) {
-                dispatch({ type: 'SET_LOADING', payload: false });
-            }
-        }
-      }, (error) => {
-        console.error(`Error fetching ${key}:`, error);
+        // After initial load, set up listeners for real-time updates
+        const unsubscribes = collectionKeys.map(key => {
+            return onSnapshot(collectionRefs[key], (snapshot) => {
+                const data = snapshot.docs.map(processDoc);
+                dispatch({ type: 'SET_DATA', payload: { collection: key, data } });
+            }, (error) => {
+                console.error(`Error on snapshot for ${key}:`, error);
+                // Optionally handle listener errors, e.g., show a toast
+            });
+        });
+
+        return () => unsubscribes.forEach(unsub => unsub());
+
+      } catch (error: any) {
+        console.error("Error loading initial data:", error);
         dispatch({ type: 'SET_ERROR', payload: error });
-      });
-      unsubscribes.push(unsubscribe);
-    });
-    
-    return () => unsubscribes.forEach(unsub => unsub());
+        return () => {};
+      }
+    };
+  
+    const unsubscribePromise = loadInitialDataAndSubscribe();
+  
+    return () => {
+      unsubscribePromise.then(cleanup => cleanup && cleanup());
+    };
   }, [collectionRefs]);
   
   const executeAction = useCallback(async (action: Promise<any>, successMessage: string, errorMessagePrefix: string) => {
@@ -332,3 +361,5 @@ export function useStudio() {
   }
   return context;
 }
+
+    
