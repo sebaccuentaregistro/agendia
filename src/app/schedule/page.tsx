@@ -4,7 +4,7 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal, UserX, Signal } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import type { Session, Person } from '@/types';
@@ -658,11 +658,11 @@ function SchedulePageContent() {
   };
   
   const clientTimeData = useMemo(() => {
-    if (!isMounted) return { now: null, todayName: '', todayIndex: -1, appDayOrder: [] };
+    if (!isMounted) return { now: null, todayName: '', todayIndex: -1, appDayOrder: [] as Session['dayOfWeek'][] };
     
     const now = new Date();
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
-    const appDayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const appDayOrder: Session['dayOfWeek'][] = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     const todayName = dayMap[now.getDay()];
     const todayIndex = appDayOrder.indexOf(todayName);
     
