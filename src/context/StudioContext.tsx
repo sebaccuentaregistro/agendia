@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
@@ -155,11 +154,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const addEntity = useCallback(<T extends { id: string }>(key: keyof State, data: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
+  const addEntity = useCallback(<T extends { id: string }>(key: keyof State, data: Omit<T, 'id'>) => {
     performUpdate(current => {
       const newItem: T = {
         id: `${key.toString().slice(0, -1)}-${Date.now()}-${Math.random()}`,
-        ...defaultValues,
         ...data,
       } as T;
       return { ...current, [key]: [...(current[key] as any[]), newItem] };
@@ -224,40 +222,28 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       { collection: 'people', field: 'tariffId', label: 'Persona' }
   ]), [deleteEntity]);
 
-  const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => addEntity('specialists', data, { avatar: `https://placehold.co/100x100.png` }), [addEntity]);
+  const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => {
+    const fullData: Omit<Specialist, 'id'> = {
+      ...data,
+      avatar: `https://placehold.co/100x100.png`
+    };
+    addEntity('specialists', fullData);
+  }, [addEntity]);
   const updateSpecialist = useCallback((data: Specialist) => updateEntity('specialists', data), [updateEntity]);
   const deleteSpecialist = useCallback((id: string) => deleteEntity('specialists', id, [
       { collection: 'sessions', field: 'instructorId', label: 'Sesión' }
   ]), [deleteEntity]);
 
-  const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addEntity('sessions', data, { personIds: [], waitlistPersonIds: [] }), [addEntity]);
-  const updateSession = useCallback((data: Session) => updateEntity('sessions', data), [updateEntity]);
-  const deleteSession = useCallback((id: string) => {
-    performUpdate(current => {
-      const session = current.sessions.find(s => s.id === id);
-      if(session && session.personIds.length > 0) {
-          toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
-          return current;
-      }
-      return {...current, sessions: current.sessions.filter(s => s.id !== id)};
-    });
-  }, [performUpdate, toast]);
-  
-  const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
-    performUpdate(current => ({
-        ...current,
-        sessions: current.sessions.map(s => s.id === sessionId ? { ...s, personIds } : s)
-    }));
-  }, [performUpdate]);
-
   const addPerson = useCallback((data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     const now = new Date();
-    addEntity('people', data, {
+    const fullData: Omit<Person, 'id'> = {
+        ...data,
         joinDate: now,
         lastPaymentDate: addMonths(now, 1),
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
-    });
+    };
+    addEntity('people', fullData);
   }, [addEntity]);
   const updatePerson = useCallback((data: Person) => updateEntity('people', data), [updateEntity]);
   const deletePerson = useCallback((id: string) => {
@@ -299,6 +285,33 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         payments: current.payments.filter(p => p.id !== lastPayment.id)
       }
     })
+  }, [performUpdate]);
+
+  const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
+    const fullData: Omit<Session, 'id'> = {
+        ...data,
+        personIds: [],
+        waitlistPersonIds: []
+    };
+    addEntity('sessions', fullData);
+  }, [addEntity]);
+  const updateSession = useCallback((data: Session) => updateEntity('sessions', data), [updateEntity]);
+  const deleteSession = useCallback((id: string) => {
+    performUpdate(current => {
+      const session = current.sessions.find(s => s.id === id);
+      if(session && session.personIds.length > 0) {
+          toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
+          return current;
+      }
+      return {...current, sessions: current.sessions.filter(s => s.id !== id)};
+    });
+  }, [performUpdate, toast]);
+  
+  const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
+    performUpdate(current => ({
+        ...current,
+        sessions: current.sessions.map(s => s.id === sessionId ? { ...s, personIds } : s)
+    }));
   }, [performUpdate]);
 
   const saveAttendance = useCallback((sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
