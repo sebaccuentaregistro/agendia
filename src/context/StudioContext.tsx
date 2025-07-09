@@ -70,10 +70,10 @@ type State = {
   notifications: AppNotification[];
   tariffs: Tariff[];
   levels: Level[];
-  loading: boolean;
 };
 
 interface StudioContextType extends State {
+    loading: boolean;
     addActividad: (data: Omit<Actividad, 'id'>) => void;
     updateActividad: (data: Actividad) => void;
     deleteActividad: (id: string) => void;
@@ -127,11 +127,11 @@ const initialAppState: State = {
     notifications: processedNotifications,
     tariffs: staticTariffs,
     levels: staticLevels,
-    loading: false,
 };
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initialAppState);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -157,14 +157,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   // --- Generic CRUD Functions ---
 
-  const updateCollection = useCallback(<T extends { id: string }>(key: keyof Omit<State, 'loading'>, item: T) => {
+  const updateCollection = <T extends { id: string }>(key: keyof State, item: T) => {
     setState(current => ({
       ...current,
       [key]: (current[key] as T[]).map(i => (i.id === item.id ? item : i)),
     }));
-  }, []);
+  };
 
-  const addToCollection = useCallback(<T extends { id: string }>(key: keyof Omit<State, 'loading'>, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
+  const addToCollection = <T extends { id: string }>(key: keyof State, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
       const newItem: T = {
         id: `${key.toString().slice(0, -1)}-${Date.now()}`,
         ...defaultValues,
@@ -174,9 +174,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...current,
         [key]: [...(current[key] as T[]), newItem],
       }));
-  }, []);
+  };
 
-  const deleteFromCollection = useCallback((key: keyof Omit<State, 'loading'>, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
+  const deleteFromCollection = useCallback((key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
     for (const check of usageChecks) {
         const collectionToCheck = state[check.collection] as any[];
         const isUsed = collectionToCheck.some(item => 
@@ -200,45 +200,45 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   }, [state, toast]);
 
   // Actividades
-  const addActividad = useCallback((data: Omit<Actividad, 'id'>) => addToCollection('actividades', data), [addToCollection]);
-  const updateActividad = useCallback((data: Actividad) => updateCollection('actividades', data), [updateCollection]);
+  const addActividad = (data: Omit<Actividad, 'id'>) => addToCollection('actividades', data);
+  const updateActividad = (data: Actividad) => updateCollection('actividades', data);
   const deleteActividad = useCallback((id: string) => deleteFromCollection('actividades', id, [
     { collection: 'sessions', field: 'actividadId', label: 'Sesión' },
     { collection: 'specialists', field: 'actividadIds', label: 'Especialista', type: 'array' },
   ]), [deleteFromCollection]);
 
   // Levels
-  const addLevel = useCallback((data: Omit<Level, 'id'>) => addToCollection('levels', data), [addToCollection]);
-  const updateLevel = useCallback((data: Level) => updateCollection('levels', data), [updateCollection]);
+  const addLevel = (data: Omit<Level, 'id'>) => addToCollection('levels', data);
+  const updateLevel = (data: Level) => updateCollection('levels', data);
   const deleteLevel = useCallback((id: string) => deleteFromCollection('levels', id, [
       { collection: 'sessions', field: 'levelId', label: 'Sesión' },
       { collection: 'people', field: 'levelId', label: 'Persona' },
   ]), [deleteFromCollection]);
 
   // Spaces
-  const addSpace = useCallback((data: Omit<Space, 'id'>) => addToCollection('spaces', data), [addToCollection]);
-  const updateSpace = useCallback((data: Space) => updateCollection('spaces', data), [updateCollection]);
+  const addSpace = (data: Omit<Space, 'id'>) => addToCollection('spaces', data);
+  const updateSpace = (data: Space) => updateCollection('spaces', data);
   const deleteSpace = useCallback((id: string) => deleteFromCollection('spaces', id, [
       { collection: 'sessions', field: 'spaceId', label: 'Sesión' }
   ]), [deleteFromCollection]);
 
   // Tariffs
-  const addTariff = useCallback((data: Omit<Tariff, 'id'>) => addToCollection('tariffs', data), [addToCollection]);
-  const updateTariff = useCallback((data: Tariff) => updateCollection('tariffs', data), [updateCollection]);
+  const addTariff = (data: Omit<Tariff, 'id'>) => addToCollection('tariffs', data);
+  const updateTariff = (data: Tariff) => updateCollection('tariffs', data);
   const deleteTariff = useCallback((id: string) => deleteFromCollection('tariffs', id, [
       { collection: 'people', field: 'tariffId', label: 'Persona' }
   ]), [deleteFromCollection]);
 
   // Specialists
-  const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => addToCollection('specialists', data, { avatar: `https://placehold.co/100x100.png` }), [addToCollection]);
-  const updateSpecialist = useCallback((data: Specialist) => updateCollection('specialists', data), [updateCollection]);
+  const addSpecialist = (data: Omit<Specialist, 'id' | 'avatar'>) => addToCollection('specialists', data, { avatar: `https://placehold.co/100x100.png` });
+  const updateSpecialist = (data: Specialist) => updateCollection('specialists', data);
   const deleteSpecialist = useCallback((id: string) => deleteFromCollection('specialists', id, [
       { collection: 'sessions', field: 'instructorId', label: 'Sesión' }
   ]), [deleteFromCollection]);
 
   // Sessions
-  const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addToCollection('sessions', data, { personIds: [], waitlistPersonIds: [] }), [addToCollection]);
-  const updateSession = useCallback((data: Session) => updateCollection('sessions', data), [updateCollection]);
+  const addSession = (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addToCollection('sessions', data, { personIds: [], waitlistPersonIds: [] });
+  const updateSession = (data: Session) => updateCollection('sessions', data);
   const deleteSession = useCallback((id: string) => {
     const session = state.sessions.find(s => s.id === id);
     if(session && session.personIds.length > 0) {
@@ -248,15 +248,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     deleteFromCollection('sessions', id, []);
   }, [state.sessions, deleteFromCollection, toast]);
   
-  const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
+  const enrollPeopleInClass = (sessionId: string, personIds: string[]) => {
     setState(current => ({
         ...current,
         sessions: current.sessions.map(s => s.id === sessionId ? { ...s, personIds } : s)
     }));
-  }, []);
+  };
 
   // People
-  const addPerson = useCallback((data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+  const addPerson = (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     const now = new Date();
     addToCollection('people', data, {
         joinDate: now,
@@ -264,8 +264,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     });
-  }, [addToCollection]);
-  const updatePerson = useCallback((data: Person) => updateCollection('people', data), [updateCollection]);
+  };
+  const updatePerson = (data: Person) => updateCollection('people', data);
   const deletePerson = useCallback((id: string) => {
     setState(current => {
         const newSessions = current.sessions.map(s => ({
@@ -277,7 +277,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         return { ...current, people: newPeople, sessions: newSessions };
     });
   }, []);
-  const recordPayment = useCallback((personId: string) => {
+  
+  const recordPayment = (personId: string) => {
     setState(current => {
       const person = current.people.find(p => p.id === personId);
       if (!person) return current;
@@ -289,8 +290,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         payments: [...current.payments, newPayment]
       };
     });
-  }, []);
-  const undoLastPayment = useCallback((personId: string) => {
+  };
+  const undoLastPayment = (personId: string) => {
     setState(current => {
       const lastPayment = current.payments.filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
       if (!lastPayment) return current;
@@ -303,9 +304,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         payments: current.payments.filter(p => p.id !== lastPayment.id)
       }
     })
-  }, []);
+  };
 
-  const saveAttendance = useCallback((sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
+  const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
       const dateStr = format(new Date(), 'yyyy-MM-dd');
       setState(current => {
           const newAttendance = [...current.attendance];
@@ -319,9 +320,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           }
           return { ...current, attendance: newAttendance };
       });
-  }, []);
+  };
   
-  const addOneTimeAttendee = useCallback((sessionId: string, personId: string, date: Date) => {
+  const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
       const dateStr = format(date, 'yyyy-MM-dd');
       setState(current => {
           const newAttendance = [...current.attendance];
@@ -343,24 +344,24 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           }
           return { ...current, attendance: newAttendance };
       });
-  }, []);
+  };
 
-  const addVacationPeriod = useCallback((personId: string, startDate: Date, endDate: Date) => {
+  const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
     const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
     setState(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation]} : p)
     }));
-  }, []);
+  };
   
-  const removeVacationPeriod = useCallback((personId: string, vacationId: string) => {
+  const removeVacationPeriod = (personId: string, vacationId: string) => {
     setState(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: p.vacationPeriods?.filter(v => v.id !== vacationId)} : p)
     }));
-  }, []);
+  };
   
-  const enrollFromWaitlist = useCallback((notificationId: string, sessionId: string, personId: string) => {
+  const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
       setState(current => {
           const session = current.sessions.find(s => s.id === sessionId);
           if (!session) return current;
@@ -374,12 +375,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
               notifications: current.notifications.filter(n => n.id !== notificationId),
           };
       });
-  }, []);
+  };
 
-  const dismissNotification = useCallback((id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)})), []);
+  const dismissNotification = (id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)}));
 
   const contextValue = useMemo(() => ({
     ...state,
+    loading,
     addActividad, updateActividad, deleteActividad,
     addSpecialist, updateSpecialist, deleteSpecialist,
     addPerson, updatePerson, deletePerson,
@@ -392,7 +394,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     addTariff, updateTariff, deleteTariff,
     addLevel, updateLevel, deleteLevel,
     isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial,
-  }), [state, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addVacationPeriod, removeVacationPeriod, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, addLevel, updateLevel, deleteLevel, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial]);
+  }), [state, loading, deleteFromCollection, deleteActividad, deleteLevel, deleteSpace, deleteTariff, deleteSpecialist, deleteSession, deletePerson, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial]);
 
   return (
     <StudioContext.Provider value={contextValue}>
