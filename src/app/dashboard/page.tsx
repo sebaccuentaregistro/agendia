@@ -24,7 +24,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
-    const sortedNotifications = useMemo(() => [...notifications].sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [notifications]);
+    const sortedNotifications = useMemo(() => {
+        return [...notifications].sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
+    }, [notifications]);
 
 
     if (sortedNotifications.length === 0) return null;
@@ -42,7 +48,7 @@ function AppNotifications() {
                     if (notification.type === 'waitlist' && notification.sessionId) {
                         const session = sessions.find(s => s.id === notification.sessionId);
                         const person = people.find(p => p.id === notification.personId);
-                        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                        constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
                         if (!session || !person || !actividad) {
                             return null;
@@ -111,7 +117,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 
   const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   }, [session, specialists, actividades, spaces]);
@@ -275,7 +281,7 @@ function DashboardPageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
+    constividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   };
