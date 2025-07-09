@@ -132,12 +132,29 @@ interface StudioContextType extends State {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
+// Process the static data *before* the component renders. This ensures the data is ready instantly.
+const processedPeople = processData(staticPeople, ['joinDate', 'lastPaymentDate'], [{path: 'vacationPeriods', fields: ['startDate', 'endDate']}]);
+const processedPayments = processData(staticPayments, ['date']);
+const processedNotifications = processData(staticNotifications, ['createdAt']);
+
+const initialAppState: State = {
+    actividades: staticActividades,
+    specialists: staticSpecialists,
+    people: processedPeople,
+    sessions: staticSessions,
+    payments: processedPayments,
+    spaces: staticSpaces,
+    attendance: staticAttendance,
+    notifications: processedNotifications,
+    tariffs: staticTariffs,
+    levels: staticLevels,
+    loading: false, // Start with loading: false to show content immediately.
+};
+
+
 export function StudioProvider({ children, instituteId }: { children: ReactNode, instituteId: string }) {
-  const [state, setState] = useState<State>({
-    actividades: [], specialists: [], people: [], sessions: [],
-    payments: [], spaces: [], attendance: [], notifications: [],
-    tariffs: [], levels: [], loading: true, // Start in loading state
-  });
+  // The main application state is now initialized here, once, with all data ready.
+  const [state] = useState<State>(initialAppState);
 
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
@@ -147,32 +164,6 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
         localStorage.setItem('agendia-tutorial-completed', 'true');
       } catch (e) { console.warn("Could not save tutorial state."); }
   }, []);
-
-  useEffect(() => {
-    // Simulate loading data to ensure a stable startup sequence.
-    const timer = setTimeout(() => {
-      // Process all static data to ensure dates are correctly formatted
-      const processedPeople = processData(staticPeople, ['joinDate', 'lastPaymentDate'], [{path: 'vacationPeriods', fields: ['startDate', 'endDate']}]);
-      const processedPayments = processData(staticPayments, ['date']);
-      const processedNotifications = processData(staticNotifications, ['createdAt']);
-      
-      setState({
-        actividades: staticActividades,
-        specialists: staticSpecialists,
-        people: processedPeople,
-        sessions: staticSessions,
-        payments: processedPayments,
-        spaces: staticSpaces,
-        attendance: staticAttendance,
-        notifications: processedNotifications,
-        tariffs: staticTariffs,
-        levels: staticLevels,
-        loading: false, // Set loading to false only after all data is processed
-      });
-    }, 500); // A small delay to mimic a real network request.
-
-    return () => clearTimeout(timer);
-  }, [instituteId]);
 
   const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
@@ -188,6 +179,8 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
   }, []);
   
+  // No more useEffect for data loading, which prevents the "stuck loading" issue.
+
   const contextValue: StudioContextType = useMemo(() => ({
     ...state,
     isPersonOnVacation,
