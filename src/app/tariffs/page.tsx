@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Pencil, PlusCircle, Trash2, DollarSign, Calendar, CheckSquare } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -41,6 +41,10 @@ export default function TariffsPage() {
     resolver: zodResolver(formSchema),
     defaultValues: { name: '', price: 0, description: '', frequency: undefined, isIndividual: false },
   });
+
+  const sortedTariffs = useMemo(() => {
+    return [...tariffs].sort((a, b) => a.price - b.price);
+  }, [tariffs]);
 
   function handleAdd() {
     setSelectedTariff(undefined);
@@ -159,7 +163,7 @@ export default function TariffsPage() {
       </PageHeader>
       
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {tariffs.slice().sort((a,b) => a.price - b.price).map((tariff) => (
+        {sortedTariffs.map((tariff) => (
           <Card key={tariff.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary/30">
             <CardHeader className="p-4">
                 <CardTitle className="flex items-center gap-2 text-lg text-slate-800 dark:text-slate-100">
