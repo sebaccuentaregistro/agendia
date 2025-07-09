@@ -294,7 +294,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
   }, []);
   
-  const contextValue: StudioContextType = {
+  const contextValue: StudioContextType = useMemo(() => ({
     ...state,
     addActividad,
     updateActividad,
@@ -333,7 +333,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     isTutorialOpen,
     openTutorial,
     closeTutorial
-  };
+  }), [state, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial]);
 
   return (
     <StudioContext.Provider value={contextValue}>
