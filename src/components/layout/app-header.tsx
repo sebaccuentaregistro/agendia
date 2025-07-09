@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ThemeToggle } from '../theme-toggle';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const navItems = [
   { href: "/dashboard", label: "Inicio" },
@@ -25,7 +25,7 @@ const navItems = [
 export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial } = useStudio();
-  
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-transparent px-4 backdrop-blur-xl sm:px-6">
       <div className="flex items-center gap-6">

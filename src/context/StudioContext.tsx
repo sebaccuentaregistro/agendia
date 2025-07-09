@@ -124,19 +124,18 @@ const initialAppState: State = {
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initialAppState);
-  const [loading, setLoading] = useState(false); // No global loading needed for now
   const { toast } = useToast();
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
-  const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
-  const closeTutorial = useCallback(() => {
+  const openTutorial = () => setIsTutorialOpen(true);
+  const closeTutorial = () => {
       setIsTutorialOpen(false);
       try {
         localStorage.setItem('agendia-tutorial-completed', 'true');
       } catch (e) { console.warn("Could not save tutorial state."); }
-  }, []);
+  };
   
-  const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
+  const isPersonOnVacation = (person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
     return person.vacationPeriods.some(period => {
@@ -145,7 +144,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (!startDate || !endDate) return false;
         return checkDate >= new Date(startDate.setHours(0,0,0,0)) && checkDate <= new Date(endDate.setHours(23,59,59,999));
     });
-  }, []);
+  };
 
   const addEntity = <T extends { id: string }>(key: keyof State, data: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
     setState(current => {
@@ -166,7 +165,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteEntity = (key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
-    const currentState = state; // Read from the latest state for checks
+    // Check for usages against the current state, not an initial/stale one
+    const currentState = (setState as any)._reactInternals.memoizedState as State;
+    
     for (const check of usageChecks) {
         const collectionToCheck = currentState[check.collection] as any[];
         const isUsed = collectionToCheck.some(item =>
@@ -224,12 +225,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const addSession = (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addEntity('sessions', data, { personIds: [], waitlistPersonIds: [] });
   const updateSession = (data: Session) => updateEntity('sessions', data);
   const deleteSession = (id: string) => {
-    const session = state.sessions.find(s => s.id === id);
-    if(session && session.personIds.length > 0) {
-        toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
-        return;
-    }
-    setState(current => ({...current, sessions: current.sessions.filter(s => s.id !== id)}));
+    setState(current => {
+      const session = current.sessions.find(s => s.id === id);
+      if(session && session.personIds.length > 0) {
+          toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
+          return current;
+      }
+      return {...current, sessions: current.sessions.filter(s => s.id !== id)};
+    });
   };
   
   const enrollPeopleInClass = (sessionId: string, personIds: string[]) => {
@@ -365,7 +368,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const contextValue: StudioContextType = {
     ...state,
-    loading,
+    loading: false,
     addActividad,
     updateActividad,
     deleteActividad,

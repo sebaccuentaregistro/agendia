@@ -17,7 +17,7 @@ export function useAuth() {
     return {
         user: null,
         userProfile: null,
-        loading: true,
+        loading: false, // Set to false to prevent infinite loading screens
         logout: () => {},
     };
 }
