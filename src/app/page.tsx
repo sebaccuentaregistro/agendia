@@ -405,7 +405,7 @@ function DashboardPageContent() {
                   </Card>
               </Link>
               ))}
-              <Link href="/dashboard?view=management" className="transition-transform hover:-translate-y-1">
+              <Link href="/?view=management" className="transition-transform hover:-translate-y-1">
               <Card className="group flex flex-col items-center justify-center p-2 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-xl shadow-lg border border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:!border-primary aspect-square">
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Settings className="h-4 w-4" />
