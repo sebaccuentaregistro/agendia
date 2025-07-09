@@ -77,7 +77,6 @@ type State = {
 };
 
 interface StudioContextType extends State {
-    loading: boolean;
     addActividad: (data: Omit<Actividad, 'id'>) => void;
     updateActividad: (data: Actividad) => void;
     deleteActividad: (id: string) => void;
@@ -159,8 +158,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     });
   }, []);
   
-  // --- Core State Manipulation Functions (Corrected with functional updates) ---
-
   const addEntity = useCallback(<T extends { id: string }>(key: keyof State, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
       setState(current => {
         const newItem: T = {
@@ -205,56 +202,50 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }));
   }, [state, toast]);
   
-  // --- Wrapper Functions for each data type ---
-  
-  // Actividades
   const addActividad = useCallback((data: Omit<Actividad, 'id'>) => addEntity('actividades', data), [addEntity]);
   const updateActividad = useCallback((data: Actividad) => updateEntity('actividades', data), [updateEntity]);
   const deleteActividad = useCallback((id: string) => deleteEntity('actividades', id, [
     { collection: 'sessions', field: 'actividadId', label: 'Sesión' },
     { collection: 'specialists', field: 'actividadIds', label: 'Especialista', type: 'array' },
-  ]), [deleteEntity]);
+  ]), [deleteEntity, state]);
 
-  // Levels
   const addLevel = useCallback((data: Omit<Level, 'id'>) => addEntity('levels', data), [addEntity]);
   const updateLevel = useCallback((data: Level) => updateEntity('levels', data), [updateEntity]);
   const deleteLevel = useCallback((id: string) => deleteEntity('levels', id, [
       { collection: 'sessions', field: 'levelId', label: 'Sesión' },
       { collection: 'people', field: 'levelId', label: 'Persona' },
-  ]), [deleteEntity]);
+  ]), [deleteEntity, state]);
 
-  // Spaces
   const addSpace = useCallback((data: Omit<Space, 'id'>) => addEntity('spaces', data), [addEntity]);
   const updateSpace = useCallback((data: Space) => updateEntity('spaces', data), [updateEntity]);
   const deleteSpace = useCallback((id: string) => deleteEntity('spaces', id, [
       { collection: 'sessions', field: 'spaceId', label: 'Sesión' }
-  ]), [deleteEntity]);
+  ]), [deleteEntity, state]);
 
-  // Tariffs
   const addTariff = useCallback((data: Omit<Tariff, 'id'>) => addEntity('tariffs', data), [addEntity]);
   const updateTariff = useCallback((data: Tariff) => updateEntity('tariffs', data), [updateEntity]);
   const deleteTariff = useCallback((id: string) => deleteEntity('tariffs', id, [
       { collection: 'people', field: 'tariffId', label: 'Persona' }
-  ]), [deleteEntity]);
+  ]), [deleteEntity, state]);
 
-  // Specialists
   const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => addEntity('specialists', data, { avatar: `https://placehold.co/100x100.png` }), [addEntity]);
   const updateSpecialist = useCallback((data: Specialist) => updateEntity('specialists', data), [updateEntity]);
   const deleteSpecialist = useCallback((id: string) => deleteEntity('specialists', id, [
       { collection: 'sessions', field: 'instructorId', label: 'Sesión' }
-  ]), [deleteEntity]);
+  ]), [deleteEntity, state]);
 
-  // Sessions
   const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addEntity('sessions', data, { personIds: [], waitlistPersonIds: [] }), [addEntity]);
   const updateSession = useCallback((data: Session) => updateEntity('sessions', data), [updateEntity]);
   const deleteSession = useCallback((id: string) => {
-    const session = state.sessions.find(s => s.id === id);
-      if(session && session.personIds.length > 0) {
-          toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
-          return;
-      }
-      setState(current => ({...current, sessions: current.sessions.filter(s => s.id !== id)}));
-  }, [state, toast]);
+    setState(current => {
+        const session = current.sessions.find(s => s.id === id);
+        if(session && session.personIds.length > 0) {
+            toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
+            return current;
+        }
+        return {...current, sessions: current.sessions.filter(s => s.id !== id)};
+    });
+  }, [toast]);
   
   const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
     setState(current => ({
@@ -263,7 +254,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  // People
   const addPerson = useCallback((data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     const now = new Date();
     addEntity('people', data, {
@@ -390,7 +380,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo(() => ({
     ...state,
-    loading: false, // Hardcoded to false
     addActividad, updateActividad, deleteActividad,
     addSpecialist, updateSpecialist, deleteSpecialist,
     addPerson, updatePerson, deletePerson,

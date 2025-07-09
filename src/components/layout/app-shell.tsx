@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useStudio } from '@/context/StudioContext';
 import type { ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
@@ -28,12 +27,6 @@ function FullscreenLoader() {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-    const { loading } = useStudio();
-
-    if (loading) {
-        return <FullscreenLoader />;
-    }
-
     return (
         <div className="flex min-h-screen w-full flex-col">
             <AppHeader />

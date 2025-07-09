@@ -26,6 +26,7 @@ function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
     const sortedNotifications = useMemo(() => {
         return [...notifications].sort((a, b) => {
+            // Ensure createdAt is a Date object before comparing
             const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return dateB - dateA;
@@ -48,7 +49,7 @@ function AppNotifications() {
                     if (notification.type === 'waitlist' && notification.sessionId) {
                         const session = sessions.find(s => s.id === notification.sessionId);
                         const person = people.find(p => p.id === notification.personId);
-                        constividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
                         if (!session || !person || !actividad) {
                             return null;
@@ -117,7 +118,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 
   const sessionDetails = useMemo(() => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   }, [session, specialists, actividades, spaces]);
@@ -165,7 +166,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 }
 
 function DashboardPageContent() {
-  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels, loading } = useStudio();
+  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -175,9 +176,6 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
 
-  // FIX: Hydration Mismatch Correction
-  // Using new Date() directly causes server/client mismatches.
-  // We ensure this logic only runs on the client after hydration.
   const [isClient, setIsClient] = useState(false);
   useEffect(() => {
     setIsClient(true);
@@ -294,7 +292,7 @@ function DashboardPageContent() {
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
-    constividad = actividades.find((s) => s.id === session.actividadId);
+    const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     return { specialist, actividad, space };
   };
@@ -304,7 +302,7 @@ function DashboardPageContent() {
     return time;
   };
   
-  if (loading || !isClient) {
+  if (!isClient) {
     return (
         <div className="space-y-8">
             <Skeleton className="h-24 w-full rounded-2xl" />
@@ -581,4 +579,3 @@ export default function DashboardPage() {
     </React.Suspense>
   );
 }
-
