@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import { 
     actividades as staticActividades, 
@@ -15,7 +15,8 @@ import {
     tariffs as staticTariffs,
     levels as staticLevels
 } from '@/lib/data';
-import { addMonths } from 'date-fns';
+import { addMonths, format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
 
 const parseDate = (date: any): Date | null => {
     if (!date) return null;
@@ -123,14 +124,15 @@ const initialAppState: State = {
     payments: processedPayments,
     spaces: staticSpaces,
     attendance: staticAttendance,
-    notifications: staticNotifications,
+    notifications: processedNotifications,
     tariffs: staticTariffs,
     levels: staticLevels,
-    loading: false, 
+    loading: false,
 };
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<State>(initialAppState);
+  const { toast } = useToast();
 
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
@@ -153,18 +155,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // --- CRUD Functions ---
+  // --- Generic CRUD Functions ---
 
-  // Generic updater
-  const updateCollection = <T extends { id: string }>(key: keyof State, item: T) => {
+  const updateCollection = useCallback(<T extends { id: string }>(key: keyof Omit<State, 'loading'>, item: T) => {
     setState(current => ({
       ...current,
-      [key]: (current[key] as T[]).map(i => i.id === item.id ? item : i),
+      [key]: (current[key] as T[]).map(i => (i.id === item.id ? item : i)),
     }));
-  };
-  
-  // Generic adder
-  const addToCollection = <T extends { id: string }>(key: keyof State, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
+  }, []);
+
+  const addToCollection = useCallback(<T extends { id: string }>(key: keyof Omit<State, 'loading'>, itemData: Omit<T, 'id'>, defaultValues: Partial<T> = {}) => {
       const newItem: T = {
         id: `${key.toString().slice(0, -1)}-${Date.now()}`,
         ...defaultValues,
@@ -174,10 +174,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...current,
         [key]: [...(current[key] as T[]), newItem],
       }));
-  };
+  }, []);
 
-  // Generic deleter
-  const deleteFromCollection = (key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
+  const deleteFromCollection = useCallback((key: keyof Omit<State, 'loading'>, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
     for (const check of usageChecks) {
         const collectionToCheck = state[check.collection] as any[];
         const isUsed = collectionToCheck.some(item => 
@@ -186,7 +185,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             : item[check.field] === id
         );
         if (isUsed) {
-            alert(`No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`);
+            toast({
+                title: 'Error al eliminar',
+                description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
+                variant: 'destructive',
+            });
             return;
         }
     }
@@ -194,66 +197,66 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       ...current,
       [key]: (current[key] as any[]).filter(i => i.id !== id),
     }));
-  };
+  }, [state, toast]);
 
   // Actividades
-  const addActividad = (data: Omit<Actividad, 'id'>) => addToCollection('actividades', data);
-  const updateActividad = (data: Actividad) => updateCollection('actividades', data);
-  const deleteActividad = (id: string) => deleteFromCollection('actividades', id, [
+  const addActividad = useCallback((data: Omit<Actividad, 'id'>) => addToCollection('actividades', data), [addToCollection]);
+  const updateActividad = useCallback((data: Actividad) => updateCollection('actividades', data), [updateCollection]);
+  const deleteActividad = useCallback((id: string) => deleteFromCollection('actividades', id, [
     { collection: 'sessions', field: 'actividadId', label: 'Sesión' },
     { collection: 'specialists', field: 'actividadIds', label: 'Especialista', type: 'array' },
-  ]);
+  ]), [deleteFromCollection]);
 
   // Levels
-  const addLevel = (data: Omit<Level, 'id'>) => addToCollection('levels', data);
-  const updateLevel = (data: Level) => updateCollection('levels', data);
-  const deleteLevel = (id: string) => deleteFromCollection('levels', id, [
+  const addLevel = useCallback((data: Omit<Level, 'id'>) => addToCollection('levels', data), [addToCollection]);
+  const updateLevel = useCallback((data: Level) => updateCollection('levels', data), [updateCollection]);
+  const deleteLevel = useCallback((id: string) => deleteFromCollection('levels', id, [
       { collection: 'sessions', field: 'levelId', label: 'Sesión' },
       { collection: 'people', field: 'levelId', label: 'Persona' },
-  ]);
+  ]), [deleteFromCollection]);
 
   // Spaces
-  const addSpace = (data: Omit<Space, 'id'>) => addToCollection('spaces', data);
-  const updateSpace = (data: Space) => updateCollection('spaces', data);
-  const deleteSpace = (id: string) => deleteFromCollection('spaces', id, [
+  const addSpace = useCallback((data: Omit<Space, 'id'>) => addToCollection('spaces', data), [addToCollection]);
+  const updateSpace = useCallback((data: Space) => updateCollection('spaces', data), [updateCollection]);
+  const deleteSpace = useCallback((id: string) => deleteFromCollection('spaces', id, [
       { collection: 'sessions', field: 'spaceId', label: 'Sesión' }
-  ]);
+  ]), [deleteFromCollection]);
 
   // Tariffs
-  const addTariff = (data: Omit<Tariff, 'id'>) => addToCollection('tariffs', data);
-  const updateTariff = (data: Tariff) => updateCollection('tariffs', data);
-  const deleteTariff = (id: string) => deleteFromCollection('tariffs', id, [
+  const addTariff = useCallback((data: Omit<Tariff, 'id'>) => addToCollection('tariffs', data), [addToCollection]);
+  const updateTariff = useCallback((data: Tariff) => updateCollection('tariffs', data), [updateCollection]);
+  const deleteTariff = useCallback((id: string) => deleteFromCollection('tariffs', id, [
       { collection: 'people', field: 'tariffId', label: 'Persona' }
-  ]);
+  ]), [deleteFromCollection]);
 
   // Specialists
-  const addSpecialist = (data: Omit<Specialist, 'id' | 'avatar'>) => addToCollection('specialists', data, { avatar: `https://placehold.co/100x100.png` });
-  const updateSpecialist = (data: Specialist) => updateCollection('specialists', data);
-  const deleteSpecialist = (id: string) => deleteFromCollection('specialists', id, [
+  const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => addToCollection('specialists', data, { avatar: `https://placehold.co/100x100.png` }), [addToCollection]);
+  const updateSpecialist = useCallback((data: Specialist) => updateCollection('specialists', data), [updateCollection]);
+  const deleteSpecialist = useCallback((id: string) => deleteFromCollection('specialists', id, [
       { collection: 'sessions', field: 'instructorId', label: 'Sesión' }
-  ]);
+  ]), [deleteFromCollection]);
 
   // Sessions
-  const addSession = (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addToCollection('sessions', data, { personIds: [], waitlistPersonIds: [] });
-  const updateSession = (data: Session) => updateCollection('sessions', data);
-  const deleteSession = (id: string) => {
+  const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => addToCollection('sessions', data, { personIds: [], waitlistPersonIds: [] }), [addToCollection]);
+  const updateSession = useCallback((data: Session) => updateCollection('sessions', data), [updateCollection]);
+  const deleteSession = useCallback((id: string) => {
     const session = state.sessions.find(s => s.id === id);
     if(session && session.personIds.length > 0) {
-        alert("No se puede eliminar una sesión con personas inscriptas.");
+        toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
         return;
     }
     deleteFromCollection('sessions', id, []);
-  };
+  }, [state.sessions, deleteFromCollection, toast]);
   
-  const enrollPeopleInClass = (sessionId: string, personIds: string[]) => {
+  const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
     setState(current => ({
         ...current,
         sessions: current.sessions.map(s => s.id === sessionId ? { ...s, personIds } : s)
     }));
-  };
+  }, []);
 
   // People
-  const addPerson = (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+  const addPerson = useCallback((data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     const now = new Date();
     addToCollection('people', data, {
         joinDate: now,
@@ -261,10 +264,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     });
-  };
-  const updatePerson = (data: Person) => updateCollection('people', data);
-  const deletePerson = (id: string) => {
-    // Also remove from sessions
+  }, [addToCollection]);
+  const updatePerson = useCallback((data: Person) => updateCollection('people', data), [updateCollection]);
+  const deletePerson = useCallback((id: string) => {
     setState(current => {
         const newSessions = current.sessions.map(s => ({
             ...s,
@@ -274,85 +276,123 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         const newPeople = current.people.filter(p => p.id !== id);
         return { ...current, people: newPeople, sessions: newSessions };
     });
-  };
-  const recordPayment = (personId: string) => {
+  }, []);
+  const recordPayment = useCallback((personId: string) => {
     setState(current => {
       const person = current.people.find(p => p.id === personId);
       if (!person) return current;
-
       const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
       const newPayment: Payment = { id: `pay-${Date.now()}`, personId, date: new Date(), months: 1 };
-      
       return {
         ...current,
         people: current.people.map(p => p.id === personId ? { ...p, lastPaymentDate: newExpiryDate } : p),
         payments: [...current.payments, newPayment]
       };
     });
-  };
-  const undoLastPayment = (personId: string) => {
-    // This is a simplified version. A real app would need more robust logic.
+  }, []);
+  const undoLastPayment = useCallback((personId: string) => {
     setState(current => {
-      const lastPayment = current.payments
-        .filter(p => p.personId === personId)
-        .sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
-      
+      const lastPayment = current.payments.filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
       if (!lastPayment) return current;
-
       const person = current.people.find(p => p.id === personId);
       if (!person || !person.lastPaymentDate) return current;
-
       const previousExpiryDate = addMonths(person.lastPaymentDate, -1);
-
       return {
         ...current,
         people: current.people.map(p => p.id === personId ? { ...p, lastPaymentDate: previousExpiryDate } : p),
         payments: current.payments.filter(p => p.id !== lastPayment.id)
       }
     })
-  };
+  }, []);
 
-  const dismissNotification = (id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)}));
+  const saveAttendance = useCallback((sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
+      const dateStr = format(new Date(), 'yyyy-MM-dd');
+      setState(current => {
+          const newAttendance = [...current.attendance];
+          const recordIndex = newAttendance.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
+          const oneTimeAttendees = recordIndex > -1 ? newAttendance[recordIndex].oneTimeAttendees : [];
+          const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds, oneTimeAttendees };
+          if (recordIndex > -1) {
+              newAttendance[recordIndex] = { ...newAttendance[recordIndex], ...record };
+          } else {
+              newAttendance.push({ id: `att-${Date.now()}`, ...record });
+          }
+          return { ...current, attendance: newAttendance };
+      });
+  }, []);
   
-  // These are more complex and will be implemented when needed
-  const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => console.log("saveAttendance", { sessionId, presentIds, absentIds, justifiedAbsenceIds });
-  const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => console.log("addOneTimeAttendee", { sessionId, personId, date });
-  
-  const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
+  const addOneTimeAttendee = useCallback((sessionId: string, personId: string, date: Date) => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+      setState(current => {
+          const newAttendance = [...current.attendance];
+          const recordIndex = newAttendance.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
+          if (recordIndex > -1) {
+              const updatedRecord = { ...newAttendance[recordIndex] };
+              updatedRecord.oneTimeAttendees = Array.from(new Set([...(updatedRecord.oneTimeAttendees || []), personId]));
+              newAttendance[recordIndex] = updatedRecord;
+          } else {
+              newAttendance.push({
+                  id: `att-${Date.now()}`,
+                  sessionId,
+                  date: dateStr,
+                  presentIds: [],
+                  absentIds: [],
+                  justifiedAbsenceIds: [],
+                  oneTimeAttendees: [personId]
+              });
+          }
+          return { ...current, attendance: newAttendance };
+      });
+  }, []);
+
+  const addVacationPeriod = useCallback((personId: string, startDate: Date, endDate: Date) => {
     const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
     setState(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation]} : p)
     }));
-  };
+  }, []);
   
-  const removeVacationPeriod = (personId: string, vacationId: string) => {
+  const removeVacationPeriod = useCallback((personId: string, vacationId: string) => {
     setState(current => ({
         ...current,
         people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: p.vacationPeriods?.filter(v => v.id !== vacationId)} : p)
     }));
-  };
+  }, []);
   
-  const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => console.log("enrollFromWaitlist", { notificationId, sessionId, personId });
+  const enrollFromWaitlist = useCallback((notificationId: string, sessionId: string, personId: string) => {
+      setState(current => {
+          const session = current.sessions.find(s => s.id === sessionId);
+          if (!session) return current;
 
+          const newPersonIds = Array.from(new Set([...session.personIds, personId]));
+          const newWaitlist = session.waitlistPersonIds?.filter(id => id !== personId) || [];
+
+          return {
+              ...current,
+              sessions: current.sessions.map(s => s.id === sessionId ? {...s, personIds: newPersonIds, waitlistPersonIds: newWaitlist} : s),
+              notifications: current.notifications.filter(n => n.id !== notificationId),
+          };
+      });
+  }, []);
+
+  const dismissNotification = useCallback((id: string) => setState(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)})), []);
 
   const contextValue = useMemo(() => ({
     ...state,
-    isPersonOnVacation,
-    isTutorialOpen, openTutorial, closeTutorial,
     addActividad, updateActividad, deleteActividad,
     addSpecialist, updateSpecialist, deleteSpecialist,
     addPerson, updatePerson, deletePerson,
     recordPayment, undoLastPayment,
     addSpace, updateSpace, deleteSpace,
     addSession, updateSession, deleteSession,
-    enrollPeopleInClass,
-    saveAttendance, addOneTimeAttendee,
+    enrollPeopleInClass, saveAttendance, addOneTimeAttendee,
     addVacationPeriod, removeVacationPeriod,
     enrollFromWaitlist, dismissNotification,
     addTariff, updateTariff, deleteTariff,
     addLevel, updateLevel, deleteLevel,
-  }), [state, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial]);
+    isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial,
+  }), [state, addActividad, updateActividad, deleteActividad, addSpecialist, updateSpecialist, deleteSpecialist, addPerson, updatePerson, deletePerson, recordPayment, undoLastPayment, addSpace, updateSpace, deleteSpace, addSession, updateSession, deleteSession, enrollPeopleInClass, saveAttendance, addOneTimeAttendee, addVacationPeriod, removeVacationPeriod, enrollFromWaitlist, dismissNotification, addTariff, updateTariff, deleteTariff, addLevel, updateLevel, deleteLevel, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial]);
 
   return (
     <StudioContext.Provider value={contextValue}>
