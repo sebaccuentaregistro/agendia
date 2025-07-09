@@ -1,6 +1,4 @@
 
-
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
@@ -23,6 +21,12 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'A
   if (!nextDueDate) {
     // If there's no due date (e.g., for certain tariff types), assume they are up-to-date.
     return 'Al día';
+  }
+  
+  // Defensive check for invalid date formats that might have slipped through
+  if (!(nextDueDate instanceof Date) || isNaN(nextDueDate.getTime())) {
+    console.warn(`Invalid 'lastPaymentDate' for person ${person.id}:`, nextDueDate);
+    return 'Atrasado'; // Default to overdue if date is invalid to be safe
   }
   
   const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });

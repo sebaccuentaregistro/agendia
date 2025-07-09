@@ -61,22 +61,39 @@ function dataReducer(state: State, action: Action): State {
 
 const processDoc = (doc: any) => {
     const data = doc.data();
+    const dateFields = ['joinDate', 'lastPaymentDate', 'date', 'createdAt'];
+
+    const parseDateValue = (value: any): Date | any => {
+        if (!value) return value;
+        // Handle Firestore Timestamps
+        if (value instanceof Timestamp) return value.toDate();
+        // Handle objects that look like Timestamps (e.g., from serialization)
+        if (value.toDate && typeof value.toDate === 'function') return value.toDate();
+        if (typeof value === 'object' && 'seconds' in value && 'nanoseconds' in value) {
+            return new Timestamp(value.seconds, value.nanoseconds).toDate();
+        }
+        // Handle ISO strings
+        if (typeof value === 'string') {
+            const parsed = new Date(value);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+        // Return original value if it's not a recognizable date format
+        return value;
+    };
+
     for (const key in data) {
-        if (data[key] instanceof Timestamp) {
-            data[key] = data[key].toDate();
-        } else if (data[key] instanceof Object && 'seconds' in data[key] && 'nanoseconds' in data[key]) {
-             data[key] = (data[key] as Timestamp).toDate();
+        // Process top-level date fields
+        if (dateFields.includes(key)) {
+            data[key] = parseDateValue(data[key]);
         }
         
+        // Process nested date fields in vacationPeriods
         if (key === 'vacationPeriods' && Array.isArray(data[key])) {
             data[key] = data[key].map((period: any) => {
+                if (!period) return period;
                 const newPeriod = { ...period };
-                if (period.startDate instanceof Timestamp) {
-                    newPeriod.startDate = period.startDate.toDate();
-                }
-                if (period.endDate instanceof Timestamp) {
-                    newPeriod.endDate = period.endDate.toDate();
-                }
+                newPeriod.startDate = parseDateValue(period.startDate);
+                newPeriod.endDate = parseDateValue(period.endDate);
                 return newPeriod;
             });
         }
@@ -361,5 +378,3 @@ export function useStudio() {
   }
   return context;
 }
-
-    
