@@ -102,9 +102,9 @@ interface StudioContextType extends State {
     deletePerson: (...args: any[]) => void;
     recordPayment: (...args: any[]) => void;
     undoLastPayment: (...args: any[]) => void;
-    addSpace: (...args: any[]) => void;
-    updateSpace: (...args: any[]) => void;
-    deleteSpace: (...args: any[]) => void;
+    addSpace: (spaceData: Omit<Space, 'id'>) => void;
+    updateSpace: (spaceToUpdate: Space) => void;
+    deleteSpace: (spaceId: string) => void;
     addSession: (...args: any[]) => void;
     updateSession: (...args: any[]) => void;
     deleteSession: (...args: any[]) => void;
@@ -132,7 +132,6 @@ interface StudioContextType extends State {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
-// Process the static data *before* the component renders. This ensures the data is ready instantly.
 const processedPeople = processData(staticPeople, ['joinDate', 'lastPaymentDate'], [{path: 'vacationPeriods', fields: ['startDate', 'endDate']}]);
 const processedPayments = processData(staticPayments, ['date']);
 const processedNotifications = processData(staticNotifications, ['createdAt']);
@@ -145,16 +144,15 @@ const initialAppState: State = {
     payments: processedPayments,
     spaces: staticSpaces,
     attendance: staticAttendance,
-    notifications: processedNotifications,
+    notifications: staticNotifications,
     tariffs: staticTariffs,
     levels: staticLevels,
-    loading: false, // Start with loading: false to show content immediately.
+    loading: false, 
 };
 
 
 export function StudioProvider({ children, instituteId }: { children: ReactNode, instituteId: string }) {
-  // The main application state is now initialized here, once, with all data ready.
-  const [state] = useState<State>(initialAppState);
+  const [state, setState] = useState<State>(initialAppState);
 
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
@@ -170,7 +168,6 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
     return person.vacationPeriods.some(period => {
         if (!period.startDate || !period.endDate) return false;
-        // Ensure period dates are valid Date objects before comparison
         const startDate = parseDate(period.startDate);
         const endDate = parseDate(period.endDate);
         if (!startDate || !endDate) return false;
@@ -179,17 +176,52 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     });
   }, []);
   
-  // No more useEffect for data loading, which prevents the "stuck loading" issue.
+  const addSpace = useCallback((spaceData: Omit<Space, 'id'>) => {
+    setState(currentState => {
+      const newSpace: Space = {
+        id: `space-${Date.now()}-${Math.random()}`,
+        ...spaceData,
+      };
+      return {
+        ...currentState,
+        spaces: [...currentState.spaces, newSpace],
+      };
+    });
+  }, []);
+
+  const updateSpace = useCallback((spaceToUpdate: Space) => {
+    setState(currentState => ({
+      ...currentState,
+      spaces: currentState.spaces.map(space =>
+        space.id === spaceToUpdate.id ? { ...space, ...spaceToUpdate } : space
+      ),
+    }));
+  }, []);
+  
+  const deleteSpace = useCallback((spaceId: string) => {
+    const isUsed = state.sessions.some(session => session.spaceId === spaceId);
+    if (isUsed) {
+        alert('No se puede eliminar el espacio porque está asignado a una o más sesiones.');
+        return;
+    }
+
+    setState(currentState => ({
+        ...currentState,
+        spaces: currentState.spaces.filter(space => space.id !== spaceId),
+    }));
+  }, [state.sessions]);
 
   const contextValue: StudioContextType = useMemo(() => ({
     ...state,
     isPersonOnVacation,
     isTutorialOpen, openTutorial, closeTutorial,
+    addSpace,
+    updateSpace,
+    deleteSpace,
     addActividad: dummyAction('addActividad'), updateActividad: dummyAction('updateActividad'), deleteActividad: dummyAction('deleteActividad'),
     addSpecialist: dummyAction('addSpecialist'), updateSpecialist: dummyAction('updateSpecialist'), deleteSpecialist: dummyAction('deleteSpecialist'),
     addPerson: dummyAction('addPerson'), updatePerson: dummyAction('updatePerson'), deletePerson: dummyAction('deletePerson'),
     recordPayment: dummyAction('recordPayment'), undoLastPayment: dummyAction('undoLastPayment'),
-    addSpace: dummyAction('addSpace'), updateSpace: dummyAction('updateSpace'), deleteSpace: dummyAction('deleteSpace'),
     addSession: dummyAction('addSession'), updateSession: dummyAction('updateSession'), deleteSession: dummyAction('deleteSession'),
     enrollPersonInSessions: dummyAction('enrollPersonInSessions'), enrollPeopleInClass: dummyAction('enrollPeopleInClass'),
     saveAttendance: dummyAction('saveAttendance'), addOneTimeAttendee: dummyAction('addOneTimeAttendee'), addJustifiedAbsence: dummyAction('addJustifiedAbsence'),
@@ -197,7 +229,7 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
     addToWaitlist: dummyAction('addToWaitlist'), enrollFromWaitlist: dummyAction('enrollFromWaitlist'), dismissNotification: dummyAction('dismissNotification'),
     addTariff: dummyAction('addTariff'), updateTariff: dummyAction('updateTariff'), deleteTariff: dummyAction('deleteTariff'),
     addLevel: dummyAction('addLevel'), updateLevel: dummyAction('updateLevel'), deleteLevel: dummyAction('deleteLevel'),
-  }), [state, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial]);
+  }), [state, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, addSpace, updateSpace, deleteSpace]);
 
   return (
     <StudioContext.Provider value={contextValue}>
