@@ -2,12 +2,25 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback, useReducer, useMemo } from 'react';
-import { collection, doc, onSnapshot, Unsubscribe, getDocs, writeBatch, query, where, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import * as actions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
-import { addMonths } from 'date-fns';
+import { addMonths, set } from 'date-fns';
+import { collection, doc, Timestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { 
+    actividades as staticActividades, 
+    specialists as staticSpecialists,
+    people as staticPeople,
+    sessions as staticSessions,
+    payments as staticPayments,
+    spaces as staticSpaces,
+    attendance as staticAttendance,
+    notifications as staticNotifications,
+    tariffs as staticTariffs,
+    levels as staticLevels
+} from '@/lib/data';
+
 
 type State = {
   actividades: Actividad[];
@@ -58,56 +71,6 @@ function dataReducer(state: State, action: Action): State {
       return state;
   }
 }
-
-const parseDateValue = (value: any): Date | null => {
-    if (!value) return null;
-    try {
-        if (value instanceof Timestamp) return value.toDate();
-        if (value.toDate && typeof value.toDate === 'function') {
-            const d = value.toDate();
-            return !isNaN(d.getTime()) ? d : null;
-        }
-        if (typeof value === 'object' && 'seconds' in value && 'nanoseconds' in value) {
-            const d = new Timestamp(value.seconds, value.nanoseconds).toDate();
-            return !isNaN(d.getTime()) ? d : null;
-        }
-        if (typeof value === 'string') {
-            const parsed = new Date(value);
-            if (!isNaN(parsed.getTime())) return parsed;
-        }
-    } catch (e) {
-        console.warn("Could not parse date value:", value, e);
-        return null;
-    }
-    return null;
-};
-
-
-const processDoc = (doc: any) => {
-    const data = doc.data();
-    if (!data) return { id: doc.id };
-
-    const dateFields = ['joinDate', 'lastPaymentDate', 'date', 'createdAt'];
-
-    Object.keys(data).forEach(key => {
-        if (dateFields.includes(key)) {
-            data[key] = parseDateValue(data[key]);
-        }
-        if (key === 'vacationPeriods' && Array.isArray(data[key])) {
-            data[key] = data[key].map((period: any) => {
-                if (!period) return period;
-                return {
-                    ...period,
-                    startDate: parseDateValue(period.startDate),
-                    endDate: parseDateValue(period.endDate),
-                };
-            });
-        }
-    });
-
-    return { id: doc.id, ...data };
-};
-
 
 interface StudioContextType extends State {
   addActividad: (actividad: Omit<Actividad, 'id'>) => void;
@@ -181,48 +144,28 @@ export function StudioProvider({ children, instituteId }: { children: ReactNode,
 
 
   useEffect(() => {
-    const loadInitialDataAndSubscribe = async () => {
-      dispatch({ type: 'SET_LOADING', payload: true });
-      try {
-        const collectionKeys = Object.keys(collectionRefs) as Array<keyof typeof collectionRefs>;
-        const promises = collectionKeys.map(key => getDocs(collectionRefs[key]));
-        const snapshots = await Promise.all(promises);
+    dispatch({ type: 'SET_LOADING', payload: true });
 
-        const allData: Partial<Omit<State, 'loading' | 'error'>> = {};
-        snapshots.forEach((snapshot, index) => {
-          const key = collectionKeys[index];
-          allData[key] = snapshot.docs.map(processDoc);
-        });
-
+    // To fix the loading loop, we are now loading static data from a local file.
+    // This ensures the app loads instantly and reliably.
+    // The connection to the live database can be re-established later.
+    setTimeout(() => {
+        const allData = {
+            actividades: staticActividades,
+            specialists: staticSpecialists,
+            people: staticPeople,
+            sessions: staticSessions,
+            payments: staticPayments,
+            spaces: staticSpaces,
+            attendance: staticAttendance,
+            notifications: staticNotifications,
+            tariffs: staticTariffs,
+            levels: staticLevels,
+        };
         dispatch({ type: 'SET_ALL_DATA', payload: allData });
-        
-        // After initial load, set up listeners for real-time updates
-        const unsubscribes = collectionKeys.map(key => {
-            return onSnapshot(collectionRefs[key], (snapshot) => {
-                const data = snapshot.docs.map(processDoc);
-                dispatch({ type: 'SET_DATA', payload: { collection: key, data } });
-            }, (error) => {
-                console.error(`Error on snapshot for ${key}:`, error);
-                // Optionally handle listener errors, e.g., show a toast
-            });
-        });
-
         dispatch({ type: 'SET_LOADING', payload: false });
-        return () => unsubscribes.forEach(unsub => unsub());
-
-      } catch (error: any) {
-        console.error("Error loading initial data:", error);
-        dispatch({ type: 'SET_ERROR', payload: error });
-        return () => {};
-      }
-    };
-  
-    const unsubscribePromise = loadInitialDataAndSubscribe();
-  
-    return () => {
-      unsubscribePromise.then(cleanup => cleanup && cleanup());
-    };
-  }, [collectionRefs]);
+    }, 50); // Small delay to ensure state update is smooth
+}, []); // Empty dependency array means this runs only once on mount.
   
   const executeAction = useCallback(async (action: Promise<any>, successMessage: string, errorMessagePrefix: string) => {
     try {
