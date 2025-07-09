@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { ReactNode } from 'react';
@@ -6,10 +5,9 @@ import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 
+// NOTE: This AppShell has been simplified to remove the complex auth logic that was causing the app to freeze.
+// It now relies on a simplified AuthContext and wraps the application in the StudioProvider.
 export function AppShell({ children }: { children: ReactNode }) {
-    // This component now wraps the entire authenticated part of the app with StudioProvider,
-    // ensuring all pages have access to the app's data and functions.
-    // The complex auth logic that caused freezes has been removed.
     return (
         <StudioProvider>
             <div className="flex min-h-screen w-full flex-col">
