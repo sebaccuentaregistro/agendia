@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -11,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Person, Payment, NewPersonData } from '@/types';
+import type { Person, Payment, NewPersonData, Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,7 +30,7 @@ import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -52,6 +53,106 @@ const vacationFormSchema = z.object({
     message: "La fecha de fin debe ser igual o posterior a la de inicio.",
     path: ['endDate'],
 });
+
+function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
+    const { sessions, specialists, actividades, enrollPersonInSessions } = useStudio();
+
+    const { enrolledSessionIds, sortedSessions } = useMemo(() => {
+        const enrolledSessionIds = sessions.filter(s => s.personIds.includes(person?.id || '')).map(s => s.id);
+        const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        const sortedSessions = [...sessions].sort((a, b) => {
+            const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
+            if (dayComparison !== 0) return dayComparison;
+            return a.time.localeCompare(b.time);
+        });
+        return { enrolledSessionIds, sortedSessions };
+    }, [sessions, person]);
+    
+    const form = useForm<{ sessionIds: string[] }>({
+        defaultValues: { sessionIds: enrolledSessionIds },
+    });
+
+    useEffect(() => {
+        form.reset({ sessionIds: enrolledSessionIds });
+    }, [person, enrolledSessionIds, form]);
+
+    if (!person) return null;
+
+    const onSubmit = (data: { sessionIds: string[] }) => {
+        enrollPersonInSessions(person.id, data.sessionIds);
+        onClose();
+    };
+
+    const sessionsByDay = sortedSessions.reduce((acc, session) => {
+        (acc[session.dayOfWeek] = acc[session.dayOfWeek] || []).push(session);
+        return acc;
+    }, {} as Record<string, Session[]>);
+
+    return (
+        <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                    <DialogTitle>Gestionar Inscripciones: {person.name}</DialogTitle>
+                    <DialogDescription>Selecciona las clases a las que asistirá {person.name} de forma regular.</DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)}>
+                        <ScrollArea className="h-[60vh] my-4">
+                            <div className="space-y-6 pr-4">
+                                {Object.entries(sessionsByDay).map(([day, daySessions]) => (
+                                    <div key={day}>
+                                        <h3 className="font-semibold mb-2 sticky top-0 bg-background py-1">{day}</h3>
+                                        <div className="space-y-2">
+                                            {daySessions.map(session => {
+                                                const actividad = actividades.find(a => a.id === session.actividadId);
+                                                const specialist = specialists.find(s => s.id === session.instructorId);
+                                                return (
+                                                    <FormField
+                                                        key={session.id}
+                                                        control={form.control}
+                                                        name="sessionIds"
+                                                        render={({ field }) => (
+                                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 hover:bg-accent/50 transition-colors">
+                                                                <FormControl>
+                                                                    <Checkbox
+                                                                        checked={field.value?.includes(session.id)}
+                                                                        onCheckedChange={(checked) => {
+                                                                            return checked
+                                                                                ? field.onChange([...(field.value || []), session.id])
+                                                                                : field.onChange(field.value?.filter((value) => value !== session.id));
+                                                                        }}
+                                                                    />
+                                                                </FormControl>
+                                                                <FormLabel className="font-normal flex-grow cursor-pointer">
+                                                                    <div className="flex justify-between items-center">
+                                                                        <div>
+                                                                            <p className="font-semibold">{actividad?.name || 'Clase'}</p>
+                                                                            <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
+                                                                        </div>
+                                                                        <p className="text-sm font-mono">{session.time}</p>
+                                                                    </div>
+                                                                </FormLabel>
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                        <DialogFooter>
+                            <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
+                            <Button type="submit">Guardar Inscripciones</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 
 function PaymentHistoryDialog({ person, payments, tariffs, onClose }: { person: Person | null; payments: Payment[]; tariffs: any[]; onClose: () => void; }) {
     if (!person) return null;
@@ -279,7 +380,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   );
 }
 
-function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { person: Person, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void }) {
+function PersonCard({ person, onManageVacations, onEdit, onViewHistory, onManageEnrollments }: { person: Person, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void }) {
     const { tariffs, deletePerson, recordPayment, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -325,6 +426,7 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onManageEnrollments(person)}><ClipboardList className="mr-2 h-4 w-4" />Gestionar Inscripciones</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onManageVacations(person)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -424,6 +526,7 @@ function StudentsPageContent() {
   const { people, tariffs, isPersonOnVacation, attendance, payments, loading } = useStudio();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
+  const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get('filter') || 'all';
@@ -497,6 +600,11 @@ function StudentsPageContent() {
     setSelectedPerson(person);
     setIsPersonDialogOpen(true);
   }
+  
+  const handleEnrollmentClick = (person: Person) => {
+    setPersonForEnrollment(person);
+  };
+
 
   if (!isMounted) {
     return (
@@ -564,6 +672,7 @@ function StudentsPageContent() {
                     onManageVacations={setPersonForVacation}
                     onEdit={handleEditClick}
                     onViewHistory={setPersonForHistory}
+                    onManageEnrollments={handleEnrollmentClick}
                 />
             ))}
           </div>
@@ -594,6 +703,7 @@ function StudentsPageContent() {
         setSearchTerm={setSearchTerm}
       />
       <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />
+      <EnrollmentsDialog person={personForEnrollment} onClose={() => setPersonForEnrollment(null)} />
       <PaymentHistoryDialog 
         person={personForHistory} 
         payments={payments}

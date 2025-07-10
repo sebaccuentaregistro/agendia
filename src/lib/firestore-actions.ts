@@ -149,28 +149,42 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
 };
 
 
-export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[], currentSessions: Session[]) => {
+export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[]) => {
     const batch = writeBatch(db);
     
-    const personEnrolledSessionsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
-    const currentSessionsSnap = await getDocs(personEnrolledSessionsQuery);
-    currentSessionsSnap.forEach(sessionDoc => {
-        const sessionData = sessionDoc.data() as Session;
-        const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
-        batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
-    });
+    // First, find all sessions the person is currently enrolled in
+    const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
+    const currentEnrollmentsSnap = await getDocs(currentEnrollmentsQuery);
+    const currentSessionIds = currentEnrollmentsSnap.docs.map(d => d.id);
 
-    sessionIds.forEach(sessionId => {
+    // Determine which sessions to remove the person from
+    const sessionsToRemoveFrom = currentSessionIds.filter(id => !sessionIds.includes(id));
+    sessionsToRemoveFrom.forEach(sessionId => {
         const sessionRef = doc(sessionsRef, sessionId);
-        const session = currentSessions.find(s => s.id === sessionId);
-        if (session) {
-            const newPersonIds = Array.from(new Set([...session.personIds, personId]));
-            batch.update(sessionRef, { personIds: newPersonIds });
+        const sessionDoc = currentEnrollmentsSnap.docs.find(d => d.id === sessionId);
+        if (sessionDoc) {
+            const sessionData = sessionDoc.data() as Session;
+            const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
+            batch.update(sessionRef, { personIds: updatedPersonIds });
         }
     });
+
+    // Determine which sessions to add the person to
+    const sessionsToAddTo = sessionIds.filter(id => !currentSessionIds.includes(id));
+    for (const sessionId of sessionsToAddTo) {
+        const sessionRef = doc(sessionsRef, sessionId);
+        // We need to fetch the session to safely add the person without removing others
+        const sessionDocSnap = await getDocs(query(sessionsRef, where('__name__', '==', sessionId)));
+        if (!sessionDocSnap.empty) {
+            const sessionData = sessionDocSnap.docs[0].data() as Session;
+            const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));
+            batch.update(sessionRef, { personIds: updatedPersonIds });
+        }
+    }
     
     return await batch.commit();
 };
+
 
 export const enrollPeopleInClassAction = async (sessionRef: any, personIds: string[]) => {
     return await updateEntity(sessionRef, { personIds });

@@ -43,6 +43,7 @@ interface StudioContextType extends State {
     addSession: (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => Promise<void>;
     updateSession: (data: Session) => Promise<void>;
     deleteSession: (id: string) => Promise<void>;
+    enrollPersonInSessions: (personId: string, sessionIds: string[]) => Promise<void>;
     enrollPeopleInClass: (sessionId: string, personIds: string[]) => Promise<void>;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => Promise<void>;
     addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => Promise<void>;
@@ -323,6 +324,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const enrollPeopleInClass = async (sessionId: string, personIds: string[]) => {
     await performFirestoreAction('Inscribir personas', () => firestoreActions.enrollPeopleInClassAction(getDocRef('sessions', sessionId), personIds));
   };
+
+  const enrollPersonInSessions = async (personId: string, sessionIds: string[]) => {
+    await performFirestoreAction('Actualizar inscripciones', () => firestoreActions.enrollPersonInSessionsAction(getCollectionRef('sessions'), personId, sessionIds));
+  };
   
   const saveAttendance = async (sessionId: string, presentIds: string[], absentIds:string[], justifiedAbsenceIds:string[]) => {
     await performFirestoreAction('Guardar asistencia', () => firestoreActions.saveAttendanceAction(getCollectionRef('attendance'), sessionId, presentIds, absentIds, justifiedAbsenceIds));
@@ -389,6 +394,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     updateSession,
     deleteSession,
     enrollPeopleInClass,
+    enrollPersonInSessions,
     saveAttendance,
     addOneTimeAttendee,
     addVacationPeriod,
