@@ -7,6 +7,7 @@ import * as firestoreActions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { addMonths } from 'date-fns';
 import { 
   actividades as demoActividades, 
   specialists as demoSpecialists, 
@@ -182,7 +183,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       ...data,
       id: `person-${Date.now()}`,
       joinDate: new Date(),
-      lastPaymentDate: firestoreActions.addMonths(new Date(), 1),
+      lastPaymentDate: addMonths(new Date(), 1),
       avatar: `https://placehold.co/100x100.png`,
       vacationPeriods: [],
     };
@@ -199,7 +200,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     performLocalAction('Registrar pago', prev => {
       const person = prev.people.find(p => p.id === personId);
       if (!person) return prev;
-      const newExpiryDate = firestoreActions.addMonths(person.lastPaymentDate || new Date(), 1);
+      const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
       const newPayment = { id: `pay-${Date.now()}`, personId, date: new Date(), months: 1 };
       return {
         ...prev,
@@ -218,7 +219,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (personPayments.length === 0) return prev;
         
         const lastPaymentId = personPayments[0].id;
-        const previousExpiryDate = firestoreActions.addMonths(person.lastPaymentDate, -1);
+        const previousExpiryDate = addMonths(person.lastPaymentDate, -1);
         
         return {
             ...prev,
