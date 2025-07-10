@@ -73,6 +73,10 @@ const config: Config = {
       },
     },
   },
+  // Adding the JIT engine specification for compatibility
+  future: {
+    hoverOnlyWhenSupported: true,
+  },
   plugins: [require("tailwindcss-animate")],
 }
 
