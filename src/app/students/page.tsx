@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Person, Payment, NewPersonData, Session } from '@/types';
+import type { Person, Payment, NewPersonData, Session, Actividad } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,12 +25,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, isAfter } from 'date-fns';
+import { format, isAfter, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -39,6 +40,9 @@ const personFormSchema = z.object({
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
+  joinDate: z.date({ required_error: "La fecha de alta es obligatoria." }),
+  initialPaymentStatus: z.enum(['al-dia', 'atrasado']),
+  monthsOwed: z.coerce.number().min(0).optional(),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -287,8 +291,21 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
+    defaultValues: {
+        name: '',
+        phone: '',
+        levelId: 'none',
+        tariffId: '',
+        healthInfo: '',
+        notes: '',
+        joinDate: new Date(),
+        initialPaymentStatus: 'al-dia',
+        monthsOwed: 0,
+    }
   });
   
+  const initialPaymentStatus = form.watch('initialPaymentStatus');
+
   useEffect(() => {
     if (open) {
         if (person) {
@@ -299,9 +316,22 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
+            joinDate: person.joinDate || new Date(),
+            initialPaymentStatus: 'al-dia', 
+            monthsOwed: 0,
           });
         } else {
-          form.reset({ name: '', phone: '', levelId: 'none', tariffId: '', healthInfo: '', notes: '' });
+          form.reset({
+            name: '',
+            phone: '',
+            levelId: 'none',
+            tariffId: '',
+            healthInfo: '',
+            notes: '',
+            joinDate: new Date(),
+            initialPaymentStatus: 'al-dia',
+            monthsOwed: 0,
+          });
         }
     }
   }, [person, open, form]);
@@ -311,21 +341,16 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
         name: values.name,
         phone: values.phone,
         tariffId: values.tariffId,
-        levelId: values.levelId,
+        levelId: values.levelId === 'none' ? undefined : values.levelId,
         healthInfo: values.healthInfo,
         notes: values.notes,
+        joinDate: values.joinDate,
+        initialPaymentStatus: values.initialPaymentStatus,
+        monthsOwed: values.initialPaymentStatus === 'atrasado' ? values.monthsOwed : 0,
     };
-
+    
     if (person) {
-      updatePerson({ 
-          ...person, 
-          name: values.name,
-          phone: values.phone,
-          tariffId: values.tariffId,
-          levelId: values.levelId,
-          healthInfo: values.healthInfo,
-          notes: values.notes,
-        });
+      updatePerson({ ...person, ...finalValues });
     } else {
       addPerson(finalValues);
       setActiveFilter('all');
@@ -365,7 +390,78 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
                     </SelectContent>
                 </Select><FormMessage /></FormItem>
             )}/>
-            
+             <FormField
+                control={form.control}
+                name="joinDate"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Fecha de Alta</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn("pl-3 text-left font-normal",!field.value && "text-muted-foreground")}
+                          >
+                            {field.value ? (format(field.value, "PPP", { locale: es })) : (<span>Elegir fecha</span>)}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            {!person && (
+                <FormField
+                  control={form.control}
+                  name="initialPaymentStatus"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3 rounded-lg border p-4">
+                      <FormLabel>Estado del Pago Inicial</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-1"
+                        >
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl><RadioGroupItem value="al-dia" /></FormControl>
+                            <FormLabel className="font-normal">Comienza al día</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl><RadioGroupItem value="atrasado" /></FormControl>
+                            <FormLabel className="font-normal">Comienza con deuda</FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+            )}
+            {initialPaymentStatus === 'atrasado' && !person && (
+                <FormField
+                    control={form.control}
+                    name="monthsOwed"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Meses adeudados</FormLabel>
+                        <FormControl><Input type="number" {...field} /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            )}
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
             )}/>
@@ -380,7 +476,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   );
 }
 
-function PersonCard({ person, onManageVacations, onEdit, onViewHistory, onManageEnrollments }: { person: Person, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void }) {
+function PersonCard({ person, sessions, actividades, onManageVacations, onEdit, onViewHistory, onManageEnrollments }: { person: Person, sessions: Session[], actividades: Actividad[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void }) {
     const { tariffs, deletePerson, recordPayment, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -402,6 +498,21 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory, onManage
     }
 
     const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
+
+    const personSessions = useMemo(() => {
+        const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+        return sessions
+            .filter(s => s.personIds.includes(person.id))
+            .map(s => {
+                const actividad = actividades.find(a => a.id === s.actividadId);
+                return { ...s, actividadName: actividad?.name || 'Clase' };
+            })
+            .sort((a, b) => {
+                const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
+                if (dayComparison !== 0) return dayComparison;
+                return a.time.localeCompare(b.time);
+            });
+    }, [sessions, actividades, person.id]);
     
     return (
         <>
@@ -458,6 +569,26 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory, onManage
                             </a>
                         </div>
                      </div>
+                     <div className="space-y-3 pt-4 border-t border-border/50">
+                        <h4 className="font-semibold text-sm text-foreground">Inscripciones</h4>
+                        <ScrollArea className="h-24">
+                           <div className="space-y-2 pr-4">
+                            {personSessions.length > 0 ? (
+                                personSessions.map(session => (
+                                    <div key={session.id} className="flex justify-between text-xs p-2 rounded-md bg-muted/50">
+                                        <div>
+                                            <p className="font-medium text-foreground">{session.actividadName}</p>
+                                            <p className="text-muted-foreground">{session.dayOfWeek}</p>
+                                        </div>
+                                        <p className="font-mono text-muted-foreground">{session.time}</p>
+                                    </div>
+                                ))
+                            ) : (
+                                <p className="text-xs text-muted-foreground text-center py-4">Sin inscripciones.</p>
+                            )}
+                            </div>
+                        </ScrollArea>
+                    </div>
                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
                         {person.healthInfo && (
                             <Popover>
@@ -499,7 +630,7 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory, onManage
                 </CardContent>
                 
                 <CardFooter className="p-2 border-t mt-auto">
-                    <Button onClick={() => recordPayment(person.id)} className="w-full font-bold">
+                    <Button onClick={() => recordPayment(person.id, 1)} className="w-full font-bold">
                         Registrar Pago
                     </Button>
                 </CardFooter>
@@ -523,7 +654,7 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory, onManage
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, payments, loading } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades } = useStudio();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
@@ -669,6 +800,8 @@ function StudentsPageContent() {
                 <PersonCard 
                     key={person.id} 
                     person={person}
+                    sessions={sessions}
+                    actividades={actividades}
                     onManageVacations={setPersonForVacation}
                     onEdit={handleEditClick}
                     onViewHistory={setPersonForHistory}
