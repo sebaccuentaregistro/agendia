@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Specialist } from '@/types';
-import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -19,6 +19,7 @@ import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -104,9 +105,9 @@ export default function SpecialistsPage() {
       <PageHeader title="Especialistas">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleAdd} size="icon">
-              <PlusCircle className="h-5 w-5" />
-              <span className="sr-only">Añadir Especialista</span>
+            <Button onClick={handleAdd}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Añadir Especialista
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
@@ -196,26 +197,46 @@ export default function SpecialistsPage() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[210px] w-full rounded-2xl bg-white/30" />)}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[210px] w-full rounded-2xl bg-white/30" />)}
         </div>
       ) : filteredSpecialists.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredSpecialists.map((specialist) => (
             <Card key={specialist.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-              <CardContent className="p-6 flex-grow">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100">{specialist.name}</h3>
-                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                      <span>{specialist.phone}</span>
-                      <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
-                          <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                          <span className="sr-only">Enviar WhatsApp a {specialist.name}</span>
-                      </a>
-                  </div>
+              <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
+                <div className="flex-1">
+                  <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{specialist.name}</CardTitle>
+                </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 flex-shrink-0">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onSelect={() => handleEdit(specialist)}>
+                        <Pencil className="mr-2 h-4 w-4" />
+                        <span>Editar</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => openDeleteDialog(specialist)} className="text-destructive focus:text-destructive">
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        <span>Eliminar</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+              </CardHeader>
+              
+              <CardContent className="p-4 pt-2 flex-grow">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300 mb-4">
+                    <span>{specialist.phone}</span>
+                    <a href={formatWhatsAppLink(specialist.phone)} target="_blank" rel="noopener noreferrer">
+                        <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                        <span className="sr-only">Enviar WhatsApp a {specialist.name}</span>
+                    </a>
                 </div>
                 
-                <div className="mt-6">
+                <div>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Actividades</h4>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {getActividadNames(specialist.actividadIds).length > 0 ? (
@@ -228,17 +249,6 @@ export default function SpecialistsPage() {
                   </div>
                 </div>
               </CardContent>
-              
-              <CardFooter className="flex justify-end gap-2 p-3 border-t border-white/20">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(specialist)}>
-                    <Pencil className="h-4 w-4" />
-                    <span className="sr-only">Editar</span>
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(specialist)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Eliminar</span>
-                </Button>
-              </CardFooter>
             </Card>
           ))}
         </div>
@@ -259,7 +269,7 @@ export default function SpecialistsPage() {
                )}
             </CardContent>
           </Card>
-      )}
+        )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

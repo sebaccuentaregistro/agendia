@@ -223,20 +223,17 @@ function PersonCard({ person, recoveryBalance, onManageVacations, onEdit }: { pe
     return (
         <>
             <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-                <CardHeader className="flex-row items-start justify-between gap-4 p-4">
-                    <div className="space-y-1">
-                        <CardTitle className="text-slate-800 dark:text-slate-100">{person.name}</CardTitle>
-                        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                          <span>{person.phone}</span>
-                          <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                              <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                              <span className="sr-only">Enviar WhatsApp</span>
-                          </a>
-                        </div>
+                <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
+                    <div className="flex-1">
+                        <CardTitle className="text-slate-800 dark:text-slate-100 text-lg">{person.name}</CardTitle>
+                        <Badge variant={paymentStatus === 'Al día' ? 'default' : 'destructive'} className={cn('mt-2', paymentStatus === 'Al día' && 'bg-green-600 hover:bg-green-700')}>
+                            <span className="mr-1.5 h-2 w-2 rounded-full bg-white" />
+                            {paymentStatus}
+                        </Badge>
                     </div>
                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreVertical className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 flex-shrink-0"><MoreVertical className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
@@ -253,13 +250,20 @@ function PersonCard({ person, recoveryBalance, onManageVacations, onEdit }: { pe
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </CardHeader>
-                <CardContent className="p-4 pt-0 flex-grow text-sm space-y-3">
+                <CardContent className="p-4 pt-2 flex-grow text-sm space-y-3">
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                      <span>{person.phone}</span>
+                      <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
+                          <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                          <span className="sr-only">Enviar WhatsApp</span>
+                      </a>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                         {tariff && <Badge variant="secondary">{tariff.name}</Badge>}
                         {level && <Badge variant="outline">{level.name}</Badge>}
                         {recoveryBalance > 0 && <Badge variant="outline" className="border-yellow-500 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10"><CalendarClock className="mr-1.5 h-3 w-3"/>{recoveryBalance} recupero(s)</Badge>}
                     </div>
-                     {(person.healthInfo || person.notes) && <div className="space-y-2 pt-2 border-t border-white/20 mt-3">
+                     {(person.healthInfo || person.notes) && <div className="space-y-2 pt-3 border-t border-white/20 mt-3">
                         {person.healthInfo && (
                             <div className="flex items-start gap-2.5 text-amber-700 dark:text-amber-400">
                                 <HeartPulse className="h-4 w-4 mt-0.5 flex-shrink-0" />
@@ -274,12 +278,6 @@ function PersonCard({ person, recoveryBalance, onManageVacations, onEdit }: { pe
                         )}
                     </div>}
                 </CardContent>
-                <CardFooter className="p-4 pt-0">
-                     <Badge variant={paymentStatus === 'Al día' ? 'default' : 'destructive'} className={cn(paymentStatus === 'Al día' && 'bg-green-600 hover:bg-green-700')}>
-                        <span className="mr-1.5 h-2 w-2 rounded-full bg-white" />
-                        {paymentStatus}
-                    </Badge>
-                </CardFooter>
             </Card>
 
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
