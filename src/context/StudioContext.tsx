@@ -45,6 +45,7 @@ interface StudioContextType extends State {
     enrollPersonInSessions: (personId: string, sessionIds: string[]) => Promise<void>;
     enrollPeopleInClass: (sessionId: string, personIds: string[]) => Promise<void>;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => Promise<void>;
+    addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => Promise<void>;
     addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => Promise<void>;
     addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => Promise<void>;
     removeVacationPeriod: (personId: string, vacationId: string) => Promise<void>;
@@ -330,6 +331,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const saveAttendance = async (sessionId: string, presentIds: string[], absentIds:string[], justifiedAbsenceIds:string[]) => {
     await performFirestoreAction('Guardar asistencia', () => firestoreActions.saveAttendanceAction(getCollectionRef('attendance'), sessionId, presentIds, absentIds, justifiedAbsenceIds));
   };
+  
+  const addJustifiedAbsence = async (personId: string, sessionId: string, date: Date) => {
+    await performFirestoreAction('Justificar ausencia', () => firestoreActions.addJustifiedAbsenceAction(getCollectionRef('attendance'), personId, sessionId, date));
+  };
 
   const addOneTimeAttendee = async (sessionId: string, personId: string, date: Date) => {
     await performFirestoreAction('Añadir asistente puntual', () => firestoreActions.addOneTimeAttendeeAction(getCollectionRef('attendance'), sessionId, personId, date));
@@ -394,6 +399,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     enrollPeopleInClass,
     enrollPersonInSessions,
     saveAttendance,
+    addJustifiedAbsence,
     addOneTimeAttendee,
     addVacationPeriod,
     removeVacationPeriod,

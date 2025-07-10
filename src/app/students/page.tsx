@@ -54,6 +54,83 @@ const vacationFormSchema = z.object({
     path: ['endDate'],
 });
 
+function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; onClose: () => void }) {
+    const { sessions, addJustifiedAbsence, attendance } = useStudio();
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const personSessions = useMemo(() => {
+        return sessions.filter(s => s.personIds.includes(person?.id || ''));
+    }, [sessions, person]);
+
+    const dayMap: { [key in Session['dayOfWeek']]: number } = useMemo(() => ({
+        'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6,
+    }), []);
+    
+    const allowedDaysOfWeek = useMemo(() => {
+        return Array.from(new Set(personSessions.map(s => dayMap[s.dayOfWeek])));
+    }, [personSessions, dayMap]);
+
+    if (!person) return null;
+
+    const sessionOnSelectedDate = selectedDate ? personSessions.find(s => dayMap[s.dayOfWeek] === selectedDate.getDay()) : null;
+
+    const handleDayClick = (day: Date, modifiers: any) => {
+        if (modifiers.disabled) return;
+        setSelectedDate(day);
+    };
+
+    const isDateAlreadyJustified = useMemo(() => {
+        if (!selectedDate || !sessionOnSelectedDate) return false;
+        const dateStr = format(selectedDate, 'yyyy-MM-dd');
+        const attendanceRecord = attendance.find(a => a.sessionId === sessionOnSelectedDate.id && a.date === dateStr);
+        return attendanceRecord?.justifiedAbsenceIds?.includes(person.id) || false;
+    }, [selectedDate, sessionOnSelectedDate, attendance, person.id]);
+
+    const handleSubmit = async () => {
+        if (!selectedDate || !sessionOnSelectedDate || isDateAlreadyJustified) return;
+        setIsSubmitting(true);
+        try {
+            await addJustifiedAbsence(person.id, sessionOnSelectedDate.id, selectedDate);
+            onClose();
+        } catch (error) {
+            console.error("Error justifying absence:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    return (
+        <Dialog open={!!person} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Notificar Ausencia: {person.name}</DialogTitle>
+                    <DialogDescription>
+                        Selecciona una fecha de clase para notificar una ausencia y generar un crédito de recupero. Solo se pueden seleccionar los días en los que la persona tiene clases asignadas.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col items-center gap-4">
+                     <Calendar
+                        mode="single"
+                        selected={selectedDate}
+                        onDayClick={handleDayClick}
+                        disabled={(date) => !allowedDaysOfWeek.includes(date.getDay())}
+                        footer={selectedDate ? <p className="text-sm text-center pt-2">Fecha seleccionada: {format(selectedDate, "PPP", { locale: es })}.</p> : <p className="text-sm text-center pt-2">Por favor, selecciona una fecha.</p>}
+                        className="rounded-md border"
+                    />
+                    {isDateAlreadyJustified && (
+                        <p className="text-sm font-semibold text-destructive">Esta ausencia ya fue justificada previamente.</p>
+                    )}
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Cancelar</Button>
+                    <Button onClick={handleSubmit} disabled={!selectedDate || !sessionOnSelectedDate || isSubmitting || isDateAlreadyJustified}>Confirmar Ausencia</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
     const { sessions, specialists, actividades, enrollPersonInSessions } = useStudio();
 
@@ -386,7 +463,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   );
 }
 
-function PersonCard({ person, sessions, actividades, specialists, spaces, onManageVacations, onEdit, onViewHistory, onManageEnrollments }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void }) {
+function PersonCard({ person, sessions, actividades, specialists, spaces, recoveryBalance, onManageVacations, onEdit, onViewHistory, onManageEnrollments, onJustifyAbsence }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], recoveryBalance: number, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void }) {
     const { tariffs, deletePerson, recordPayment, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -440,7 +517,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                 )}>
                     <div className="flex items-start justify-between">
                          <div className="flex-1">
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 flex-wrap">
                                 <CardTitle className="text-xl font-bold">{person.name}</CardTitle>
                                 {person.healthInfo && (
                                     <Popover>
@@ -499,6 +576,23 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                                         </PopoverContent>
                                     </Popover>
                                 )}
+                                {recoveryBalance > 0 && (
+                                     <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
+                                                <CalendarClock className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-60">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Recuperos Pendientes</h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Esta persona tiene <strong>{recoveryBalance}</strong> {recoveryBalance === 1 ? 'clase' : 'clases'} para recuperar.
+                                                </p>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
                             </div>
                             <Badge variant="secondary" className={cn(
                                 "font-semibold mt-1.5 border-0", 
@@ -513,11 +607,13 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onManageEnrollments(person)}><ClipboardList className="mr-2 h-4 w-4" />Gestionar Inscripciones</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onManageEnrollments(person)}><ClipboardList className="mr-2 h-4 w-4" />Gestionar Horarios</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onJustifyAbsence(person)}><UserX className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onManageVacations(person)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setIsRevertDialogOpen(true)}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
+                                <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -560,7 +656,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                                     </div>
                                 ))
                             ) : (
-                                <p className="text-xs text-muted-foreground text-center py-4">Sin inscripciones.</p>
+                                <p className="text-xs text-muted-foreground text-center py-4">Sin horarios fijos.</p>
                             )}
                             </div>
                         </ScrollArea>
@@ -604,6 +700,7 @@ function StudentsPageContent() {
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
+  const [personForAbsence, setPersonForAbsence] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const searchParams = useSearchParams();
   const initialFilter = searchParams.get('filter') || 'all';
@@ -681,6 +778,10 @@ function StudentsPageContent() {
   const handleEnrollmentClick = (person: Person) => {
     setPersonForEnrollment(person);
   };
+  
+  const handleJustifyAbsenceClick = (person: Person) => {
+    setPersonForAbsence(person);
+  };
 
 
   if (!isMounted) {
@@ -750,10 +851,12 @@ function StudentsPageContent() {
                     actividades={actividades}
                     specialists={specialists}
                     spaces={spaces}
+                    recoveryBalance={recoveryBalances[person.id] || 0}
                     onManageVacations={setPersonForVacation}
                     onEdit={handleEditClick}
                     onViewHistory={setPersonForHistory}
                     onManageEnrollments={handleEnrollmentClick}
+                    onJustifyAbsence={handleJustifyAbsenceClick}
                 />
             ))}
           </div>
@@ -785,6 +888,7 @@ function StudentsPageContent() {
       />
       <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />
       <EnrollmentsDialog person={personForEnrollment} onClose={() => setPersonForEnrollment(null)} />
+      <JustifiedAbsenceDialog person={personForAbsence} onClose={() => setPersonForAbsence(null)} />
       <PaymentHistoryDialog 
         person={personForHistory} 
         payments={payments}
