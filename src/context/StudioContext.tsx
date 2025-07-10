@@ -3,7 +3,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { collection, onSnapshot, doc, Timestamp, getDocs, query, where, writeBatch } from 'firebase/firestore';
-import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod, NewPersonData } from '@/types';
 import * as firestoreActions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
@@ -32,7 +32,7 @@ interface StudioContextType extends State {
     addSpecialist: (data: Omit<Specialist, 'id' | 'avatar'>) => Promise<void>;
     updateSpecialist: (data: Specialist) => Promise<void>;
     deleteSpecialist: (id: string) => Promise<void>;
-    addPerson: (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'paymentHistory'>) => Promise<void>;
+    addPerson: (data: NewPersonData) => Promise<void>;
     updatePerson: (data: Person) => Promise<void>;
     deletePerson: (id: string) => Promise<void>;
     recordPayment: (personId: string) => Promise<void>;
@@ -260,7 +260,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     ));
   };
   
-  const addPerson = async (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'paymentHistory'>) => {
+  const addPerson = async (data: NewPersonData) => {
     await performFirestoreAction('Añadir persona', () => firestoreActions.addPersonAction(getCollectionRef('people'), data));
   };
   const updatePerson = async (data: Person) => {

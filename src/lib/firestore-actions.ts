@@ -2,7 +2,7 @@
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData } from '@/types';
 import { db } from './firebase';
 import { format as formatDate } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
@@ -37,13 +37,12 @@ export const deleteEntity = async (docRef: any) => {
 
 
 // Specific Actions
-export const addPersonAction = async (collectionRef: CollectionReference, personData: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'paymentHistory'>) => {
-    const now = new Date();
+export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
+    const { joinDate, ...rest } = personData;
     const newPerson = {
-        ...personData,
-        joinDate: now,
-        // The lastPaymentDate field now stores the date the membership is valid until.
-        lastPaymentDate: calculateNextPaymentDate(now, now),
+        ...rest,
+        joinDate: joinDate,
+        lastPaymentDate: calculateNextPaymentDate(joinDate, joinDate),
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     };
