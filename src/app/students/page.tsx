@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, HeartPulse, StickyNote, Star, MapPin } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -11,13 +12,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Person, Session } from '@/types';
+import type { Person, Payment } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
+import { getStudentPaymentStatus, exportToCsv, calculateNextPaymentDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSearchParams } from 'next/navigation';
@@ -51,6 +51,57 @@ const vacationFormSchema = z.object({
     message: "La fecha de fin debe ser igual o posterior a la de inicio.",
     path: ['endDate'],
 });
+
+function PaymentHistoryDialog({ person, payments, tariffs, onClose }: { person: Person | null; payments: Payment[]; tariffs: any[]; onClose: () => void; }) {
+    if (!person) return null;
+
+    const personPayments = payments
+        .filter(p => p.personId === person.id)
+        .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+
+    const formatPrice = (price: number) => {
+      return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+      }).format(price);
+    };
+
+    return (
+        <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Historial de Pagos: {person.name}</DialogTitle>
+                </DialogHeader>
+                <ScrollArea className="h-72 my-4">
+                    {personPayments.length > 0 ? (
+                        <div className="space-y-3 pr-4">
+                            {personPayments.map(payment => {
+                                const tariff = tariffs.find(t => t.id === payment.tariffId);
+                                return (
+                                    <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                                        <div>
+                                            <p className="font-semibold">{tariff ? tariff.name : 'Pago registrado'}</p>
+                                            <p className="text-sm text-muted-foreground">{payment.date ? format(payment.date, 'dd MMMM, yyyy', { locale: es }) : 'Fecha no disponible'}</p>
+                                        </div>
+                                        <p className="font-bold text-lg">{tariff ? formatPrice(tariff.price) : ''}</p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-full">
+                            <p className="text-muted-foreground">No hay pagos registrados para esta persona.</p>
+                        </div>
+                    )}
+                </ScrollArea>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function VacationDialog({ person, onClose }: { person: Person | null; onClose: () => void; }) {
     const { addVacationPeriod, removeVacationPeriod } = useStudio();
@@ -210,8 +261,8 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   );
 }
 
-function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void }) {
-    const { tariffs, deletePerson, recordPayment, undoLastPayment, sessions, actividades, specialists, spaces, isPersonOnVacation, levels } = useStudio();
+function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { person: Person, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void }) {
+    const { tariffs, deletePerson, recordPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     
     const tariff = tariffs.find(t => t.id === person.tariffId);
@@ -225,32 +276,20 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
       }).format(price);
     };
     
-    const enrolledSessions = useMemo(() => {
-        return sessions
-            .filter(s => s.personIds.includes(person.id))
-            .map(s => {
-                const actividad = actividades.find(a => a.id === s.actividadId);
-                const specialist = specialists.find(sp => sp.id === s.instructorId);
-                const space = spaces.find(sp => sp.id === s.spaceId);
-                return { ...s, actividadName: actividad?.name, specialistName: specialist?.name, spaceName: space?.name };
-            })
-            .sort((a,b) => {
-                const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-                return dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek) || a.time.localeCompare(b.time)
-            });
-    }, [sessions, person.id, actividades, specialists, spaces]);
-
     return (
         <>
             <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <div className={cn(
+                <CardHeader className={cn(
                     "p-4 text-white",
-                    "bg-gradient-to-br from-primary to-fuchsia-600"
+                    paymentStatus === 'Al día' ? "bg-gradient-to-br from-green-500 to-teal-600" : "bg-gradient-to-br from-red-500 to-orange-600"
                 )}>
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start justify-between">
                         <div>
-                            <h3 className="text-xl font-bold">{person.name}</h3>
-                            <Badge variant="secondary" className={cn("font-semibold mt-1 border-0", paymentStatus === 'Al día' ? 'bg-green-400/80 text-green-900' : 'bg-destructive/80 text-destructive-foreground')}>
+                            <CardTitle className="text-xl font-bold">{person.name}</CardTitle>
+                            <Badge variant="secondary" className={cn(
+                                "font-semibold mt-1.5 border-0", 
+                                paymentStatus === 'Al día' ? 'bg-green-400/80 text-green-900' : 'bg-destructive/80 text-destructive-foreground'
+                            )}>
                                 {paymentStatus}
                             </Badge>
                         </div>
@@ -261,9 +300,7 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onManageVacations(person)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => recordPayment(person.id)}>Registrar Pago</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => undoLastPayment(person.id)}>Deshacer Pago</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
                             </DropdownMenuContent>
@@ -271,64 +308,30 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
                     </div>
                      
                     <div className="mt-2">
-                         <div className="flex justify-between items-baseline">
-                           <p className="text-sm font-semibold opacity-90">
-                               {tariff?.name || 'Sin arancel'}
-                            </p>
+                        <div className="flex justify-between items-baseline">
+                            <p className="text-sm font-semibold opacity-90">{tariff?.name}</p>
                             {tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>}
                         </div>
-                         {person.lastPaymentDate && (
+                        {person.lastPaymentDate && (
                             <p className="text-xs opacity-80 mt-1">Vence: {format(person.lastPaymentDate, 'dd/MM/yyyy')}</p>
-                         )}
+                        )}
                     </div>
-                </div>
+                </CardHeader>
 
-                <div className="p-4 flex-grow">
-                    <div className="space-y-4">
-                        <div>
-                            <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-semibold text-sm text-foreground">Horarios Inscriptos</h4>
-                                <Badge variant="secondary" className="bg-primary/10 text-primary">{enrolledSessions.length}</Badge>
-                            </div>
-                            {enrolledSessions.length > 0 ? (
-                                <div className="space-y-2">
-                                    {enrolledSessions.map(session => (
-                                        <div key={session.id} className="p-2 rounded-md bg-muted/50 text-xs">
-                                            <p className="font-bold text-foreground">{session.actividadName}</p>
-                                            <div className="flex items-center justify-between text-muted-foreground">
-                                                <span>{session.dayOfWeek}, {session.time}</span>
-                                                <div className="flex items-center gap-2">
-                                                  <span>{session.specialistName}</span>
-                                                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/>{session.spaceName}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <p className="text-xs text-muted-foreground text-center py-2">No está inscripto en ninguna clase.</p>
-                            )}
+                <CardContent className="p-4 flex-grow">
+                     <div className="space-y-2">
+                        <h4 className="font-semibold text-sm text-foreground">Contacto</h4>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <span>{person.phone}</span>
                         </div>
-
-                        <div>
-                             <div className="flex justify-between items-center mb-2">
-                                <h4 className="font-semibold text-sm text-foreground">Períodos de Vacaciones</h4>
-                                <Badge variant="secondary">{person.vacationPeriods?.length || 0}</Badge>
-                            </div>
-                             {(person.vacationPeriods && person.vacationPeriods.length > 0) ? (
-                                <div className="space-y-2">
-                                {person.vacationPeriods.map(vac => (
-                                    <div key={vac.id} className="p-2 rounded-md bg-muted/50 text-xs text-center">
-                                        <p className="font-semibold text-muted-foreground">{vac.startDate ? format(vac.startDate, 'dd MMM') : 'N/A'} - {vac.endDate ? format(vac.endDate, 'dd MMM') : 'N/A'}</p>
-                                    </div>
-                                ))}
-                                </div>
-                            ) : (
-                                <p className="text-xs text-muted-foreground text-center py-2">Sin vacaciones registradas.</p>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                     </div>
+                </CardContent>
+                
+                <CardFooter className="p-2 border-t mt-auto">
+                    <Button onClick={() => recordPayment(person.id)} className="w-full font-bold">
+                        Registrar Pago
+                    </Button>
+                </CardFooter>
             </Card>
             
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -342,7 +345,7 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, loading } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, payments, loading } = useStudio();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
@@ -350,6 +353,7 @@ function StudentsPageContent() {
   const initialFilter = searchParams.get('filter') || 'all';
   const [activeFilter, setActiveFilter] = useState(initialFilter);
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
+  const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -483,6 +487,7 @@ function StudentsPageContent() {
                     person={person}
                     onManageVacations={setPersonForVacation}
                     onEdit={handleEditClick}
+                    onViewHistory={setPersonForHistory}
                 />
             ))}
           </div>
@@ -513,6 +518,12 @@ function StudentsPageContent() {
         setSearchTerm={setSearchTerm}
       />
       <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />
+      <PaymentHistoryDialog 
+        person={personForHistory} 
+        payments={payments}
+        tariffs={tariffs}
+        onClose={() => setPersonForHistory(null)}
+      />
 
     </div>
   );

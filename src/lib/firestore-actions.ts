@@ -1,6 +1,7 @@
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
-import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level } from '@/types';
 import { db } from './firebase';
 import { format as formatDate } from 'date-fns';
@@ -79,13 +80,15 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 };
 
 
-export const recordPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, person: Person) => {
+export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff) => {
     const now = new Date();
     const newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate || now);
 
     const paymentRecord = {
         personId: person.id,
         date: now, // The actual transaction date
+        amount: tariff.price,
+        tariffId: tariff.id,
         months: 1, // We simplified this to always be 1 month
     };
     const batch = writeBatch(db);
@@ -93,26 +96,11 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, peop
     const paymentRef = doc(paymentsRef);
     batch.set(paymentRef, paymentRecord);
     
-    const personRef = doc(peopleRef, person.id);
     batch.update(personRef, { lastPaymentDate: newExpiryDate });
 
     return await batch.commit();
 };
 
-export const undoLastPaymentAction = async (paymentsRef: CollectionReference, peopleRef: CollectionReference, person: Person, paymentToDelete: any) => {
-    const batch = writeBatch(db);
-    const paymentRef = doc(paymentsRef, paymentToDelete.id);
-    batch.delete(paymentRef);
-    
-    if (person.lastPaymentDate) {
-        // To "undo", we calculate the *previous* payment date.
-        const previousExpiryDate = calculateNextPaymentDate(person.lastPaymentDate, person.joinDate || person.lastPaymentDate, -1);
-        const personRef = doc(peopleRef, person.id);
-        batch.update(personRef, { lastPaymentDate: previousExpiryDate });
-    }
-
-    return await batch.commit();
-};
 
 export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[], currentSessions: Session[]) => {
     const batch = writeBatch(db);

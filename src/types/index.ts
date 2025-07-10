@@ -1,4 +1,5 @@
 
+
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -46,6 +47,7 @@ export type Person = {
   healthInfo?: string;
   levelId?: string;
   notes?: string;
+  paymentHistory?: string[]; // Array of payment IDs
 };
 
 export type Session = {
@@ -65,6 +67,8 @@ export type Payment = {
   id:string;
   personId: string;
   date: Date | null; // The actual date the payment was recorded
+  amount: number;
+  tariffId: string;
   months: number;
 };
 

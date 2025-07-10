@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
+import { addMonths } from 'date-fns';
 
 type State = {
   actividades: Actividad[];
@@ -31,11 +32,10 @@ interface StudioContextType extends State {
     addSpecialist: (data: Omit<Specialist, 'id' | 'avatar'>) => Promise<void>;
     updateSpecialist: (data: Specialist) => Promise<void>;
     deleteSpecialist: (id: string) => Promise<void>;
-    addPerson: (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => Promise<void>;
+    addPerson: (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'paymentHistory'>) => Promise<void>;
     updatePerson: (data: Person) => Promise<void>;
     deletePerson: (id: string) => Promise<void>;
     recordPayment: (personId: string) => Promise<void>;
-    undoLastPayment: (personId: string) => Promise<void>;
     addSpace: (data: Omit<Space, 'id'>) => Promise<void>;
     updateSpace: (data: Space) => Promise<void>;
     deleteSpace: (id: string) => Promise<void>;
@@ -259,7 +259,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     ));
   };
   
-  const addPerson = async (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+  const addPerson = async (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'paymentHistory'>) => {
     await performFirestoreAction('Añadir persona', () => firestoreActions.addPersonAction(getCollectionRef('people'), data));
   };
   const updatePerson = async (data: Person) => {
@@ -275,27 +275,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         toast({ title: 'Error', description: 'No se encontró a la persona.', variant: 'destructive' });
         return;
       }
-      await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(getCollectionRef('payments'), getCollectionRef('people'), person));
-  };
-
-  const undoLastPayment = async (personId: string) => {
-      const person = state.people.find(p => p.id === personId);
-      if (!person || !person.lastPaymentDate) {
-        toast({ title: 'Error', description: 'No hay pago previo para deshacer.', variant: 'destructive' });
+       if (!person.tariffId) {
+        toast({ title: 'Error', description: 'La persona no tiene un arancel asignado.', variant: 'destructive' });
         return;
       }
-      
-      const personPayments = state.payments
-        .filter(p => p.personId === personId)
-        .sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-        
-      if (personPayments.length === 0) {
-        toast({ title: 'Error', description: 'No se encontró un registro de pago para eliminar.', variant: 'destructive' });
+      const tariff = state.tariffs.find(t => t.id === person.tariffId);
+       if (!tariff) {
+        toast({ title: 'Error', description: 'No se encontró el arancel de la persona.', variant: 'destructive' });
         return;
       }
-      const lastPayment = personPayments[0];
-      
-      await performFirestoreAction('Deshacer pago', () => firestoreActions.undoLastPaymentAction(getCollectionRef('payments'), getCollectionRef('people'), person, lastPayment));
+      await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(getCollectionRef('payments'), getDocRef('people', person.id), person, tariff));
   };
   
   const addSession = async (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
@@ -376,7 +365,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     updatePerson,
     deletePerson,
     recordPayment,
-    undoLastPayment,
     addSpace,
     updateSpace,
     deleteSpace,
