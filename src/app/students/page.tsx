@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -55,6 +56,8 @@ const vacationFormSchema = z.object({
 });
 
 function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; onClose: () => void }) {
+    if (!person) return null;
+    
     const { sessions, addJustifiedAbsence, attendance } = useStudio();
     const [selectedDate, setSelectedDate] = useState<Date | undefined>();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,14 +74,7 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
         return Array.from(new Set(personSessions.map(s => dayMap[s.dayOfWeek])));
     }, [personSessions, dayMap]);
 
-    if (!person) return null;
-
     const sessionOnSelectedDate = selectedDate ? personSessions.find(s => dayMap[s.dayOfWeek] === selectedDate.getDay()) : null;
-
-    const handleDayClick = (day: Date, modifiers: any) => {
-        if (modifiers.disabled) return;
-        setSelectedDate(day);
-    };
 
     const isDateAlreadyJustified = useMemo(() => {
         if (!selectedDate || !sessionOnSelectedDate) return false;
@@ -87,6 +83,11 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
         return attendanceRecord?.justifiedAbsenceIds?.includes(person.id) || false;
     }, [selectedDate, sessionOnSelectedDate, attendance, person.id]);
 
+    const handleDayClick = (day: Date, modifiers: any) => {
+        if (modifiers.disabled) return;
+        setSelectedDate(day);
+    };
+    
     const handleSubmit = async () => {
         if (!selectedDate || !sessionOnSelectedDate || isDateAlreadyJustified) return;
         setIsSubmitting(true);
@@ -169,7 +170,7 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
         <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
-                    <DialogTitle>Gestionar Inscripciones: {person.name}</DialogTitle>
+                    <DialogTitle>Gestionar Horarios: {person.name}</DialogTitle>
                     <DialogDescription>Selecciona las clases a las que asistirá {person.name} de forma regular.</DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -221,7 +222,7 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                         </ScrollArea>
                         <DialogFooter>
                             <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
-                            <Button type="submit">Guardar Inscripciones</Button>
+                            <Button type="submit">Guardar Horarios</Button>
                         </DialogFooter>
                     </form>
                 </Form>
