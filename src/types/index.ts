@@ -58,10 +58,6 @@ export type NewPersonData = {
     levelId?: string;
     healthInfo?: string;
     notes?: string;
-    joinDate: Date;
-    altaType: 'nuevo' | 'migracion';
-    lastPaymentDate?: Date; // Only for migration
-    paymentBalance?: number;  // Only for migration
 };
 
 

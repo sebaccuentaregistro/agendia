@@ -37,18 +37,8 @@ export const deleteEntity = async (docRef: any) => {
 
 // Specific Actions
 export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
-    let lastPaymentDate: Date;
-    let paymentBalance: number;
-
-    if (personData.altaType === 'nuevo') {
-        // Alumno Nuevo: El primer vencimiento es un mes después de la fecha de alta.
-        lastPaymentDate = calculateNextPaymentDate(personData.joinDate, personData.joinDate);
-        paymentBalance = 0; // Starts at 0, perfectly up-to-date
-    } else {
-        // Migración: Se usan los valores provistos en el formulario.
-        lastPaymentDate = personData.lastPaymentDate || calculateNextPaymentDate(personData.joinDate, personData.joinDate);
-        paymentBalance = personData.paymentBalance || 0;
-    }
+    const joinDate = new Date();
+    const lastPaymentDate = calculateNextPaymentDate(joinDate, joinDate);
 
     const newPerson = {
         name: personData.name,
@@ -57,9 +47,9 @@ export const addPersonAction = async (collectionRef: CollectionReference, person
         levelId: personData.levelId,
         healthInfo: personData.healthInfo,
         notes: personData.notes,
-        joinDate: personData.joinDate,
+        joinDate: joinDate,
         lastPaymentDate: lastPaymentDate,
-        paymentBalance: paymentBalance,
+        paymentBalance: 0,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     };

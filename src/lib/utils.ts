@@ -44,16 +44,15 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'A
   }
   
   const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-  const isOverdue = isAfter(today, nextDueDate);
-  const hasDebt = (person.paymentBalance || 0) < 0;
+  const isOverdueByTime = isAfter(today, nextDueDate);
+  const hasDebt = (person.paymentBalance ?? 0) < 0;
 
-  if (isOverdue && !hasDebt) {
-    // Their date has passed, but they have no debt, so they are overdue by time.
+  if (hasDebt) {
     return 'Atrasado';
   }
-  if (hasDebt) {
-    // If they have a negative balance, they are always overdue.
-    return 'Atrasado';
+  
+  if (isOverdueByTime && (person.paymentBalance ?? 0) <= 0) {
+     return 'Atrasado';
   }
   
   return 'Al día';

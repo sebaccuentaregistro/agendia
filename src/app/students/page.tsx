@@ -38,10 +38,6 @@ const personFormSchema = z.object({
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
-  altaType: z.enum(['nuevo', 'migracion']),
-  joinDate: z.date({ required_error: 'La fecha de alta es obligatoria.' }),
-  lastPaymentDate: z.date().optional(),
-  paymentBalance: z.coerce.number().optional(),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -190,28 +186,21 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
-    defaultValues: { altaType: 'nuevo', joinDate: new Date(), paymentBalance: 0 },
   });
   
-  const altaType = form.watch('altaType');
-
   useEffect(() => {
     if (open) {
         if (person) {
           form.reset({
             name: person.name,
             phone: person.phone,
-            joinDate: person.joinDate ? new Date(person.joinDate) : new Date(),
             levelId: person.levelId || 'none',
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
-            altaType: 'nuevo', // Editing always assumes simple flow
-            paymentBalance: person.paymentBalance || 0,
-            lastPaymentDate: person.lastPaymentDate || undefined,
           });
         } else {
-          form.reset({ name: '', phone: '', joinDate: new Date(), levelId: 'none', tariffId: '', healthInfo: '', notes: '', altaType: 'nuevo', paymentBalance: 0 });
+          form.reset({ name: '', phone: '', levelId: 'none', tariffId: '', healthInfo: '', notes: '' });
         }
     }
   }, [person, open, form]);
@@ -224,10 +213,6 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
         levelId: values.levelId,
         healthInfo: values.healthInfo,
         notes: values.notes,
-        joinDate: values.joinDate,
-        altaType: values.altaType,
-        lastPaymentDate: values.altaType === 'migracion' ? values.lastPaymentDate : undefined,
-        paymentBalance: values.altaType === 'migracion' ? values.paymentBalance : 0,
     };
 
     if (person) {
@@ -270,76 +255,6 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
                 </Select><FormMessage /></FormItem>
               )}/>
             </div>
-
-            {!person && (
-                <FormField
-                    control={form.control}
-                    name="altaType"
-                    render={({ field }) => (
-                        <FormItem className="space-y-3">
-                            <FormLabel>Tipo de Alta</FormLabel>
-                            <FormControl>
-                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
-                                <FormItem className="flex items-center space-x-3 space-y-0">
-                                    <FormControl><RadioGroupItem value="nuevo" /></FormControl>
-                                    <FormLabel className="font-normal">Alumno Nuevo</FormLabel>
-                                </FormItem>
-                                <FormItem className="flex items-center space-x-3 space-y-0">
-                                    <FormControl><RadioGroupItem value="migracion" /></FormControl>
-                                    <FormLabel className="font-normal">Migración</FormLabel>
-                                </FormItem>
-                                </RadioGroup>
-                            </FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
-            )}
-            
-            <div className="grid grid-cols-1 gap-4">
-                <FormField
-                    control={form.control}
-                    name="joinDate"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>{altaType === 'nuevo' ? 'Fecha de Alta' : 'Fecha de Alta Original'}</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger>
-                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                    </FormItem>
-                )}/>
-                {altaType === 'migracion' && !person && (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name="lastPaymentDate"
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Próximo Vencimiento</FormLabel>
-                             <Popover>
-                                <PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger>
-                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                        </FormItem>
-                      )}/>
-                      <FormField
-                        control={form.control}
-                        name="paymentBalance"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Saldo Inicial (Cuotas)</FormLabel>
-                                <FormControl><Input type="number" {...field} value={field.value ?? 0} placeholder="0: al día, -1: debe 1 cuota" /></FormControl>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                      />
-                    </>
-                )}
-            </div>
-
              <FormField control={form.control} name="levelId" render={({ field }) => (
                 <FormItem><FormLabel>Nivel (Opcional)</FormLabel><Select onValueChange={field.onChange} value={field.value || 'none'}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
