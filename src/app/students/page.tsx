@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -263,8 +263,9 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
 }
 
 function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { person: Person, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void }) {
-    const { tariffs, deletePerson, recordPayment } = useStudio();
+    const { tariffs, deletePerson, recordPayment, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
     
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const paymentStatus = getStudentPaymentStatus(person, new Date());
@@ -276,6 +277,11 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
         minimumFractionDigits: 0,
       }).format(price);
     };
+
+    const handleRevertPayment = () => {
+        revertLastPayment(person.id);
+        setIsRevertDialogOpen(false);
+    }
 
     const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
     
@@ -305,6 +311,7 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
                                 <DropdownMenuItem onSelect={() => onManageVacations(person)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
                                 <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => setIsRevertDialogOpen(true)}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
@@ -345,6 +352,13 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
                 <AlertDialogContent>
                     <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará a la persona y todas sus inscripciones.</AlertDialogDescription></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletePerson(person.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction></AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+             <AlertDialog open={isRevertDialogOpen} onOpenChange={setIsRevertDialogOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader><AlertDialogTitle>¿Revertir último pago?</AlertDialogTitle><AlertDialogDescription>Esta acción eliminará el pago más reciente del historial y ajustará la fecha de vencimiento de la persona. Esta acción no se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRevertPayment} className="bg-destructive hover:bg-destructive/90">Sí, revertir pago</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
         </>

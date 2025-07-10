@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { collection, onSnapshot, doc, Timestamp } from 'firebase/firestore';
+import { collection, onSnapshot, doc, Timestamp, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import * as firestoreActions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +36,7 @@ interface StudioContextType extends State {
     updatePerson: (data: Person) => Promise<void>;
     deletePerson: (id: string) => Promise<void>;
     recordPayment: (personId: string) => Promise<void>;
+    revertLastPayment: (personId: string) => Promise<void>;
     addSpace: (data: Omit<Space, 'id'>) => Promise<void>;
     updateSpace: (data: Space) => Promise<void>;
     deleteSpace: (id: string) => Promise<void>;
@@ -286,6 +287,20 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       }
       await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(getCollectionRef('payments'), getDocRef('people', person.id), person, tariff));
   };
+
+  const revertLastPayment = async (personId: string) => {
+      const person = state.people.find(p => p.id === personId);
+      if (!person) {
+        toast({ title: 'Error', description: 'No se encontró a la persona.', variant: 'destructive' });
+        return;
+      }
+      await performFirestoreAction('Revertir pago', () => firestoreActions.revertLastPaymentAction(
+          getCollectionRef('payments'),
+          getDocRef('people', person.id),
+          personId,
+          person.joinDate || new Date()
+      ));
+  }
   
   const addSession = async (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
     const newSession = { ...data, personIds: [], waitlistPersonIds: [] };
@@ -365,6 +380,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     updatePerson,
     deletePerson,
     recordPayment,
+    revertLastPayment,
     addSpace,
     updateSpace,
     deleteSpace,

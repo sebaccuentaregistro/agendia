@@ -1,8 +1,8 @@
 
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
-import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level } from '@/types';
+import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment } from '@/types';
 import { db } from './firebase';
 import { format as formatDate } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
@@ -98,6 +98,46 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
     
     batch.update(personRef, { lastPaymentDate: newExpiryDate });
 
+    return await batch.commit();
+};
+
+export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, joinDate: Date) => {
+    const batch = writeBatch(db);
+    
+    // 1. Find the two most recent payments for the person
+    const q = query(
+        paymentsRef,
+        where('personId', '==', personId),
+        orderBy('date', 'desc'),
+        limit(2)
+    );
+    const paymentsSnap = await getDocs(q);
+
+    if (paymentsSnap.empty) {
+        throw new Error("No hay pagos para revertir para esta persona.");
+    }
+
+    // 2. Delete the most recent payment
+    const lastPaymentDoc = paymentsSnap.docs[0];
+    batch.delete(lastPaymentDoc.ref);
+
+    // 3. Determine the new lastPaymentDate
+    let newLastPaymentDate: Date;
+    if (paymentsSnap.docs.length > 1) {
+        // There was a previous payment, calculate expiry from it
+        const secondToLastPayment = paymentsSnap.docs[1].data() as Payment;
+        if (!secondToLastPayment.date) {
+            throw new Error("El penúltimo pago tiene una fecha inválida.");
+        }
+        newLastPaymentDate = calculateNextPaymentDate(secondToLastPayment.date, joinDate);
+    } else {
+        // This was the only payment, so revert to the initial state
+        newLastPaymentDate = calculateNextPaymentDate(joinDate, joinDate);
+    }
+
+    // 4. Update the person's lastPaymentDate
+    batch.update(personRef, { lastPaymentDate: newLastPaymentDate });
+    
     return await batch.commit();
 };
 
