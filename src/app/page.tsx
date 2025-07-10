@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
@@ -348,11 +347,11 @@ function DashboardPageContent() {
               )}>
                   <div className={cn(
                       "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                      hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600"
+                      hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300"
                   )}>
                       <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasOverdue ? "text-destructive" : "text-green-600")}>
+                  <CardTitle className={cn("text-lg font-semibold", hasOverdue ? "text-destructive" : "text-green-600 dark:text-green-300")}>
                       Atrasados
                   </CardTitle>
                   <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{overdueCount}</p>
@@ -365,11 +364,11 @@ function DashboardPageContent() {
               )}>
                   <div className={cn(
                       "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                      hasPendingRecovery ? "bg-yellow-100 text-yellow-600" : "bg-green-100 text-green-600"
+                      hasPendingRecovery ? "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-300" : "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300"
                   )}>
                       <CalendarClock className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasPendingRecovery ? "text-yellow-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-lg font-semibold", hasPendingRecovery ? "text-yellow-600 dark:text-yellow-300" : "text-green-600 dark:text-green-300")}>
                       Recuperos
                   </CardTitle>
                   <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{pendingRecoveryCount}</p>
@@ -382,11 +381,11 @@ function DashboardPageContent() {
               )}>
                   <div className={cn(
                       "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                      hasOnVacation ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                      hasOnVacation ? "bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300" : "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300"
                   )}>
                       <Plane className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600" : "text-green-600")}>
+                  <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600 dark:text-blue-300" : "text-green-600 dark:text-green-300")}>
                       Vacaciones
                   </CardTitle>
                   <p className="text-2xl font-bold text-slate-600 dark:text-slate-300">{onVacationCount}</p>
