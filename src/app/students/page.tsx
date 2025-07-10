@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -35,12 +34,13 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   phone: z.string().min(7, { message: 'Por favor, introduce un número de teléfono válido.' }),
-  joinDate: z.date({ required_error: 'La fecha de alta es obligatoria.' }),
-  lastPaymentDate: z.date({ required_error: 'La fecha de vencimiento es obligatoria.' }),
   levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
+  altaType: z.enum(['nuevo', 'migracion']),
+  joinDate: z.date({ required_error: 'La fecha de alta es obligatoria.' }),
+  monthsOwed: z.coerce.number().min(0, { message: "Debe ser 0 o más." }).optional(),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -189,7 +189,10 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
+    defaultValues: { altaType: 'nuevo', joinDate: new Date(), monthsOwed: 0 },
   });
+  
+  const altaType = form.watch('altaType');
 
   useEffect(() => {
     if (open) {
@@ -198,24 +201,45 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
             name: person.name,
             phone: person.phone,
             joinDate: person.joinDate ? new Date(person.joinDate) : new Date(),
-            lastPaymentDate: person.lastPaymentDate ? new Date(person.lastPaymentDate) : new Date(),
             levelId: person.levelId || 'none',
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
+            altaType: 'nuevo', // Editing always assumes simple flow
+            monthsOwed: 0,
           });
         } else {
-          const today = new Date();
-          form.reset({ name: '', phone: '', joinDate: today, lastPaymentDate: today, levelId: 'none', tariffId: '', healthInfo: '', notes: ''});
+          form.reset({ name: '', phone: '', joinDate: new Date(), levelId: 'none', tariffId: '', healthInfo: '', notes: '', altaType: 'nuevo', monthsOwed: 0 });
         }
     }
   }, [person, open, form]);
 
   const onSubmit = (values: PersonFormData) => {
+    const finalValues: NewPersonData = {
+        name: values.name,
+        phone: values.phone,
+        tariffId: values.tariffId,
+        levelId: values.levelId,
+        healthInfo: values.healthInfo,
+        notes: values.notes,
+        joinDate: values.joinDate,
+        altaType: values.altaType,
+        monthsOwed: values.altaType === 'migracion' ? values.monthsOwed : 0,
+    };
+
     if (person) {
-      updatePerson({ ...person, ...values });
+      // Simplified update - does not change payment logic, just person details.
+      updatePerson({ 
+          ...person, 
+          name: values.name,
+          phone: values.phone,
+          tariffId: values.tariffId,
+          levelId: values.levelId,
+          healthInfo: values.healthInfo,
+          notes: values.notes,
+        });
     } else {
-      addPerson(values);
+      addPerson(finalValues);
       setActiveFilter('all');
       setSearchTerm('');
     }
@@ -237,62 +261,78 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
               <FormField control={form.control} name="phone" render={({ field }) => (
                 <FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
               )}/>
-               <FormField control={form.control} name="joinDate" render={({ field }) => (
-                  <FormItem>
-                      <FormLabel>Fecha de Alta</FormLabel>
-                      <Popover>
-                          <PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger>
-                          <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                  </FormItem>
-              )}/>
-            </div>
-             <div className="grid grid-cols-2 gap-4">
                <FormField control={form.control} name="tariffId" render={({ field }) => (
                 <FormItem><FormLabel>Arancel</FormLabel><Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
                     <SelectContent>{tariffs.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
                 </Select><FormMessage /></FormItem>
               )}/>
-               <FormField control={form.control} name="levelId" render={({ field }) => (
-                <FormItem><FormLabel>Nivel</FormLabel><Select onValueChange={field.onChange} value={field.value || 'none'}>
+            </div>
+
+            {!person && (
+                <FormField
+                    control={form.control}
+                    name="altaType"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                            <FormLabel>Tipo de Alta</FormLabel>
+                            <FormControl>
+                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl><RadioGroupItem value="nuevo" /></FormControl>
+                                    <FormLabel className="font-normal">Alumno Nuevo</FormLabel>
+                                </FormItem>
+                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl><RadioGroupItem value="migracion" /></FormControl>
+                                    <FormLabel className="font-normal">Migración</FormLabel>
+                                </FormItem>
+                                </RadioGroup>
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+            )}
+            
+            <div className="grid grid-cols-2 gap-4">
+                <FormField
+                    control={form.control}
+                    name="joinDate"
+                    render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>{altaType === 'nuevo' ? 'Fecha de Alta' : 'Fecha de Alta Original'}</FormLabel>
+                        <Popover>
+                            <PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger>
+                            <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                )}/>
+                {altaType === 'migracion' && !person && (
+                    <FormField
+                        control={form.control}
+                        name="monthsOwed"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Meses Adeudados</FormLabel>
+                                <FormControl><Input type="number" {...field} value={field.value ?? 0} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+            </div>
+
+             <FormField control={form.control} name="levelId" render={({ field }) => (
+                <FormItem><FormLabel>Nivel (Opcional)</FormLabel><Select onValueChange={field.onChange} value={field.value || 'none'}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
                     <SelectContent>
                       <SelectItem value="none">Sin nivel</SelectItem>
                       {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
                     </SelectContent>
                 </Select><FormMessage /></FormItem>
-              )}/>
-            </div>
-            {!person && (
-              <FormField
-                control={form.control}
-                name="lastPaymentDate"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fecha de Vencimiento del Próximo Pago</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                            {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                    <DialogDescription className="text-xs pt-1">
-                      Para un alumno nuevo, elige un mes después de su alta. Para uno migrado, indica cuándo vencería su próximo pago.
-                    </DialogDescription>
-                  </FormItem>
-                )}
-              />
-            )}
+            )}/>
+            
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
             )}/>

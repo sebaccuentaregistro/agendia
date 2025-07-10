@@ -50,9 +50,16 @@ export type Person = {
   paymentHistory?: string[]; // Array of payment IDs
 };
 
-export type NewPersonData = Omit<Person, 'id' | 'avatar' | 'vacationPeriods' | 'paymentHistory'> & {
+export type NewPersonData = {
+    name: string;
+    phone: string;
+    tariffId: string;
+    levelId?: string;
+    healthInfo?: string;
+    notes?: string;
     joinDate: Date;
-    lastPaymentDate: Date;
+    altaType: 'nuevo' | 'migracion';
+    monthsOwed?: number;
 };
 
 

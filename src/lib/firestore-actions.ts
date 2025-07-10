@@ -1,10 +1,9 @@
-
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData } from '@/types';
 import { db } from './firebase';
-import { format as formatDate } from 'date-fns';
+import { format as formatDate, addMonths, subMonths } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -38,11 +37,33 @@ export const deleteEntity = async (docRef: any) => {
 
 // Specific Actions
 export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
+    let lastPaymentDate: Date;
+
+    if (personData.altaType === 'nuevo') {
+        // Alumno Nuevo: El primer vencimiento es un mes después de la fecha de alta.
+        lastPaymentDate = calculateNextPaymentDate(personData.joinDate, personData.joinDate);
+    } else {
+        // Migración: Se calcula el vencimiento en base a los meses adeudados.
+        const monthsToSubtract = personData.monthsOwed || 0;
+        // Se calcula el vencimiento "ideal" del mes siguiente...
+        const nextMonthPayment = calculateNextPaymentDate(new Date(), personData.joinDate);
+        // ...y luego se restan los meses adeudados.
+        lastPaymentDate = subMonths(nextMonthPayment, monthsToSubtract);
+    }
+
     const newPerson = {
-        ...personData,
+        name: personData.name,
+        phone: personData.phone,
+        tariffId: personData.tariffId,
+        levelId: personData.levelId,
+        healthInfo: personData.healthInfo,
+        notes: personData.notes,
+        joinDate: personData.joinDate,
+        lastPaymentDate: lastPaymentDate,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     };
+    
     return addEntity(collectionRef, newPerson);
 };
 
