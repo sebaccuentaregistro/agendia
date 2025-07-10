@@ -439,8 +439,8 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                     paymentStatus === 'Al día' ? "bg-gradient-to-br from-primary to-fuchsia-600" : "bg-gradient-to-br from-red-500 to-orange-600"
                 )}>
                     <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2">
+                         <div className="flex-1">
+                            <div className="flex items-center gap-1">
                                 <CardTitle className="text-xl font-bold">{person.name}</CardTitle>
                                 {person.healthInfo && (
                                     <Popover>
@@ -468,6 +468,33 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                                             <div className="space-y-2">
                                                 <h4 className="font-medium leading-none">Notas</h4>
                                                 <p className="text-sm text-muted-foreground">{person.notes}</p>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+                                {person.vacationPeriods && person.vacationPeriods.length > 0 && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
+                                                <Plane className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-80">
+                                            <div className="space-y-4">
+                                                <div>
+                                                    <h4 className="font-medium leading-none">Períodos de Vacaciones</h4>
+                                                    <p className="text-sm text-muted-foreground">La persona no aparecerá en la asistencia durante estas fechas.</p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {person.vacationPeriods.map(vac => (
+                                                        <div key={vac.id} className="text-sm">
+                                                            <span className="font-semibold">{vac.startDate ? format(vac.startDate, 'dd/MM/yy') : 'N/A'}</span> al <span className="font-semibold">{vac.endDate ? format(vac.endDate, 'dd/MM/yy') : 'N/A'}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <Button variant="outline" size="sm" className="w-full" onClick={() => onManageVacations(person)}>
+                                                    Gestionar Vacaciones
+                                                </Button>
                                             </div>
                                         </PopoverContent>
                                     </Popover>
