@@ -40,7 +40,8 @@ const personFormSchema = z.object({
   notes: z.string().optional(),
   altaType: z.enum(['nuevo', 'migracion']),
   joinDate: z.date({ required_error: 'La fecha de alta es obligatoria.' }),
-  monthsOwed: z.coerce.number().min(0, { message: "Debe ser 0 o más." }).optional(),
+  lastPaymentDate: z.date().optional(),
+  paymentBalance: z.coerce.number().optional(),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -189,7 +190,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
-    defaultValues: { altaType: 'nuevo', joinDate: new Date(), monthsOwed: 0 },
+    defaultValues: { altaType: 'nuevo', joinDate: new Date(), paymentBalance: 0 },
   });
   
   const altaType = form.watch('altaType');
@@ -206,10 +207,11 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
             healthInfo: person.healthInfo,
             notes: person.notes,
             altaType: 'nuevo', // Editing always assumes simple flow
-            monthsOwed: 0,
+            paymentBalance: person.paymentBalance || 0,
+            lastPaymentDate: person.lastPaymentDate || undefined,
           });
         } else {
-          form.reset({ name: '', phone: '', joinDate: new Date(), levelId: 'none', tariffId: '', healthInfo: '', notes: '', altaType: 'nuevo', monthsOwed: 0 });
+          form.reset({ name: '', phone: '', joinDate: new Date(), levelId: 'none', tariffId: '', healthInfo: '', notes: '', altaType: 'nuevo', paymentBalance: 0 });
         }
     }
   }, [person, open, form]);
@@ -224,11 +226,11 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
         notes: values.notes,
         joinDate: values.joinDate,
         altaType: values.altaType,
-        monthsOwed: values.altaType === 'migracion' ? values.monthsOwed : 0,
+        lastPaymentDate: values.altaType === 'migracion' ? values.lastPaymentDate : undefined,
+        paymentBalance: values.altaType === 'migracion' ? values.paymentBalance : 0,
     };
 
     if (person) {
-      // Simplified update - does not change payment logic, just person details.
       updatePerson({ 
           ...person, 
           name: values.name,
@@ -294,7 +296,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
                 />
             )}
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
                 <FormField
                     control={form.control}
                     name="joinDate"
@@ -309,17 +311,32 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
                     </FormItem>
                 )}/>
                 {altaType === 'migracion' && !person && (
-                    <FormField
+                    <>
+                      <FormField
                         control={form.control}
-                        name="monthsOwed"
+                        name="lastPaymentDate"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Próximo Vencimiento</FormLabel>
+                             <Popover>
+                                <PopoverTrigger asChild><FormControl><Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>{field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}<CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button></FormControl></PopoverTrigger>
+                                <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} /></PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                        </FormItem>
+                      )}/>
+                      <FormField
+                        control={form.control}
+                        name="paymentBalance"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Meses Adeudados</FormLabel>
-                                <FormControl><Input type="number" {...field} value={field.value ?? 0} /></FormControl>
+                                <FormLabel>Saldo Inicial (Cuotas)</FormLabel>
+                                <FormControl><Input type="number" {...field} value={field.value ?? 0} placeholder="0: al día, -1: debe 1 cuota" /></FormControl>
                                 <FormMessage />
                             </FormItem>
                         )}
-                    />
+                      />
+                    </>
                 )}
             </div>
 
@@ -455,6 +472,12 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
                                 </PopoverContent>
                             </Popover>
                         )}
+                        {typeof person.paymentBalance === 'number' && person.paymentBalance < 0 && (
+                             <Badge variant="destructive">Debe: {Math.abs(person.paymentBalance)} cuota(s)</Badge>
+                        )}
+                        {typeof person.paymentBalance === 'number' && person.paymentBalance > 0 && (
+                             <Badge className="bg-blue-600">Crédito: {person.paymentBalance} cuota(s)</Badge>
+                        )}
                      </div>
                 </CardContent>
                 
@@ -474,7 +497,7 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
 
              <AlertDialog open={isRevertDialogOpen} onOpenChange={setIsRevertDialogOpen}>
                 <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitle>¿Revertir último pago?</AlertDialogTitle><AlertDialogDescription>Esta acción eliminará el pago más reciente del historial y ajustará la fecha de vencimiento de la persona. Esta acción no se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogHeader><AlertDialogTitle>¿Revertir último pago?</AlertDialogTitle><AlertDialogDescription>Esta acción eliminará el pago más reciente del historial, ajustará el saldo y la fecha de vencimiento de la persona. Esta acción no se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRevertPayment} className="bg-destructive hover:bg-destructive/90">Sí, revertir pago</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>

@@ -34,20 +34,29 @@ export function calculateNextPaymentDate(fromDate: Date, joinDate: Date, monthsT
 export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
   const nextDueDate = person.lastPaymentDate;
   
-  // A person needs a due date to have a status. If not, they are up to date by default.
   if (!nextDueDate) {
     return 'Al día';
   }
   
-  // Defensive check for invalid date formats that might have slipped through
   if (!(nextDueDate instanceof Date) || isNaN(nextDueDate.getTime())) {
     console.warn(`Invalid 'lastPaymentDate' for person ${person.id}:`, nextDueDate);
-    return 'Atrasado'; // Default to overdue if date is invalid to be safe
+    return 'Atrasado';
   }
   
   const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-  // We consider the payment overdue if today is strictly after the due date.
-  return isAfter(today, nextDueDate) ? 'Atrasado' : 'Al día';
+  const isOverdue = isAfter(today, nextDueDate);
+  const hasDebt = (person.paymentBalance || 0) < 0;
+
+  if (isOverdue && !hasDebt) {
+    // Their date has passed, but they have no debt, so they are overdue by time.
+    return 'Atrasado';
+  }
+  if (hasDebt) {
+    // If they have a negative balance, they are always overdue.
+    return 'Atrasado';
+  }
+  
+  return 'Al día';
 }
 
 

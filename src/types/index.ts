@@ -48,6 +48,7 @@ export type Person = {
   levelId?: string;
   notes?: string;
   paymentHistory?: string[]; // Array of payment IDs
+  paymentBalance?: number; // 0 = up to date, < 0 = debt, > 0 = credit
 };
 
 export type NewPersonData = {
@@ -59,7 +60,8 @@ export type NewPersonData = {
     notes?: string;
     joinDate: Date;
     altaType: 'nuevo' | 'migracion';
-    monthsOwed?: number;
+    lastPaymentDate?: Date; // Only for migration
+    paymentBalance?: number;  // Only for migration
 };
 
 

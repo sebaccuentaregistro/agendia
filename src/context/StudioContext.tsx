@@ -298,7 +298,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           getCollectionRef('payments'),
           getDocRef('people', person.id),
           personId,
-          person.joinDate || new Date()
+          person.joinDate || new Date(),
+          person
       ));
   }
   

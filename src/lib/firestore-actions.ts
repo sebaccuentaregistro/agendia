@@ -38,17 +38,16 @@ export const deleteEntity = async (docRef: any) => {
 // Specific Actions
 export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
     let lastPaymentDate: Date;
+    let paymentBalance: number;
 
     if (personData.altaType === 'nuevo') {
         // Alumno Nuevo: El primer vencimiento es un mes después de la fecha de alta.
         lastPaymentDate = calculateNextPaymentDate(personData.joinDate, personData.joinDate);
+        paymentBalance = 0; // Starts at 0, perfectly up-to-date
     } else {
-        // Migración: Se calcula el vencimiento en base a los meses adeudados.
-        const monthsToSubtract = personData.monthsOwed || 0;
-        // Se calcula el vencimiento "ideal" del mes siguiente...
-        const nextMonthPayment = calculateNextPaymentDate(new Date(), personData.joinDate);
-        // ...y luego se restan los meses adeudados.
-        lastPaymentDate = subMonths(nextMonthPayment, monthsToSubtract);
+        // Migración: Se usan los valores provistos en el formulario.
+        lastPaymentDate = personData.lastPaymentDate || calculateNextPaymentDate(personData.joinDate, personData.joinDate);
+        paymentBalance = personData.paymentBalance || 0;
     }
 
     const newPerson = {
@@ -60,6 +59,7 @@ export const addPersonAction = async (collectionRef: CollectionReference, person
         notes: personData.notes,
         joinDate: personData.joinDate,
         lastPaymentDate: lastPaymentDate,
+        paymentBalance: paymentBalance,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     };
@@ -99,26 +99,31 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 
 export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff) => {
     const now = new Date();
+    // The new expiry date is always calculated from the last one, regardless of when the payment is made.
     const newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate || now);
+    const newPaymentBalance = (person.paymentBalance || 0) + 1;
 
     const paymentRecord = {
         personId: person.id,
         date: now, // The actual transaction date
         amount: tariff.price,
         tariffId: tariff.id,
-        months: 1, // We simplified this to always be 1 month
+        months: 1,
     };
     const batch = writeBatch(db);
 
     const paymentRef = doc(paymentsRef);
     batch.set(paymentRef, paymentRecord);
     
-    batch.update(personRef, { lastPaymentDate: newExpiryDate });
+    batch.update(personRef, { 
+        lastPaymentDate: newExpiryDate,
+        paymentBalance: newPaymentBalance,
+     });
 
     return await batch.commit();
 };
 
-export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, joinDate: Date) => {
+export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, joinDate: Date, currentPerson: Person) => {
     const batch = writeBatch(db);
 
     // 1. Find all payments for the person
@@ -138,22 +143,17 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     const lastPaymentRef = doc(paymentsRef, lastPayment.id);
     batch.delete(lastPaymentRef);
 
-    // 4. Determine the new lastPaymentDate
-    let newLastPaymentDate: Date;
-    if (allPayments.length > 1) {
-        // There was a previous payment, calculate expiry from it
-        const secondToLastPayment = allPayments[1];
-        if (!secondToLastPayment.date) {
-            throw new Error("El penúltimo pago tiene una fecha inválida.");
-        }
-        newLastPaymentDate = calculateNextPaymentDate(secondToLastPayment.date, joinDate);
-    } else {
-        // This was the only payment, so revert to the initial state (overdue)
-        newLastPaymentDate = joinDate;
-    }
+    // 4. Calculate the new lastPaymentDate by subtracting one month from the current one
+    const newLastPaymentDate = subMonths(currentPerson.lastPaymentDate || new Date(), 1);
 
-    // 5. Update the person's lastPaymentDate
-    batch.update(personRef, { lastPaymentDate: newLastPaymentDate });
+    // 5. Decrement the payment balance
+    const newPaymentBalance = (currentPerson.paymentBalance || 0) - 1;
+
+    // 6. Update the person's lastPaymentDate and paymentBalance
+    batch.update(personRef, { 
+        lastPaymentDate: newLastPaymentDate,
+        paymentBalance: newPaymentBalance
+    });
     
     return await batch.commit();
 };
