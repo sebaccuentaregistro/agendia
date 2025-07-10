@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Person, Payment, NewPersonData, Session, Actividad } from '@/types';
+import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -40,9 +40,6 @@ const personFormSchema = z.object({
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
-  joinDate: z.date({ required_error: "La fecha de alta es obligatoria." }),
-  initialPaymentStatus: z.enum(['al-dia', 'atrasado']),
-  monthsOwed: z.coerce.number().min(0).optional(),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -298,14 +295,9 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
         tariffId: '',
         healthInfo: '',
         notes: '',
-        joinDate: new Date(),
-        initialPaymentStatus: 'al-dia',
-        monthsOwed: 0,
     }
   });
   
-  const initialPaymentStatus = form.watch('initialPaymentStatus');
-
   useEffect(() => {
     if (open) {
         if (person) {
@@ -316,9 +308,6 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
-            joinDate: person.joinDate || new Date(),
-            initialPaymentStatus: 'al-dia', 
-            monthsOwed: 0,
           });
         } else {
           form.reset({
@@ -328,9 +317,6 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
             tariffId: '',
             healthInfo: '',
             notes: '',
-            joinDate: new Date(),
-            initialPaymentStatus: 'al-dia',
-            monthsOwed: 0,
           });
         }
     }
@@ -344,9 +330,6 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
         levelId: values.levelId === 'none' ? undefined : values.levelId,
         healthInfo: values.healthInfo,
         notes: values.notes,
-        joinDate: values.joinDate,
-        initialPaymentStatus: values.initialPaymentStatus,
-        monthsOwed: values.initialPaymentStatus === 'atrasado' ? values.monthsOwed : 0,
     };
     
     if (person) {
@@ -390,78 +373,6 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
                     </SelectContent>
                 </Select><FormMessage /></FormItem>
             )}/>
-             <FormField
-                control={form.control}
-                name="joinDate"
-                render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Fecha de Alta</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn("pl-3 text-left font-normal",!field.value && "text-muted-foreground")}
-                          >
-                            {field.value ? (format(field.value, "PPP", { locale: es })) : (<span>Elegir fecha</span>)}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                          initialFocus
-                        />
-                      </PopoverContent>
-                    </Popover>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            {!person && (
-                <FormField
-                  control={form.control}
-                  name="initialPaymentStatus"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3 rounded-lg border p-4">
-                      <FormLabel>Estado del Pago Inicial</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-1"
-                        >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="al-dia" /></FormControl>
-                            <FormLabel className="font-normal">Comienza al día</FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl><RadioGroupItem value="atrasado" /></FormControl>
-                            <FormLabel className="font-normal">Comienza con deuda</FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-            )}
-            {initialPaymentStatus === 'atrasado' && !person && (
-                <FormField
-                    control={form.control}
-                    name="monthsOwed"
-                    render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Meses adeudados</FormLabel>
-                        <FormControl><Input type="number" {...field} /></FormControl>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            )}
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
             )}/>
@@ -476,7 +387,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   );
 }
 
-function PersonCard({ person, sessions, actividades, onManageVacations, onEdit, onViewHistory, onManageEnrollments }: { person: Person, sessions: Session[], actividades: Actividad[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void }) {
+function PersonCard({ person, sessions, actividades, specialists, spaces, onManageVacations, onEdit, onViewHistory, onManageEnrollments }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void }) {
     const { tariffs, deletePerson, recordPayment, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -505,14 +416,21 @@ function PersonCard({ person, sessions, actividades, onManageVacations, onEdit, 
             .filter(s => s.personIds.includes(person.id))
             .map(s => {
                 const actividad = actividades.find(a => a.id === s.actividadId);
-                return { ...s, actividadName: actividad?.name || 'Clase' };
+                const specialist = specialists.find(sp => sp.id === s.instructorId);
+                const space = spaces.find(sp => sp.id === s.spaceId);
+                return { 
+                    ...s, 
+                    actividadName: actividad?.name || 'Clase',
+                    specialistName: specialist?.name || 'N/A',
+                    spaceName: space?.name || 'N/A'
+                };
             })
             .sort((a, b) => {
                 const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
                 if (dayComparison !== 0) return dayComparison;
                 return a.time.localeCompare(b.time);
             });
-    }, [sessions, actividades, person.id]);
+    }, [sessions, actividades, specialists, spaces, person.id]);
     
     return (
         <>
@@ -571,16 +489,17 @@ function PersonCard({ person, sessions, actividades, onManageVacations, onEdit, 
                      </div>
                      <div className="space-y-3 pt-4 border-t border-border/50">
                         <h4 className="font-semibold text-sm text-foreground">Inscripciones</h4>
-                        <ScrollArea className="h-24">
+                        <ScrollArea className="h-28">
                            <div className="space-y-2 pr-4">
                             {personSessions.length > 0 ? (
                                 personSessions.map(session => (
-                                    <div key={session.id} className="flex justify-between text-xs p-2 rounded-md bg-muted/50">
-                                        <div>
-                                            <p className="font-medium text-foreground">{session.actividadName}</p>
-                                            <p className="text-muted-foreground">{session.dayOfWeek}</p>
+                                    <div key={session.id} className="text-xs p-2 rounded-md bg-muted/50">
+                                        <p className="font-bold text-foreground">{session.actividadName}</p>
+                                        <p className="text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
+                                        <div className="flex items-center gap-4 mt-1 text-muted-foreground">
+                                          <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
+                                          <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{session.spaceName}</span>
                                         </div>
-                                        <p className="font-mono text-muted-foreground">{session.time}</p>
                                     </div>
                                 ))
                             ) : (
@@ -654,7 +573,7 @@ function PersonCard({ person, sessions, actividades, onManageVacations, onEdit, 
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces } = useStudio();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
@@ -802,6 +721,8 @@ function StudentsPageContent() {
                     person={person}
                     sessions={sessions}
                     actividades={actividades}
+                    specialists={specialists}
+                    spaces={spaces}
                     onManageVacations={setPersonForVacation}
                     onEdit={handleEditClick}
                     onViewHistory={setPersonForHistory}
