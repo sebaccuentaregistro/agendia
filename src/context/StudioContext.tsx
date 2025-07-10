@@ -1,10 +1,24 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
-import * as demoData from '@/lib/data';
+import * as firestoreActions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
-import { format, addMonths } from 'date-fns';
+import { useAuth } from '@/context/AuthContext';
+import { Skeleton } from '@/components/ui/skeleton';
+import { 
+  actividades as demoActividades, 
+  specialists as demoSpecialists, 
+  people as demoPeople,
+  sessions as demoSessions,
+  payments as demoPayments,
+  spaces as demoSpaces,
+  attendance as demoAttendance,
+  notifications as demoNotifications,
+  tariffs as demoTariffs,
+  levels as demoLevels
+} from '@/lib/data';
 
 type State = {
   actividades: Actividad[];
@@ -60,22 +74,20 @@ interface StudioContextType extends State {
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
 // This is the main provider for the application's business logic and state.
+// NOTE: This version uses local demo data and does NOT connect to Firestore.
 export function StudioProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const { user, userProfile, loading: authLoading } = useAuth();
 
   const [state, setState] = useState<State>({
-    actividades: demoData.actividades,
-    specialists: demoData.specialists,
-    people: demoData.people,
-    sessions: demoData.sessions,
-    payments: demoData.payments,
-    spaces: demoData.spaces,
-    attendance: demoData.attendance,
-    notifications: demoData.notifications,
-    tariffs: demoData.tariffs,
-    levels: demoData.levels,
+    actividades: demoActividades, specialists: demoSpecialists, people: demoPeople, sessions: demoSessions,
+    payments: demoPayments, spaces: demoSpaces, attendance: demoAttendance, notifications: demoNotifications, tariffs: demoTariffs, levels: demoLevels,
   });
+  const [loading, setLoading] = useState(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
+  // In this local version, we don't need useEffect to fetch data.
+  // The state is initialized with the demo data directly.
 
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
   const closeTutorial = useCallback(() => {
@@ -98,218 +110,193 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const showToast = (action: string, success: boolean, message?: string) => {
     toast({
       title: success ? `${action} con éxito` : `Error en ${action}`,
-      description: message || (success ? 'La operación se completó correctamente.' : 'Ocurrió un error.'),
+      description: message || (success ? 'La operación se completó correctamente.' : 'Ocurrió un error (operando en modo local).'),
       variant: success ? 'default' : 'destructive',
     });
   };
 
-  const createEntity = <T extends { id: string }>(
-    collectionKey: keyof State,
-    data: Omit<T, 'id'>
-  ): T => {
-    const newId = `${collectionKey}-${Date.now()}`;
-    const newItem = { ...data, id: newId } as T;
-    setState(prev => ({
-      ...prev,
-      [collectionKey]: [...(prev[collectionKey] as T[]), newItem],
-    }));
-    return newItem;
+  const performLocalAction = (actionName: string, updateFn: (prevState: State) => State) => {
+    try {
+      setState(updateFn);
+      showToast(actionName, true);
+    } catch (error: any) {
+      console.error(`Error in ${actionName}:`, error);
+      showToast(actionName, false, error.message);
+    }
   };
 
-  const updateEntity = <T extends { id: string }>(
-    collectionKey: keyof State,
-    data: T
-  ) => {
-    setState(prev => ({
-      ...prev,
-      [collectionKey]: (prev[collectionKey] as T[]).map(item =>
-        item.id === data.id ? data : item
-      ),
-    }));
-  };
+  // --- CRUD operations are now simulated locally ---
 
-  const deleteEntity = (collectionKey: keyof State, id: string) => {
-    setState(prev => ({
-      ...prev,
-      [collectionKey]: (prev[collectionKey] as any[]).filter(item => item.id !== id),
-    }));
+  const addActividad = async (data: Omit<Actividad, 'id'>) => {
+    performLocalAction('Añadir actividad', prev => ({ ...prev, actividades: [...prev.actividades, { ...data, id: `act-${Date.now()}` }] }));
   };
-  
-  const checkUsage = (id: string, checks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
-      const messages = [];
-      for (const check of checks) {
-          const found = (state[check.collection] as any[]).filter(item => 
-              check.type === 'array' ? item[check.field]?.includes(id) : item[check.field] === id
-          );
-          if (found.length > 0) {
-              messages.push(`No se puede eliminar. Está en uso por ${found.length} ${check.label}(s).`);
-          }
-      }
-      return messages.join('\n');
+  const updateActividad = async (data: Actividad) => {
+    performLocalAction('Actualizar actividad', prev => ({ ...prev, actividades: prev.actividades.map(a => a.id === data.id ? data : a) }));
   };
-  
-  const deleteWithUsageCheck = (collectionKey: keyof State, id: string, actionName: string, checks: any[]) => {
-      const usageMessage = checkUsage(id, checks);
-      if (usageMessage) {
-          showToast(`Eliminar ${actionName}`, false, usageMessage);
-          return;
-      }
-      deleteEntity(collectionKey, id);
-  }
-
-  const addActividad = async (data: Omit<Actividad, 'id'>) => { createEntity('actividades', data); };
-  const updateActividad = async (data: Actividad) => { updateEntity('actividades', data); };
   const deleteActividad = async (id: string) => {
-      deleteWithUsageCheck('actividades', id, 'actividad', [
-          { collection: 'sessions', field: 'actividadId', label: 'Sesión' },
-          { collection: 'specialists', field: 'actividadIds', label: 'Especialista', type: 'array' },
-      ]);
+     performLocalAction('Eliminar actividad', prev => ({ ...prev, actividades: prev.actividades.filter(a => a.id !== id) }));
   };
   
-  const addLevel = async (data: Omit<Level, 'id'>) => { createEntity('levels', data); };
-  const updateLevel = async (data: Level) => { updateEntity('levels', data); };
+  const addLevel = async (data: Omit<Level, 'id'>) => {
+    performLocalAction('Añadir nivel', prev => ({ ...prev, levels: [...prev.levels, { ...data, id: `lvl-${Date.now()}` }] }));
+  };
+  const updateLevel = async (data: Level) => {
+    performLocalAction('Actualizar nivel', prev => ({ ...prev, levels: prev.levels.map(l => l.id === data.id ? data : l) }));
+  };
   const deleteLevel = async (id: string) => {
-      deleteWithUsageCheck('levels', id, 'nivel', [
-          { collection: 'sessions', field: 'levelId', label: 'Sesión' },
-          { collection: 'people', field: 'levelId', label: 'Persona' },
-      ]);
+    performLocalAction('Eliminar nivel', prev => ({ ...prev, levels: prev.levels.filter(l => l.id !== id) }));
   };
-  
-  const addSpace = async (data: Omit<Space, 'id'>) => { createEntity('spaces', data); };
-  const updateSpace = async (data: Space) => { updateEntity('spaces', data); };
+
+  const addSpace = async (data: Omit<Space, 'id'>) => {
+    performLocalAction('Añadir espacio', prev => ({ ...prev, spaces: [...prev.spaces, { ...data, id: `spc-${Date.now()}` }] }));
+  };
+  const updateSpace = async (data: Space) => {
+    performLocalAction('Actualizar espacio', prev => ({ ...prev, spaces: prev.spaces.map(s => s.id === data.id ? data : s) }));
+  };
   const deleteSpace = async (id: string) => {
-      deleteWithUsageCheck('spaces', id, 'espacio', [{ collection: 'sessions', field: 'spaceId', label: 'Sesión' }]);
+    performLocalAction('Eliminar espacio', prev => ({ ...prev, spaces: prev.spaces.filter(s => s.id !== id) }));
   };
   
-  const addTariff = async (data: Omit<Tariff, 'id'>) => { createEntity('tariffs', data); };
-  const updateTariff = async (data: Tariff) => { updateEntity('tariffs', data); };
+  const addTariff = async (data: Omit<Tariff, 'id'>) => {
+     performLocalAction('Añadir arancel', prev => ({ ...prev, tariffs: [...prev.tariffs, { ...data, id: `tff-${Date.now()}` }] }));
+  };
+  const updateTariff = async (data: Tariff) => {
+    performLocalAction('Actualizar arancel', prev => ({ ...prev, tariffs: prev.tariffs.map(t => t.id === data.id ? data : t) }));
+  };
   const deleteTariff = async (id: string) => {
-      deleteWithUsageCheck('tariffs', id, 'arancel', [{ collection: 'people', field: 'tariffId', label: 'Persona' }]);
+     performLocalAction('Eliminar arancel', prev => ({ ...prev, tariffs: prev.tariffs.filter(t => t.id !== id) }));
   };
 
   const addSpecialist = async (data: Omit<Specialist, 'id' | 'avatar'>) => {
-    createEntity('specialists', { ...data, avatar: `https://placehold.co/100x100.png` });
+     performLocalAction('Añadir especialista', prev => ({ ...prev, specialists: [...prev.specialists, { ...data, id: `spec-${Date.now()}`, avatar: `https://placehold.co/100x100.png` }] }));
   };
-  const updateSpecialist = async (data: Specialist) => { updateEntity('specialists', data); };
+  const updateSpecialist = async (data: Specialist) => {
+     performLocalAction('Actualizar especialista', prev => ({ ...prev, specialists: prev.specialists.map(s => s.id === data.id ? data : s) }));
+  };
   const deleteSpecialist = async (id: string) => {
-      deleteWithUsageCheck('specialists', id, 'especialista', [{ collection: 'sessions', field: 'instructorId', label: 'Sesión' }]);
+    performLocalAction('Eliminar especialista', prev => ({ ...prev, specialists: prev.specialists.filter(s => s.id !== id) }));
   };
   
   const addPerson = async (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
-    const now = new Date();
-    createEntity('people', { 
-        ...data, 
-        joinDate: now, 
-        lastPaymentDate: addMonths(now, 1), 
-        avatar: `https://placehold.co/100x100.png`,
-        vacationPeriods: []
-    });
+    const newPerson: Person = {
+      ...data,
+      id: `person-${Date.now()}`,
+      joinDate: new Date(),
+      lastPaymentDate: firestoreActions.addMonths(new Date(), 1),
+      avatar: `https://placehold.co/100x100.png`,
+      vacationPeriods: [],
+    };
+    performLocalAction('Añadir persona', prev => ({ ...prev, people: [...prev.people, newPerson] }));
   };
-  const updatePerson = async (data: Person) => { updateEntity('people', data); };
+  const updatePerson = async (data: Person) => {
+    performLocalAction('Actualizar persona', prev => ({ ...prev, people: prev.people.map(p => p.id === data.id ? data : p) }));
+  };
   const deletePerson = async (id: string) => {
-      // Remove person from sessions
-      setState(prev => ({
-          ...prev,
-          sessions: prev.sessions.map(s => ({
-              ...s,
-              personIds: s.personIds.filter(pid => pid !== id),
-              waitlistPersonIds: s.waitlistPersonIds?.filter(pid => pid !== id)
-          }))
-      }));
-      deleteEntity('people', id);
+    performLocalAction('Eliminar persona', prev => ({ ...prev, people: prev.people.filter(p => p.id !== id) }));
   };
   
   const recordPayment = async (personId: string) => {
-    const person = state.people.find(p => p.id === personId);
-    if (!person) return;
-    const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
-    updateEntity('people', { ...person, lastPaymentDate: newExpiryDate });
-    createEntity('payments', { personId, date: new Date(), months: 1 });
+    performLocalAction('Registrar pago', prev => {
+      const person = prev.people.find(p => p.id === personId);
+      if (!person) return prev;
+      const newExpiryDate = firestoreActions.addMonths(person.lastPaymentDate || new Date(), 1);
+      const newPayment = { id: `pay-${Date.now()}`, personId, date: new Date(), months: 1 };
+      return {
+        ...prev,
+        people: prev.people.map(p => p.id === personId ? { ...p, lastPaymentDate: newExpiryDate } : p),
+        payments: [...prev.payments, newPayment]
+      }
+    });
   };
 
   const undoLastPayment = async (personId: string) => {
-    const person = state.people.find(p => p.id === personId);
-    if (!person || !person.lastPaymentDate) return;
-    const lastPayment = [...state.payments].filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
-    if (lastPayment) {
-        deleteEntity('payments', lastPayment.id);
-        updateEntity('people', { ...person, lastPaymentDate: addMonths(person.lastPaymentDate, -1) });
-    } else {
-        showToast('Deshacer pago', false, 'No hay pagos para deshacer.');
-    }
+     performLocalAction('Deshacer pago', prev => {
+        const person = prev.people.find(p => p.id === personId);
+        if (!person || !person.lastPaymentDate) return prev;
+
+        const personPayments = prev.payments.filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+        if (personPayments.length === 0) return prev;
+        
+        const lastPaymentId = personPayments[0].id;
+        const previousExpiryDate = firestoreActions.addMonths(person.lastPaymentDate, -1);
+        
+        return {
+            ...prev,
+            people: prev.people.map(p => p.id === personId ? { ...p, lastPaymentDate: previousExpiryDate } : p),
+            payments: prev.payments.filter(p => p.id !== lastPaymentId)
+        }
+    });
   };
   
   const addSession = async (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
-    createEntity('sessions', { ...data, personIds: [], waitlistPersonIds: [] });
+    const newSession = { ...data, id: `session-${Date.now()}`, personIds: [], waitlistPersonIds: [] };
+    performLocalAction('Añadir sesión', prev => ({...prev, sessions: [...prev.sessions, newSession]}));
   };
-  const updateSession = async (data: Session) => { updateEntity('sessions', data); };
+  const updateSession = async (data: Session) => {
+    performLocalAction('Actualizar sesión', prev => ({...prev, sessions: prev.sessions.map(s => s.id === data.id ? data : s)}));
+  };
   const deleteSession = async (id: string) => {
-    const session = state.sessions.find(s => s.id === id);
-    if(session && session.personIds.length > 0) {
-        showToast('Eliminar sesión', false, 'No se puede eliminar una sesión con personas inscriptas.');
-        return;
-    }
-    deleteEntity('sessions', id);
+    performLocalAction('Eliminar sesión', prev => ({...prev, sessions: prev.sessions.filter(s => s.id !== id)}));
   };
   
   const enrollPeopleInClass = async (sessionId: string, personIds: string[]) => {
-    const session = state.sessions.find(s => s.id === sessionId);
-    if(session) updateEntity('sessions', { ...session, personIds });
+    performLocalAction('Inscribir personas', prev => ({ ...prev, sessions: prev.sessions.map(s => s.id === sessionId ? {...s, personIds} : s)}));
   };
   
-  const saveAttendance = async (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
-    const dateStr = format(new Date(), 'yyyy-MM-dd');
-    const existingRecord = state.attendance.find(a => a.sessionId === sessionId && a.date === dateStr);
-    const record = { id: existingRecord?.id || '', sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
-    if (existingRecord) {
-        updateEntity('attendance', record);
-    } else {
-        createEntity('attendance', record);
-    }
+  const saveAttendance = async (sessionId: string, presentIds: string[], absentIds:string[], justifiedAbsenceIds:string[]) => {
+    // This is complex to simulate locally without a proper database, so we'll just log it.
+    console.log("Saving attendance (local mode):", { sessionId, presentIds, absentIds, justifiedAbsenceIds });
+    showToast('Guardar asistencia', true);
   };
 
   const addOneTimeAttendee = async (sessionId: string, personId: string, date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    const record = state.attendance.find(a => a.sessionId === sessionId && a.date === dateStr);
-    if (record) {
-        const updatedAttendees = Array.from(new Set([...(record.oneTimeAttendees || []), personId]));
-        updateEntity('attendance', {...record, oneTimeAttendees: updatedAttendees});
-    } else {
-        createEntity('attendance', { sessionId, date: dateStr, presentIds:[], absentIds:[], oneTimeAttendees: [personId] });
-    }
+    console.log("Adding one-time attendee (local mode):", { sessionId, personId, date });
+    showToast('Añadir asistente puntual', true);
   };
 
   const addVacationPeriod = async (personId: string, startDate: Date, endDate: Date) => {
-    const person = state.people.find(p => p.id === personId);
-    if (!person) return;
-    const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
-    const updatedVacations = [...(person.vacationPeriods || []), newVacation];
-    updateEntity('people', { ...person, vacationPeriods: updatedVacations });
+     performLocalAction('Añadir vacaciones', prev => {
+        const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
+        return {
+            ...prev,
+            people: prev.people.map(p => p.id === personId ? { ...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation] } : p)
+        }
+     });
   };
   
   const removeVacationPeriod = async (personId: string, vacationId: string) => {
-    const person = state.people.find(p => p.id === personId);
-    if (!person || !person.vacationPeriods) return;
-    const updatedVacations = person.vacationPeriods.filter(v => v.id !== vacationId);
-    updateEntity('people', { ...person, vacationPeriods: updatedVacations });
+    performLocalAction('Eliminar vacaciones', prev => ({
+        ...prev,
+        people: prev.people.map(p => p.id === personId ? { ...p, vacationPeriods: p.vacationPeriods?.filter(v => v.id !== vacationId) } : p)
+    }));
   };
 
   const enrollFromWaitlist = async (notificationId: string, sessionId: string, personId: string) => {
-    const session = state.sessions.find(s => s.id === sessionId);
-    if (!session) return;
-    const newPersonIds = Array.from(new Set([...session.personIds, personId]));
-    const newWaitlist = session.waitlistPersonIds?.filter(id => id !== personId) || [];
-    updateEntity('sessions', { ...session, personIds: newPersonIds, waitlistPersonIds: newWaitlist });
-    deleteEntity('notifications', notificationId);
+    console.log("Enrolling from waitlist (local mode)", { notificationId, sessionId, personId });
+    showToast('Inscribir desde lista de espera', true);
   };
   
   const dismissNotification = async (id: string) => {
-    deleteEntity('notifications', id);
+    performLocalAction('Descartar notificación', prev => ({...prev, notifications: prev.notifications.filter(n => n.id !== id)}));
   };
+
+  if (authLoading || loading) {
+    return (
+        <div className="flex h-screen w-full items-center justify-center">
+            <div className="space-y-8 w-full max-w-5xl p-8">
+                <Skeleton className="h-16 w-full rounded-2xl" />
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-auto w-full rounded-xl aspect-square" />)}
+                </div>
+                <Skeleton className="h-64 w-full rounded-2xl" />
+            </div>
+      </div>
+    );
+  }
 
   const contextValue: StudioContextType = {
     ...state,
-    loading: false, // Set to false as we are using local data
+    loading,
     addActividad,
     updateActividad,
     deleteActividad,

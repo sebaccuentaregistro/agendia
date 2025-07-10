@@ -6,7 +6,7 @@ import React, { createContext, useContext, ReactNode } from 'react';
 // It ensures the app thinks a user is logged in and has an institute.
 const dummyUser = { uid: 'dummy-user' };
 const dummyProfile = {
-    instituteId: 'dummy-institute-id',
+    instituteId: 'yogaflow-manager-uqjpc', // Using the actual project ID
     status: 'active',
 };
 
