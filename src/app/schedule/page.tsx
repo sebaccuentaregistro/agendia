@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -144,19 +143,41 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
 }
 
 function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
-  const { people, addOneTimeAttendee, actividades, attendance } = useStudio();
+  const { people, addOneTimeAttendee, actividades, attendance, spaces, isPersonOnVacation } = useStudio();
   const actividad = actividades.find(a => a.id === session.actividadId);
+  const space = spaces.find(s => s.id === session.spaceId);
+  const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-
+  
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
     resolver: zodResolver(oneTimeAttendeeSchema),
   });
+
+  const selectedDate = form.watch('date');
 
   const dayMap: { [key in Session['dayOfWeek']]: number } = useMemo(() => ({
     'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6,
   }), []);
 
   const sessionDayNumber = dayMap[session.dayOfWeek];
+
+  const { occupationMessage, isFull } = useMemo(() => {
+    if (!selectedDate) return { occupationMessage: '', isFull: false };
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
+    const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
+    const regularIdsOnVacation = session.personIds.filter(pid => {
+        const person = people.find(p => p.id === pid);
+        return person && isPersonOnVacation(person, selectedDate);
+    }).length;
+
+    const currentEnrollment = session.personIds.length - regularIdsOnVacation + oneTimeIds.length;
+    
+    return {
+      occupationMessage: `Ocupación para el ${format(selectedDate, 'dd/MM/yy')}: ${currentEnrollment}/${capacity}`,
+      isFull: currentEnrollment >= capacity,
+    }
+  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
   const eligiblePeople = useMemo(() => {
     const balances: Record<string, number> = {};
@@ -193,35 +214,7 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
             </DialogHeader>
             <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                        control={form.control}
-                        name="personId"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Persona</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                    <FormControl>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecciona una persona" />
-                                        </SelectTrigger>
-                                    </FormControl>
-                                    <SelectContent>
-                                        {eligiblePeople.length > 0 ? (
-                                          eligiblePeople.map(person => (
-                                            <SelectItem key={person.id} value={person.id}>
-                                              {person.name}
-                                            </SelectItem>
-                                          ))
-                                        ) : (
-                                          <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )}
-                    />
-                    <FormField
+                     <FormField
                         control={form.control}
                         name="date"
                         render={({ field }) => (
@@ -260,13 +253,48 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                                         />
                                     </PopoverContent>
                                 </Popover>
+                                {occupationMessage && (
+                                    <p className={cn("text-sm mt-1", isFull ? "text-destructive font-semibold" : "text-muted-foreground")}>
+                                        {occupationMessage}
+                                    </p>
+                                )}
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="personId"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Persona con recuperos pendientes</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedDate || isFull}>
+                                    <FormControl>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecciona una persona" />
+                                        </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                        {eligiblePeople.length > 0 ? (
+                                          eligiblePeople.map(person => (
+                                            <SelectItem key={person.id} value={person.id}>
+                                              {person.name}
+                                            </SelectItem>
+                                          ))
+                                        ) : (
+                                          <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                {!selectedDate && <p className="text-xs text-muted-foreground">Debes seleccionar una fecha para habilitar esta lista.</p>}
+                                {isFull && <p className="text-xs text-destructive">La clase está llena para la fecha seleccionada.</p>}
                                 <FormMessage />
                             </FormItem>
                         )}
                     />
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button type="submit">Añadir Asistente</Button>
+                        <Button type="submit" disabled={isFull || !form.formState.isValid}>Añadir Asistente</Button>
                     </DialogFooter>
                 </form>
             </Form>

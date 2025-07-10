@@ -1,4 +1,3 @@
-
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
@@ -198,11 +197,20 @@ export const saveAttendanceAction = async (attendanceRef: CollectionReference, s
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
     
     const snap = await getDocs(attendanceQuery);
-    const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
+    
     if (snap.empty) {
+        const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
         await addEntity(attendanceRef, record);
     } else {
-        await updateEntity(snap.docs[0].ref, record);
+        const docRef = snap.docs[0].ref;
+        const existingData = snap.docs[0].data() as SessionAttendance;
+        const updatedData = { 
+            ...existingData, 
+            presentIds, 
+            absentIds, 
+            justifiedAbsenceIds 
+        };
+        await updateEntity(docRef, updatedData);
     }
 };
 
@@ -226,7 +234,7 @@ export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReferenc
 
     const snap = await getDocs(attendanceQuery);
     if (snap.empty) {
-        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], oneTimeAttendees: [personId] });
+        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [], oneTimeAttendees: [personId] });
     } else {
         const record = snap.docs[0].data() as SessionAttendance;
         const updatedAttendees = Array.from(new Set([...(record.oneTimeAttendees || []), personId]));

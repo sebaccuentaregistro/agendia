@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -56,7 +55,10 @@ export function AttendanceSheet({ session, onClose }: { session: Session; onClos
             initialStatuses[personId] = 'absent';
         } else if (record?.justifiedAbsenceIds?.includes(personId)) {
             initialStatuses[personId] = 'justified';
+        } else if (record?.presentIds.includes(personId)) {
+            initialStatuses[personId] = 'present';
         } else {
+            // Default to present if no record exists for them yet
             initialStatuses[personId] = 'present';
         }
     });
