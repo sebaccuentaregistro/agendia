@@ -1,4 +1,3 @@
-
 import type { Config } from 'tailwindcss';
 
 const config: Config = {
@@ -72,10 +71,6 @@ const config: Config = {
         "accordion-up": "accordion-up 0.2s ease-out",
       },
     },
-  },
-  // Adding the JIT engine specification for compatibility
-  future: {
-    hoverOnlyWhenSupported: true,
   },
   plugins: [require("tailwindcss-animate")],
 }
