@@ -274,9 +274,6 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
                          <div className="flex justify-between items-baseline">
                            <p className="text-sm font-semibold opacity-90">
                                {tariff?.name || 'Sin arancel'}
-                               {tariff?.frequency && (
-                                 <span className="font-normal"> ({tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} p/semana)</span>
-                               )}
                             </p>
                             {tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>}
                         </div>

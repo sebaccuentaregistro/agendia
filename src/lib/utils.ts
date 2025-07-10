@@ -2,22 +2,37 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
-import { set, isBefore, addMonths, isAfter, differenceInDays, addDays, format } from "date-fns";
+import { set, isBefore, addMonths, isAfter, differenceInDays, addDays, format, getDate, getDaysInMonth } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// This function determines the next billing date based on the last payment.
-export function getNextPaymentDate(person: Person): Date | null {
-  // The 'lastPaymentDate' field now stores the date the membership is valid until.
-  // This date is effectively the next payment date.
-  return person.lastPaymentDate;
+/**
+ * Calculates the next payment date based on a starting date and the original join date.
+ * This ensures the billing day of the month remains consistent.
+ * @param fromDate The date to calculate from (e.g., the current expiry date or today).
+ * @param joinDate The original date the person joined, used to anchor the day of the month.
+ * @param monthsToAdd The number of months to add (can be negative to go back).
+ * @returns The new calculated payment date.
+ */
+export function calculateNextPaymentDate(fromDate: Date, joinDate: Date, monthsToAdd: number = 1): Date {
+  const fromDateInFuture = addMonths(fromDate, monthsToAdd);
+  let targetDay = getDate(joinDate);
+  const daysInNewMonth = getDaysInMonth(fromDateInFuture);
+
+  // If the join day is, e.g., the 31st, and the next month only has 30 days,
+  // we should use the last day of that month.
+  if (targetDay > daysInNewMonth) {
+    targetDay = daysInNewMonth;
+  }
+
+  return set(fromDateInFuture, { date: targetDay });
 }
 
 // This function checks if a person's payment is up-to-date.
 export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
-  const nextDueDate = getNextPaymentDate(person);
+  const nextDueDate = person.lastPaymentDate;
   
   // A person needs a due date to have a status. If not, they are up to date by default.
   if (!nextDueDate) {

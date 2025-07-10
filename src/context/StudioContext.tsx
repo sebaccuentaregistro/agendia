@@ -9,7 +9,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
-import { addMonths } from 'date-fns';
 
 type State = {
   actividades: Actividad[];
@@ -276,8 +275,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         toast({ title: 'Error', description: 'No se encontró a la persona.', variant: 'destructive' });
         return;
       }
-      const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
-      await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(getCollectionRef('payments'), getCollectionRef('people'), personId, newExpiryDate));
+      await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(getCollectionRef('payments'), getCollectionRef('people'), person));
   };
 
   const undoLastPayment = async (personId: string) => {
@@ -296,8 +294,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         return;
       }
       const lastPayment = personPayments[0];
-      const previousExpiryDate = addMonths(person.lastPaymentDate, -1);
-      await performFirestoreAction('Deshacer pago', () => firestoreActions.undoLastPaymentAction(getCollectionRef('payments'), getCollectionRef('people'), personId, lastPayment, previousExpiryDate));
+      
+      await performFirestoreAction('Deshacer pago', () => firestoreActions.undoLastPaymentAction(getCollectionRef('payments'), getCollectionRef('people'), person, lastPayment));
   };
   
   const addSession = async (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
