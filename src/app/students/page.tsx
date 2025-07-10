@@ -518,7 +518,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                         </div>
                      </div>
                      <div className="space-y-3 pt-4 border-t border-border/50">
-                        <h4 className="font-semibold text-sm text-foreground">Inscripciones</h4>
+                        <h4 className="font-semibold text-sm text-foreground">Horarios</h4>
                         <ScrollArea className="h-28">
                            <div className="space-y-2 pr-4">
                             {personSessions.length > 0 ? (
