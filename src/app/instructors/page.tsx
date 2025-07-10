@@ -110,7 +110,7 @@ export default function SpecialistsPage() {
               Añadir Especialista
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>{selectedSpecialist ? 'Editar Especialista' : 'Añadir Nuevo Especialista'}</DialogTitle>
             </DialogHeader>
@@ -121,12 +121,12 @@ export default function SpecialistsPage() {
                     control={form.control}
                     name="name"
                     render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Nombre</FormLabel>
+                      <FormItem>
+                        <FormLabel>Nombre</FormLabel>
                         <FormControl>
-                          <Input {...field} className="col-span-3" />
+                          <Input {...field} />
                         </FormControl>
-                        <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -134,12 +134,12 @@ export default function SpecialistsPage() {
                     control={form.control}
                     name="phone"
                     render={({ field }) => (
-                      <FormItem className="grid grid-cols-4 items-center gap-4">
-                        <FormLabel className="text-right">Teléfono</FormLabel>
+                      <FormItem>
+                        <FormLabel>Teléfono</FormLabel>
                         <FormControl>
-                          <Input type="tel" {...field} className="col-span-3" />
+                          <Input type="tel" {...field} />
                         </FormControl>
-                        <FormMessage className="col-span-4 pl-[calc(25%+1rem)]" />
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -147,9 +147,9 @@ export default function SpecialistsPage() {
                     control={form.control}
                     name="actividadIds"
                     render={() => (
-                      <FormItem className="grid grid-cols-4 items-start gap-4">
-                        <FormLabel className="text-right pt-2">Actividades</FormLabel>
-                        <div className="col-span-3 space-y-2">
+                      <FormItem>
+                        <FormLabel>Actividades</FormLabel>
+                        <div className="space-y-2">
                           {actividades.map((item) => (
                             <FormField
                               key={item.id}
@@ -197,11 +197,11 @@ export default function SpecialistsPage() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[210px] w-full rounded-2xl bg-white/30" />)}
         </div>
       ) : filteredSpecialists.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredSpecialists.map((specialist) => (
             <Card key={specialist.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
               <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">

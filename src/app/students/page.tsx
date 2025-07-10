@@ -432,7 +432,7 @@ function StudentsPageContent() {
             <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                     <Skeleton className="h-10 flex-grow rounded-xl" />
-                    <Skeleton className="h-10 w-full sm:w-[380px] rounded-lg" />
+                    <Skeleton className="h-10 w-full sm:w-auto sm:min-w-[380px] rounded-lg" />
                 </div>
             </Card>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

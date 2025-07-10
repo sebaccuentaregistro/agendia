@@ -507,7 +507,7 @@ function DashboardPageContent() {
                       <li 
                           key={session.id}
                           className={cn(
-                          "flex items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/50 dark:bg-zinc-800/50 border-white/20 shadow-md hover:shadow-lg",
+                          "flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-white/50 dark:bg-zinc-800/50 border-white/20 shadow-md hover:shadow-lg",
                           isFull && "bg-pink-500/20 border-pink-500/30",
                           isNearlyFull && "bg-amber-500/10 border-amber-500/20"
                           )}
@@ -519,7 +519,7 @@ function DashboardPageContent() {
                               <span className="flex items-center gap-1.5"><DoorOpen className="h-4 w-4" />{space?.name || 'N/A'}</span>
                           </div>
                           </div>
-                          <div className="flex items-center gap-2 text-right">
+                          <div className="flex items-center gap-2 text-right self-end sm:self-center">
                               <div>
                               <p className="font-bold text-primary">{formatTime(session.time)}</p>
                               <p className={cn(
@@ -594,5 +594,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-    
