@@ -453,7 +453,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
 }
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading } = useStudio();
+  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading, isPersonOnVacation, attendance } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
@@ -933,7 +933,17 @@ function SchedulePageContent() {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const isIndividual = session.sessionType === 'Individual';
                       const capacity = isIndividual ? 1 : space?.capacity || 0;
-                      const enrolledCount = session.personIds.filter(pid => people.some(p => p.id === pid)).length;
+                      
+                      const today = new Date();
+                      const todayStr = format(today, 'yyyy-MM-dd');
+                      const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+                      const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+                      const activeRegulars = session.personIds.filter(pid => {
+                          const person = people.find(p => p.id === pid);
+                          return person && !isPersonOnVacation(person, today);
+                      });
+                      const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+
                       const availableSpots = capacity - enrolledCount;
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
                       const isFull = availableSpots <= 0;
