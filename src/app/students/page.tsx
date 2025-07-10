@@ -439,9 +439,41 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                     paymentStatus === 'Al día' ? "bg-gradient-to-br from-primary to-fuchsia-600" : "bg-gradient-to-br from-red-500 to-orange-600"
                 )}>
                     <div className="flex items-start justify-between">
-                        <div>
-                            <CardTitle className="text-xl font-bold">{person.name}</CardTitle>
-                             <Badge variant="secondary" className={cn(
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <CardTitle className="text-xl font-bold">{person.name}</CardTitle>
+                                {person.healthInfo && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
+                                                <Heart className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-60">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Info de Salud</h4>
+                                                <p className="text-sm text-muted-foreground">{person.healthInfo}</p>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+                                {person.notes && (
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
+                                                <FileText className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-60">
+                                            <div className="space-y-2">
+                                                <h4 className="font-medium leading-none">Notas</h4>
+                                                <p className="text-sm text-muted-foreground">{person.notes}</p>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                )}
+                            </div>
+                            <Badge variant="secondary" className={cn(
                                 "font-semibold mt-1.5 border-0", 
                                 paymentStatus === 'Al día' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
                             )}>
@@ -508,36 +540,6 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                         </ScrollArea>
                     </div>
                      <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-                        {person.healthInfo && (
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive">
-                                        <Heart className="h-4 w-4" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-60">
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium leading-none">Info de Salud</h4>
-                                        <p className="text-sm text-muted-foreground">{person.healthInfo}</p>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        )}
-                        {person.notes && (
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                     <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-600/50 hover:bg-blue-600/10 hover:text-blue-600">
-                                        <FileText className="h-4 w-4" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-60">
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium leading-none">Notas</h4>
-                                        <p className="text-sm text-muted-foreground">{person.notes}</p>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        )}
                         {typeof person.paymentBalance === 'number' && person.paymentBalance < 0 && (
                              <Badge variant="destructive">Debe: {Math.abs(person.paymentBalance)} cuota(s)</Badge>
                         )}
