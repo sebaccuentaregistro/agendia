@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -299,7 +298,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           getCollectionRef('payments'),
           getDocRef('people', person.id),
           personId,
-          person.joinDate || new Date(),
           person
       ));
   }

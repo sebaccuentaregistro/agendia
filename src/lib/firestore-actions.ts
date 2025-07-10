@@ -38,7 +38,8 @@ export const deleteEntity = async (docRef: any) => {
 // Specific Actions
 export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
     const joinDate = new Date();
-    const lastPaymentDate = calculateNextPaymentDate(joinDate, joinDate);
+    // For a new person, the first payment is due one month from their join date.
+    const lastPaymentDate = calculateNextPaymentDate(joinDate);
 
     const newPerson = {
         name: personData.name,
@@ -49,9 +50,9 @@ export const addPersonAction = async (collectionRef: CollectionReference, person
         notes: personData.notes,
         joinDate: joinDate,
         lastPaymentDate: lastPaymentDate,
-        paymentBalance: 0,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
+        paymentBalance: 0, // All new members start with a balance of 0
     };
     
     return addEntity(collectionRef, newPerson);
@@ -90,8 +91,7 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff) => {
     const now = new Date();
     // The new expiry date is always calculated from the last one, regardless of when the payment is made.
-    const newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate || now);
-    const newPaymentBalance = (person.paymentBalance || 0) + 1;
+    const newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now);
 
     const paymentRecord = {
         personId: person.id,
@@ -107,13 +107,13 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
     
     batch.update(personRef, { 
         lastPaymentDate: newExpiryDate,
-        paymentBalance: newPaymentBalance,
+        paymentBalance: (person.paymentBalance || 0) + 1,
      });
 
     return await batch.commit();
 };
 
-export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, joinDate: Date, currentPerson: Person) => {
+export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, currentPerson: Person) => {
     const batch = writeBatch(db);
 
     // 1. Find all payments for the person
@@ -174,7 +174,8 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
     for (const sessionId of sessionsToAddTo) {
         const sessionRef = doc(sessionsRef, sessionId);
         // We need to fetch the session to safely add the person without removing others
-        const sessionDocSnap = await getDocs(query(sessionsRef, where('__name__', '==', sessionId)));
+        // A simple getDoc would be more efficient if we know the doc exists
+        const sessionDocSnap = await getDocs(query(sessionsRef, where('__name__', '==', sessionId), limit(1)));
         if (!sessionDocSnap.empty) {
             const sessionData = sessionDocSnap.docs[0].data() as Session;
             const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));

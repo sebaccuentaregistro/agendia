@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
@@ -9,50 +8,55 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Calculates the next payment date based on a starting date and the original join date.
- * This ensures the billing day of the month remains consistent.
+ * Calculates the next payment date based on a starting date.
+ * If the original join date is provided, it tries to maintain the same day of the month.
  * @param fromDate The date to calculate from (e.g., the current expiry date or today).
- * @param joinDate The original date the person joined, used to anchor the day of the month.
+ * @param joinDate The original date the person joined, used to anchor the day of the month. (Optional)
  * @param monthsToAdd The number of months to add (can be negative to go back).
  * @returns The new calculated payment date.
  */
-export function calculateNextPaymentDate(fromDate: Date, joinDate: Date, monthsToAdd: number = 1): Date {
+export function calculateNextPaymentDate(fromDate: Date, joinDate?: Date | null, monthsToAdd: number = 1): Date {
   const fromDateInFuture = addMonths(fromDate, monthsToAdd);
-  let targetDay = getDate(joinDate);
-  const daysInNewMonth = getDaysInMonth(fromDateInFuture);
+  
+  if (joinDate) {
+    let targetDay = getDate(joinDate);
+    const daysInNewMonth = getDaysInMonth(fromDateInFuture);
 
-  // If the join day is, e.g., the 31st, and the next month only has 30 days,
-  // we should use the last day of that month.
-  if (targetDay > daysInNewMonth) {
-    targetDay = daysInNewMonth;
+    if (targetDay > daysInNewMonth) {
+      targetDay = daysInNewMonth;
+    }
+    return set(fromDateInFuture, { date: targetDay });
   }
 
-  return set(fromDateInFuture, { date: targetDay });
+  // If no join date, just add the months
+  return fromDateInFuture;
 }
+
 
 // This function checks if a person's payment is up-to-date.
 export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
   const nextDueDate = person.lastPaymentDate;
   
   if (!nextDueDate) {
-    return 'Al día';
+    // If there's no payment date, they are considered up-to-date unless they have a negative balance.
+    return (person.paymentBalance ?? 0) < 0 ? 'Atrasado' : 'Al día';
   }
   
   if (!(nextDueDate instanceof Date) || isNaN(nextDueDate.getTime())) {
     console.warn(`Invalid 'lastPaymentDate' for person ${person.id}:`, nextDueDate);
-    return 'Atrasado';
+    return 'Atrasado'; // Treat invalid dates as overdue.
   }
   
   const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
-  const isOverdueByTime = isAfter(today, nextDueDate);
-  const hasDebt = (person.paymentBalance ?? 0) < 0;
 
-  if (hasDebt) {
-    return 'Atrasado';
+  // A person is overdue if their next payment date has passed AND their balance isn't positive.
+  if (isAfter(today, nextDueDate) && (person.paymentBalance ?? 0) <= 0) {
+     return 'Atrasado';
   }
   
-  if (isOverdueByTime && (person.paymentBalance ?? 0) <= 0) {
-     return 'Atrasado';
+  // Also, if their balance is negative, they are overdue regardless of the date.
+  if ((person.paymentBalance ?? 0) < 0) {
+    return 'Atrasado';
   }
   
   return 'Al día';

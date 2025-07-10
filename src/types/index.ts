@@ -47,8 +47,7 @@ export type Person = {
   healthInfo?: string;
   levelId?: string;
   notes?: string;
-  paymentHistory?: string[]; // Array of payment IDs
-  paymentBalance?: number; // 0 = up to date, < 0 = debt, > 0 = credit
+  paymentBalance?: number;
 };
 
 export type NewPersonData = {

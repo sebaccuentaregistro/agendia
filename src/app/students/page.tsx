@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -549,7 +548,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
                 </CardContent>
                 
                 <CardFooter className="p-2 border-t mt-auto">
-                    <Button onClick={() => recordPayment(person.id, 1)} className="w-full font-bold">
+                    <Button onClick={() => recordPayment(person.id)} className="w-full font-bold">
                         Registrar Pago
                     </Button>
                 </CardFooter>
