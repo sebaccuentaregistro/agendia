@@ -1,3 +1,4 @@
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
@@ -125,7 +126,7 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     }
 
     // 2. Sort payments by date locally to find the latest one
-    const allPayments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as Payment }))
+    const allPayments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment))
         .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
 
     // 3. Delete the most recent payment
