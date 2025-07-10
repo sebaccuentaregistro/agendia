@@ -50,9 +50,9 @@ export type Person = {
   paymentHistory?: string[]; // Array of payment IDs
 };
 
-export type NewPersonData = Omit<Person, 'id' | 'avatar' | 'lastPaymentDate' | 'vacationPeriods' | 'paymentHistory'> & {
+export type NewPersonData = Omit<Person, 'id' | 'avatar' | 'vacationPeriods' | 'paymentHistory'> & {
     joinDate: Date;
-    initialPaymentStatus: 'paid' | 'unpaid';
+    lastPaymentDate: Date;
 };
 
 

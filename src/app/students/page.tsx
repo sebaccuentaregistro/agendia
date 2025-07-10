@@ -36,11 +36,11 @@ const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   phone: z.string().min(7, { message: 'Por favor, introduce un número de teléfono válido.' }),
   joinDate: z.date({ required_error: 'La fecha de alta es obligatoria.' }),
+  lastPaymentDate: z.date({ required_error: 'La fecha de vencimiento es obligatoria.' }),
   levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
-  initialPaymentStatus: z.enum(['paid', 'unpaid']).default('paid'),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -198,23 +198,22 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
             name: person.name,
             phone: person.phone,
             joinDate: person.joinDate ? new Date(person.joinDate) : new Date(),
+            lastPaymentDate: person.lastPaymentDate ? new Date(person.lastPaymentDate) : new Date(),
             levelId: person.levelId || 'none',
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
-            initialPaymentStatus: 'paid', // When editing, this field is not used
           });
         } else {
-          form.reset({ name: '', phone: '', joinDate: new Date(), levelId: 'none', tariffId: '', healthInfo: '', notes: '', initialPaymentStatus: 'paid' });
+          const today = new Date();
+          form.reset({ name: '', phone: '', joinDate: today, lastPaymentDate: today, levelId: 'none', tariffId: '', healthInfo: '', notes: ''});
         }
     }
   }, [person, open, form]);
 
   const onSubmit = (values: PersonFormData) => {
     if (person) {
-      // Don't pass initialPaymentStatus on updates
-      const { initialPaymentStatus, ...updateValues } = values;
-      updatePerson({ ...person, ...updateValues });
+      updatePerson({ ...person, ...values });
     } else {
       addPerson(values);
       setActiveFilter('all');
@@ -249,7 +248,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
                   </FormItem>
               )}/>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+             <div className="grid grid-cols-2 gap-4">
                <FormField control={form.control} name="tariffId" render={({ field }) => (
                 <FormItem><FormLabel>Arancel</FormLabel><Select onValueChange={field.onChange} value={field.value}>
                     <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
@@ -267,40 +266,32 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
               )}/>
             </div>
             {!person && (
-                 <FormField
-                    control={form.control}
-                    name="initialPaymentStatus"
-                    render={({ field }) => (
-                      <FormItem className="space-y-3">
-                        <FormLabel>¿Iniciar con el pago al día?</FormLabel>
+              <FormField
+                control={form.control}
+                name="lastPaymentDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Fecha de Vencimiento del Próximo Pago</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
                         <FormControl>
-                          <RadioGroup
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            className="flex gap-4"
-                          >
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="paid" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                Sí, comenzar al día
-                              </FormLabel>
-                            </FormItem>
-                            <FormItem className="flex items-center space-x-3 space-y-0">
-                              <FormControl>
-                                <RadioGroupItem value="unpaid" />
-                              </FormControl>
-                              <FormLabel className="font-normal">
-                                No, comenzar como atrasado
-                              </FormLabel>
-                            </FormItem>
-                          </RadioGroup>
+                          <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
+                            {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
                         </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                    <DialogDescription className="text-xs pt-1">
+                      Para un alumno nuevo, elige un mes después de su alta. Para uno migrado, indica cuándo vencería su próximo pago.
+                    </DialogDescription>
+                  </FormItem>
+                )}
+              />
             )}
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>

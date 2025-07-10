@@ -38,18 +38,8 @@ export const deleteEntity = async (docRef: any) => {
 
 // Specific Actions
 export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
-    const { joinDate, initialPaymentStatus, ...rest } = personData;
-    
-    // If 'paid', the next due date is 1 month after joining.
-    // If 'unpaid', the due date is the join date itself, making them immediately overdue.
-    const initialExpiryDate = initialPaymentStatus === 'paid'
-        ? calculateNextPaymentDate(joinDate, joinDate, 1)
-        : joinDate;
-
     const newPerson = {
-        ...rest,
-        joinDate: joinDate,
-        lastPaymentDate: initialExpiryDate,
+        ...personData,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     };
