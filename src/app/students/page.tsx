@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -281,7 +280,9 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
                             </p>
                             {tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>}
                         </div>
-                        <p className="text-xs opacity-80 mt-1">INSCRIPCIÓN: {person.joinDate ? format(person.joinDate, 'dd/MM/yyyy') : 'N/A'}</p>
+                         {person.lastPaymentDate && (
+                            <p className="text-xs opacity-80 mt-1">Vence: {format(person.lastPaymentDate, 'dd/MM/yyyy')}</p>
+                         )}
                     </div>
                 </div>
 
@@ -474,11 +475,11 @@ function StudentsPageContent() {
       </Card>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
           {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[350px] w-full rounded-2xl" />)}
         </div>
       ) : filteredPeople.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
             {filteredPeople.map((person) => (
                 <PersonCard 
                     key={person.id} 
