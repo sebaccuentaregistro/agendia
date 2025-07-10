@@ -212,7 +212,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
 }
 
 function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void }) {
-    const { tariffs, deletePerson, recordPayment, undoLastPayment, sessions, actividades, specialists, spaces } = useStudio();
+    const { tariffs, deletePerson, recordPayment, undoLastPayment, sessions, actividades, specialists, spaces, isPersonOnVacation, levels } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     
     const tariff = tariffs.find(t => t.id === person.tariffId);
@@ -227,15 +227,23 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
                 const space = spaces.find(sp => sp.id === s.spaceId);
                 return { ...s, actividadName: actividad?.name, specialistName: specialist?.name, spaceName: space?.name };
             })
-            .sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+            .sort((a,b) => {
+                const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+                return dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek) || a.time.localeCompare(b.time)
+            });
     }, [sessions, person.id, actividades, specialists, spaces]);
 
     return (
         <>
-            <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+            <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
                 <div className="p-4 text-white bg-gradient-to-br from-primary to-fuchsia-600">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-xl font-bold">{person.name}</h3>
+                    <div className="flex items-start justify-between mb-2">
+                        <div>
+                            <h3 className="text-xl font-bold">{person.name}</h3>
+                            <Badge variant="secondary" className={cn("font-semibold mt-1 border-0", paymentStatus === 'Al día' ? 'bg-green-400/80 text-green-900' : 'bg-destructive/80 text-destructive-foreground')}>
+                                {paymentStatus}
+                            </Badge>
+                        </div>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20 -mr-2 flex-shrink-0"><MoreVertical className="h-4 w-4" /></Button>
@@ -251,16 +259,19 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                     <Badge variant="secondary" className={cn("font-semibold mb-3 border-0", paymentStatus === 'Al día' ? 'bg-green-400/80 text-green-900' : 'bg-destructive/80 text-destructive-foreground')}>
-                        {paymentStatus}
-                    </Badge>
-                    <div>
-                        <p className="text-sm font-semibold opacity-90">{tariff?.name || 'Sin arancel'}</p>
+                     
+                    <div className="mt-2">
+                        <p className="text-sm font-semibold opacity-90">
+                           {tariff?.name || 'Sin arancel'}
+                           {tariff?.frequency && (
+                             <span className="font-normal"> ({tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} p/semana)</span>
+                           )}
+                        </p>
                         <p className="text-xs opacity-80">INSCRIPCIÓN: {person.joinDate ? format(person.joinDate, 'dd/MM/yyyy') : 'N/A'}</p>
                     </div>
                 </div>
 
-                <div className="p-4 bg-background flex-grow">
+                <div className="p-4 flex-grow">
                     <div className="space-y-4">
                         <div>
                             <div className="flex justify-between items-center mb-2">
