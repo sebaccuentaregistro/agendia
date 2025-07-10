@@ -40,9 +40,11 @@ export const deleteEntity = async (docRef: any) => {
 export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
     const { joinDate, initialPaymentStatus, ...rest } = personData;
     
-    // If the person starts as unpaid, their "next payment date" is in the past, so they appear as overdue.
-    const monthsToAdd = initialPaymentStatus === 'paid' ? 1 : -1;
-    const initialExpiryDate = calculateNextPaymentDate(joinDate, joinDate, monthsToAdd);
+    // If 'paid', the next due date is 1 month after joining.
+    // If 'unpaid', the due date is the join date itself, making them immediately overdue.
+    const initialExpiryDate = initialPaymentStatus === 'paid'
+        ? calculateNextPaymentDate(joinDate, joinDate, 1)
+        : joinDate;
 
     const newPerson = {
         ...rest,
@@ -135,8 +137,8 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
         }
         newLastPaymentDate = calculateNextPaymentDate(secondToLastPayment.date, joinDate);
     } else {
-        // This was the only payment, so revert to the initial state
-        newLastPaymentDate = calculateNextPaymentDate(joinDate, joinDate, -1);
+        // This was the only payment, so revert to the initial state (overdue)
+        newLastPaymentDate = joinDate;
     }
 
     // 5. Update the person's lastPaymentDate
