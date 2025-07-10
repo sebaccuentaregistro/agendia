@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2 } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -17,7 +17,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
+import { getStudentPaymentStatus, exportToCsv, calculateNextPaymentDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSearchParams } from 'next/navigation';
@@ -328,7 +328,7 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
                     </div>
                 </CardHeader>
 
-                <CardContent className="p-4 flex-grow">
+                <CardContent className="p-4 flex-grow space-y-4">
                      <div className="space-y-2">
                         <h4 className="font-semibold text-sm text-foreground">Contacto</h4>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -338,6 +338,38 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
                                 <span className="sr-only">Enviar WhatsApp a {person.name}</span>
                             </a>
                         </div>
+                     </div>
+                     <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                        {person.healthInfo && (
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" size="icon" className="h-8 w-8 text-destructive border-destructive/50 hover:bg-destructive/10 hover:text-destructive">
+                                        <Heart className="h-4 w-4" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-60">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium leading-none">Info de Salud</h4>
+                                        <p className="text-sm text-muted-foreground">{person.healthInfo}</p>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                        {person.notes && (
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                     <Button variant="outline" size="icon" className="h-8 w-8 text-blue-600 border-blue-600/50 hover:bg-blue-600/10 hover:text-blue-600">
+                                        <FileText className="h-4 w-4" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-60">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium leading-none">Notas</h4>
+                                        <p className="text-sm text-muted-foreground">{person.notes}</p>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        )}
                      </div>
                 </CardContent>
                 
