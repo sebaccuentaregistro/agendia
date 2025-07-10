@@ -233,10 +233,7 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
     return (
         <>
             <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <div className={cn(
-                    "p-4 text-white",
-                    paymentStatus === 'Al día' ? 'bg-gradient-to-br from-primary to-fuchsia-600' : 'bg-gradient-to-br from-destructive to-orange-600'
-                )}>
+                <div className="p-4 text-white bg-gradient-to-br from-primary to-fuchsia-600">
                     <div className="flex items-center justify-between mb-2">
                         <h3 className="text-xl font-bold">{person.name}</h3>
                         <DropdownMenu>
@@ -254,7 +251,7 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                     <Badge variant="secondary" className="bg-white/20 text-white border-0 font-semibold mb-3">
+                     <Badge variant="secondary" className={cn("font-semibold mb-3 border-0", paymentStatus === 'Al día' ? 'bg-green-400/80 text-green-900' : 'bg-destructive/80 text-destructive-foreground')}>
                         {paymentStatus}
                     </Badge>
                     <div>
