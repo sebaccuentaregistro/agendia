@@ -218,6 +218,14 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const paymentStatus = getStudentPaymentStatus(person, new Date());
     
+    const formatPrice = (price: number) => {
+      return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+      }).format(price);
+    };
+    
     const enrolledSessions = useMemo(() => {
         return sessions
             .filter(s => s.personIds.includes(person.id))
@@ -236,7 +244,10 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
     return (
         <>
             <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <div className="p-4 text-white bg-gradient-to-br from-primary to-fuchsia-600">
+                <div className={cn(
+                    "p-4 text-white",
+                    "bg-gradient-to-br from-primary to-fuchsia-600"
+                )}>
                     <div className="flex items-start justify-between mb-2">
                         <div>
                             <h3 className="text-xl font-bold">{person.name}</h3>
@@ -261,13 +272,16 @@ function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onM
                     </div>
                      
                     <div className="mt-2">
-                        <p className="text-sm font-semibold opacity-90">
-                           {tariff?.name || 'Sin arancel'}
-                           {tariff?.frequency && (
-                             <span className="font-normal"> ({tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} p/semana)</span>
-                           )}
-                        </p>
-                        <p className="text-xs opacity-80">INSCRIPCIÓN: {person.joinDate ? format(person.joinDate, 'dd/MM/yyyy') : 'N/A'}</p>
+                         <div className="flex justify-between items-baseline">
+                           <p className="text-sm font-semibold opacity-90">
+                               {tariff?.name || 'Sin arancel'}
+                               {tariff?.frequency && (
+                                 <span className="font-normal"> ({tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} p/semana)</span>
+                               )}
+                            </p>
+                            {tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>}
+                        </div>
+                        <p className="text-xs opacity-80 mt-1">INSCRIPCIÓN: {person.joinDate ? format(person.joinDate, 'dd/MM/yyyy') : 'N/A'}</p>
                     </div>
                 </div>
 
