@@ -37,7 +37,7 @@ export const deleteEntity = async (docRef: any) => {
 
 
 // Specific Actions
-export const addPersonAction = async (collectionRef: CollectionReference, personData: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+export const addPersonAction = async (collectionRef: CollectionReference, personData: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods' | 'paymentHistory'>) => {
     const now = new Date();
     const newPerson = {
         ...personData,
@@ -103,29 +103,29 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
 
 export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, joinDate: Date) => {
     const batch = writeBatch(db);
-    
-    // 1. Find the two most recent payments for the person
-    const q = query(
-        paymentsRef,
-        where('personId', '==', personId),
-        orderBy('date', 'desc'),
-        limit(2)
-    );
+
+    // 1. Find all payments for the person
+    const q = query(paymentsRef, where('personId', '==', personId));
     const paymentsSnap = await getDocs(q);
 
     if (paymentsSnap.empty) {
         throw new Error("No hay pagos para revertir para esta persona.");
     }
 
-    // 2. Delete the most recent payment
-    const lastPaymentDoc = paymentsSnap.docs[0];
-    batch.delete(lastPaymentDoc.ref);
+    // 2. Sort payments by date locally to find the latest one
+    const allPayments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() as Payment }))
+        .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
 
-    // 3. Determine the new lastPaymentDate
+    // 3. Delete the most recent payment
+    const lastPayment = allPayments[0];
+    const lastPaymentRef = doc(paymentsRef, lastPayment.id);
+    batch.delete(lastPaymentRef);
+
+    // 4. Determine the new lastPaymentDate
     let newLastPaymentDate: Date;
-    if (paymentsSnap.docs.length > 1) {
+    if (allPayments.length > 1) {
         // There was a previous payment, calculate expiry from it
-        const secondToLastPayment = paymentsSnap.docs[1].data() as Payment;
+        const secondToLastPayment = allPayments[1];
         if (!secondToLastPayment.date) {
             throw new Error("El penúltimo pago tiene una fecha inválida.");
         }
@@ -135,7 +135,7 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
         newLastPaymentDate = calculateNextPaymentDate(joinDate, joinDate);
     }
 
-    // 4. Update the person's lastPaymentDate
+    // 5. Update the person's lastPaymentDate
     batch.update(personRef, { lastPaymentDate: newLastPaymentDate });
     
     return await batch.commit();
