@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, HeartPulse, StickyNote } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, HeartPulse, StickyNote, Star, MapPin } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Person } from '@/types';
+import type { Person, Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -211,75 +211,106 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   );
 }
 
-function PersonCard({ person, recoveryBalance, onManageVacations, onEdit }: { person: Person, recoveryBalance: number, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void }) {
-    const { tariffs, levels, deletePerson, recordPayment, undoLastPayment } = useStudio();
+function PersonCard({ person, onManageVacations, onEdit }: { person: Person, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void }) {
+    const { tariffs, deletePerson, recordPayment, undoLastPayment, sessions, actividades, specialists, spaces } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     
     const tariff = tariffs.find(t => t.id === person.tariffId);
-    const level = levels.find(l => l.id === person.levelId);
     const paymentStatus = getStudentPaymentStatus(person, new Date());
-    const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
+    
+    const enrolledSessions = useMemo(() => {
+        return sessions
+            .filter(s => s.personIds.includes(person.id))
+            .map(s => {
+                const actividad = actividades.find(a => a.id === s.actividadId);
+                const specialist = specialists.find(sp => sp.id === s.instructorId);
+                const space = spaces.find(sp => sp.id === s.spaceId);
+                return { ...s, actividadName: actividad?.name, specialistName: specialist?.name, spaceName: space?.name };
+            })
+            .sort((a,b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+    }, [sessions, person.id, actividades, specialists, spaces]);
 
     return (
         <>
-            <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-                <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
-                    <div className="flex-1">
-                        <CardTitle className="text-slate-800 dark:text-slate-100 text-lg">{person.name}</CardTitle>
-                        <Badge variant={paymentStatus === 'Al día' ? 'default' : 'destructive'} className={cn('mt-2', paymentStatus === 'Al día' && 'bg-green-600 hover:bg-green-700')}>
-                            <span className="mr-1.5 h-2 w-2 rounded-full bg-white" />
-                            {paymentStatus}
-                        </Badge>
+            <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
+                <div className={cn(
+                    "p-4 text-white",
+                    paymentStatus === 'Al día' ? 'bg-gradient-to-br from-primary to-fuchsia-600' : 'bg-gradient-to-br from-destructive to-orange-600'
+                )}>
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-xl font-bold">{person.name}</h3>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20 -mr-2 flex-shrink-0"><MoreVertical className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onManageVacations(person)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => recordPayment(person.id)}>Registrar Pago</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => undoLastPayment(person.id)}>Deshacer Pago</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 flex-shrink-0"><MoreVertical className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
-                             <DropdownMenuItem onSelect={() => onManageVacations(person)}>
-                                <Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => recordPayment(person.id)}>Registrar Pago</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => undoLastPayment(person.id)}>Deshacer Pago</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />Eliminar
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </CardHeader>
-                <CardContent className="p-4 pt-2 flex-grow text-sm space-y-3">
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                      <span>{person.phone}</span>
-                      <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                          <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                          <span className="sr-only">Enviar WhatsApp</span>
-                      </a>
+                     <Badge variant="secondary" className="bg-white/20 text-white border-0 font-semibold mb-3">
+                        {paymentStatus}
+                    </Badge>
+                    <div>
+                        <p className="text-sm font-semibold opacity-90">{tariff?.name || 'Sin arancel'}</p>
+                        <p className="text-xs opacity-80">INSCRIPCIÓN: {person.joinDate ? format(person.joinDate, 'dd/MM/yyyy') : 'N/A'}</p>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                        {tariff && <Badge variant="secondary">{tariff.name}</Badge>}
-                        {level && <Badge variant="outline">{level.name}</Badge>}
-                        {recoveryBalance > 0 && <Badge variant="outline" className="border-yellow-500 text-yellow-600 dark:text-yellow-400 bg-yellow-500/10"><CalendarClock className="mr-1.5 h-3 w-3"/>{recoveryBalance} recupero(s)</Badge>}
-                    </div>
-                     {(person.healthInfo || person.notes) && <div className="space-y-2 pt-3 border-t border-white/20 mt-3">
-                        {person.healthInfo && (
-                            <div className="flex items-start gap-2.5 text-amber-700 dark:text-amber-400">
-                                <HeartPulse className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                <p className="text-xs">{person.healthInfo}</p>
-                            </div>
-                        )}
-                        {person.notes && (
-                            <div className="flex items-start gap-2.5 text-slate-600 dark:text-slate-400">
-                                <StickyNote className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                                <p className="text-xs">{person.notes}</p>
-                            </div>
-                        )}
-                    </div>}
-                </CardContent>
-            </Card>
+                </div>
 
+                <div className="p-4 bg-background flex-grow">
+                    <div className="space-y-4">
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-semibold text-sm text-foreground">Horarios Inscriptos</h4>
+                                <Badge variant="secondary" className="bg-primary/10 text-primary">{enrolledSessions.length}</Badge>
+                            </div>
+                            {enrolledSessions.length > 0 ? (
+                                <div className="space-y-2">
+                                    {enrolledSessions.map(session => (
+                                        <div key={session.id} className="p-2 rounded-md bg-muted/50 text-xs">
+                                            <p className="font-bold text-foreground">{session.actividadName}</p>
+                                            <div className="flex items-center justify-between text-muted-foreground">
+                                                <span>{session.dayOfWeek}, {session.time}</span>
+                                                <div className="flex items-center gap-2">
+                                                  <span>{session.specialistName}</span>
+                                                  <span className="flex items-center gap-1"><MapPin className="h-3 w-3"/>{session.spaceName}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground text-center py-2">No está inscripto en ninguna clase.</p>
+                            )}
+                        </div>
+
+                        <div>
+                             <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-semibold text-sm text-foreground">Períodos de Vacaciones</h4>
+                                <Badge variant="secondary">{person.vacationPeriods?.length || 0}</Badge>
+                            </div>
+                             {(person.vacationPeriods && person.vacationPeriods.length > 0) ? (
+                                <div className="space-y-2">
+                                {person.vacationPeriods.map(vac => (
+                                    <div key={vac.id} className="p-2 rounded-md bg-muted/50 text-xs text-center">
+                                        <p className="font-semibold text-muted-foreground">{vac.startDate ? format(vac.startDate, 'dd MMM') : 'N/A'} - {vac.endDate ? format(vac.endDate, 'dd MMM') : 'N/A'}</p>
+                                    </div>
+                                ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-muted-foreground text-center py-2">Sin vacaciones registradas.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </Card>
+            
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará a la persona y todas sus inscripciones.</AlertDialogDescription></AlertDialogHeader>
@@ -382,8 +413,8 @@ function StudentsPageContent() {
                     <Skeleton className="h-10 w-full sm:w-[380px] rounded-lg" />
                 </div>
             </Card>
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[218px] w-full rounded-2xl" />)}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[218px] w-full rounded-2xl" />)}
             </div>
       </div>
     )
@@ -421,16 +452,15 @@ function StudentsPageContent() {
       </Card>
 
       {loading ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[218px] w-full rounded-2xl" />)}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[350px] w-full rounded-2xl" />)}
         </div>
       ) : filteredPeople.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredPeople.map((person) => (
                 <PersonCard 
                     key={person.id} 
                     person={person}
-                    recoveryBalance={recoveryBalances[person.id] || 0}
                     onManageVacations={setPersonForVacation}
                     onEdit={handleEditClick}
                 />
