@@ -286,9 +286,9 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
                     <div className="flex items-start justify-between">
                         <div>
                             <CardTitle className="text-xl font-bold">{person.name}</CardTitle>
-                            <Badge variant="secondary" className={cn(
+                             <Badge variant="secondary" className={cn(
                                 "font-semibold mt-1.5 border-0", 
-                                paymentStatus === 'Al día' ? 'bg-primary/80 text-primary-foreground' : 'bg-destructive/80 text-destructive-foreground'
+                                paymentStatus === 'Al día' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
                             )}>
                                 {paymentStatus}
                             </Badge>
@@ -537,3 +537,5 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
+    
