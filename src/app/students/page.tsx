@@ -281,14 +281,14 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
             <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
                 <CardHeader className={cn(
                     "p-4 text-white",
-                    paymentStatus === 'Al día' ? "bg-gradient-to-br from-green-500 to-teal-600" : "bg-gradient-to-br from-red-500 to-orange-600"
+                    paymentStatus === 'Al día' ? "bg-gradient-to-br from-primary to-fuchsia-600" : "bg-gradient-to-br from-red-500 to-orange-600"
                 )}>
                     <div className="flex items-start justify-between">
                         <div>
                             <CardTitle className="text-xl font-bold">{person.name}</CardTitle>
                             <Badge variant="secondary" className={cn(
                                 "font-semibold mt-1.5 border-0", 
-                                paymentStatus === 'Al día' ? 'bg-green-400/80 text-green-900' : 'bg-destructive/80 text-destructive-foreground'
+                                paymentStatus === 'Al día' ? 'bg-primary/80 text-primary-foreground' : 'bg-destructive/80 text-destructive-foreground'
                             )}>
                                 {paymentStatus}
                             </Badge>
