@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space } from '@/types';
+import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -25,7 +25,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, isAfter, subMonths } from 'date-fns';
+import { format, isAfter, subMonths, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -54,6 +54,125 @@ const vacationFormSchema = z.object({
     message: "La fecha de fin debe ser igual o posterior a la de inicio.",
     path: ['endDate'],
 });
+
+
+function AttendanceHistoryDialog({ person, sessions, actividades, attendance, onClose }: { person: Person | null; sessions: Session[]; actividades: Actividad[]; attendance: SessionAttendance[]; onClose: () => void; }) {
+    if (!person) return null;
+
+    const eventHistory = useMemo(() => {
+        let history: { date: Date; type: string; description: string; }[] = [];
+
+        // Process attendance records
+        attendance.forEach(record => {
+            const session = sessions.find(s => s.id === record.sessionId);
+            const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+            const description = actividad ? actividad.name : 'Clase';
+            const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+
+            if (record.presentIds?.includes(person.id)) {
+                history.push({ date: recordDate, type: 'presente', description });
+            }
+            if (record.absentIds?.includes(person.id)) {
+                history.push({ date: recordDate, type: 'ausente', description });
+            }
+            if (record.justifiedAbsenceIds?.includes(person.id)) {
+                history.push({ date: recordDate, type: 'a recuperar', description });
+            }
+            if (record.oneTimeAttendees?.includes(person.id)) {
+                history.push({ date: recordDate, type: 'recupero', description });
+            }
+        });
+
+        // Process vacation periods
+        person.vacationPeriods?.forEach(vac => {
+            if (vac.startDate && vac.endDate) {
+                 history.push({
+                    date: vac.startDate,
+                    type: 'vacaciones',
+                    description: `Inicio de vacaciones hasta ${format(vac.endDate, 'dd/MM/yy')}`
+                });
+            }
+        });
+
+        // Sort all events by date, descending
+        return history.sort((a, b) => b.date.getTime() - a.date.getTime());
+
+    }, [person, attendance, sessions, actividades]);
+
+    const getBadgeVariant = (type: string): "default" | "secondary" | "destructive" | "outline" => {
+        switch(type) {
+            case 'presente': return 'secondary'; // Greenish in theme
+            case 'recupero': return 'default'; // Primary color
+            case 'a recuperar': return 'outline'; // Yellowish/Orange
+            case 'ausente': return 'destructive';
+            case 'vacaciones': return 'outline'; // Purplish
+            default: return 'secondary';
+        }
+    };
+
+    const getBadgeIcon = (type: string) => {
+        switch(type) {
+            case 'presente': return <Check className="h-3 w-3" />;
+            case 'recupero': return <ClipboardList className="h-3 w-3" />;
+            case 'a recuperar': return <CalendarClock className="h-3 w-3" />;
+            case 'ausente': return <X className="h-3 w-3" />;
+            case 'vacaciones': return <Plane className="h-3 w-3" />;
+            default: return <Circle className="h-3 w-3" />;
+        }
+    };
+    
+    const getBadgeClass = (type: string) => {
+        switch (type) {
+            case 'presente': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700';
+            case 'recupero': return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700';
+            case 'a recuperar': return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700';
+            case 'vacaciones': return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-700';
+            default: return '';
+        }
+    };
+
+    return (
+        <Dialog open={!!person} onOpenChange={onClose}>
+            <DialogContent className="max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Historial de Asistencia: {person.name}</DialogTitle>
+                    <DialogDescription>
+                        Registro de todas las actividades, ausencias y recuperos.
+                    </DialogDescription>
+                </DialogHeader>
+                <ScrollArea className="h-96 my-4">
+                    {eventHistory.length > 0 ? (
+                        <div className="space-y-4 pr-4">
+                            {eventHistory.map((event, index) => (
+                                <div key={index} className="flex items-center gap-4">
+                                    <div className="text-center w-16 flex-shrink-0">
+                                        <p className="font-bold text-sm text-foreground">{format(event.date, 'dd MMM', { locale: es })}</p>
+                                        <p className="text-xs text-muted-foreground">{format(event.date, 'yyyy')}</p>
+                                    </div>
+                                    <div className="flex-grow space-y-1">
+                                       <Badge variant={getBadgeVariant(event.type)} className={cn("capitalize", getBadgeClass(event.type))}>
+                                           {getBadgeIcon(event.type)}
+                                           {event.type}
+                                       </Badge>
+                                       <p className="text-sm text-muted-foreground">{event.description}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-center h-full">
+                            <p className="text-muted-foreground text-center">No hay historial de asistencia para esta persona.</p>
+                        </div>
+                    )}
+                </ScrollArea>
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 
 function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; onClose: () => void }) {
     if (!person) return null;
@@ -464,7 +583,7 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
   );
 }
 
-function PersonCard({ person, sessions, actividades, specialists, spaces, recoveryBalance, onManageVacations, onEdit, onViewHistory, onManageEnrollments, onJustifyAbsence }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], recoveryBalance: number, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void }) {
+function PersonCard({ person, sessions, actividades, specialists, spaces, recoveryBalance, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], recoveryBalance: number, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void }) {
     const { tariffs, deletePerson, recordPayment, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -612,7 +731,8 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                                 <DropdownMenuItem onSelect={() => onJustifyAbsence(person)}><UserX className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onManageVacations(person)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Ver Historial de Pagos</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Historial de Pagos</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => onViewAttendanceHistory(person)}><CalendarIcon className="mr-2 h-4 w-4" />Historial de Asistencia</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => setIsRevertDialogOpen(true)}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
@@ -708,6 +828,7 @@ function StudentsPageContent() {
   const [activeFilter, setActiveFilter] = useState(initialFilter);
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
+  const [personForAttendanceHistory, setPersonForAttendanceHistory] = useState<Person | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -856,6 +977,7 @@ function StudentsPageContent() {
                     onManageVacations={setPersonForVacation}
                     onEdit={handleEditClick}
                     onViewHistory={setPersonForHistory}
+                    onViewAttendanceHistory={setPersonForAttendanceHistory}
                     onManageEnrollments={handleEnrollmentClick}
                     onJustifyAbsence={handleJustifyAbsenceClick}
                 />
@@ -896,6 +1018,14 @@ function StudentsPageContent() {
         tariffs={tariffs}
         onClose={() => setPersonForHistory(null)}
       />
+      <AttendanceHistoryDialog
+        person={personForAttendanceHistory}
+        sessions={sessions}
+        actividades={actividades}
+        attendance={attendance}
+        onClose={() => setPersonForAttendanceHistory(null)}
+      />
+
 
     </div>
   );
