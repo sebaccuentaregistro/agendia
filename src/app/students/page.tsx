@@ -17,7 +17,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getStudentPaymentStatus, exportToCsv, calculateNextPaymentDate } from '@/lib/utils';
+import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSearchParams } from 'next/navigation';
@@ -29,6 +29,7 @@ import { format, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { WhatsAppIcon } from '@/components/whatsapp-icon';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -275,6 +276,8 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
         minimumFractionDigits: 0,
       }).format(price);
     };
+
+    const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
     
     return (
         <>
@@ -323,6 +326,10 @@ function PersonCard({ person, onManageVacations, onEdit, onViewHistory }: { pers
                         <h4 className="font-semibold text-sm text-foreground">Contacto</h4>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>{person.phone}</span>
+                            <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
+                                <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                                <span className="sr-only">Enviar WhatsApp a {person.name}</span>
+                            </a>
                         </div>
                      </div>
                 </CardContent>
@@ -537,5 +544,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
-    
