@@ -5,8 +5,6 @@ import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
 
-// NOTE: This AppShell has been simplified to remove the complex auth logic that was causing the app to freeze.
-// It now relies on a simplified AuthContext and wraps the application in the StudioProvider.
 export function AppShell({ children }: { children: ReactNode }) {
     return (
         <StudioProvider>

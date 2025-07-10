@@ -10,7 +10,15 @@ const dummyProfile = {
     status: 'active',
 };
 
-const AuthContext = createContext<any>(undefined);
+// We define the shape of the context for TypeScript.
+type AuthContextType = {
+  user: typeof dummyUser | null;
+  userProfile: typeof dummyProfile | null;
+  loading: boolean;
+  logout: () => void;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     // This provider now gives a static, "logged-in" state to the whole app.
@@ -25,5 +33,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-    return useContext(AuthContext);
+    const context = useContext(AuthContext);
+    if (context === undefined) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
+    return context;
 }

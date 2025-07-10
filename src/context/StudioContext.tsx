@@ -1,56 +1,10 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
-import { 
-    actividades as staticActividades, 
-    specialists as staticSpecialists,
-    people as staticPeople,
-    sessions as staticSessions,
-    payments as staticPayments,
-    spaces as staticSpaces,
-    attendance as staticAttendance,
-    notifications as staticNotifications,
-    tariffs as staticTariffs,
-    levels as staticLevels
-} from '@/lib/data';
-import { addMonths, format } from 'date-fns';
+import * as demoData from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
-
-// Helper to robustly parse dates from various formats
-const parseDate = (date: any): Date | null => {
-    if (!date) return null;
-    if (date instanceof Date) return date;
-    if (date.toDate && typeof date.toDate === 'function') return date.toDate();
-    if (typeof date === 'string' || typeof date === 'number') {
-        const parsed = new Date(date);
-        return isNaN(parsed.getTime()) ? null : parsed;
-    }
-    return null;
-};
-
-// Helper to process raw data arrays and convert date fields
-const processData = (data: any[], dateFields: string[], nestedDateFields: {path: string, fields: string[]}[] = []) => {
-  return data.map(item => {
-    const newItem = { ...item };
-    dateFields.forEach(field => {
-      if (newItem[field]) newItem[field] = parseDate(newItem[field]);
-    });
-    nestedDateFields.forEach(nested => {
-        if (newItem[nested.path] && Array.isArray(newItem[nested.path])) {
-            newItem[nested.path] = newItem[nested.path].map((subItem: any) => {
-                const newSubItem = {...subItem};
-                nested.fields.forEach(field => {
-                    if (newSubItem[field]) newSubItem[field] = parseDate(newSubItem[field]);
-                });
-                return newSubItem;
-            });
-        }
-    });
-    return newItem;
-  });
-};
-
+import { format, addMonths } from 'date-fns';
 
 type State = {
   actividades: Actividad[];
@@ -67,37 +21,37 @@ type State = {
 
 interface StudioContextType extends State {
     loading: boolean;
-    addActividad: (data: Omit<Actividad, 'id'>) => void;
-    updateActividad: (data: Actividad) => void;
-    deleteActividad: (id: string) => void;
-    addSpecialist: (data: Omit<Specialist, 'id' | 'avatar'>) => void;
-    updateSpecialist: (data: Specialist) => void;
-    deleteSpecialist: (id: string) => void;
-    addPerson: (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => void;
-    updatePerson: (data: Person) => void;
-    deletePerson: (id: string) => void;
-    recordPayment: (personId: string) => void;
-    undoLastPayment: (personId: string) => void;
-    addSpace: (data: Omit<Space, 'id'>) => void;
-    updateSpace: (data: Space) => void;
-    deleteSpace: (id: string) => void;
-    addSession: (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => void;
-    updateSession: (data: Session) => void;
-    deleteSession: (id: string) => void;
-    enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
-    saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
-    addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
-    addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
-    removeVacationPeriod: (personId: string, vacationId: string) => void;
+    addActividad: (data: Omit<Actividad, 'id'>) => Promise<void>;
+    updateActividad: (data: Actividad) => Promise<void>;
+    deleteActividad: (id: string) => Promise<void>;
+    addSpecialist: (data: Omit<Specialist, 'id' | 'avatar'>) => Promise<void>;
+    updateSpecialist: (data: Specialist) => Promise<void>;
+    deleteSpecialist: (id: string) => Promise<void>;
+    addPerson: (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => Promise<void>;
+    updatePerson: (data: Person) => Promise<void>;
+    deletePerson: (id: string) => Promise<void>;
+    recordPayment: (personId: string) => Promise<void>;
+    undoLastPayment: (personId: string) => Promise<void>;
+    addSpace: (data: Omit<Space, 'id'>) => Promise<void>;
+    updateSpace: (data: Space) => Promise<void>;
+    deleteSpace: (id: string) => Promise<void>;
+    addSession: (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => Promise<void>;
+    updateSession: (data: Session) => Promise<void>;
+    deleteSession: (id: string) => Promise<void>;
+    enrollPeopleInClass: (sessionId: string, personIds: string[]) => Promise<void>;
+    saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => Promise<void>;
+    addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => Promise<void>;
+    addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => Promise<void>;
+    removeVacationPeriod: (personId: string, vacationId: string) => Promise<void>;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
-    enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => void;
-    dismissNotification: (id: string) => void;
-    addTariff: (data: Omit<Tariff, 'id'>) => void;
-    updateTariff: (data: Tariff) => void;
-    deleteTariff: (id: string) => void;
-    addLevel: (data: Omit<Level, 'id'>) => void;
-    updateLevel: (data: Level) => void;
-    deleteLevel: (id: string) => void;
+    enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => Promise<void>;
+    dismissNotification: (id: string) => Promise<void>;
+    addTariff: (data: Omit<Tariff, 'id'>) => Promise<void>;
+    updateTariff: (data: Tariff) => Promise<void>;
+    deleteTariff: (id: string) => Promise<void>;
+    addLevel: (data: Omit<Level, 'id'>) => Promise<void>;
+    updateLevel: (data: Level) => Promise<void>;
+    deleteLevel: (id: string) => Promise<void>;
     isTutorialOpen: boolean;
     openTutorial: () => void;
     closeTutorial: () => void;
@@ -105,291 +59,257 @@ interface StudioContextType extends State {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
-// Process the initial static data to convert date strings/timestamps into Date objects
-const processedPeople = processData(staticPeople, ['joinDate', 'lastPaymentDate'], [{path: 'vacationPeriods', fields: ['startDate', 'endDate']}]);
-const processedPayments = processData(staticPayments, ['date']);
-const processedNotifications = processData(staticNotifications, ['createdAt']);
-
-const initialAppState: State = {
-    actividades: staticActividades,
-    specialists: staticSpecialists,
-    people: processedPeople,
-    sessions: staticSessions,
-    payments: processedPayments,
-    spaces: staticSpaces,
-    attendance: staticAttendance,
-    notifications: processedNotifications,
-    tariffs: staticTariffs,
-    levels: staticLevels,
-};
-
 // This is the main provider for the application's business logic and state.
 export function StudioProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>(initialAppState);
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
   const { toast } = useToast();
+
+  const [state, setState] = useState<State>({
+    actividades: demoData.actividades,
+    specialists: demoData.specialists,
+    people: demoData.people,
+    sessions: demoData.sessions,
+    payments: demoData.payments,
+    spaces: demoData.spaces,
+    attendance: demoData.attendance,
+    notifications: demoData.notifications,
+    tariffs: demoData.tariffs,
+    levels: demoData.levels,
+  });
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
 
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
   const closeTutorial = useCallback(() => {
-      setIsTutorialOpen(false);
-      try {
-        localStorage.setItem('agendia-tutorial-completed', 'true');
-      } catch (e) { console.warn("Could not save tutorial state."); }
+    setIsTutorialOpen(false);
+    try {
+      localStorage.setItem('agendia-tutorial-completed', 'true');
+    } catch (e) { console.warn("Could not save tutorial state."); }
   }, []);
-  
-  // Use a functional update for any state change to ensure the latest state is used.
-  // This avoids issues with stale closures from useCallback with empty dependency arrays.
-  const performUpdate = useCallback((updateFn: (currentState: State) => State) => {
-    setState(currentState => updateFn(currentState));
-  }, []);
-  
+
+
   const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
     if (!person.vacationPeriods) return false;
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
     return person.vacationPeriods.some(period => {
-        const startDate = parseDate(period.startDate);
-        const endDate = parseDate(period.endDate);
-        if (!startDate || !endDate) return false;
-        return checkDate >= new Date(startDate.setHours(0,0,0,0)) && checkDate <= new Date(endDate.setHours(23,59,59,999));
+        if (!period.startDate || !period.endDate) return false;
+        return checkDate >= new Date(period.startDate.setHours(0,0,0,0)) && checkDate <= new Date(period.endDate.setHours(23,59,59,999));
     });
   }, []);
 
-  const addEntity = useCallback(<T extends { id: string }>(key: keyof State, data: Omit<T, 'id'>) => {
-    performUpdate(current => {
-      const newItem: T = {
-        id: `${key.toString().slice(0, -1)}-${Date.now()}-${Math.random()}`,
-        ...data,
-      } as T;
-      return { ...current, [key]: [...(current[key] as any[]), newItem] };
+  const showToast = (action: string, success: boolean, message?: string) => {
+    toast({
+      title: success ? `${action} con éxito` : `Error en ${action}`,
+      description: message || (success ? 'La operación se completó correctamente.' : 'Ocurrió un error.'),
+      variant: success ? 'default' : 'destructive',
     });
-  }, [performUpdate]);
+  };
 
-  const updateEntity = useCallback(<T extends { id: string }>(key: keyof State, item: T) => {
-    performUpdate(current => ({
-      ...current,
-      [key]: (current[key] as any[]).map(i => (i.id === item.id ? item : i)),
+  const createEntity = <T extends { id: string }>(
+    collectionKey: keyof State,
+    data: Omit<T, 'id'>
+  ): T => {
+    const newId = `${collectionKey}-${Date.now()}`;
+    const newItem = { ...data, id: newId } as T;
+    setState(prev => ({
+      ...prev,
+      [collectionKey]: [...(prev[collectionKey] as T[]), newItem],
     }));
-  }, [performUpdate]);
+    return newItem;
+  };
 
-  const deleteEntity = useCallback((key: keyof State, id: string, usageChecks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
-    performUpdate(current => {
-      for (const check of usageChecks) {
-          const collectionToCheck = current[check.collection] as any[];
-          const isUsed = collectionToCheck.some(item =>
-              check.type === 'array'
-              ? (item[check.field] as string[])?.includes(id)
-              : item[check.field] === id
+  const updateEntity = <T extends { id: string }>(
+    collectionKey: keyof State,
+    data: T
+  ) => {
+    setState(prev => ({
+      ...prev,
+      [collectionKey]: (prev[collectionKey] as T[]).map(item =>
+        item.id === data.id ? data : item
+      ),
+    }));
+  };
+
+  const deleteEntity = (collectionKey: keyof State, id: string) => {
+    setState(prev => ({
+      ...prev,
+      [collectionKey]: (prev[collectionKey] as any[]).filter(item => item.id !== id),
+    }));
+  };
+  
+  const checkUsage = (id: string, checks: { collection: keyof State, field: string, label: string, type?: 'array' }[]) => {
+      const messages = [];
+      for (const check of checks) {
+          const found = (state[check.collection] as any[]).filter(item => 
+              check.type === 'array' ? item[check.field]?.includes(id) : item[check.field] === id
           );
-          if (isUsed) {
-              toast({
-                  title: 'Error al eliminar',
-                  description: `No se puede eliminar porque está en uso por al menos un(a) ${check.label}.`,
-                  variant: 'destructive',
-              });
-              return current; // Return current state without changes
+          if (found.length > 0) {
+              messages.push(`No se puede eliminar. Está en uso por ${found.length} ${check.label}(s).`);
           }
       }
-      return {
-        ...current,
-        [key]: (current[key] as any[]).filter(i => i.id !== id),
-      };
-    });
-  }, [performUpdate, toast]);
+      return messages.join('\n');
+  };
   
-  const addActividad = useCallback((data: Omit<Actividad, 'id'>) => addEntity('actividades', data), [addEntity]);
-  const updateActividad = useCallback((data: Actividad) => updateEntity('actividades', data), [updateEntity]);
-  const deleteActividad = useCallback((id: string) => deleteEntity('actividades', id, [
-    { collection: 'sessions', field: 'actividadId', label: 'Sesión' },
-    { collection: 'specialists', field: 'actividadIds', label: 'Especialista', type: 'array' },
-  ]), [deleteEntity]);
+  const deleteWithUsageCheck = (collectionKey: keyof State, id: string, actionName: string, checks: any[]) => {
+      const usageMessage = checkUsage(id, checks);
+      if (usageMessage) {
+          showToast(`Eliminar ${actionName}`, false, usageMessage);
+          return;
+      }
+      deleteEntity(collectionKey, id);
+  }
 
-  const addLevel = useCallback((data: Omit<Level, 'id'>) => addEntity('levels', data), [addEntity]);
-  const updateLevel = useCallback((data: Level) => updateEntity('levels', data), [updateEntity]);
-  const deleteLevel = useCallback((id: string) => deleteEntity('levels', id, [
-      { collection: 'sessions', field: 'levelId', label: 'Sesión' },
-      { collection: 'people', field: 'levelId', label: 'Persona' },
-  ]), [deleteEntity]);
+  const addActividad = async (data: Omit<Actividad, 'id'>) => { createEntity('actividades', data); };
+  const updateActividad = async (data: Actividad) => { updateEntity('actividades', data); };
+  const deleteActividad = async (id: string) => {
+      deleteWithUsageCheck('actividades', id, 'actividad', [
+          { collection: 'sessions', field: 'actividadId', label: 'Sesión' },
+          { collection: 'specialists', field: 'actividadIds', label: 'Especialista', type: 'array' },
+      ]);
+  };
+  
+  const addLevel = async (data: Omit<Level, 'id'>) => { createEntity('levels', data); };
+  const updateLevel = async (data: Level) => { updateEntity('levels', data); };
+  const deleteLevel = async (id: string) => {
+      deleteWithUsageCheck('levels', id, 'nivel', [
+          { collection: 'sessions', field: 'levelId', label: 'Sesión' },
+          { collection: 'people', field: 'levelId', label: 'Persona' },
+      ]);
+  };
+  
+  const addSpace = async (data: Omit<Space, 'id'>) => { createEntity('spaces', data); };
+  const updateSpace = async (data: Space) => { updateEntity('spaces', data); };
+  const deleteSpace = async (id: string) => {
+      deleteWithUsageCheck('spaces', id, 'espacio', [{ collection: 'sessions', field: 'spaceId', label: 'Sesión' }]);
+  };
+  
+  const addTariff = async (data: Omit<Tariff, 'id'>) => { createEntity('tariffs', data); };
+  const updateTariff = async (data: Tariff) => { updateEntity('tariffs', data); };
+  const deleteTariff = async (id: string) => {
+      deleteWithUsageCheck('tariffs', id, 'arancel', [{ collection: 'people', field: 'tariffId', label: 'Persona' }]);
+  };
 
-  const addSpace = useCallback((data: Omit<Space, 'id'>) => addEntity('spaces', data), [addEntity]);
-  const updateSpace = useCallback((data: Space) => updateEntity('spaces', data), [updateEntity]);
-  const deleteSpace = useCallback((id: string) => deleteEntity('spaces', id, [
-      { collection: 'sessions', field: 'spaceId', label: 'Sesión' }
-  ]), [deleteEntity]);
-
-  const addTariff = useCallback((data: Omit<Tariff, 'id'>) => addEntity('tariffs', data), [addEntity]);
-  const updateTariff = useCallback((data: Tariff) => updateEntity('tariffs', data), [updateEntity]);
-  const deleteTariff = useCallback((id: string) => deleteEntity('tariffs', id, [
-      { collection: 'people', field: 'tariffId', label: 'Persona' }
-  ]), [deleteEntity]);
-
-  const addSpecialist = useCallback((data: Omit<Specialist, 'id' | 'avatar'>) => {
-    const fullData: Omit<Specialist, 'id'> = {
-      ...data,
-      avatar: `https://placehold.co/100x100.png`
-    };
-    addEntity('specialists', fullData);
-  }, [addEntity]);
-  const updateSpecialist = useCallback((data: Specialist) => updateEntity('specialists', data), [updateEntity]);
-  const deleteSpecialist = useCallback((id: string) => deleteEntity('specialists', id, [
-      { collection: 'sessions', field: 'instructorId', label: 'Sesión' }
-  ]), [deleteEntity]);
-
-  const addPerson = useCallback((data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
+  const addSpecialist = async (data: Omit<Specialist, 'id' | 'avatar'>) => {
+    createEntity('specialists', { ...data, avatar: `https://placehold.co/100x100.png` });
+  };
+  const updateSpecialist = async (data: Specialist) => { updateEntity('specialists', data); };
+  const deleteSpecialist = async (id: string) => {
+      deleteWithUsageCheck('specialists', id, 'especialista', [{ collection: 'sessions', field: 'instructorId', label: 'Sesión' }]);
+  };
+  
+  const addPerson = async (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
     const now = new Date();
-    const fullData: Omit<Person, 'id'> = {
-        ...data,
-        joinDate: now,
-        lastPaymentDate: addMonths(now, 1),
+    createEntity('people', { 
+        ...data, 
+        joinDate: now, 
+        lastPaymentDate: addMonths(now, 1), 
         avatar: `https://placehold.co/100x100.png`,
-        vacationPeriods: [],
-    };
-    addEntity('people', fullData);
-  }, [addEntity]);
-  const updatePerson = useCallback((data: Person) => updateEntity('people', data), [updateEntity]);
-  const deletePerson = useCallback((id: string) => {
-    performUpdate(current => {
-        const newSessions = current.sessions.map(s => ({
-            ...s,
-            personIds: s.personIds.filter(pId => pId !== id),
-            waitlistPersonIds: s.waitlistPersonIds?.filter(pId => pId !== id)
-        }));
-        const newPeople = current.people.filter(p => p.id !== id);
-        return { ...current, people: newPeople, sessions: newSessions };
+        vacationPeriods: []
     });
-  }, [performUpdate]);
+  };
+  const updatePerson = async (data: Person) => { updateEntity('people', data); };
+  const deletePerson = async (id: string) => {
+      // Remove person from sessions
+      setState(prev => ({
+          ...prev,
+          sessions: prev.sessions.map(s => ({
+              ...s,
+              personIds: s.personIds.filter(pid => pid !== id),
+              waitlistPersonIds: s.waitlistPersonIds?.filter(pid => pid !== id)
+          }))
+      }));
+      deleteEntity('people', id);
+  };
   
-  const recordPayment = useCallback((personId: string) => {
-    performUpdate(current => {
-      const person = current.people.find(p => p.id === personId);
-      if (!person) return current;
-      const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
-      const newPayment: Payment = { id: `pay-${Date.now()}`, personId, date: new Date(), months: 1 };
-      return {
-        ...current,
-        people: current.people.map(p => p.id === personId ? { ...p, lastPaymentDate: newExpiryDate } : p),
-        payments: [...current.payments, newPayment]
-      };
-    });
-  }, [performUpdate]);
+  const recordPayment = async (personId: string) => {
+    const person = state.people.find(p => p.id === personId);
+    if (!person) return;
+    const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
+    updateEntity('people', { ...person, lastPaymentDate: newExpiryDate });
+    createEntity('payments', { personId, date: new Date(), months: 1 });
+  };
 
-  const undoLastPayment = useCallback((personId: string) => {
-    performUpdate(current => {
-      const lastPayment = [...current.payments].filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
-      if (!lastPayment) return current;
-      const person = current.people.find(p => p.id === personId);
-      if (!person || !person.lastPaymentDate) return current;
-      const previousExpiryDate = addMonths(person.lastPaymentDate, -1);
-      return {
-        ...current,
-        people: current.people.map(p => p.id === personId ? { ...p, lastPaymentDate: previousExpiryDate } : p),
-        payments: current.payments.filter(p => p.id !== lastPayment.id)
-      }
-    })
-  }, [performUpdate]);
-
-  const addSession = useCallback((data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
-    const fullData: Omit<Session, 'id'> = {
-        ...data,
-        personIds: [],
-        waitlistPersonIds: []
-    };
-    addEntity('sessions', fullData);
-  }, [addEntity]);
-  const updateSession = useCallback((data: Session) => updateEntity('sessions', data), [updateEntity]);
-  const deleteSession = useCallback((id: string) => {
-    performUpdate(current => {
-      const session = current.sessions.find(s => s.id === id);
-      if(session && session.personIds.length > 0) {
-          toast({ title: 'Error al eliminar', description: 'No se puede eliminar una sesión con personas inscriptas.', variant: 'destructive' });
-          return current;
-      }
-      return {...current, sessions: current.sessions.filter(s => s.id !== id)};
-    });
-  }, [performUpdate, toast]);
+  const undoLastPayment = async (personId: string) => {
+    const person = state.people.find(p => p.id === personId);
+    if (!person || !person.lastPaymentDate) return;
+    const lastPayment = [...state.payments].filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0))[0];
+    if (lastPayment) {
+        deleteEntity('payments', lastPayment.id);
+        updateEntity('people', { ...person, lastPaymentDate: addMonths(person.lastPaymentDate, -1) });
+    } else {
+        showToast('Deshacer pago', false, 'No hay pagos para deshacer.');
+    }
+  };
   
-  const enrollPeopleInClass = useCallback((sessionId: string, personIds: string[]) => {
-    performUpdate(current => ({
-        ...current,
-        sessions: current.sessions.map(s => s.id === sessionId ? { ...s, personIds } : s)
-    }));
-  }, [performUpdate]);
-
-  const saveAttendance = useCallback((sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
-      const dateStr = format(new Date(), 'yyyy-MM-dd');
-      performUpdate(current => {
-          const newAttendance = [...current.attendance];
-          const recordIndex = newAttendance.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
-          const oneTimeAttendees = recordIndex > -1 ? newAttendance[recordIndex].oneTimeAttendees : [];
-          const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds, oneTimeAttendees };
-          if (recordIndex > -1) {
-              newAttendance[recordIndex] = { ...newAttendance[recordIndex], ...record };
-          } else {
-              newAttendance.push({ id: `att-${Date.now()}`, ...record });
-          }
-          return { ...current, attendance: newAttendance };
-      });
-  }, [performUpdate]);
+  const addSession = async (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
+    createEntity('sessions', { ...data, personIds: [], waitlistPersonIds: [] });
+  };
+  const updateSession = async (data: Session) => { updateEntity('sessions', data); };
+  const deleteSession = async (id: string) => {
+    const session = state.sessions.find(s => s.id === id);
+    if(session && session.personIds.length > 0) {
+        showToast('Eliminar sesión', false, 'No se puede eliminar una sesión con personas inscriptas.');
+        return;
+    }
+    deleteEntity('sessions', id);
+  };
   
-  const addOneTimeAttendee = useCallback((sessionId: string, personId: string, date: Date) => {
-      const dateStr = format(date, 'yyyy-MM-dd');
-      performUpdate(current => {
-          const newAttendance = [...current.attendance];
-          const recordIndex = newAttendance.findIndex(a => a.sessionId === sessionId && a.date === dateStr);
-          if (recordIndex > -1) {
-              const updatedRecord = { ...newAttendance[recordIndex] };
-              updatedRecord.oneTimeAttendees = Array.from(new Set([...(updatedRecord.oneTimeAttendees || []), personId]));
-              newAttendance[recordIndex] = updatedRecord;
-          } else {
-              newAttendance.push({
-                  id: `att-${Date.now()}`,
-                  sessionId,
-                  date: dateStr,
-                  presentIds: [],
-                  absentIds: [],
-                  justifiedAbsenceIds: [],
-                  oneTimeAttendees: [personId]
-              });
-          }
-          return { ...current, attendance: newAttendance };
-      });
-  }, [performUpdate]);
+  const enrollPeopleInClass = async (sessionId: string, personIds: string[]) => {
+    const session = state.sessions.find(s => s.id === sessionId);
+    if(session) updateEntity('sessions', { ...session, personIds });
+  };
+  
+  const saveAttendance = async (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
+    const dateStr = format(new Date(), 'yyyy-MM-dd');
+    const existingRecord = state.attendance.find(a => a.sessionId === sessionId && a.date === dateStr);
+    const record = { id: existingRecord?.id || '', sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
+    if (existingRecord) {
+        updateEntity('attendance', record);
+    } else {
+        createEntity('attendance', record);
+    }
+  };
 
-  const addVacationPeriod = useCallback((personId: string, startDate: Date, endDate: Date) => {
+  const addOneTimeAttendee = async (sessionId: string, personId: string, date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    const record = state.attendance.find(a => a.sessionId === sessionId && a.date === dateStr);
+    if (record) {
+        const updatedAttendees = Array.from(new Set([...(record.oneTimeAttendees || []), personId]));
+        updateEntity('attendance', {...record, oneTimeAttendees: updatedAttendees});
+    } else {
+        createEntity('attendance', { sessionId, date: dateStr, presentIds:[], absentIds:[], oneTimeAttendees: [personId] });
+    }
+  };
+
+  const addVacationPeriod = async (personId: string, startDate: Date, endDate: Date) => {
+    const person = state.people.find(p => p.id === personId);
+    if (!person) return;
     const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
-    performUpdate(current => ({
-        ...current,
-        people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation]} : p)
-    }));
-  }, [performUpdate]);
+    const updatedVacations = [...(person.vacationPeriods || []), newVacation];
+    updateEntity('people', { ...person, vacationPeriods: updatedVacations });
+  };
   
-  const removeVacationPeriod = useCallback((personId: string, vacationId: string) => {
-    performUpdate(current => ({
-        ...current,
-        people: current.people.map(p => p.id === personId ? {...p, vacationPeriods: p.vacationPeriods?.filter(v => v.id !== vacationId)} : p)
-    }));
-  }, [performUpdate]);
+  const removeVacationPeriod = async (personId: string, vacationId: string) => {
+    const person = state.people.find(p => p.id === personId);
+    if (!person || !person.vacationPeriods) return;
+    const updatedVacations = person.vacationPeriods.filter(v => v.id !== vacationId);
+    updateEntity('people', { ...person, vacationPeriods: updatedVacations });
+  };
+
+  const enrollFromWaitlist = async (notificationId: string, sessionId: string, personId: string) => {
+    const session = state.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    const newPersonIds = Array.from(new Set([...session.personIds, personId]));
+    const newWaitlist = session.waitlistPersonIds?.filter(id => id !== personId) || [];
+    updateEntity('sessions', { ...session, personIds: newPersonIds, waitlistPersonIds: newWaitlist });
+    deleteEntity('notifications', notificationId);
+  };
   
-  const enrollFromWaitlist = useCallback((notificationId: string, sessionId: string, personId: string) => {
-      performUpdate(current => {
-          const session = current.sessions.find(s => s.id === sessionId);
-          if (!session) return current;
-
-          const newPersonIds = Array.from(new Set([...session.personIds, personId]));
-          const newWaitlist = session.waitlistPersonIds?.filter(id => id !== personId) || [];
-
-          return {
-              ...current,
-              sessions: current.sessions.map(s => s.id === sessionId ? {...s, personIds: newPersonIds, waitlistPersonIds: newWaitlist} : s),
-              notifications: current.notifications.filter(n => n.id !== notificationId),
-          };
-      });
-  }, [performUpdate]);
-
-  const dismissNotification = useCallback((id: string) => performUpdate(current => ({ ...current, notifications: current.notifications.filter(n => n.id !== id)})), [performUpdate]);
+  const dismissNotification = async (id: string) => {
+    deleteEntity('notifications', id);
+  };
 
   const contextValue: StudioContextType = {
     ...state,
-    loading: false, // Set loading to false as data is handled statically
+    loading: false, // Set to false as we are using local data
     addActividad,
     updateActividad,
     deleteActividad,
