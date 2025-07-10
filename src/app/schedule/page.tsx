@@ -128,10 +128,10 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
                   </Button>
                 </div>
               ))}
-            </div>
-            {attendeesToNotify.length === 0 && (
+              {attendeesToNotify.length === 0 && (
                 <div className="text-center p-4 text-sm text-muted-foreground">No hay asistentes para notificar.</div>
-            )}
+              )}
+            </div>
           </ScrollArea>
         </div>
         <DialogFooter>
