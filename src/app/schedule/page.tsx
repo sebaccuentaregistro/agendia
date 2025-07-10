@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, Heart, MoreHorizontal, UserX, Signal } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -1032,9 +1032,12 @@ function SchedulePageContent() {
                               </div>
                             </div>
                             <div className="space-y-1">
-                              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                               <div
+                                  className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
+                                  onClick={() => setSessionForRoster(session)}
+                                >
                                 <Users className="h-4 w-4" />
-                                <span onClick={() => setSessionForRoster(session)} className="cursor-pointer hover:underline">
+                                <span>
                                     {enrolledCount}/{capacity} inscriptos
                                 </span>
                                 {waitlistCount > 0 && (
