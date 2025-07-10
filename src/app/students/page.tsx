@@ -509,7 +509,6 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, onMana
 
                 <CardContent className="p-4 flex-grow space-y-4">
                      <div className="space-y-2">
-                        <h4 className="font-semibold text-sm text-foreground">Contacto</h4>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>{person.phone}</span>
                             <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
