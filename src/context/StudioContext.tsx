@@ -2,24 +2,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { collection, onSnapshot, doc, Timestamp } from 'firebase/firestore';
 import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod } from '@/types';
 import * as firestoreActions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
+import { db } from '@/lib/firebase';
 import { addMonths } from 'date-fns';
-import { 
-  actividades as demoActividades, 
-  specialists as demoSpecialists, 
-  people as demoPeople,
-  sessions as demoSessions,
-  payments as demoPayments,
-  spaces as demoSpaces,
-  attendance as demoAttendance,
-  notifications as demoNotifications,
-  tariffs as demoTariffs,
-  levels as demoLevels
-} from '@/lib/data';
 
 type State = {
   actividades: Actividad[];
@@ -74,21 +64,71 @@ interface StudioContextType extends State {
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
 
-// This is the main provider for the application's business logic and state.
-// NOTE: This version uses local demo data and does NOT connect to Firestore.
+// Helper to convert Firestore Timestamps to JS Dates in nested objects
+const convertTimestamps = (data: any) => {
+    const newData = { ...data };
+    for (const key in newData) {
+        if (newData[key] instanceof Timestamp) {
+            newData[key] = newData[key].toDate();
+        } else if (Array.isArray(newData[key])) {
+            newData[key] = newData[key].map(item =>
+                (typeof item === 'object' && item !== null) ? convertTimestamps(item) : item
+            );
+        }
+    }
+    return newData;
+};
+
 export function StudioProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { user, userProfile, loading: authLoading } = useAuth();
-
+  
   const [state, setState] = useState<State>({
-    actividades: demoActividades, specialists: demoSpecialists, people: demoPeople, sessions: demoSessions,
-    payments: demoPayments, spaces: demoSpaces, attendance: demoAttendance, notifications: demoNotifications, tariffs: demoTariffs, levels: demoLevels,
+    actividades: [], specialists: [], people: [], sessions: [],
+    payments: [], spaces: [], attendance: [], notifications: [], tariffs: [], levels: [],
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  
+  const instituteId = userProfile?.instituteId;
 
-  // In this local version, we don't need useEffect to fetch data.
-  // The state is initialized with the demo data directly.
+  useEffect(() => {
+    if (!instituteId) {
+      if (!authLoading) {
+        setLoading(false);
+      }
+      return;
+    }
+    
+    setLoading(true);
+    const instituteRef = doc(db, 'institutes', instituteId);
+    
+    const collectionsToListen: (keyof State)[] = [
+      'actividades', 'specialists', 'people', 'sessions', 'payments', 
+      'spaces', 'attendance', 'notifications', 'tariffs', 'levels'
+    ];
+
+    const unsubscribes = collectionsToListen.map((collectionName) => {
+      const collectionRef = collection(instituteRef, collectionName);
+      return onSnapshot(collectionRef, (snapshot) => {
+        const data = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...convertTimestamps(doc.data()),
+        }));
+        setState(prev => ({ ...prev, [collectionName]: data }));
+      }, (error) => {
+        console.error(`Error fetching ${collectionName}:`, error);
+        toast({ title: `Error al cargar ${collectionName}`, description: error.message, variant: 'destructive' });
+      });
+    });
+
+    setLoading(false);
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, [instituteId, authLoading, toast]);
+
 
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
   const closeTutorial = useCallback(() => {
@@ -104,181 +144,211 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const checkDate = new Date(date.setHours(0, 0, 0, 0));
     return person.vacationPeriods.some(period => {
         if (!period.startDate || !period.endDate) return false;
-        return checkDate >= new Date(period.startDate.setHours(0,0,0,0)) && checkDate <= new Date(period.endDate.setHours(23,59,59,999));
+        return checkDate >= new Date(new Date(period.startDate).setHours(0,0,0,0)) && checkDate <= new Date(new Date(period.endDate).setHours(23,59,59,999));
     });
   }, []);
 
-  const showToast = (action: string, success: boolean, message?: string) => {
-    toast({
-      title: success ? `${action} con éxito` : `Error en ${action}`,
-      description: message || (success ? 'La operación se completó correctamente.' : 'Ocurrió un error (operando en modo local).'),
-      variant: success ? 'default' : 'destructive',
-    });
+  const getCollectionRef = (name: string) => {
+    if (!instituteId) throw new Error("No hay un ID de instituto disponible.");
+    return collection(db, 'institutes', instituteId, name);
   };
+  
+  const getDocRef = (collectionName: string, id: string) => {
+     if (!instituteId) throw new Error("No hay un ID de instituto disponible.");
+     return doc(db, 'institutes', instituteId, collectionName, id);
+  }
 
-  const performLocalAction = (actionName: string, updateFn: (prevState: State) => State) => {
+  const performFirestoreAction = async (actionName: string, actionFn: () => Promise<any>) => {
     try {
-      setState(updateFn);
-      showToast(actionName, true);
+      await actionFn();
+      toast({ title: `${actionName} con éxito`, description: 'La operación se completó correctamente.' });
     } catch (error: any) {
       console.error(`Error in ${actionName}:`, error);
-      showToast(actionName, false, error.message);
+      toast({ title: `Error en ${actionName}`, description: error.message, variant: 'destructive' });
     }
   };
-
-  // --- CRUD operations are now simulated locally ---
+  
+  const allDataForMessages = {
+      sessions: state.sessions,
+      people: state.people,
+      actividades: state.actividades,
+      specialists: state.specialists,
+      spaces: state.spaces,
+      levels: state.levels,
+  };
+  
+  const deleteWithUsageCheck = async (entityId: string, checks: any[], collectionName: string) => {
+     if (!instituteId) throw new Error("Institute ID not found");
+     const collectionRefs = {
+        sessions: getCollectionRef('sessions'),
+        people: getCollectionRef('people'),
+        specialists: getCollectionRef('specialists'),
+     };
+     await firestoreActions.deleteWithUsageCheckAction(entityId, checks, collectionRefs, allDataForMessages);
+     await firestoreActions.deleteEntity(getDocRef(collectionName, entityId));
+  };
 
   const addActividad = async (data: Omit<Actividad, 'id'>) => {
-    performLocalAction('Añadir actividad', prev => ({ ...prev, actividades: [...prev.actividades, { ...data, id: `act-${Date.now()}` }] }));
+    await performFirestoreAction('Añadir actividad', () => firestoreActions.addEntity(getCollectionRef('actividades'), data));
   };
   const updateActividad = async (data: Actividad) => {
-    performLocalAction('Actualizar actividad', prev => ({ ...prev, actividades: prev.actividades.map(a => a.id === data.id ? data : a) }));
+    await performFirestoreAction('Actualizar actividad', () => firestoreActions.updateEntity(getDocRef('actividades', data.id), data));
   };
   const deleteActividad = async (id: string) => {
-     performLocalAction('Eliminar actividad', prev => ({ ...prev, actividades: prev.actividades.filter(a => a.id !== id) }));
+    await performFirestoreAction('Eliminar actividad', () => deleteWithUsageCheck(id,
+        [
+            { collection: 'sessions', field: 'actividadId', label: 'sesión' },
+            { collection: 'specialists', field: 'actividadIds', label: 'especialista', type: 'array' }
+        ],
+        'actividades'
+    ));
   };
   
   const addLevel = async (data: Omit<Level, 'id'>) => {
-    performLocalAction('Añadir nivel', prev => ({ ...prev, levels: [...prev.levels, { ...data, id: `lvl-${Date.now()}` }] }));
+     await performFirestoreAction('Añadir nivel', () => firestoreActions.addEntity(getCollectionRef('levels'), data));
   };
   const updateLevel = async (data: Level) => {
-    performLocalAction('Actualizar nivel', prev => ({ ...prev, levels: prev.levels.map(l => l.id === data.id ? data : l) }));
+     await performFirestoreAction('Actualizar nivel', () => firestoreActions.updateEntity(getDocRef('levels', data.id), data));
   };
   const deleteLevel = async (id: string) => {
-    performLocalAction('Eliminar nivel', prev => ({ ...prev, levels: prev.levels.filter(l => l.id !== id) }));
+    await performFirestoreAction('Eliminar nivel', () => deleteWithUsageCheck(id,
+        [
+            { collection: 'sessions', field: 'levelId', label: 'sesión' },
+            { collection: 'people', field: 'levelId', label: 'persona' }
+        ],
+        'levels'
+    ));
   };
 
   const addSpace = async (data: Omit<Space, 'id'>) => {
-    performLocalAction('Añadir espacio', prev => ({ ...prev, spaces: [...prev.spaces, { ...data, id: `spc-${Date.now()}` }] }));
+    await performFirestoreAction('Añadir espacio', () => firestoreActions.addEntity(getCollectionRef('spaces'), data));
   };
   const updateSpace = async (data: Space) => {
-    performLocalAction('Actualizar espacio', prev => ({ ...prev, spaces: prev.spaces.map(s => s.id === data.id ? data : s) }));
+    await performFirestoreAction('Actualizar espacio', () => firestoreActions.updateEntity(getDocRef('spaces', data.id), data));
   };
   const deleteSpace = async (id: string) => {
-    performLocalAction('Eliminar espacio', prev => ({ ...prev, spaces: prev.spaces.filter(s => s.id !== id) }));
+    await performFirestoreAction('Eliminar espacio', () => deleteWithUsageCheck(id,
+        [{ collection: 'sessions', field: 'spaceId', label: 'sesión' }],
+        'spaces'
+    ));
   };
   
   const addTariff = async (data: Omit<Tariff, 'id'>) => {
-     performLocalAction('Añadir arancel', prev => ({ ...prev, tariffs: [...prev.tariffs, { ...data, id: `tff-${Date.now()}` }] }));
+     await performFirestoreAction('Añadir arancel', () => firestoreActions.addEntity(getCollectionRef('tariffs'), data));
   };
   const updateTariff = async (data: Tariff) => {
-    performLocalAction('Actualizar arancel', prev => ({ ...prev, tariffs: prev.tariffs.map(t => t.id === data.id ? data : t) }));
+    await performFirestoreAction('Actualizar arancel', () => firestoreActions.updateEntity(getDocRef('tariffs', data.id), data));
   };
   const deleteTariff = async (id: string) => {
-     performLocalAction('Eliminar arancel', prev => ({ ...prev, tariffs: prev.tariffs.filter(t => t.id !== id) }));
+     await performFirestoreAction('Eliminar arancel', () => deleteWithUsageCheck(id,
+        [{ collection: 'people', field: 'tariffId', label: 'persona' }],
+        'tariffs'
+     ));
   };
 
   const addSpecialist = async (data: Omit<Specialist, 'id' | 'avatar'>) => {
-     performLocalAction('Añadir especialista', prev => ({ ...prev, specialists: [...prev.specialists, { ...data, id: `spec-${Date.now()}`, avatar: `https://placehold.co/100x100.png` }] }));
+    const newSpecialist = { ...data, avatar: `https://placehold.co/100x100.png` };
+    await performFirestoreAction('Añadir especialista', () => firestoreActions.addEntity(getCollectionRef('specialists'), newSpecialist));
   };
   const updateSpecialist = async (data: Specialist) => {
-     performLocalAction('Actualizar especialista', prev => ({ ...prev, specialists: prev.specialists.map(s => s.id === data.id ? data : s) }));
+     await performFirestoreAction('Actualizar especialista', () => firestoreActions.updateEntity(getDocRef('specialists', data.id), data));
   };
   const deleteSpecialist = async (id: string) => {
-    performLocalAction('Eliminar especialista', prev => ({ ...prev, specialists: prev.specialists.filter(s => s.id !== id) }));
+     await performFirestoreAction('Eliminar especialista', () => deleteWithUsageCheck(id,
+        [{ collection: 'sessions', field: 'instructorId', label: 'sesión' }],
+        'specialists'
+    ));
   };
   
   const addPerson = async (data: Omit<Person, 'id' | 'avatar' | 'joinDate' | 'lastPaymentDate' | 'vacationPeriods'>) => {
-    const newPerson: Person = {
-      ...data,
-      id: `person-${Date.now()}`,
-      joinDate: new Date(),
-      lastPaymentDate: addMonths(new Date(), 1),
-      avatar: `https://placehold.co/100x100.png`,
-      vacationPeriods: [],
-    };
-    performLocalAction('Añadir persona', prev => ({ ...prev, people: [...prev.people, newPerson] }));
+    await performFirestoreAction('Añadir persona', () => firestoreActions.addPersonAction(getCollectionRef('people'), data));
   };
   const updatePerson = async (data: Person) => {
-    performLocalAction('Actualizar persona', prev => ({ ...prev, people: prev.people.map(p => p.id === data.id ? data : p) }));
+    await performFirestoreAction('Actualizar persona', () => firestoreActions.updateEntity(getDocRef('people', data.id), data));
   };
   const deletePerson = async (id: string) => {
-    performLocalAction('Eliminar persona', prev => ({ ...prev, people: prev.people.filter(p => p.id !== id) }));
+    await performFirestoreAction('Eliminar persona', () => firestoreActions.deletePersonAction(getCollectionRef('sessions'), getCollectionRef('people'), id));
   };
   
   const recordPayment = async (personId: string) => {
-    performLocalAction('Registrar pago', prev => {
-      const person = prev.people.find(p => p.id === personId);
-      if (!person) return prev;
-      const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
-      const newPayment = { id: `pay-${Date.now()}`, personId, date: new Date(), months: 1 };
-      return {
-        ...prev,
-        people: prev.people.map(p => p.id === personId ? { ...p, lastPaymentDate: newExpiryDate } : p),
-        payments: [...prev.payments, newPayment]
+      const person = state.people.find(p => p.id === personId);
+      if (!person) {
+        toast({ title: 'Error', description: 'No se encontró a la persona.', variant: 'destructive' });
+        return;
       }
-    });
+      const newExpiryDate = addMonths(person.lastPaymentDate || new Date(), 1);
+      await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(getCollectionRef('payments'), getCollectionRef('people'), personId, newExpiryDate));
   };
 
   const undoLastPayment = async (personId: string) => {
-     performLocalAction('Deshacer pago', prev => {
-        const person = prev.people.find(p => p.id === personId);
-        if (!person || !person.lastPaymentDate) return prev;
-
-        const personPayments = prev.payments.filter(p => p.personId === personId).sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-        if (personPayments.length === 0) return prev;
+      const person = state.people.find(p => p.id === personId);
+      if (!person || !person.lastPaymentDate) {
+        toast({ title: 'Error', description: 'No hay pago previo para deshacer.', variant: 'destructive' });
+        return;
+      }
+      
+      const personPayments = state.payments
+        .filter(p => p.personId === personId)
+        .sort((a,b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
         
-        const lastPaymentId = personPayments[0].id;
-        const previousExpiryDate = addMonths(person.lastPaymentDate, -1);
-        
-        return {
-            ...prev,
-            people: prev.people.map(p => p.id === personId ? { ...p, lastPaymentDate: previousExpiryDate } : p),
-            payments: prev.payments.filter(p => p.id !== lastPaymentId)
-        }
-    });
+      if (personPayments.length === 0) {
+        toast({ title: 'Error', description: 'No se encontró un registro de pago para eliminar.', variant: 'destructive' });
+        return;
+      }
+      const lastPayment = personPayments[0];
+      const previousExpiryDate = addMonths(person.lastPaymentDate, -1);
+      await performFirestoreAction('Deshacer pago', () => firestoreActions.undoLastPaymentAction(getCollectionRef('payments'), getCollectionRef('people'), personId, lastPayment, previousExpiryDate));
   };
   
   const addSession = async (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
-    const newSession = { ...data, id: `session-${Date.now()}`, personIds: [], waitlistPersonIds: [] };
-    performLocalAction('Añadir sesión', prev => ({...prev, sessions: [...prev.sessions, newSession]}));
+    const newSession = { ...data, personIds: [], waitlistPersonIds: [] };
+    await performFirestoreAction('Añadir sesión', () => firestoreActions.addEntity(getCollectionRef('sessions'), newSession));
   };
   const updateSession = async (data: Session) => {
-    performLocalAction('Actualizar sesión', prev => ({...prev, sessions: prev.sessions.map(s => s.id === data.id ? data : s)}));
+    await performFirestoreAction('Actualizar sesión', () => firestoreActions.updateEntity(getDocRef('sessions', data.id), data));
   };
   const deleteSession = async (id: string) => {
-    performLocalAction('Eliminar sesión', prev => ({...prev, sessions: prev.sessions.filter(s => s.id !== id)}));
+    await performFirestoreAction('Eliminar sesión', () => {
+        const sessionToDelete = state.sessions.find(s => s.id === id);
+        if (sessionToDelete && sessionToDelete.personIds.length > 0) {
+            throw new Error(`No se puede eliminar. Hay ${sessionToDelete.personIds.length} persona(s) inscripta(s).`);
+        }
+        return firestoreActions.deleteEntity(getDocRef('sessions', id));
+    });
   };
   
   const enrollPeopleInClass = async (sessionId: string, personIds: string[]) => {
-    performLocalAction('Inscribir personas', prev => ({ ...prev, sessions: prev.sessions.map(s => s.id === sessionId ? {...s, personIds} : s)}));
+    await performFirestoreAction('Inscribir personas', () => firestoreActions.enrollPeopleInClassAction(getDocRef('sessions', sessionId), personIds));
   };
   
   const saveAttendance = async (sessionId: string, presentIds: string[], absentIds:string[], justifiedAbsenceIds:string[]) => {
-    // This is complex to simulate locally without a proper database, so we'll just log it.
-    console.log("Saving attendance (local mode):", { sessionId, presentIds, absentIds, justifiedAbsenceIds });
-    showToast('Guardar asistencia', true);
+    await performFirestoreAction('Guardar asistencia', () => firestoreActions.saveAttendanceAction(getCollectionRef('attendance'), sessionId, presentIds, absentIds, justifiedAbsenceIds));
   };
 
   const addOneTimeAttendee = async (sessionId: string, personId: string, date: Date) => {
-    console.log("Adding one-time attendee (local mode):", { sessionId, personId, date });
-    showToast('Añadir asistente puntual', true);
+    await performFirestoreAction('Añadir asistente puntual', () => firestoreActions.addOneTimeAttendeeAction(getCollectionRef('attendance'), sessionId, personId, date));
   };
 
   const addVacationPeriod = async (personId: string, startDate: Date, endDate: Date) => {
-     performLocalAction('Añadir vacaciones', prev => {
-        const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
-        return {
-            ...prev,
-            people: prev.people.map(p => p.id === personId ? { ...p, vacationPeriods: [...(p.vacationPeriods || []), newVacation] } : p)
-        }
-     });
+     const person = state.people.find(p => p.id === personId);
+     if (!person) return;
+     await performFirestoreAction('Añadir vacaciones', () => firestoreActions.addVacationPeriodAction(getDocRef('people', personId), person, startDate, endDate));
   };
   
   const removeVacationPeriod = async (personId: string, vacationId: string) => {
-    performLocalAction('Eliminar vacaciones', prev => ({
-        ...prev,
-        people: prev.people.map(p => p.id === personId ? { ...p, vacationPeriods: p.vacationPeriods?.filter(v => v.id !== vacationId) } : p)
-    }));
+    const person = state.people.find(p => p.id === personId);
+    if (!person) return;
+    await performFirestoreAction('Eliminar vacaciones', () => firestoreActions.removeVacationPeriodAction(getDocRef('people', personId), person, vacationId));
   };
 
   const enrollFromWaitlist = async (notificationId: string, sessionId: string, personId: string) => {
-    console.log("Enrolling from waitlist (local mode)", { notificationId, sessionId, personId });
-    showToast('Inscribir desde lista de espera', true);
+    const session = state.sessions.find(s => s.id === sessionId);
+    if (!session) return;
+    await performFirestoreAction('Inscribir desde lista de espera', () => firestoreActions.enrollFromWaitlistAction(getCollectionRef('sessions'), getCollectionRef('notifications'), notificationId, sessionId, personId, session));
   };
   
   const dismissNotification = async (id: string) => {
-    performLocalAction('Descartar notificación', prev => ({...prev, notifications: prev.notifications.filter(n => n.id !== id)}));
+    await performFirestoreAction('Descartar notificación', () => firestoreActions.deleteEntity(getDocRef('notifications', id)));
   };
 
   if (authLoading || loading) {
