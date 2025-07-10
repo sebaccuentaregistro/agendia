@@ -38,11 +38,16 @@ export const deleteEntity = async (docRef: any) => {
 
 // Specific Actions
 export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
-    const { joinDate, ...rest } = personData;
+    const { joinDate, initialPaymentStatus, ...rest } = personData;
+    
+    // If the person starts as unpaid, their "next payment date" is in the past, so they appear as overdue.
+    const monthsToAdd = initialPaymentStatus === 'paid' ? 1 : -1;
+    const initialExpiryDate = calculateNextPaymentDate(joinDate, joinDate, monthsToAdd);
+
     const newPerson = {
         ...rest,
         joinDate: joinDate,
-        lastPaymentDate: calculateNextPaymentDate(joinDate, joinDate),
+        lastPaymentDate: initialExpiryDate,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
     };
@@ -131,7 +136,7 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
         newLastPaymentDate = calculateNextPaymentDate(secondToLastPayment.date, joinDate);
     } else {
         // This was the only payment, so revert to the initial state
-        newLastPaymentDate = calculateNextPaymentDate(joinDate, joinDate);
+        newLastPaymentDate = calculateNextPaymentDate(joinDate, joinDate, -1);
     }
 
     // 5. Update the person's lastPaymentDate

@@ -12,7 +12,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Person, Payment } from '@/types';
+import type { Person, Payment, NewPersonData } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,6 +30,7 @@ import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -39,6 +40,7 @@ const personFormSchema = z.object({
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
+  initialPaymentStatus: z.enum(['paid', 'unpaid']).default('paid'),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -200,16 +202,19 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
+            initialPaymentStatus: 'paid', // When editing, this field is not used
           });
         } else {
-          form.reset({ name: '', phone: '', joinDate: new Date(), levelId: 'none', tariffId: '', healthInfo: '', notes: '' });
+          form.reset({ name: '', phone: '', joinDate: new Date(), levelId: 'none', tariffId: '', healthInfo: '', notes: '', initialPaymentStatus: 'paid' });
         }
     }
   }, [person, open, form]);
 
   const onSubmit = (values: PersonFormData) => {
     if (person) {
-      updatePerson({ ...person, ...values });
+      // Don't pass initialPaymentStatus on updates
+      const { initialPaymentStatus, ...updateValues } = values;
+      updatePerson({ ...person, ...updateValues });
     } else {
       addPerson(values);
       setActiveFilter('all');
@@ -261,6 +266,42 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
                 </Select><FormMessage /></FormItem>
               )}/>
             </div>
+            {!person && (
+                 <FormField
+                    control={form.control}
+                    name="initialPaymentStatus"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel>¿Iniciar con el pago al día?</FormLabel>
+                        <FormControl>
+                          <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex gap-4"
+                          >
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="paid" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                Sí, comenzar al día
+                              </FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <RadioGroupItem value="unpaid" />
+                              </FormControl>
+                              <FormLabel className="font-normal">
+                                No, comenzar como atrasado
+                              </FormLabel>
+                            </FormItem>
+                          </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+            )}
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
             )}/>

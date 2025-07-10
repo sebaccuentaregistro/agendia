@@ -52,6 +52,7 @@ export type Person = {
 
 export type NewPersonData = Omit<Person, 'id' | 'avatar' | 'lastPaymentDate' | 'vacationPeriods' | 'paymentHistory'> & {
     joinDate: Date;
+    initialPaymentStatus: 'paid' | 'unpaid';
 };
 
 
