@@ -20,7 +20,6 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useSearchParams } from 'next/navigation';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { PageHeader } from '@/components/page-header';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
@@ -42,7 +41,6 @@ const formSchema = z.object({
   spaceId: z.string().min(1, { message: 'Debes seleccionar un espacio.' }),
   dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
   time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
-  sessionType: z.enum(['Grupal', 'Individual']),
   levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
 });
 
@@ -147,7 +145,7 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
   const { people, addOneTimeAttendee, actividades, attendance, spaces, isPersonOnVacation } = useStudio();
   const actividad = actividades.find(a => a.id === session.actividadId);
   const space = spaces.find(s => s.id === session.spaceId);
-  const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+  const capacity = space?.capacity ?? 0;
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
@@ -314,7 +312,7 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
   const watchedPersonIds = form.watch('personIds');
 
   const space = spaces.find(s => s.id === session.spaceId);
-  const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+  const capacity = space?.capacity ?? 0;
   const actividad = actividades.find(a => a.id === session.actividadId);
 
   function onSubmit(data: { personIds: string[] }) {
@@ -419,7 +417,7 @@ function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: 
           <SheetDescription>
             {session.dayOfWeek} a las {formatTime(session.time)} en {space?.name || 'N/A'}.
             <br/>
-            {enrolledPeople.length} de {session.sessionType === 'Individual' ? 1 : space?.capacity || 0} personas inscriptas.
+            {enrolledPeople.length} de {space?.capacity || 0} personas inscriptas.
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="mt-4 h-[calc(100%-8rem)] pr-4">
@@ -498,7 +496,6 @@ function SchedulePageContent() {
       spaceId: '',
       dayOfWeek: 'Lunes',
       time: '09:00',
-      sessionType: 'Grupal',
       levelId: '',
     },
   });
@@ -593,7 +590,7 @@ function SchedulePageContent() {
 
   const handleAdd = () => {
     setSelectedSession(undefined);
-    form.reset({ instructorId: '', actividadId: '', spaceId: '', dayOfWeek: 'Lunes', time: '09:00', sessionType: 'Grupal', levelId: '' });
+    form.reset({ instructorId: '', actividadId: '', spaceId: '', dayOfWeek: 'Lunes', time: '09:00', levelId: '' });
     setIsDialogOpen(true);
   };
 
@@ -665,7 +662,6 @@ function SchedulePageContent() {
         espacio: 'Espacio',
         dia: 'Día',
         hora: 'Hora',
-        tipo: 'Tipo',
         inscriptos: 'Inscriptos',
         capacidad: 'Capacidad'
     };
@@ -677,9 +673,8 @@ function SchedulePageContent() {
             espacio: space?.name || 'N/A',
             dia: session.dayOfWeek,
             hora: session.time,
-            tipo: session.sessionType,
             inscriptos: session.personIds.length,
-            capacidad: session.sessionType === 'Individual' ? 1 : (space?.capacity || 0)
+            capacidad: space?.capacity || 0
         }
     });
 
@@ -753,24 +748,6 @@ function SchedulePageContent() {
                     </DialogHeader>
                     <Form {...form}>
                         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                        <FormField control={form.control} name="sessionType" render={({ field }) => (
-                            <FormItem className="space-y-3">
-                                <FormLabel>Tipo de Sesión</FormLabel>
-                                <FormControl>
-                                <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="flex gap-4">
-                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                    <FormControl><RadioGroupItem value="Grupal" /></FormControl>
-                                    <FormLabel className="font-normal">Grupal</FormLabel>
-                                    </FormItem>
-                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                    <FormControl><RadioGroupItem value="Individual" /></FormControl>
-                                    <FormLabel className="font-normal">Individual</FormLabel>
-                                    </FormItem>
-                                </RadioGroup>
-                                </FormControl>
-                                <FormMessage />
-                            </FormItem>
-                            )}/>
                         <FormField control={form.control} name="actividadId" render={({ field }) => (
                             <FormItem>
                             <FormLabel>Actividad</FormLabel>
@@ -932,8 +909,7 @@ function SchedulePageContent() {
                   filteredSessions.length > 0 ? (
                       filteredSessions.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
-                      const isIndividual = session.sessionType === 'Individual';
-                      const capacity = isIndividual ? 1 : space?.capacity || 0;
+                      const capacity = space?.capacity || 0;
                       
                       const today = new Date();
                       const todayStr = format(today, 'yyyy-MM-dd');
@@ -992,16 +968,9 @@ function SchedulePageContent() {
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
-                              {isIndividual ? (
-                                <div className="flex items-center gap-1.5 rounded-full bg-pink-500 px-3 py-1 text-xs font-bold text-white shadow-sm">
-                                  INDIVIDUAL
-                                  <Star className="h-3 w-3" />
-                                </div>
-                              ) : (
-                                <div className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm", isFull ? 'bg-red-500': 'bg-green-500')}>
-                                  {isFull ? 'LLENO' : `${availableSpots} LUGARES`}
-                                </div>
-                              )}
+                              <div className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm", isFull ? 'bg-red-500': 'bg-green-500')}>
+                                {isFull ? 'LLENO' : `${availableSpots} LUGARES`}
+                              </div>
                               <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2 text-slate-600 dark:text-slate-300">

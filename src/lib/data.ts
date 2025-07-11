@@ -1,3 +1,4 @@
+
 import type { Person, Specialist, Actividad, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level } from '@/types';
 
 // This file contains initial data for the application.
@@ -27,7 +28,7 @@ export const levels: Level[] = [
 ];
 
 export const tariffs: Tariff[] = [
-  { id: 'tariff-1', name: 'Clase Individual', price: 2500, description: 'Valor por una única clase (drop-in).', isIndividual: true },
+  { id: 'tariff-1', name: 'Clase Suelta', price: 2500, description: 'Valor por una única clase (drop-in).' },
   { id: 'tariff-2', name: '1 vez por semana', price: 8000, description: 'Plan mensual.', frequency: 1 },
   { id: 'tariff-3', name: '2 veces por semana', price: 12000, description: 'Plan mensual.', frequency: 2 },
   { id: 'tariff-4', name: '3 veces por semana', price: 15000, description: 'Plan mensual.', frequency: 3 },

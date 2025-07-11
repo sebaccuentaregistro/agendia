@@ -73,7 +73,6 @@ export type Session = {
   spaceId: string;
   dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
   time: string; // Format "HH:mm"
-  sessionType: 'Grupal' | 'Individual';
   personIds: string[];
   waitlistPersonIds?: string[];
   levelId?: string;
@@ -120,5 +119,4 @@ export type Tariff = {
   price: number;
   description?: string;
   frequency?: number;
-  isIndividual?: boolean;
 };

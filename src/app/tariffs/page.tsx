@@ -16,19 +16,12 @@ import type { Tariff } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
   price: z.coerce.number().min(0, { message: 'El precio no puede ser negativo.' }),
   description: z.string().optional(),
   frequency: z.coerce.number().optional(),
-  isIndividual: z.boolean().optional(),
-}).refine(data => {
-  return !(data.frequency && data.isIndividual);
-}, {
-  message: "Un arancel no puede ser individual y tener frecuencia a la vez.",
-  path: ["isIndividual"],
 });
 
 export default function TariffsPage() {
@@ -40,7 +33,7 @@ export default function TariffsPage() {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { name: '', price: 0, description: '', frequency: undefined, isIndividual: false },
+    defaultValues: { name: '', price: 0, description: '', frequency: undefined },
   });
 
   const sortedTariffs = useMemo(() => {
@@ -49,7 +42,7 @@ export default function TariffsPage() {
 
   function handleAdd() {
     setSelectedTariff(undefined);
-    form.reset({ name: '', price: 0, description: '', frequency: undefined, isIndividual: false });
+    form.reset({ name: '', price: 0, description: '', frequency: undefined });
     setIsDialogOpen(true);
   }
 
@@ -60,7 +53,6 @@ export default function TariffsPage() {
         price: tariff.price,
         description: tariff.description,
         frequency: tariff.frequency,
-        isIndividual: tariff.isIndividual,
     });
     setIsDialogOpen(true);
   }
@@ -82,7 +74,6 @@ export default function TariffsPage() {
     const finalValues = {
         ...values,
         frequency: values.frequency || undefined,
-        isIndividual: values.isIndividual || false,
     };
 
     if (selectedTariff) {
@@ -133,26 +124,6 @@ export default function TariffsPage() {
                 <FormField control={form.control} name="frequency" render={({ field }) => (
                   <FormItem><FormLabel>Frecuencia Semanal Asociada (Opcional)</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.value)} /></FormControl><FormMessage /></FormItem>
                 )}/>
-                 <FormField
-                    control={form.control}
-                    name="isIndividual"
-                    render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
-                        <FormControl>
-                            <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                            <FormLabel>
-                            Es arancel para clase individual
-                            </FormLabel>
-                            <FormMessage />
-                        </div>
-                        </FormItem>
-                    )}
-                    />
                 <DialogFooter>
                     <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
                     <Button type="submit">Guardar Cambios</Button>
@@ -179,9 +150,6 @@ export default function TariffsPage() {
                 <p className="text-4xl font-bold text-slate-800 dark:text-slate-100">{formatPrice(tariff.price)}</p>
                 {tariff.frequency && (
                     <span className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Calendar className="h-4 w-4" /> {tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} por semana</span>
-                )}
-                {tariff.isIndividual && (
-                    <span className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><CheckSquare className="h-4 w-4" /> Clase individual</span>
                 )}
             </CardContent>
             <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2">
