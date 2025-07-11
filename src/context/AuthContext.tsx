@@ -3,14 +3,10 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, type User } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import type { LoginCredentials } from '@/types';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import type { LoginCredentials, UserProfile } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
-
-type UserProfile = {
-  instituteId: string;
-  status: 'active' | 'pending';
-};
 
 type AuthContextType = {
   user: User | null;
@@ -22,25 +18,38 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// This is a TEMPORARY profile.
-// In the next step, we will load this dynamically from Firestore.
-const tempProfile: UserProfile = {
-    instituteId: 'yogaflow-manager-uqjpc',
-    status: 'active',
-};
-
 const protectedRoutes = ['/', '/schedule', '/students', '/instructors', '/specializations', '/spaces', '/levels', '/tariffs', '/statistics'];
 const authRoutes = ['/login'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            setUser(user);
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                setUser(user);
+                // User is signed in, let's fetch their profile.
+                const userDocRef = doc(db, 'users', user.uid);
+                const userDocSnap = await getDoc(userDocRef);
+
+                if (userDocSnap.exists()) {
+                    const profileData = userDocSnap.data() as UserProfile;
+                    setUserProfile(profileData);
+                } else {
+                    // Handle case where user exists in Auth but not in Firestore users collection
+                    console.error("No user profile found in Firestore for UID:", user.uid);
+                    setUserProfile(null);
+                    // Optional: logout the user if profile is required
+                    await signOut(auth);
+                }
+            } else {
+                setUser(null);
+                setUserProfile(null);
+            }
             setLoading(false);
         });
         return () => unsubscribe();
@@ -49,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (loading) return;
 
-        const userIsLoggedIn = !!user;
+        const userIsLoggedIn = !!user && !!userProfile && userProfile.status === 'active';
         const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
         const isAuthRoute = authRoutes.includes(pathname);
 
@@ -58,21 +67,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else if (userIsLoggedIn && isAuthRoute) {
             router.push('/');
         }
-    }, [user, loading, pathname, router]);
+    }, [user, userProfile, loading, pathname, router]);
 
     const login = async ({ email, password }: LoginCredentials) => {
         await signInWithEmailAndPassword(auth, email, password);
+        // onAuthStateChanged will handle fetching the profile
     };
 
     const logout = async () => {
         await signOut(auth);
+        setUser(null);
+        setUserProfile(null);
         router.push('/login');
     };
 
     const value = {
         user,
-        // We use the temporary profile for now. The user object is real.
-        userProfile: user ? tempProfile : null,
+        userProfile,
         loading,
         login,
         logout,

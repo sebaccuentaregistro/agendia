@@ -5,6 +5,12 @@ export type LoginCredentials = {
   password: string;
 };
 
+export type UserProfile = {
+  instituteId: string;
+  status: 'active' | 'pending';
+  email: string;
+};
+
 export type Institute = {
   id: string;
   name: string;
