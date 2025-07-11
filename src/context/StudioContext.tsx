@@ -186,7 +186,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                         createdAt: new Date(),
                     };
                     try {
-                        await addEntity(getCollectionRef('notifications'), newNotification);
+                        await firestoreActions.addEntity(getCollectionRef('notifications'), newNotification);
                     } catch (error) {
                         console.error("Error creating churn risk notification:", error);
                     }
@@ -506,5 +506,3 @@ export function useStudio() {
   }
   return context;
 }
-
-    
