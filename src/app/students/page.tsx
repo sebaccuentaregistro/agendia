@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -32,6 +32,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Alert } from '@/components/ui/alert';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -252,7 +253,7 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
 }
 
 function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
-    const { sessions, specialists, actividades, enrollPersonInSessions } = useStudio();
+    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs } = useStudio();
 
     const { enrolledSessionIds, sortedSessions } = useMemo(() => {
         const enrolledSessionIds = sessions.filter(s => s.personIds.includes(person?.id || '')).map(s => s.id);
@@ -268,6 +269,15 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
     const form = useForm<{ sessionIds: string[] }>({
         defaultValues: { sessionIds: enrolledSessionIds },
     });
+    
+    const watchedSessionIds = form.watch('sessionIds');
+
+    const personTariff = useMemo(() => {
+        return tariffs.find(t => t.id === person?.tariffId);
+    }, [tariffs, person]);
+
+    const tariffFrequency = personTariff?.frequency;
+    const isOverLimit = tariffFrequency && watchedSessionIds.length > tariffFrequency;
 
     useEffect(() => {
         form.reset({ sessionIds: enrolledSessionIds });
@@ -290,11 +300,29 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
             <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>Gestionar Horarios: {person.name}</DialogTitle>
-                    <DialogDescription>Selecciona las clases a las que asistirá {person.name} de forma regular.</DialogDescription>
+                    <DialogDescription>
+                        Selecciona las clases a las que asistirá {person.name} de forma regular.
+                        {personTariff && (
+                          <span className="block mt-1 font-medium">
+                            Plan actual: {personTariff.name} ({tariffFrequency ? `${watchedSessionIds.length}/${tariffFrequency}` : watchedSessionIds.length} clase(s) semanales)
+                          </span>
+                        )}
+                    </DialogDescription>
                 </DialogHeader>
+
+                {isOverLimit && (
+                    <Alert variant="destructive" className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 [&>svg]:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20">
+                        <AlertCircle className="h-4 w-4" />
+                        <CardTitle className="text-sm font-semibold">Atención</CardTitle>
+                        <Description>
+                            Con {watchedSessionIds.length} clases, {person.name} supera el límite de {tariffFrequency} de su plan. Puedes inscribirlo igualmente.
+                        </Description>
+                    </Alert>
+                )}
+
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)}>
-                        <ScrollArea className="h-[60vh] my-4">
+                        <ScrollArea className="h-[50vh] my-4">
                             <div className="space-y-6 pr-4">
                                 {Object.entries(sessionsByDay).map(([day, daySessions]) => (
                                     <div key={day}>
@@ -1039,3 +1067,6 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
+
+    
