@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, Warehouse, Users, MoreHorizontal } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, Warehouse, Users } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo } from 'react';
@@ -17,7 +17,6 @@ import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -168,32 +167,12 @@ export default function SpacesPage() {
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredSpaces.map((space) => (
               <Card key={space.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-                <CardHeader className="flex flex-row items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-3 text-slate-800 dark:text-slate-100">
-                      <Warehouse className="h-6 w-6 text-primary" />
-                      <span>{space.name}</span>
-                    </CardTitle>
-                    <CardDescription className="flex items-center gap-2 pt-2"><Users className="h-4 w-4" /> Capacidad: {space.capacity} personas</CardDescription>
-                  </div>
-                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Más opciones</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => handleEdit(space)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        <span>Editar</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => openDeleteDialog(space)} className="text-destructive focus:text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Eliminar</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-slate-800 dark:text-slate-100">
+                    <Warehouse className="h-6 w-6 text-primary" />
+                    <span>{space.name}</span>
+                  </CardTitle>
+                  <CardDescription className="flex items-center gap-2 pt-2"><Users className="h-4 w-4" /> Capacidad: {space.capacity} personas</CardDescription>
                 </CardHeader>
                 <CardContent className="flex-grow">
                    <Link href={`/schedule?spaceId=${space.id}`} className="transition-opacity hover:opacity-75">
@@ -204,6 +183,16 @@ export default function SpacesPage() {
                     </p>
                   </Link>
                 </CardContent>
+                <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2 mt-auto">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(space)}>
+                        <Pencil className="h-4 w-4" />
+                        <span className="sr-only">Editar</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(space)}>
+                        <Trash2 className="h-4 w-4" />
+                        <span className="sr-only">Eliminar</span>
+                    </Button>
+                </CardFooter>
               </Card>
             ))}
           </div>
@@ -238,5 +227,3 @@ export default function SpacesPage() {
     </div>
   );
 }
-
-    
