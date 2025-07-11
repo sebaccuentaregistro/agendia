@@ -1,34 +1,83 @@
+
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { onAuthStateChanged, signOut, signInWithEmailAndPassword, type User } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import type { LoginCredentials } from '@/types';
+import { usePathname, useRouter } from 'next/navigation';
 
-// This is a DUMMY user profile for demonstration purposes.
-// It ensures the app thinks a user is logged in and has an institute.
-const dummyUser = { uid: 'dummy-user' };
-const dummyProfile = {
-    instituteId: 'yogaflow-manager-uqjpc', // Using the actual project ID
-    status: 'active',
+type UserProfile = {
+  instituteId: string;
+  status: 'active' | 'pending';
 };
 
-// We define the shape of the context for TypeScript.
 type AuthContextType = {
-  user: typeof dummyUser | null;
-  userProfile: typeof dummyProfile | null;
+  user: User | null;
+  userProfile: UserProfile | null;
   loading: boolean;
-  logout: () => void;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// This is a TEMPORARY profile.
+// In the next step, we will load this dynamically from Firestore.
+const tempProfile: UserProfile = {
+    instituteId: 'yogaflow-manager-uqjpc',
+    status: 'active',
+};
+
+const protectedRoutes = ['/', '/schedule', '/students', '/instructors', '/specializations', '/spaces', '/levels', '/tariffs', '/statistics'];
+const authRoutes = ['/login'];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-    // This provider now gives a static, "logged-in" state to the whole app.
-    // This removes the complex logic that was causing the application to freeze.
-    const value = {
-        user: dummyUser,
-        userProfile: dummyProfile,
-        loading: false, // Always false to prevent loading screens.
-        logout: () => console.log("Logout action disabled."), // A safe, no-op function.
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
+    const router = useRouter();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setUser(user);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, []);
+
+    useEffect(() => {
+        if (loading) return;
+
+        const userIsLoggedIn = !!user;
+        const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
+        const isAuthRoute = authRoutes.includes(pathname);
+
+        if (!userIsLoggedIn && isProtectedRoute) {
+            router.push('/login');
+        } else if (userIsLoggedIn && isAuthRoute) {
+            router.push('/');
+        }
+    }, [user, loading, pathname, router]);
+
+    const login = async ({ email, password }: LoginCredentials) => {
+        await signInWithEmailAndPassword(auth, email, password);
     };
+
+    const logout = async () => {
+        await signOut(auth);
+        router.push('/login');
+    };
+
+    const value = {
+        user,
+        // We use the temporary profile for now. The user object is real.
+        userProfile: user ? tempProfile : null,
+        loading,
+        login,
+        logout,
+    };
+
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

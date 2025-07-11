@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/components/theme-provider';
 import { AppShell } from '@/components/layout/app-shell';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from '@/context/AuthContext';
+import { usePathname } from 'next/navigation';
 
 export const metadata = {
   title: 'Agendia - Gestión para Estudios',
@@ -26,8 +27,8 @@ export default function RootLayout({
         >
           <AuthProvider>
             <AppShell>{children}</AppShell>
+            <Toaster />
           </AuthProvider>
-          <Toaster />
         </ThemeProvider>
       </body>
     </html>
