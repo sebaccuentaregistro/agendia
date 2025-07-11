@@ -484,7 +484,7 @@ function DashboardPageContent() {
                   {filteredSessions.map(session => {
                       const { specialist, actividad, space } = getSessionDetails(session);
                       const enrolledCount = (session as any).enrolledCount;
-                      const capacity = session.sessionType === 'Individual' ? 1 : space?.capacity ?? 0;
+                      const capacity = space?.capacity ?? 0;
                       const utilization = capacity > 0 ? enrolledCount / capacity : 0;
                       const isFull = utilization >= 1;
                       const isNearlyFull = utilization >= 0.8 && !isFull;
