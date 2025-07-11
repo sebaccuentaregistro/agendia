@@ -28,7 +28,7 @@ const signupSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
   confirmPassword: z.string(),
-  terms: z.literal(true, {
+  terms: z.literal<boolean>(true, {
     errorMap: () => ({ message: 'Debes aceptar los términos y condiciones para registrarte.' }),
   }),
 }).refine(data => data.password === data.confirmPassword, {
