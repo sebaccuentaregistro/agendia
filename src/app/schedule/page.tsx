@@ -700,7 +700,7 @@ function SchedulePageContent() {
         <PageHeader title="Horarios">
           <div className="flex items-center gap-2">
             <Button variant="outline" disabled><FileDown className="mr-2 h-4 w-4"/>Exportar</Button>
-            <Button size="icon" disabled><PlusCircle className="h-5 w-5" /></Button>
+            <Button disabled><PlusCircle className="mr-2 h-4 w-4" />Agregar Horario</Button>
           </div>
         </PageHeader>
         <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-6">
@@ -737,9 +737,9 @@ function SchedulePageContent() {
             </Button>
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                 <DialogTrigger asChild>
-                <Button onClick={handleAdd} size="icon">
-                    <PlusCircle className="h-5 w-5" />
-                    <span className="sr-only">Añadir Sesión</span>
+                <Button onClick={handleAdd}>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Agregar Horario
                 </Button>
                 </DialogTrigger>
                 <DialogContent>
