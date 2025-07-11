@@ -2,10 +2,10 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword, type User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
-import type { LoginCredentials, UserProfile } from '@/types';
+import { doc, getDoc, collection, writeBatch } from 'firebase/firestore';
+import type { LoginCredentials, SignupCredentials, UserProfile } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
 
 type AuthContextType = {
@@ -13,6 +13,7 @@ type AuthContextType = {
   userProfile: UserProfile | null;
   loading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
+  signup: (credentials: SignupCredentials) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -40,11 +41,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     const profileData = userDocSnap.data() as UserProfile;
                     setUserProfile(profileData);
                 } else {
-                    // Handle case where user exists in Auth but not in Firestore users collection
-                    console.error("No user profile found in Firestore for UID:", user.uid);
+                    // This can happen briefly during signup before the user profile is created.
+                    // We don't treat it as an error here.
                     setUserProfile(null);
-                    // Optional: logout the user if profile is required
-                    await signOut(auth);
                 }
             } else {
                 setUser(null);
@@ -61,17 +60,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userIsLoggedIn = !!user && !!userProfile && userProfile.status === 'active';
         const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
         const isAuthRoute = authRoutes.includes(pathname);
+        const userIsPending = !!user && userProfile && userProfile.status === 'pending';
 
         if (!userIsLoggedIn && isProtectedRoute) {
             router.push('/login');
         } else if (userIsLoggedIn && isAuthRoute) {
             router.push('/');
         }
+        
+        // If user is logged in but pending, keep them on login page
+        // The login page should show a "pending approval" message if it detects this state.
+        if (userIsPending && isProtectedRoute) {
+            router.push('/login');
+        }
+
     }, [user, userProfile, loading, pathname, router]);
 
     const login = async ({ email, password }: LoginCredentials) => {
         await signInWithEmailAndPassword(auth, email, password);
-        // onAuthStateChanged will handle fetching the profile
+    };
+
+    const signup = async ({ instituteName, email, password }: SignupCredentials) => {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const newUser = userCredential.user;
+
+        // Use a batch write to create both documents atomically
+        const batch = writeBatch(db);
+
+        // 1. Create the new institute document
+        const instituteRef = doc(collection(db, 'institutes'));
+        batch.set(instituteRef, {
+            name: instituteName,
+            ownerId: newUser.uid,
+            createdAt: new Date(),
+        });
+
+        // 2. Create the user profile document
+        const userRef = doc(db, 'users', newUser.uid);
+        batch.set(userRef, {
+            email: newUser.email,
+            instituteId: instituteRef.id,
+            status: 'pending', // Key change: new users are pending approval
+            createdAt: new Date(),
+        });
+        
+        await batch.commit();
+        // The onAuthStateChanged listener will pick up the new user and their (pending) profile
     };
 
     const logout = async () => {
@@ -86,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userProfile,
         loading,
         login,
+        signup,
         logout,
     };
 

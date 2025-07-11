@@ -13,27 +13,42 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { Heart, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-const formSchema = z.object({
+const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
 });
 
+const signupSchema = z.object({
+  instituteName: z.string().min(3, { message: 'El nombre del instituto debe tener al menos 3 caracteres.' }),
+  email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
+  password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
+  confirmPassword: z.string()
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Las contraseñas no coinciden.",
+  path: ["confirmPassword"],
+});
+
+
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, signup } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [signupSuccess, setSignupSuccess] = useState(false);
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      email: '',
-      password: '',
-    },
+  const loginForm = useForm<z.infer<typeof loginSchema>>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const signupForm = useForm<z.infer<typeof signupSchema>>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { instituteName: '', email: '', password: '', confirmPassword: '' },
+  });
+
+  async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
     setError(null);
     setLoading(true);
     try {
@@ -51,6 +66,49 @@ export default function LoginPage() {
     }
   }
 
+  async function onSignupSubmit(values: z.infer<typeof signupSchema>) {
+    setError(null);
+    setLoading(true);
+    try {
+      await signup(values);
+      setSignupSuccess(true);
+    } catch (err: any) {
+       if (err.code === 'auth/email-already-in-use') {
+        setError('Este correo electrónico ya está registrado.');
+      } else {
+        setError('Ocurrió un error inesperado durante el registro. Por favor, inténtalo de nuevo.');
+      }
+      console.error(err);
+    } finally {
+        setLoading(false);
+    }
+  }
+
+  if (signupSuccess) {
+    return (
+       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+        <div className="flex items-center gap-3 mb-8">
+         <Heart className="h-10 w-10 text-fuchsia-500" />
+         <h1 className="text-4xl font-bold">Agendia</h1>
+        </div>
+        <Card className="w-full max-w-sm">
+          <CardHeader>
+            <CardTitle>¡Registro Exitoso!</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Alert variant="default" className="border-primary/50 text-primary">
+                <AlertTitle>Cuenta Pendiente de Aprobación</AlertTitle>
+                <AlertDescription>
+                    Gracias por registrarte. Tu cuenta ha sido creada y está esperando la aprobación de un administrador. Recibirás una notificación por correo electrónico una vez que esté activa.
+                </AlertDescription>
+            </Alert>
+            <Button onClick={() => setSignupSuccess(false)} className="w-full mt-6">Volver al inicio</Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="flex items-center gap-3 mb-8">
@@ -58,55 +116,133 @@ export default function LoginPage() {
          <h1 className="text-4xl font-bold">Agendia</h1>
       </div>
       <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Iniciar Sesión</CardTitle>
-          <CardDescription>Bienvenido de nuevo. Ingresa a tu cuenta.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Correo Electrónico</FormLabel>
-                    <FormControl>
-                      <Input placeholder="tu@email.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contraseña</FormLabel>
-                    <FormControl>
-                      <Input type="password" placeholder="••••••••" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {error && (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {loading ? 'Ingresando...' : 'Ingresar'}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
+         <Tabs defaultValue="login" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
+                <TabsTrigger value="signup">Registrarse</TabsTrigger>
+            </TabsList>
+            <TabsContent value="login">
+                <CardHeader>
+                    <CardTitle>Iniciar Sesión</CardTitle>
+                    <CardDescription>Bienvenido de nuevo. Ingresa a tu cuenta.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Form {...loginForm}>
+                    <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                        <FormField
+                        control={loginForm.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Correo Electrónico</FormLabel>
+                            <FormControl>
+                                <Input placeholder="tu@email.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={loginForm.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Contraseña</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="••••••••" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        {error && (
+                        <Alert variant="destructive">
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                        )}
+                        <Button type="submit" className="w-full" disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {loading ? 'Ingresando...' : 'Ingresar'}
+                        </Button>
+                    </form>
+                    </Form>
+                </CardContent>
+            </TabsContent>
+            <TabsContent value="signup">
+                <CardHeader>
+                    <CardTitle>Crear Cuenta</CardTitle>
+                    <CardDescription>Registra tu instituto para empezar a gestionar.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <Form {...signupForm}>
+                    <form onSubmit={signupForm.handleSubmit(onSignupSubmit)} className="space-y-4">
+                         <FormField
+                        control={signupForm.control}
+                        name="instituteName"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Nombre de tu Instituto</FormLabel>
+                            <FormControl>
+                                <Input placeholder="Ej: Centro de Yoga Flow" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={signupForm.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Correo Electrónico</FormLabel>
+                            <FormControl>
+                                <Input placeholder="tu@email.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={signupForm.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Contraseña</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="Mínimo 6 caracteres" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                         <FormField
+                        control={signupForm.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Confirmar Contraseña</FormLabel>
+                            <FormControl>
+                                <Input type="password" placeholder="Repite la contraseña" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        {error && (
+                        <Alert variant="destructive">
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                        )}
+                        <Button type="submit" className="w-full" disabled={loading}>
+                        {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {loading ? 'Registrando...' : 'Registrarse'}
+                        </Button>
+                    </form>
+                    </Form>
+                </CardContent>
+            </TabsContent>
+         </Tabs>
       </Card>
-       <p className="mt-8 text-center text-sm text-muted-foreground">
-        ¿Aún no tienes cuenta? Contacta con el soporte para registrar tu instituto.
-      </p>
     </div>
   );
 }
