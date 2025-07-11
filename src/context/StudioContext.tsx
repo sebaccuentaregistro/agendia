@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -8,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { db } from '@/lib/firebase';
-import { addMonths } from 'date-fns';
+import { addMonths, parse } from 'date-fns';
 
 type State = {
   actividades: Actividad[];
@@ -82,7 +83,7 @@ const convertTimestamps = (data: any) => {
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  const { user, userProfile, loading: authLoading } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   
   const [state, setState] = useState<State>({
     actividades: [], specialists: [], people: [], sessions: [],
@@ -129,6 +130,80 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       unsubscribes.forEach(unsub => unsub());
     };
   }, [instituteId, authLoading, toast]);
+
+   useEffect(() => {
+    if (authLoading || loading || !instituteId) return;
+
+    const checkChurnRisk = async () => {
+        const CHURN_THRESHOLD = 3;
+        const notificationType = 'churnRisk';
+
+        for (const person of state.people) {
+            // Check if there's already an active churn notification for this person
+            const existingNotification = state.notifications.find(
+                n => n.type === notificationType && n.personId === person.id
+            );
+            if (existingNotification) {
+                continue; // Skip if notification already exists
+            }
+
+            // Find sessions this person is enrolled in
+            const personSessions = state.sessions.filter(s => s.personIds.includes(person.id));
+            if (personSessions.length === 0) continue;
+            
+            const personSessionIds = new Set(personSessions.map(s => s.id));
+
+            // Get all attendance records relevant to this person, sorted by most recent
+            const personAttendance = state.attendance
+                .filter(a => personSessionIds.has(a.sessionId))
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+            let consecutiveAbsences = 0;
+
+            for (const record of personAttendance) {
+                // Ignore records for dates the person was on vacation
+                const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+                if (isPersonOnVacation(person, recordDate)) {
+                    continue;
+                }
+                
+                // Only consider this record if the person was supposed to be there
+                // (i.e., not a justified absence or already present)
+                const wasSupposedToBeThere = !record.justifiedAbsenceIds?.includes(person.id) && !record.presentIds?.includes(person.id);
+
+                if (wasSupposedToBeThere && record.absentIds?.includes(person.id)) {
+                    consecutiveAbsences++;
+                } else if (record.presentIds?.includes(person.id)) {
+                    // If they were present, the streak is broken
+                    break;
+                }
+
+                if (consecutiveAbsences >= CHURN_THRESHOLD) {
+                    // Create notification
+                    const newNotification = {
+                        type: notificationType,
+                        personId: person.id,
+                        createdAt: new Date(),
+                    };
+                    try {
+                        await addEntity(getCollectionRef('notifications'), newNotification);
+                    } catch (error) {
+                        console.error("Error creating churn risk notification:", error);
+                    }
+                    break; // Stop checking for this person once a notification is created
+                }
+            }
+        }
+    };
+    
+    // Run the check once, a few seconds after data is loaded.
+    const timer = setTimeout(() => {
+        checkChurnRisk();
+    }, 3000);
+    
+    return () => clearTimeout(timer);
+
+  }, [state.people, state.sessions, state.attendance, state.notifications, authLoading, loading, instituteId]);
 
 
   const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
