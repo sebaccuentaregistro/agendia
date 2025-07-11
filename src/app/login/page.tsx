@@ -15,6 +15,8 @@ import { Heart, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { TermsDialog } from '@/components/terms-dialog';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
@@ -25,7 +27,10 @@ const signupSchema = z.object({
   instituteName: z.string().min(3, { message: 'El nombre del instituto debe tener al menos 3 caracteres.' }),
   email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
+  terms: z.literal(true, {
+    errorMap: () => ({ message: 'Debes aceptar los términos y condiciones para registrarte.' }),
+  }),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Las contraseñas no coinciden.",
   path: ["confirmPassword"],
@@ -38,6 +43,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -46,7 +52,7 @@ export default function LoginPage() {
 
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { instituteName: '', email: '', password: '', confirmPassword: '' },
+    defaultValues: { instituteName: '', email: '', password: '', confirmPassword: '', terms: false },
   });
 
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
@@ -111,6 +117,8 @@ export default function LoginPage() {
   }
 
   return (
+    <>
+    <TermsDialog isOpen={isTermsOpen} onOpenChange={setIsTermsOpen} />
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="flex items-center gap-3 mb-8">
          <Heart className="h-10 w-10 text-fuchsia-500" />
@@ -233,6 +241,38 @@ export default function LoginPage() {
                             </FormItem>
                         )}
                         />
+                        <FormField
+                          control={signupForm.control}
+                          name="terms"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                  Acepto los{' '}
+                                  <Button
+                                    type="button"
+                                    variant="link"
+                                    className="p-0 h-auto text-primary font-semibold"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setIsTermsOpen(true);
+                                    }}
+                                  >
+                                    Términos y Condiciones
+                                  </Button>
+                                  .
+                                </FormLabel>
+                                <FormMessage />
+                              </div>
+                            </FormItem>
+                          )}
+                        />
                         {error && (
                         <Alert variant="destructive">
                             <AlertDescription>{error}</AlertDescription>
@@ -249,5 +289,6 @@ export default function LoginPage() {
          </Tabs>
       </Card>
     </div>
+    </>
   );
 }
