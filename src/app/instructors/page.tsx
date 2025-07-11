@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Specialist } from '@/types';
-import { Pencil, PlusCircle, Trash2, MoreVertical } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -19,7 +19,6 @@ import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -204,27 +203,8 @@ export default function SpecialistsPage() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {filteredSpecialists.map((specialist) => (
             <Card key={specialist.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-              <CardHeader className="flex flex-row items-start justify-between p-4 pb-2">
-                <div className="flex-1">
+              <CardHeader className="p-4 pb-2">
                   <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{specialist.name}</CardTitle>
-                </div>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 flex-shrink-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onSelect={() => handleEdit(specialist)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        <span>Editar</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => openDeleteDialog(specialist)} className="text-destructive focus:text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        <span>Eliminar</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
               </CardHeader>
               
               <CardContent className="p-4 pt-2 flex-grow">
@@ -249,6 +229,16 @@ export default function SpecialistsPage() {
                   </div>
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2 mt-auto">
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(specialist)}>
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Editar</span>
+                </Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(specialist)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Eliminar</span>
+                </Button>
+              </CardFooter>
             </Card>
           ))}
         </div>
@@ -290,3 +280,5 @@ export default function SpecialistsPage() {
     </div>
   );
 }
+
+    
