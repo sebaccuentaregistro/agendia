@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
@@ -341,57 +342,62 @@ function DashboardPageContent() {
           {dashboardView === 'main' ? (
           <>
               <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
-              <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden">
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-red-500/20 to-transparent"></div>
-                  <div className={cn( "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full", hasOverdue ? "bg-destructive/10 text-destructive" : "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300" )}>
+                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <AlertTriangle className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasOverdue ? "text-destructive" : "text-green-600 dark:text-green-300")}>
+                  <CardTitle className="text-lg font-semibold text-foreground">
                       Atrasados
                   </CardTitle>
                   <p className="text-2xl font-bold text-foreground">{overdueCount}</p>
-              </Card>
+                </Card>
               </Link>
               <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
-              <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden">
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-yellow-500/20 to-transparent"></div>
-                  <div className={cn( "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full", hasPendingRecovery ? "bg-yellow-100 text-yellow-600 dark:bg-yellow-900/50 dark:text-yellow-300" : "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300" )}>
+                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <CalendarClock className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasPendingRecovery ? "text-yellow-600 dark:text-yellow-300" : "text-green-600 dark:text-green-300")}>
+                  <CardTitle className="text-lg font-semibold text-foreground">
                       Recuperos
                   </CardTitle>
                   <p className="text-2xl font-bold text-foreground">{pendingRecoveryCount}</p>
-              </Card>
+                </Card>
               </Link>
               <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
-              <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden">
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-blue-500/20 to-transparent"></div>
-                  <div className={cn( "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full", hasOnVacation ? "bg-blue-100 text-blue-600 dark:bg-blue-900/50 dark:text-blue-300" : "bg-green-100 text-green-600 dark:bg-green-900/50 dark:text-green-300" )}>
+                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Plane className="h-4 w-4" />
                   </div>
-                  <CardTitle className={cn("text-lg font-semibold", hasOnVacation ? "text-blue-600 dark:text-blue-300" : "text-green-600 dark:text-green-300")}>
+                  <CardTitle className="text-lg font-semibold text-foreground">
                       Vacaciones
                   </CardTitle>
                   <p className="text-2xl font-bold text-foreground">{onVacationCount}</p>
-              </Card>
+                </Card>
               </Link>
               {mainCards.map((item) => (
               <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                  <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden">
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                      <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <item.icon className="h-4 w-4" />
-                      </div>
-                      <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                      {item.count !== null && (
-                      <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                      )}
-                  </Card>
+                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <item.icon className="h-4 w-4" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                  {item.count !== null && (
+                  <p className="text-2xl font-bold text-foreground">{item.count}</p>
+                  )}
+                </Card>
               </Link>
               ))}
               <Link href="/?view=management" className="transition-transform hover:-translate-y-1">
-              <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden">
+              <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                       <Settings className="h-4 w-4" />
@@ -405,18 +411,19 @@ function DashboardPageContent() {
           <>
               {managementCards.map((item) => (
               <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                  <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden">
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                      <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <item.icon className="h-4 w-4" />
-                      </div>
-                      <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                      {item.count !== null ? (
-                      <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                      ) : (
-                      <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-                      )}
-                  </Card>
+                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <item.icon className="h-4 w-4" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                  {item.count !== null ? (
+                  <p className="text-2xl font-bold text-foreground">{item.count}</p>
+                  ) : (
+                  <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                  )}
+                </Card>
               </Link>
               ))}
           </>
@@ -424,13 +431,13 @@ function DashboardPageContent() {
       </div>
 
       {dashboardView === 'main' && (
-          <Card className="flex flex-col bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
+        <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10">
           <CardHeader>
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle className="text-lg text-foreground">Sesiones de Hoy - {todayName}</CardTitle>
               <div className="flex flex-wrap items-center gap-2">
                   <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background border-border shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
                       <SelectValue placeholder="Especialista" />
                   </SelectTrigger>
                   <SelectContent>
@@ -439,7 +446,7 @@ function DashboardPageContent() {
                   </SelectContent>
                   </Select>
                   <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background border-border shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
                       <SelectValue placeholder="Actividad" />
                   </SelectTrigger>
                   <SelectContent>
@@ -448,7 +455,7 @@ function DashboardPageContent() {
                   </SelectContent>
                   </Select>
                   <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background border-border shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
                       <SelectValue placeholder="Espacio" />
                   </SelectTrigger>
                   <SelectContent>
@@ -457,7 +464,7 @@ function DashboardPageContent() {
                   </SelectContent>
                   </Select>
                   <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background border-border shadow-sm rounded-xl">
+                  <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
                       <SelectValue placeholder="Horario" />
                   </SelectTrigger>
                   <SelectContent>
@@ -494,7 +501,7 @@ function DashboardPageContent() {
                       <li 
                           key={session.id}
                           className={cn(
-                          "flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-card/90 shadow-md hover:shadow-lg hover:border-primary/30",
+                          "flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-background/60 shadow-md hover:shadow-lg hover:border-primary/30",
                           isFull && "bg-pink-500/10 border-pink-500/30",
                           isNearlyFull && "bg-amber-500/10 border-amber-500/20"
                           )}

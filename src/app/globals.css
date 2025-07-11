@@ -6,37 +6,37 @@
 
 @layer base {
   :root {
-    --background: 257 60% 99%;
-    --foreground: 257 15% 25%;
+    --background: 265 60% 98%;
+    --foreground: 265 15% 25%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 257 15% 25%;
+    --card: 265 80% 100%;
+    --card-foreground: 265 15% 25%;
  
     --popover: 0 0% 100%;
-    --popover-foreground: 257 15% 25%;
+    --popover-foreground: 265 15% 25%;
  
-    --primary: 257 80% 60%;
-    --primary-foreground: 257 100% 99%;
+    --primary: 265 80% 58%;
+    --primary-foreground: 265 100% 99%;
  
-    --secondary: 257 20% 94%;
-    --secondary-foreground: 257 15% 25%;
+    --secondary: 265 20% 94%;
+    --secondary-foreground: 265 15% 25%;
  
-    --muted: 257 20% 96%;
-    --muted-foreground: 257 10% 45%;
+    --muted: 265 20% 96%;
+    --muted-foreground: 265 10% 45%;
  
-    --accent: 257 30% 91%;
-    --accent-foreground: 257 15% 25%;
+    --accent: 265 30% 91%;
+    --accent-foreground: 265 15% 25%;
  
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 257 20% 90%;
-    --input: 257 20% 92%;
-    --ring: 257 80% 60%;
+    --border: 265 20% 90%;
+    --input: 265 20% 92%;
+    --ring: 265 80% 58%;
  
     --radius: 1rem;
 
-    --chart-1: 257 70% 50%;
+    --chart-1: 265 70% 50%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
@@ -44,35 +44,35 @@
   }
  
   .dark {
-    --background: 257 15% 10%;
+    --background: 265 15% 10%;
     --foreground: 0 0% 98%;
 
-    --card: 257 15% 14%;
+    --card: 265 15% 14%;
     --card-foreground: 0 0% 98%;
  
-    --popover: 257 15% 10%;
+    --popover: 265 15% 10%;
     --popover-foreground: 0 0% 98%;
  
-    --primary: 257 80% 65%;
-    --primary-foreground: 257 100% 99%;
+    --primary: 265 80% 65%;
+    --primary-foreground: 265 100% 99%;
  
-    --secondary: 257 15% 25%;
+    --secondary: 265 15% 25%;
     --secondary-foreground: 0 0% 98%;
  
-    --muted: 257 15% 20%;
+    --muted: 265 15% 20%;
     --muted-foreground: 0 0% 63.9%;
  
-    --accent: 257 20% 28%;
+    --accent: 265 20% 28%;
     --accent-foreground: 0 0% 98%;
  
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
  
-    --border: 257 15% 25%;
-    --input: 257 15% 25%;
-    --ring: 257 80% 65%;
+    --border: 265 15% 25%;
+    --input: 265 15% 25%;
+    --ring: 265 80% 65%;
 
-    --chart-1: 257 70% 60%;
+    --chart-1: 265 70% 60%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
@@ -87,9 +87,9 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Poppins', sans-serif;
-    background-image: linear-gradient(to bottom right, hsl(var(--background)), hsl(257, 60%, 96%), hsl(var(--background)));
+    background-image: linear-gradient(to bottom right, hsl(var(--background)), hsl(265, 60%, 96%), hsl(var(--background)));
   }
   .dark body {
-    background-image: linear-gradient(to bottom right, hsl(var(--background)), hsl(257, 20%, 12%), hsl(var(--background)));
+    background-image: linear-gradient(to bottom right, hsl(var(--background)), hsl(265, 20%, 12%), hsl(var(--background)));
   }
 }
