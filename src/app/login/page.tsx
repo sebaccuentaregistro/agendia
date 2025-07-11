@@ -14,6 +14,7 @@ import { useRouter } from 'next/navigation';
 import { Heart, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
@@ -119,7 +120,11 @@ export default function LoginPage() {
          <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="login">Iniciar Sesión</TabsTrigger>
-                <TabsTrigger value="signup">Registrarse</TabsTrigger>
+                <TabsTrigger value="signup" className={cn(
+                    "data-[state=inactive]:bg-primary/10 data-[state=inactive]:text-primary data-[state=inactive]:shadow-inner"
+                )}>
+                    Registrarse
+                </TabsTrigger>
             </TabsList>
             <TabsContent value="login">
                 <CardHeader>
