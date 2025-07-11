@@ -571,7 +571,7 @@ function SchedulePageContent() {
         form.setValue('instructorId', '', { shouldValidate: true });
       }
     }
-  }, [watchedActividadId, watchedInstructorId, availableSpecialists, form]);
+  }, [watchedActividadId, availableSpecialists, form]);
 
   useEffect(() => {
     if (watchedInstructorId && watchedActividadId) {
@@ -580,7 +580,7 @@ function SchedulePageContent() {
         form.setValue('actividadId', '', { shouldValidate: true });
       }
     }
-  }, [watchedInstructorId, watchedActividadId, availableActividades, form]);
+  }, [watchedInstructorId, availableActividades, form]);
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
