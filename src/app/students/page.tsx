@@ -6,7 +6,7 @@ import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -32,7 +32,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -277,7 +277,7 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
     }, [tariffs, person]);
 
     const tariffFrequency = personTariff?.frequency;
-    const isOverLimit = tariffFrequency && watchedSessionIds.length > tariffFrequency;
+    const isOverLimit = tariffFrequency !== undefined && watchedSessionIds.length > tariffFrequency;
 
     useEffect(() => {
         form.reset({ sessionIds: enrolledSessionIds });
@@ -304,7 +304,7 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                         Selecciona las clases a las que asistirá {person.name} de forma regular.
                         {personTariff && (
                           <span className="block mt-1 font-medium">
-                            Plan actual: {personTariff.name} ({tariffFrequency ? `${watchedSessionIds.length}/${tariffFrequency}` : watchedSessionIds.length} clase(s) semanales)
+                            Plan actual: {personTariff.name} ({tariffFrequency !== undefined ? `${watchedSessionIds.length}/${tariffFrequency}` : watchedSessionIds.length} clase(s) semanales)
                           </span>
                         )}
                     </DialogDescription>
@@ -313,10 +313,10 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                 {isOverLimit && (
                     <Alert variant="destructive" className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 [&>svg]:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20">
                         <AlertCircle className="h-4 w-4" />
-                        <CardTitle className="text-sm font-semibold">Atención</CardTitle>
-                        <Description>
+                        <AlertTitle className="text-sm font-semibold">Atención</AlertTitle>
+                        <AlertDescription>
                             Con {watchedSessionIds.length} clases, {person.name} supera el límite de {tariffFrequency} de su plan. Puedes inscribirlo igualmente.
-                        </Description>
+                        </AlertDescription>
                     </Alert>
                 )}
 
@@ -829,14 +829,14 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
             
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitle>¿Estás seguro?</AlertDialogTitle><AlertDialogDescription>Esta acción no se puede deshacer. Se eliminará a la persona y todas sus inscripciones.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogHeader><AlertDialogTitleAlert>¿Estás seguro?</AlertDialogTitleAlert><AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Se eliminará a la persona y todas sus inscripciones.</AlertDialogDescriptionAlert></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletePerson(person.id)} className="bg-destructive hover:bg-destructive/90">Eliminar</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 
              <AlertDialog open={isRevertDialogOpen} onOpenChange={setIsRevertDialogOpen}>
                 <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitle>¿Revertir último pago?</AlertDialogTitle><AlertDialogDescription>Esta acción eliminará el pago más reciente del historial, ajustará el saldo y la fecha de vencimiento de la persona. Esta acción no se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
+                    <AlertDialogHeader><AlertDialogTitleAlert>¿Revertir último pago?</AlertDialogTitleAlert><AlertDialogDescriptionAlert>Esta acción eliminará el pago más reciente del historial, ajustará el saldo y la fecha de vencimiento de la persona. Esta acción no se puede deshacer.</AlertDialogDescriptionAlert></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRevertPayment} className="bg-destructive hover:bg-destructive/90">Sí, revertir pago</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -1014,8 +1014,8 @@ function StudentsPageContent() {
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle className="text-slate-800 dark:text-slate-100">{searchTerm || activeFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
+              <CardTitle>{searchTerm || activeFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+              <CardDescription>
                 {searchTerm || activeFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
               </CardDescription>
             </CardHeader>
@@ -1067,6 +1067,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
-
-    
