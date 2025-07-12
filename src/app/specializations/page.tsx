@@ -89,9 +89,9 @@ export default function ActividadesPage() {
       <PageHeader title="Actividades">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleAdd} size="icon">
-              <PlusCircle className="h-5 w-5" />
-              <span className="sr-only">Añadir Actividad</span>
+            <Button onClick={handleAdd}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Añadir Actividad
             </Button>
           </DialogTrigger>
           <DialogContent>
