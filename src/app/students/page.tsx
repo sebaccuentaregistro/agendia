@@ -549,7 +549,7 @@ function VacationDialog({ person, onClose }: { person: Person | null; onClose: (
     )
 }
 
-function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTerm }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setActiveFilter: (filter: string) => void; setSearchTerm: (term: string) => void; }) {
+function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setSearchTerm: (term: string) => void; }) {
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
@@ -601,7 +601,6 @@ function PersonDialog({ person, onOpenChange, open, setActiveFilter, setSearchTe
       updatePerson({ ...person, ...finalValues });
     } else {
       addPerson(finalValues);
-      setActiveFilter('all');
       setSearchTerm('');
     }
     onOpenChange(false);
@@ -896,8 +895,6 @@ function StudentsPageContent() {
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
   const [personForAbsence, setPersonForAbsence] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const searchParams = useSearchParams();
-  const [activeFilter, setActiveFilter] = useState('all');
   const [actividadFilter, setActividadFilter] = useState('all');
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
@@ -906,11 +903,7 @@ function StudentsPageContent() {
 
   useEffect(() => {
     setIsMounted(true);
-    const filterFromParams = searchParams.get('filter');
-    if (filterFromParams) {
-        setActiveFilter(filterFromParams);
-    }
-  }, [searchParams]);
+  }, []);
 
   const { recoveryBalances, filteredPeople } = useMemo(() => {
     if (!isMounted) return { recoveryBalances: {}, filteredPeople: [] };
@@ -944,19 +937,10 @@ function StudentsPageContent() {
     
     const finalFilteredPeople = peopleToFilter
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
-      .filter(person => {
-        if (activeFilter === 'all') return true;
-        const status = getStudentPaymentStatus(person, now);
-        if (activeFilter === 'overdue') return status === 'Atrasado';
-        if (activeFilter === 'pending-payment') return status === 'Pendiente de Pago';
-        if (activeFilter === 'on-vacation') return isPersonOnVacation(person, now);
-        if (activeFilter === 'pending-recovery') return balances[person.id] > 0;
-        return true;
-      })
       .sort((a,b) => a.name.localeCompare(b.name));
       
     return { recoveryBalances: balances, filteredPeople: finalFilteredPeople };
-  }, [people, searchTerm, activeFilter, actividadFilter, isPersonOnVacation, attendance, sessions, isMounted]);
+  }, [people, searchTerm, actividadFilter, attendance, sessions, isMounted]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -1041,11 +1025,11 @@ function StudentsPageContent() {
             </div>
             <div className="flex gap-2">
                 <Select value={actividadFilter} onValueChange={setActividadFilter}>
-                    <SelectTrigger className="w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                    <SelectTrigger className="w-full sm:w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
                         <SelectValue placeholder="Actividad" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="all">Todas las actividades</SelectItem>
+                        <SelectItem value="all">Actividad</SelectItem>
                         {actividades.map(a => (
                             <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                         ))}
@@ -1102,7 +1086,6 @@ function StudentsPageContent() {
         person={selectedPerson} 
         onOpenChange={setIsPersonDialogOpen} 
         open={isPersonDialogOpen}
-        setActiveFilter={setActiveFilter}
         setSearchTerm={setSearchTerm}
       />
       <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />
@@ -1135,6 +1118,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 
