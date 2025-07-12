@@ -2,7 +2,7 @@
 'use server';
 
 import { genkit } from 'genkit';
-import { googleAI } from 'genkit/plugins/googleai';
+import { googleAI } from 'genkit/googleai';
 import { firebase } from '@genkit-ai/firebase';
 import { z } from 'zod';
 
