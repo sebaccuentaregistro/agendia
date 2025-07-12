@@ -29,6 +29,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { recoverPin } from '@/ai/flows/recover-pin-flow';
 
 
 function AppNotifications() {
@@ -246,12 +247,28 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
         }
     };
 
-
-    const handleForgotPassword = () => {
+    const handlePinRecovery = async () => {
+        if (!institute) return;
+        
         toast({
-            title: "Recuperación de PIN",
-            description: `Se enviaría un correo de recuperación a: ${institute?.recoveryEmail || 'email no configurado'}.`,
+            title: 'Procesando...',
+            description: 'Solicitando recuperación de PIN.'
         });
+
+        const result = await recoverPin(institute.id);
+
+        if (result.success) {
+            toast({
+                title: '¡Solicitud enviada!',
+                description: `${result.message} (${result.recoveryEmail})`,
+            });
+        } else {
+            toast({
+                title: 'Error de Recuperación',
+                description: result.message,
+                variant: 'destructive',
+            });
+        }
     };
     
     if (isSetupMode) {
@@ -327,7 +344,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
                     {error && <p className="text-sm text-destructive">{error}</p>}
                 </div>
                 <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between items-center w-full">
-                    <Button variant="link" onClick={handleForgotPassword}>¿Olvidaste tu PIN?</Button>
+                    <Button variant="link" onClick={handlePinRecovery}>¿Olvidaste tu PIN?</Button>
                     <Button onClick={handlePinSubmit}>Desbloquear</Button>
                 </DialogFooter>
             </DialogContent>
@@ -525,7 +542,7 @@ function DashboardPageContent() {
     <div className="space-y-8">
       <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />
       
-      {dashboardView === 'management' && (
+      {dashboardView === 'management' && !isAdvancedViewUnlocked && (
         <Button variant="outline" onClick={() => router.push('/')} className="mb-4">
             <ArrowLeft className="mr-2" /> Volver al Inicio
         </Button>
