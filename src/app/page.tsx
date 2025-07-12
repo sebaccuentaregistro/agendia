@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'reac
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, Reports } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Institute } from '@/types';
@@ -326,7 +326,10 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 
 
 function DashboardPageContent() {
-  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels, tariffs, payments } = useStudio();
+  const { 
+    sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
+    levels, tariffs, payments, isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial 
+  } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
     actividadId: 'all',
@@ -471,7 +474,7 @@ function DashboardPageContent() {
      { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
-     { id: 'reports', href: "/reports", label: "Reportes", icon: Reports, count: null },
+     { id: 'reports', href: "/reports", label: "Reportes", icon: FileText, count: null },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
@@ -533,7 +536,7 @@ function DashboardPageContent() {
 
   return (
     <div className="space-y-8">
-      <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />
+      <OnboardingTutorial isOpen={isTutorialOpen} onClose={handleCloseTutorial} />
       
       {dashboardView !== 'main' && (
         <Button 
@@ -843,3 +846,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
