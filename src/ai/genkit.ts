@@ -13,8 +13,6 @@ const ai = genkit({
     }),
     firebase,
   ],
-  logLevel: 'debug',
-  enableTracingAndMetrics: true,
 });
 
 export { ai, z };
