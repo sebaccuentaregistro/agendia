@@ -254,17 +254,26 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
 
 function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
     const { sessions, specialists, actividades, enrollPersonInSessions, tariffs } = useStudio();
+    const [filters, setFilters] = useState({ day: 'all', actividadId: 'all', specialistId: 'all' });
 
-    const { enrolledSessionIds, sortedSessions } = useMemo(() => {
+    const { enrolledSessionIds, filteredAndSortedSessions } = useMemo(() => {
         const enrolledSessionIds = sessions.filter(s => s.personIds.includes(person?.id || '')).map(s => s.id);
         const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-        const sortedSessions = [...sessions].sort((a, b) => {
+
+        const filtered = sessions.filter(session => {
+            return (filters.day === 'all' || session.dayOfWeek === filters.day) &&
+                   (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
+                   (filters.specialistId === 'all' || session.instructorId === filters.specialistId);
+        });
+
+        const sorted = [...filtered].sort((a, b) => {
             const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
             if (dayComparison !== 0) return dayComparison;
             return a.time.localeCompare(b.time);
         });
-        return { enrolledSessionIds, sortedSessions };
-    }, [sessions, person]);
+
+        return { enrolledSessionIds, filteredAndSortedSessions: sorted };
+    }, [sessions, person, filters]);
     
     const form = useForm<{ sessionIds: string[] }>({
         defaultValues: { sessionIds: enrolledSessionIds },
@@ -290,10 +299,12 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
         onClose();
     };
 
-    const sessionsByDay = sortedSessions.reduce((acc, session) => {
+    const sessionsByDay = filteredAndSortedSessions.reduce((acc, session) => {
         (acc[session.dayOfWeek] = acc[session.dayOfWeek] || []).push(session);
         return acc;
     }, {} as Record<string, Session[]>);
+    
+    const daysOfWeekWithSessions = Object.keys(sessionsByDay);
 
     return (
         <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
@@ -310,6 +321,31 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                     </DialogDescription>
                 </DialogHeader>
 
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 my-4 p-4 border rounded-lg bg-muted/50">
+                    <Select value={filters.day} onValueChange={(value) => setFilters(f => ({ ...f, day: value }))}>
+                        <SelectTrigger><SelectValue placeholder="Día" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los días</SelectItem>
+                            {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select value={filters.actividadId} onValueChange={(value) => setFilters(f => ({ ...f, actividadId: value }))}>
+                        <SelectTrigger><SelectValue placeholder="Actividad" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todas las actividades</SelectItem>
+                            {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <Select value={filters.specialistId} onValueChange={(value) => setFilters(f => ({ ...f, specialistId: value }))}>
+                        <SelectTrigger><SelectValue placeholder="Especialista" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Todos los especialistas</SelectItem>
+                            {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+
+
                 {isOverLimit && (
                     <Alert variant="destructive" className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 [&>svg]:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20">
                         <AlertCircle className="h-4 w-4" />
@@ -322,13 +358,13 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
 
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)}>
-                        <ScrollArea className="h-[50vh] my-4">
+                        <ScrollArea className="h-[40vh] my-4">
                             <div className="space-y-6 pr-4">
-                                {Object.entries(sessionsByDay).map(([day, daySessions]) => (
+                                {daysOfWeekWithSessions.length > 0 ? daysOfWeekWithSessions.map(day => (
                                     <div key={day}>
                                         <h3 className="font-semibold mb-2 sticky top-0 bg-background py-1">{day}</h3>
                                         <div className="space-y-2">
-                                            {daySessions.map(session => {
+                                            {sessionsByDay[day].map(session => {
                                                 const actividad = actividades.find(a => a.id === session.actividadId);
                                                 const specialist = specialists.find(s => s.id === session.instructorId);
                                                 return (
@@ -364,7 +400,11 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                             })}
                                         </div>
                                     </div>
-                                ))}
+                                )) : (
+                                    <div className="flex items-center justify-center h-full text-center">
+                                        <p className="text-sm text-muted-foreground">No se encontraron clases con los filtros seleccionados.</p>
+                                    </div>
+                                )}
                             </div>
                         </ScrollArea>
                         <DialogFooter>
