@@ -4,7 +4,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
-import { doc, getDoc, collection, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, collection, writeBatch, updateDoc } from 'firebase/firestore';
 import type { LoginCredentials, SignupCredentials, UserProfile, Institute } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
 
@@ -17,6 +17,7 @@ type AuthContextType = {
   signup: (credentials: SignupCredentials) => Promise<void>;
   logout: () => Promise<void>;
   validatePin: (pin: string) => Promise<boolean>;
+  setupOwnerPin: (data: { ownerPin: string; recoveryEmail: string }) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -32,6 +33,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
+    const fetchInstituteData = async (instituteId: string) => {
+        const instituteDocRef = doc(db, 'institutes', instituteId);
+        const instituteDocSnap = await getDoc(instituteDocRef);
+        if (instituteDocSnap.exists()) {
+            const instituteData = { id: instituteDocSnap.id, ...instituteDocSnap.data() } as Institute;
+            setInstitute(instituteData);
+            return instituteData;
+        }
+        setInstitute(null);
+        return null;
+    };
+
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
@@ -44,13 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     setUserProfile(profileData);
 
                     if (profileData.instituteId) {
-                        const instituteDocRef = doc(db, 'institutes', profileData.instituteId);
-                        const instituteDocSnap = await getDoc(instituteDocRef);
-                        if (instituteDocSnap.exists()) {
-                            setInstitute({ id: instituteDocSnap.id, ...instituteDocSnap.data() } as Institute);
-                        } else {
-                            setInstitute(null);
-                        }
+                       await fetchInstituteData(profileData.instituteId);
                     }
 
                 } else {
@@ -127,11 +134,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     const validatePin = async (pin: string): Promise<boolean> => {
         if (!institute) return false;
-        // In a real scenario, the PIN would be hashed.
-        // For this prototype, we'll do a plain text comparison.
         return institute.ownerPin === pin;
     };
 
+    const setupOwnerPin = async (data: { ownerPin: string; recoveryEmail: string }) => {
+        if (!institute) throw new Error("No hay un instituto cargado.");
+        
+        const instituteRef = doc(db, 'institutes', institute.id);
+        await updateDoc(instituteRef, {
+            ownerPin: data.ownerPin,
+            recoveryEmail: data.recoveryEmail,
+        });
+        // After updating, refetch institute data to update the state
+        const updatedInstitute = await fetchInstituteData(institute.id);
+        setInstitute(updatedInstitute);
+    };
 
     const value = {
         user,
@@ -142,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         validatePin,
+        setupOwnerPin,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

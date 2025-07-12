@@ -5,10 +5,10 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session } from '@/types';
+import type { Session, Institute } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
 
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -175,11 +180,37 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
   )
 }
 
+const pinSetupSchema = z.object({
+  ownerPin: z.string().regex(/^\d{4}$/, { message: 'El PIN debe ser de 4 dígitos numéricos.' }),
+  recoveryEmail: z.string().email({ message: 'Por favor, introduce un correo de recuperación válido.' }),
+});
+
 function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpenChange: (open: boolean) => void; onPinVerified: () => void }) {
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
-    const { institute, validatePin } = useAuth();
+    const { institute, validatePin, setupOwnerPin } = useAuth();
     const { toast } = useToast();
+    const [isSetupMode, setIsSetupMode] = useState(false);
+    
+    const setupForm = useForm<z.infer<typeof pinSetupSchema>>({
+      resolver: zodResolver(pinSetupSchema),
+      defaultValues: { ownerPin: '', recoveryEmail: institute?.recoveryEmail || '' },
+    });
+
+    useEffect(() => {
+        if (open && institute) {
+            // If the ownerPin is missing, we force the setup mode.
+            if (!institute.ownerPin) {
+                setIsSetupMode(true);
+            } else {
+                setIsSetupMode(false);
+            }
+        }
+        // Reset errors when dialog opens/closes or mode changes
+        setError('');
+        setPin('');
+        setupForm.reset({ ownerPin: '', recoveryEmail: institute?.recoveryEmail || '' });
+    }, [open, institute, setupForm]);
 
     const handlePinSubmit = async () => {
         setError('');
@@ -198,16 +229,82 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
             setError('PIN incorrecto. Inténtalo de nuevo.');
         }
     };
+    
+    const handleSetupSubmit = async (values: z.infer<typeof pinSetupSchema>) => {
+        setError('');
+        try {
+            await setupOwnerPin(values);
+            toast({
+                title: '¡PIN configurado!',
+                description: 'Tu PIN de propietario ha sido guardado de forma segura.',
+            });
+            onOpenChange(false); // Close dialog on success
+        } catch (err) {
+            setError('Hubo un error al guardar el PIN. Inténtalo de nuevo.');
+            console.error(err);
+        }
+    };
+
 
     const handleForgotPassword = () => {
-        // Here you would trigger the PIN recovery flow
-        // For now, we'll just show a toast
         toast({
             title: "Recuperación de PIN",
             description: `Se enviaría un correo de recuperación a: ${institute?.recoveryEmail || 'email no configurado'}.`,
         });
     };
     
+    if (isSetupMode) {
+      return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <Form {...setupForm}>
+                    <form onSubmit={setupForm.handleSubmit(handleSetupSubmit)} className="space-y-4">
+                        <DialogHeader>
+                            <DialogTitle>Configura tu PIN de Propietario</DialogTitle>
+                            <DialogDescription>
+                                Es la primera vez que accedes a esta sección. Crea un PIN de 4 dígitos para proteger tus datos sensibles.
+                            </DialogDescription>
+                        </DialogHeader>
+                        
+                        <FormField
+                            control={setupForm.control}
+                            name="ownerPin"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nuevo PIN de 4 dígitos</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" maxLength={4} placeholder="----" {...field} className="w-40 text-center text-2xl tracking-[1rem]" />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={setupForm.control}
+                            name="recoveryEmail"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email de Recuperación de PIN</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="tu-email-personal@email.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {error && <p className="text-sm text-destructive">{error}</p>}
+                        
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+                            <Button type="submit">Guardar PIN</Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            </DialogContent>
+        </Dialog>
+      );
+    }
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
