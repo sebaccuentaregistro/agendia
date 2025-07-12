@@ -238,6 +238,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
                 title: '¡PIN configurado!',
                 description: 'Tu PIN de propietario ha sido guardado de forma segura.',
             });
+            onPinVerified();
             onOpenChange(false); // Close dialog on success
         } catch (err) {
             setError('Hubo un error al guardar el PIN. Inténtalo de nuevo.');
@@ -613,12 +614,25 @@ function DashboardPageContent() {
                 </Link>
               ))}
               
-              <div onClick={() => setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
-                  <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
+              <div
+                onClick={() => {
+                  if (!isAdvancedViewUnlocked) {
+                    setIsPinDialogOpen(true);
+                  }
+                }}
+                className={cn(
+                  "transition-transform hover:-translate-y-1",
+                   isAdvancedViewUnlocked ? 'cursor-default' : 'cursor-pointer'
+                )}
+              >
+                  <Card className={cn(
+                      "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg transition-all duration-300 aspect-square overflow-hidden border-2 h-full",
+                      isAdvancedViewUnlocked ? "border-purple-500/50 shadow-2xl" : "hover:shadow-2xl hover:border-primary/50 border-transparent"
+                    )}>
                     <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
                     <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                        <Lock className="h-4 w-4" />
+                        {isAdvancedViewUnlocked ? <ShieldCheck className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                     </div>
                     <CardTitle className="text-lg font-semibold text-foreground">Gestión Avanzada</CardTitle>
                     <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
