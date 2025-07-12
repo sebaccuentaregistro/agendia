@@ -9,7 +9,7 @@ import { z } from 'zod';
 const ai = genkit({
   plugins: [
     googleAI(),
-    firebase,
+    firebase(),
   ],
 });
 
