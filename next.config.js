@@ -1,5 +1,5 @@
 // YogaFlow Next.js Configuration
-// Este comentario se añade para forzar la invalidación de la caché de Next.js.
+// Forzando la invalidación de la caché de Next.js con una nueva modificación.
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
