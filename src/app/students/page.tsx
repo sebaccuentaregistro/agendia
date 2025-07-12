@@ -755,7 +755,6 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onManageEnrollments(person)}><ClipboardList className="mr-2 h-4 w-4" />Gestionar Horarios</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onJustifyAbsence(person)}><UserX className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onManageVacations(person)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
                                 <DropdownMenuSeparator />
@@ -820,7 +819,15 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                      </div>
                 </CardContent>
                 
-                <CardFooter className="p-2 border-t mt-auto">
+                <CardFooter className="grid grid-cols-2 gap-2 p-2 border-t mt-auto">
+                    <Button
+                        onClick={() => onManageEnrollments(person)}
+                        variant="outline"
+                        className="w-full font-semibold"
+                    >
+                        <ClipboardList className="mr-2 h-4 w-4" />
+                        Horarios
+                    </Button>
                     <Button onClick={() => recordPayment(person.id)} className="w-full font-bold">
                         Registrar Pago
                     </Button>
