@@ -328,7 +328,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    levels, tariffs, payments, isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial 
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments 
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
@@ -561,11 +561,23 @@ function DashboardPageContent() {
         <>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                 <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
-                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-red-500/50">
-                    <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent"></div>
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-red-500/20 to-transparent"></div>
-                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-500">
-                        <AlertTriangle className="h-4 w-4" />
+                    <Card className={cn(
+                        "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
+                        overdueCount > 0 ? "hover:border-red-500/50" : "hover:border-green-500/50"
+                    )}>
+                    <div className={cn(
+                        "absolute inset-0 bg-gradient-to-br to-transparent",
+                        overdueCount > 0 ? "from-red-500/10" : "from-green-500/10"
+                    )}></div>
+                    <div className={cn(
+                        "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
+                        overdueCount > 0 ? "from-red-500/20" : "from-green-500/20"
+                    )}></div>
+                    <div className={cn(
+                        "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                        overdueCount > 0 ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"
+                    )}>
+                        {overdueCount > 0 ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
                     </div>
                     <CardTitle className="text-lg font-semibold text-foreground">
                         Atrasados
@@ -847,4 +859,3 @@ export default function RootPage() {
   );
 }
 
-    
