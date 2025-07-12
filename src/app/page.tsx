@@ -329,6 +329,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 
 function DashboardPageContent() {
   const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels, tariffs, payments } = useStudio();
+  const { isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -339,7 +340,6 @@ function DashboardPageContent() {
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
-  const [isAdvancedViewUnlocked, setIsAdvancedViewUnlocked] = useState(false);
 
 
   useEffect(() => {
@@ -517,7 +517,7 @@ function DashboardPageContent() {
     <div className="space-y-8">
       <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />
       
-      {dashboardView === 'management' && !isAdvancedViewUnlocked && (
+      {dashboardView === 'management' && (
         <Button variant="outline" onClick={() => router.push('/')} className="mb-4">
             <ArrowLeft className="mr-2" /> Volver al Inicio
         </Button>
@@ -595,9 +595,9 @@ function DashboardPageContent() {
           </>
           ) : (
           <>
-            {isAdvancedViewUnlocked ? (
+            {isPinVerified ? (
               <>
-                <Button variant="outline" onClick={() => setIsAdvancedViewUnlocked(false)} className="col-span-full justify-start mb-4">
+                <Button variant="outline" onClick={() => setPinVerified(false)} className="col-span-full justify-start mb-4">
                   <ArrowLeft className="mr-2" /> Volver a Gestión
                 </Button>
                 {advancedCards.map((item) => (
@@ -791,7 +791,7 @@ function DashboardPageContent() {
           </Card>
       )}
     
-      <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setIsAdvancedViewUnlocked(true)} />
+      <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
 
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 

@@ -13,6 +13,8 @@ type AuthContextType = {
   userProfile: UserProfile | null;
   institute: Institute | null;
   loading: boolean;
+  isPinVerified: boolean;
+  setPinVerified: (isVerified: boolean) => void;
   login: (credentials: LoginCredentials) => Promise<void>;
   signup: (credentials: SignupCredentials) => Promise<void>;
   logout: () => Promise<void>;
@@ -22,7 +24,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const protectedRoutes = ['/', '/schedule', '/students', '/instructors', '/specializations', '/spaces', '/levels', '/tariffs', '/statistics'];
+const protectedRoutes = ['/', '/schedule', '/students', '/instructors', '/specializations', '/spaces', '/levels', '/tariffs', '/statistics', '/payments'];
 const authRoutes = ['/login'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -30,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [institute, setInstitute] = useState<Institute | null>(null);
     const [loading, setLoading] = useState(true);
+    const [isPinVerified, setPinVerified] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -129,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setUserProfile(null);
         setInstitute(null);
+        setPinVerified(false); // Reset PIN on logout
         router.push('/login');
     };
     
@@ -155,6 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userProfile,
         institute,
         loading,
+        isPinVerified,
+        setPinVerified,
         login,
         signup,
         logout,
