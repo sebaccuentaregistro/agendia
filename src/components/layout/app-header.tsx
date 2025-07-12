@@ -20,7 +20,6 @@ const navItems = [
   { href: "/spaces", label: "Espacios" },
   { href: "/levels", label: "Niveles" },
   { href: "/tariffs", label: "Aranceles" },
-  { href: "/statistics", label: "Estadísticas" },
 ];
 
 export function AppHeader() {
