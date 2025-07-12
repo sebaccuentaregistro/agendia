@@ -896,6 +896,10 @@ function StudentsPageContent() {
   const [personForAbsence, setPersonForAbsence] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [actividadFilter, setActividadFilter] = useState('all');
+  const searchParams = useSearchParams();
+  const initialStatusFilter = searchParams.get('filter') || 'all';
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
+
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [personForAttendanceHistory, setPersonForAttendanceHistory] = useState<Person | null>(null);
@@ -935,12 +939,22 @@ function StudentsPageContent() {
         peopleToFilter = peopleToFilter.filter(p => peopleInActivity.has(p.id));
     }
     
+    // Filter by status
+    if (statusFilter !== 'all') {
+      peopleToFilter = peopleToFilter.filter(p => {
+        if (statusFilter === 'overdue') return getStudentPaymentStatus(p, now) === 'Atrasado';
+        if (statusFilter === 'on-vacation') return isPersonOnVacation(p, now);
+        if (statusFilter === 'pending-recovery') return (balances[p.id] || 0) > 0;
+        return true;
+      });
+    }
+    
     const finalFilteredPeople = peopleToFilter
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
       .sort((a,b) => a.name.localeCompare(b.name));
       
     return { recoveryBalances: balances, filteredPeople: finalFilteredPeople };
-  }, [people, searchTerm, actividadFilter, attendance, sessions, isMounted]);
+  }, [people, searchTerm, actividadFilter, statusFilter, attendance, sessions, isMounted, isPersonOnVacation]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -980,6 +994,12 @@ function StudentsPageContent() {
     setPersonForAbsence(person);
   };
 
+  const statusFilters = [
+    { value: 'all', label: 'Todos' },
+    { value: 'overdue', label: 'Atrasados' },
+    { value: 'pending-recovery', label: 'Recuperos' },
+    { value: 'on-vacation', label: 'Vacaciones' },
+  ];
 
   if (!isMounted) {
     return (
@@ -1037,6 +1057,19 @@ function StudentsPageContent() {
                 </Select>
             </div>
         </div>
+        <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-border/50">
+            {statusFilters.map(filter => (
+                 <Button 
+                    key={filter.value}
+                    variant={statusFilter === filter.value ? 'default' : 'outline'} 
+                    size="sm"
+                    onClick={() => setStatusFilter(filter.value)}
+                    className={cn(statusFilter === filter.value && "shadow-md")}
+                 >
+                    {filter.label}
+                 </Button>
+            ))}
+        </div>
       </Card>
 
       {loading ? (
@@ -1066,13 +1099,13 @@ function StudentsPageContent() {
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle>{searchTerm || actividadFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+              <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
               <CardDescription>
-                {searchTerm || actividadFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
+                {searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-               {!(searchTerm || actividadFilter !== 'all') && (
+               {!(searchTerm || actividadFilter !== 'all' || statusFilter !== 'all') && (
                  <Button onClick={handleAddClick}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Persona
@@ -1118,10 +1151,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
-
-
-
-
-
-
