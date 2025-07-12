@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session } from '@/types';
@@ -172,7 +172,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
 }
 
 function DashboardPageContent() {
-  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels } = useStudio();
+  const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels, tariffs } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -189,7 +189,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0 };
     }
     const now = new Date();
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
@@ -206,6 +206,11 @@ function DashboardPageContent() {
       record.oneTimeAttendees?.forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
     });
     const pendingRecoveryCount = Object.values(balances).filter(balance => balance > 0).length;
+    
+    const potentialIncome = people.reduce((acc, person) => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        return acc + (tariff?.price || 0);
+    }, 0);
 
     const todaysSessions = sessions
       .filter(session => session.dayOfWeek === currentTodayName)
@@ -232,8 +237,9 @@ function DashboardPageContent() {
       hasOverdue: overdueCount > 0,
       hasOnVacation: onVacationCount > 0,
       hasPendingRecovery: pendingRecoveryCount > 0,
+      potentialIncome
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs]);
 
   const {
     overdueCount,
@@ -244,6 +250,7 @@ function DashboardPageContent() {
     hasOverdue,
     hasOnVacation,
     hasPendingRecovery,
+    potentialIncome,
   } = clientSideData;
 
   useEffect(() => {
@@ -267,13 +274,22 @@ function DashboardPageContent() {
     { href: "/students", label: "Personas", icon: Users, count: people.length },
   ];
   
+  const formatPrice = (price: number) => {
+      return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+      }).format(price);
+  };
+  
   const managementCards = [
-    { href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
-    { href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
-    { href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
-    { href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
-    { href: "/tariffs", label: "Aranceles", icon: DollarSign, count: null },
-    { href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
+    { id: 'potentialIncome', label: "Ingreso Potencial", icon: TrendingUp, count: formatPrice(potentialIncome), href: null },
+    { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
+    { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
+    { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
+    { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
+    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
+    { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
@@ -409,23 +425,27 @@ function DashboardPageContent() {
           </>
           ) : (
           <>
-              {managementCards.map((item) => (
-              <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <item.icon className="h-4 w-4" />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                  {item.count !== null ? (
-                  <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                  ) : (
-                  <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-                  )}
-                </Card>
-              </Link>
-              ))}
+              {managementCards.map((item) => {
+                const CardWrapper = item.href ? Link : 'div';
+                const wrapperProps = item.href ? { href: item.href } : {};
+                return (
+                  <CardWrapper key={item.id} {...wrapperProps} className="transition-transform hover:-translate-y-1">
+                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                      <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <item.icon className="h-4 w-4" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                      {item.count !== null ? (
+                      <p className="text-2xl font-bold text-foreground">{item.count}</p>
+                      ) : (
+                      <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                      )}
+                    </Card>
+                  </CardWrapper>
+                )
+              })}
           </>
           )}
       </div>
