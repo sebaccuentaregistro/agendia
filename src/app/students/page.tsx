@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -325,21 +326,21 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                     <Select value={filters.day} onValueChange={(value) => setFilters(f => ({ ...f, day: value }))}>
                         <SelectTrigger><SelectValue placeholder="Día" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los días</SelectItem>
+                            <SelectItem value="all">Día</SelectItem>
                             {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <Select value={filters.actividadId} onValueChange={(value) => setFilters(f => ({ ...f, actividadId: value }))}>
                         <SelectTrigger><SelectValue placeholder="Actividad" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todas las actividades</SelectItem>
+                            <SelectItem value="all">Actividad</SelectItem>
                             {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <Select value={filters.specialistId} onValueChange={(value) => setFilters(f => ({ ...f, specialistId: value }))}>
                         <SelectTrigger><SelectValue placeholder="Especialista" /></SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los especialistas</SelectItem>
+                            <SelectItem value="all">Especialista</SelectItem>
                             {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
