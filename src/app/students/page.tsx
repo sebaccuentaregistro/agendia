@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -662,10 +662,10 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
     
     const getStatusBadgeClass = () => {
         switch (paymentStatus) {
-            case 'Al día': return "bg-green-600 hover:bg-green-700 border-green-700";
-            case 'Atrasado': return "bg-red-600 hover:bg-red-700 border-red-700";
-            case 'Pendiente de Pago': return "bg-blue-600 hover:bg-blue-700 border-blue-700";
-            default: return "bg-gray-500 hover:bg-gray-600 border-gray-600";
+            case 'Al día': return "bg-green-600 hover:bg-green-700 border-green-700 text-white";
+            case 'Atrasado': return "bg-red-600 hover:bg-red-700 border-red-700 text-white";
+            case 'Pendiente de Pago': return "bg-blue-600 hover:bg-blue-700 border-blue-700 text-white";
+            default: return "bg-gray-500 hover:bg-gray-600 border-gray-600 text-white";
         }
     };
     
@@ -789,7 +789,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                                     </Popover>
                                 )}
                             </div>
-                            <Badge variant="secondary" className={cn("font-semibold mt-1.5 border-0 text-white", getStatusBadgeClass())}>
+                            <Badge variant="secondary" className={cn("font-semibold mt-1.5 border-0", getStatusBadgeClass())}>
                                 {paymentStatus === 'Pendiente de Pago' ? 'Pago Pendiente' : paymentStatus}
                             </Badge>
                         </div>
@@ -1115,6 +1115,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 
