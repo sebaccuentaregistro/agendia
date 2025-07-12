@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from 'firebase/auth';
+import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, writeBatch, updateDoc } from 'firebase/firestore';
 import type { LoginCredentials, SignupCredentials, UserProfile, Institute } from '@/types';
@@ -22,6 +22,7 @@ type AuthContextType = {
   logout: () => Promise<void>;
   validatePin: (pin: string) => Promise<boolean>;
   setupOwnerPin: (data: { ownerPin: string; recoveryEmail: string }) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -179,6 +180,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setInstitute(updatedInstitute);
     };
 
+    const sendPasswordReset = async (email: string) => {
+        return sendPasswordResetEmail(auth, email);
+    };
+
     const value = {
         user,
         userProfile,
@@ -191,6 +196,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logout,
         validatePin,
         setupOwnerPin,
+        sendPasswordReset,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

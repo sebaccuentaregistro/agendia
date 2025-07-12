@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { TermsDialog } from '@/components/terms-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
@@ -38,14 +39,21 @@ const signupSchema = z.object({
   path: ["confirmPassword"],
 });
 
+const resetPasswordSchema = z.object({
+    email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
+});
+
 
 export default function LoginPage() {
-  const { login, signup } = useAuth();
+  const { login, signup, sendPasswordReset } = useAuth();
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [signupSuccess, setSignupSuccess] = useState(false);
   const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+  const [resetError, setResetError] = useState<string | null>(null);
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -55,6 +63,11 @@ export default function LoginPage() {
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
     defaultValues: { instituteName: '', email: '', password: '', confirmPassword: '', ownerPin: '', recoveryEmail: '', terms: false },
+  });
+
+  const resetPasswordForm = useForm<z.infer<typeof resetPasswordSchema>>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { email: '' },
   });
 
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
@@ -92,6 +105,25 @@ export default function LoginPage() {
         setLoading(false);
     }
   }
+  
+  async function onResetPasswordSubmit(values: z.infer<typeof resetPasswordSchema>) {
+    setResetError(null);
+    setResetSuccess(null);
+    setLoading(true);
+    try {
+      await sendPasswordReset(values.email);
+      setResetSuccess(`Se ha enviado un correo de recuperación a ${values.email}. Por favor, revisa tu bandeja de entrada.`);
+    } catch (err: any) {
+      if (err.code === 'auth/user-not-found') {
+        setResetError('No se encontró ninguna cuenta con ese correo electrónico.');
+      } else {
+        setResetError('Ocurrió un error inesperado. Por favor, inténtalo de nuevo.');
+      }
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   if (signupSuccess) {
     return (
@@ -121,6 +153,51 @@ export default function LoginPage() {
   return (
     <>
     <TermsDialog isOpen={isTermsOpen} onOpenChange={setIsTermsOpen} />
+    <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Recuperar Contraseña</DialogTitle>
+                <DialogDescription>
+                    Introduce tu correo electrónico para recibir un enlace de recuperación.
+                </DialogDescription>
+            </DialogHeader>
+            {resetSuccess ? (
+                <Alert variant="default" className="border-primary/50 text-primary">
+                    <AlertTitle>¡Correo Enviado!</AlertTitle>
+                    <AlertDescription>{resetSuccess}</AlertDescription>
+                </Alert>
+            ) : (
+                <Form {...resetPasswordForm}>
+                    <form onSubmit={resetPasswordForm.handleSubmit(onResetPasswordSubmit)} className="space-y-4">
+                        <FormField
+                        control={resetPasswordForm.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Correo Electrónico</FormLabel>
+                            <FormControl>
+                                <Input placeholder="tu@email.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        {resetError && (
+                            <Alert variant="destructive">
+                                <AlertDescription>{resetError}</AlertDescription>
+                            </Alert>
+                        )}
+                         <DialogFooter>
+                            <Button type="submit" className="w-full" disabled={loading}>
+                                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                {loading ? 'Enviando...' : 'Enviar enlace'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
+            )}
+        </DialogContent>
+    </Dialog>
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
       <div className="flex items-center gap-3 mb-8">
          <Heart className="h-10 w-10 text-fuchsia-500" />
@@ -162,7 +239,17 @@ export default function LoginPage() {
                         name="password"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Contraseña</FormLabel>
+                                <div className="flex justify-between items-center">
+                                    <FormLabel>Contraseña</FormLabel>
+                                    <Button
+                                        type="button"
+                                        variant="link"
+                                        className="p-0 h-auto text-xs text-primary font-semibold"
+                                        onClick={() => setIsResetDialogOpen(true)}
+                                    >
+                                        ¿Olvidaste tu contraseña?
+                                    </Button>
+                                </div>
                             <FormControl>
                                 <Input type="password" placeholder="••••••••" {...field} />
                             </FormControl>
