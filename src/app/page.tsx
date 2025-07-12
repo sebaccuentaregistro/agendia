@@ -534,8 +534,19 @@ function DashboardPageContent() {
       <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />
       
       {dashboardView !== 'main' && (
-        <Button variant="outline" onClick={() => router.push('/')} className="mb-4">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver al Inicio
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            if (dashboardView === 'advanced') {
+              router.push('/?view=management');
+            } else {
+              router.push('/');
+            }
+          }} 
+          className="mb-4"
+        >
+            <ArrowLeft className="mr-2 h-4 w-4" /> 
+            {dashboardView === 'advanced' ? 'Volver a Gestión' : 'Volver al Inicio'}
         </Button>
       )}
 
