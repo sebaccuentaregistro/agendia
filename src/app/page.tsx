@@ -340,6 +340,15 @@ function DashboardPageContent() {
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // State for the view can be 'main', 'management', or 'advanced'
+  let dashboardView = searchParams.get('view') || 'main';
+  if (isPinVerified && dashboardView === 'management') {
+      dashboardView = 'advanced';
+  }
 
 
   useEffect(() => {
@@ -406,9 +415,6 @@ function DashboardPageContent() {
     pendingRecoveryCount,
     todaysSessions,
     todayName,
-    hasOverdue,
-    hasOnVacation,
-    hasPendingRecovery,
     potentialIncome,
   } = clientSideData;
 
@@ -423,16 +429,6 @@ function DashboardPageContent() {
       console.warn("Could not access localStorage. Tutorial will not be shown automatically.");
     }
   }, [openTutorial, isMounted]);
-
-
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  let dashboardView = searchParams.get('view') === 'management' ? 'management' : 'main';
-
-  // If PIN is verified, force management view.
-  if (isPinVerified) {
-    dashboardView = 'management';
-  }
 
   const mainCards = [
     { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
@@ -456,7 +452,6 @@ function DashboardPageContent() {
   ];
   
   const advancedCards = [
-     { id: 'potential-income', href: "#", label: "Ingreso Potencial", icon: TrendingUp, count: formatPrice(potentialIncome) },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
@@ -522,16 +517,16 @@ function DashboardPageContent() {
     <div className="space-y-8">
       <OnboardingTutorial isOpen={isTutorialOpen} onClose={closeTutorial} />
       
-      {dashboardView === 'management' && (
+      {dashboardView !== 'main' && (
         <Button variant="outline" onClick={() => router.push('/')} className="mb-4">
             <ArrowLeft className="mr-2" /> Volver al Inicio
         </Button>
       )}
 
       <AppNotifications />
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-          {dashboardView === 'main' ? (
-          <>
+      
+      {dashboardView === 'main' && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
               <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
                 <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
@@ -597,9 +592,11 @@ function DashboardPageContent() {
                   <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
               </Card>
               </Link>
-          </>
-          ) : (
-          <>
+        </div>
+      )}
+
+      {dashboardView === 'management' && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
             {managementCards.map((item) => (
               <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
                 <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
@@ -609,19 +606,11 @@ function DashboardPageContent() {
                       <item.icon className="h-4 w-4" />
                   </div>
                   <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                  {item.count !== null ? (
                   <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                  ) : (
-                  <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-                  )}
                 </Card>
               </Link>
             ))}
-            
-            <div
-              onClick={() => setIsPinDialogOpen(true)}
-              className="transition-transform hover:-translate-y-1 cursor-pointer"
-            >
+            <div onClick={() => setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
                 <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 hover:border-primary/50 border-transparent h-full">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
@@ -634,8 +623,12 @@ function DashboardPageContent() {
                     </div>
                 </Card>
             </div>
+        </div>
+      )}
 
-            {advancedCards.map((item) => (
+      {dashboardView === 'advanced' && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+             {managementCards.map((item) => (
               <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
                 <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
@@ -644,15 +637,27 @@ function DashboardPageContent() {
                       <item.icon className="h-4 w-4" />
                   </div>
                   <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                  {item.count !== null && (
                   <p className="text-2xl font-bold text-foreground">{item.count}</p>
+                </Card>
+              </Link>
+            ))}
+            {advancedCards.map((item) => (
+              <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
+                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                      <item.icon className="h-4 w-4" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                  {item.count !== null && (
+                  <p className="text-2xl font-bold text-foreground">{item.count === 'number' ? item.count : formatPrice(item.count as number)}</p>
                   )}
                 </Card>
               </Link>
             ))}
-          </>
-          )}
-      </div>
+        </div>
+      )}
 
       {dashboardView === 'main' && (
         <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10">
@@ -787,7 +792,7 @@ function DashboardPageContent() {
           </Card>
       )}
     
-      <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
+      <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
 
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
@@ -813,5 +818,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-    
