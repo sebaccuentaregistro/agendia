@@ -254,7 +254,7 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
 }
 
 function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
-    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs } = useStudio();
+    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces } = useStudio();
     const [filters, setFilters] = useState({ day: 'all', actividadId: 'all', specialistId: 'all' });
 
     const { enrolledSessionIds, filteredAndSortedSessions } = useMemo(() => {
@@ -368,16 +368,23 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                             {sessionsByDay[day].map(session => {
                                                 const actividad = actividades.find(a => a.id === session.actividadId);
                                                 const specialist = specialists.find(s => s.id === session.instructorId);
+                                                const space = spaces.find(s => s.id === session.spaceId);
+                                                const capacity = space?.capacity ?? 0;
+                                                const enrolledCount = session.personIds.length;
+                                                const isFull = enrolledCount >= capacity;
+                                                const isAlreadyEnrolled = field.value?.includes(session.id);
+
                                                 return (
                                                     <FormField
                                                         key={session.id}
                                                         control={form.control}
                                                         name="sessionIds"
                                                         render={({ field }) => (
-                                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 hover:bg-accent/50 transition-colors">
+                                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 hover:bg-accent/50 transition-colors data-[disabled]:opacity-50" data-disabled={isFull && !isAlreadyEnrolled}>
                                                                 <FormControl>
                                                                     <Checkbox
-                                                                        checked={field.value?.includes(session.id)}
+                                                                        checked={isAlreadyEnrolled}
+                                                                        disabled={isFull && !isAlreadyEnrolled}
                                                                         onCheckedChange={(checked) => {
                                                                             return checked
                                                                                 ? field.onChange([...(field.value || []), session.id])
@@ -385,13 +392,14 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                                                         }}
                                                                     />
                                                                 </FormControl>
-                                                                <FormLabel className="font-normal flex-grow cursor-pointer">
-                                                                    <div className="flex justify-between items-center">
-                                                                        <div>
-                                                                            <p className="font-semibold">{actividad?.name || 'Clase'}</p>
-                                                                            <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
-                                                                        </div>
+                                                                <FormLabel className="font-normal flex-grow cursor-pointer flex justify-between items-center">
+                                                                    <div>
+                                                                        <p className="font-semibold">{actividad?.name || 'Clase'}</p>
+                                                                        <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
+                                                                    </div>
+                                                                    <div className="text-right">
                                                                         <p className="text-sm font-mono">{session.time}</p>
+                                                                        <Badge variant={isFull ? 'destructive' : 'secondary'} className="text-xs">{enrolledCount}/{capacity}</Badge>
                                                                     </div>
                                                                 </FormLabel>
                                                             </FormItem>
@@ -897,8 +905,7 @@ function StudentsPageContent() {
   const [searchTerm, setSearchTerm] = useState('');
   
   const searchParams = useSearchParams();
-  const initialStatusFilter = searchParams.get('filter') || 'all';
-  const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
+  const statusFilterFromUrl = searchParams.get('filter') || 'all';
 
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
@@ -933,25 +940,24 @@ function StudentsPageContent() {
 
     let peopleToFilter = [...people];
 
-    // Pre-filter by status from URL
-    if (statusFilter !== 'all') {
+    // Pre-filter by status from URL param
+    if (statusFilterFromUrl !== 'all') {
       peopleToFilter = peopleToFilter.filter(p => {
-        if (statusFilter === 'overdue') return getStudentPaymentStatus(p, now) === 'Atrasado';
-        if (statusFilter === 'on-vacation') return isPersonOnVacation(p, now);
-        if (statusFilter === 'pending-recovery') return (balances[p.id] || 0) > 0;
+        if (statusFilterFromUrl === 'overdue') return getStudentPaymentStatus(p, now) === 'Atrasado';
+        if (statusFilterFromUrl === 'on-vacation') return isPersonOnVacation(p, now);
+        if (statusFilterFromUrl === 'pending-recovery') return (balances[p.id] || 0) > 0;
         return true;
       });
     }
 
-    // Filter by selects
-    let peopleIdsInFilteredSessions = new Set<string>();
-
+    // Filter by selects if any is active
     if (actividadFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') {
       const filteredSessions = sessions.filter(s => 
           (actividadFilter === 'all' || s.actividadId === actividadFilter) &&
           (specialistFilter === 'all' || s.instructorId === specialistFilter) &&
           (spaceFilter === 'all' || s.spaceId === spaceFilter)
       );
+      const peopleIdsInFilteredSessions = new Set<string>();
       filteredSessions.forEach(s => {
           s.personIds.forEach(pid => peopleIdsInFilteredSessions.add(pid));
       });
@@ -963,7 +969,7 @@ function StudentsPageContent() {
       .sort((a,b) => a.name.localeCompare(b.name));
       
     return { recoveryBalances: balances, filteredPeople: finalFilteredPeople };
-  }, [people, searchTerm, statusFilter, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, isMounted, isPersonOnVacation]);
+  }, [people, searchTerm, statusFilterFromUrl, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, isMounted, isPersonOnVacation]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -1015,7 +1021,11 @@ function StudentsPageContent() {
             <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
                 <div className="flex flex-col sm:flex-row gap-4">
                     <Skeleton className="h-10 flex-grow rounded-xl" />
-                    <Skeleton className="h-10 w-full sm:w-auto sm:min-w-[380px] rounded-lg" />
+                    <div className="flex gap-2 flex-col sm:flex-row">
+                      <Skeleton className="h-10 w-full sm:w-32 rounded-xl" />
+                      <Skeleton className="h-10 w-full sm:w-32 rounded-xl" />
+                      <Skeleton className="h-10 w-full sm:w-32 rounded-xl" />
+                    </div>
                 </div>
             </Card>
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -1110,13 +1120,13 @@ function StudentsPageContent() {
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+              <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
               <CardDescription>
-                {searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
+                {searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-               {!(searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') && (
+               {!(searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') && (
                  <Button onClick={handleAddClick}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Persona
