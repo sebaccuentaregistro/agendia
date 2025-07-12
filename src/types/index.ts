@@ -1,6 +1,7 @@
 
 
 
+
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -10,6 +11,8 @@ export type SignupCredentials = {
   instituteName: string;
   email: string;
   password: string;
+  ownerPin: string;
+  recoveryEmail: string;
 }
 
 export type UserProfile = {
@@ -22,6 +25,8 @@ export type Institute = {
   id: string;
   name: string;
   ownerId: string;
+  ownerPin?: string;
+  recoveryEmail?: string;
 };
 
 export type Actividad = {

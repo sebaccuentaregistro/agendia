@@ -28,6 +28,8 @@ const signupSchema = z.object({
   email: z.string().email({ message: 'Por favor, introduce un correo electrónico válido.' }),
   password: z.string().min(6, { message: 'La contraseña debe tener al menos 6 caracteres.' }),
   confirmPassword: z.string(),
+  ownerPin: z.string().regex(/^\d{4}$/, { message: 'El PIN debe ser de 4 dígitos numéricos.' }),
+  recoveryEmail: z.string().email({ message: 'Por favor, introduce un correo de recuperación válido.' }),
   terms: z.literal<boolean>(true, {
     errorMap: () => ({ message: 'Debes aceptar los términos y condiciones para registrarte.' }),
   }),
@@ -52,7 +54,7 @@ export default function LoginPage() {
 
   const signupForm = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { instituteName: '', email: '', password: '', confirmPassword: '', terms: false },
+    defaultValues: { instituteName: '', email: '', password: '', confirmPassword: '', ownerPin: '', recoveryEmail: '', terms: false },
   });
 
   async function onLoginSubmit(values: z.infer<typeof loginSchema>) {
@@ -207,10 +209,13 @@ export default function LoginPage() {
                         name="email"
                         render={({ field }) => (
                             <FormItem>
-                            <FormLabel>Correo Electrónico</FormLabel>
+                            <FormLabel>Correo Electrónico de Login</FormLabel>
                             <FormControl>
                                 <Input placeholder="tu@email.com" {...field} />
                             </FormControl>
+                             <FormDescription className="text-xs">
+                                Este será el email para iniciar sesión. Puede ser uno compartido.
+                             </FormDescription>
                             <FormMessage />
                             </FormItem>
                         )}
@@ -237,6 +242,38 @@ export default function LoginPage() {
                             <FormControl>
                                 <Input type="password" placeholder="Repite la contraseña" {...field} />
                             </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={signupForm.control}
+                        name="ownerPin"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>PIN de Propietario</FormLabel>
+                            <FormControl>
+                                <Input type="password" maxLength={4} placeholder="PIN de 4 dígitos" {...field} />
+                            </FormControl>
+                            <FormDescription className="text-xs">
+                                Para acceder a métricas y funciones de dueño.
+                            </FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={signupForm.control}
+                        name="recoveryEmail"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Email de Recuperación de PIN</FormLabel>
+                            <FormControl>
+                                <Input placeholder="tu-email-personal@email.com" {...field} />
+                            </FormControl>
+                             <FormDescription className="text-xs">
+                                Tu email personal. Se usará solo si olvidas el PIN.
+                             </FormDescription>
                             <FormMessage />
                             </FormItem>
                         )}

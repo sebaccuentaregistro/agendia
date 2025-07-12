@@ -80,7 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await signInWithEmailAndPassword(auth, email, password);
     };
 
-    const signup = async ({ instituteName, email, password }: SignupCredentials) => {
+    const signup = async ({ instituteName, email, password, ownerPin, recoveryEmail }: SignupCredentials) => {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const newUser = userCredential.user;
 
@@ -93,6 +93,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             name: instituteName,
             ownerId: newUser.uid,
             createdAt: new Date(),
+            // TODO: Encrypt PIN before saving
+            ownerPin: ownerPin, // Storing PIN
+            recoveryEmail: recoveryEmail, // Storing recovery email
         });
 
         // 2. Create the user profile document
