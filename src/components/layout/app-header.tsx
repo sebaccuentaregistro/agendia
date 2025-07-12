@@ -21,6 +21,7 @@ const navItems = [
   { href: "/levels", label: "Niveles" },
   { href: "/tariffs", label: "Aranceles" },
   { href: "/statistics", label: "Estadísticas" },
+  { href: "/payments", label: "Pagos" },
 ];
 
 export function AppHeader() {
