@@ -11,7 +11,7 @@ const ai = genkit({
     googleAI({
       apiVersion: ['v1beta'],
     }),
-    firebase(),
+    firebase,
   ],
   logLevel: 'debug',
   enableTracingAndMetrics: true,
