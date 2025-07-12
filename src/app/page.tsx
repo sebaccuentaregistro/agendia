@@ -348,14 +348,6 @@ function DashboardPageContent() {
     setIsMounted(true);
   }, []);
   
-  useEffect(() => {
-    if (isPinVerified && dashboardView === 'management') {
-      const advancedCard = document.getElementById('advanced-management-card');
-      if (advancedCard) {
-        advancedCard.click();
-      }
-    }
-  }, [isPinVerified, dashboardView, router]);
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
