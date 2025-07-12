@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session } from '@/types';
@@ -21,6 +21,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/context/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
@@ -171,6 +175,69 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
   )
 }
 
+function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpenChange: (open: boolean) => void; onPinVerified: () => void }) {
+    const [pin, setPin] = useState('');
+    const [error, setError] = useState('');
+    const { institute, validatePin } = useAuth();
+    const { toast } = useToast();
+
+    const handlePinSubmit = async () => {
+        setError('');
+        if (pin.length !== 4) {
+            setError('El PIN debe tener 4 dígitos.');
+            return;
+        }
+
+        const isValid = await validatePin(pin);
+        
+        if (isValid) {
+            onPinVerified();
+            onOpenChange(false);
+            setPin('');
+        } else {
+            setError('PIN incorrecto. Inténtalo de nuevo.');
+        }
+    };
+
+    const handleForgotPassword = () => {
+        // Here you would trigger the PIN recovery flow
+        // For now, we'll just show a toast
+        toast({
+            title: "Recuperación de PIN",
+            description: `Se enviaría un correo de recuperación a: ${institute?.recoveryEmail || 'email no configurado'}.`,
+        });
+    };
+    
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Acceso a Gestión Avanzada</DialogTitle>
+                    <DialogDescription>
+                        Introduce el PIN de 4 dígitos del propietario para continuar.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col items-center gap-4 py-4">
+                    <Input
+                        type="password"
+                        maxLength={4}
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value)}
+                        className="w-40 text-center text-2xl tracking-[1rem]"
+                        placeholder="----"
+                    />
+                    {error && <p className="text-sm text-destructive">{error}</p>}
+                </div>
+                <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between items-center w-full">
+                    <Button variant="link" onClick={handleForgotPassword}>¿Olvidaste tu PIN?</Button>
+                    <Button onClick={handlePinSubmit}>Desbloquear</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+
 function DashboardPageContent() {
   const { sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, isTutorialOpen, openTutorial, closeTutorial, levels, tariffs } = useStudio();
   const [filters, setFilters] = useState({
@@ -182,6 +249,9 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [isAdvancedViewUnlocked, setIsAdvancedViewUnlocked] = useState(false);
+
 
   useEffect(() => {
     setIsMounted(true);
@@ -289,6 +359,10 @@ function DashboardPageContent() {
     { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
     { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
+  ];
+  
+  const advancedCards = [
+     { id: 'potential-income', href: null, label: "Ingreso Potencial", icon: TrendingUp, count: formatPrice(potentialIncome) },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
@@ -424,37 +498,52 @@ function DashboardPageContent() {
           </>
           ) : (
           <>
-              {managementCards.map((item) => {
-                const cardContent = (
-                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                      <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <item.icon className="h-4 w-4" />
-                      </div>
-                      <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                      {item.count !== null ? (
-                      <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                      ) : (
-                      <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-                      )}
-                    </Card>
-                );
+              {managementCards.map((item) => (
+                <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
+                  <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <item.icon className="h-4 w-4" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                    {item.count !== null ? (
+                    <p className="text-2xl font-bold text-foreground">{item.count}</p>
+                    ) : (
+                    <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                    )}
+                  </Card>
+                </Link>
+              ))}
+              
+              <div onClick={() => setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
+                  <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
+                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                        <Lock className="h-4 w-4" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold text-foreground">Gestión Avanzada</CardTitle>
+                    <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                  </Card>
+              </div>
 
-                if (item.href) {
-                  return (
-                    <Link key={item.id} href={item.href} className="transition-transform hover:-translate-y-1">
-                      {cardContent}
-                    </Link>
-                  );
-                }
-                
-                return (
-                  <div key={item.id} className="transition-transform hover:-translate-y-1">
-                    {cardContent}
-                  </div>
-                )
-              })}
+              {isAdvancedViewUnlocked && advancedCards.map((item) => (
+                <div key={item.id} className="transition-transform hover:-translate-y-1">
+                  <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <item.icon className="h-4 w-4" />
+                    </div>
+                    <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                    {item.count !== null && (
+                    <p className="text-2xl font-bold text-foreground">{item.count}</p>
+                    )}
+                  </Card>
+                </div>
+              ))}
+
           </>
           )}
       </div>
@@ -592,6 +681,7 @@ function DashboardPageContent() {
           </Card>
       )}
     
+      <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setIsAdvancedViewUnlocked(true)} />
 
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 

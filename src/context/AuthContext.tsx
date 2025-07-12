@@ -5,16 +5,18 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, writeBatch } from 'firebase/firestore';
-import type { LoginCredentials, SignupCredentials, UserProfile } from '@/types';
+import type { LoginCredentials, SignupCredentials, UserProfile, Institute } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
 
 type AuthContextType = {
   user: User | null;
   userProfile: UserProfile | null;
+  institute: Institute | null;
   loading: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
   signup: (credentials: SignupCredentials) => Promise<void>;
   logout: () => Promise<void>;
+  validatePin: (pin: string) => Promise<boolean>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -25,6 +27,7 @@ const authRoutes = ['/login'];
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+    const [institute, setInstitute] = useState<Institute | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
     const pathname = usePathname();
@@ -33,21 +36,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setUser(user);
-                // User is signed in, let's fetch their profile.
                 const userDocRef = doc(db, 'users', user.uid);
                 const userDocSnap = await getDoc(userDocRef);
 
                 if (userDocSnap.exists()) {
                     const profileData = userDocSnap.data() as UserProfile;
                     setUserProfile(profileData);
+
+                    if (profileData.instituteId) {
+                        const instituteDocRef = doc(db, 'institutes', profileData.instituteId);
+                        const instituteDocSnap = await getDoc(instituteDocRef);
+                        if (instituteDocSnap.exists()) {
+                            setInstitute({ id: instituteDocSnap.id, ...instituteDocSnap.data() } as Institute);
+                        } else {
+                            setInstitute(null);
+                        }
+                    }
+
                 } else {
-                    // This can happen briefly during signup before the user profile is created.
-                    // We don't treat it as an error here.
                     setUserProfile(null);
+                    setInstitute(null);
                 }
             } else {
                 setUser(null);
                 setUserProfile(null);
+                setInstitute(null);
             }
             setLoading(false);
         });
@@ -68,8 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             router.push('/');
         }
         
-        // If user is logged in but pending, keep them on login page
-        // The login page should show a "pending approval" message if it detects this state.
         if (userIsPending && isProtectedRoute) {
             router.push('/login');
         }
@@ -84,47 +95,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         const newUser = userCredential.user;
 
-        // Use a batch write to create both documents atomically
         const batch = writeBatch(db);
 
-        // 1. Create the new institute document
         const instituteRef = doc(collection(db, 'institutes'));
         batch.set(instituteRef, {
             name: instituteName,
             ownerId: newUser.uid,
             createdAt: new Date(),
-            // TODO: Encrypt PIN before saving
-            ownerPin: ownerPin, // Storing PIN
-            recoveryEmail: recoveryEmail, // Storing recovery email
+            ownerPin: ownerPin,
+            recoveryEmail: recoveryEmail,
         });
 
-        // 2. Create the user profile document
         const userRef = doc(db, 'users', newUser.uid);
         batch.set(userRef, {
             email: newUser.email,
             instituteId: instituteRef.id,
-            status: 'pending', // Key change: new users are pending approval
+            status: 'pending',
             createdAt: new Date(),
         });
         
         await batch.commit();
-        // The onAuthStateChanged listener will pick up the new user and their (pending) profile
     };
 
     const logout = async () => {
         await signOut(auth);
         setUser(null);
         setUserProfile(null);
+        setInstitute(null);
         router.push('/login');
     };
+    
+    const validatePin = async (pin: string): Promise<boolean> => {
+        if (!institute) return false;
+        // In a real scenario, the PIN would be hashed.
+        // For this prototype, we'll do a plain text comparison.
+        return institute.ownerPin === pin;
+    };
+
 
     const value = {
         user,
         userProfile,
+        institute,
         loading,
         login,
         signup,
         logout,
+        validatePin,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
