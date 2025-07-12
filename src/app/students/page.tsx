@@ -895,10 +895,14 @@ function StudentsPageContent() {
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
   const [personForAbsence, setPersonForAbsence] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [actividadFilter, setActividadFilter] = useState('all');
+  
   const searchParams = useSearchParams();
   const initialStatusFilter = searchParams.get('filter') || 'all';
   const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
+
+  const [actividadFilter, setActividadFilter] = useState('all');
+  const [specialistFilter, setSpecialistFilter] = useState('all');
+  const [spaceFilter, setSpaceFilter] = useState('all');
 
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
@@ -929,17 +933,7 @@ function StudentsPageContent() {
 
     let peopleToFilter = [...people];
 
-    // Filter by Actividad
-    if (actividadFilter !== 'all') {
-        const relevantSessions = sessions.filter(s => s.actividadId === actividadFilter);
-        const peopleInActivity = new Set<string>();
-        relevantSessions.forEach(s => {
-            s.personIds.forEach(pid => peopleInActivity.add(pid));
-        });
-        peopleToFilter = peopleToFilter.filter(p => peopleInActivity.has(p.id));
-    }
-    
-    // Filter by status
+    // Pre-filter by status from URL
     if (statusFilter !== 'all') {
       peopleToFilter = peopleToFilter.filter(p => {
         if (statusFilter === 'overdue') return getStudentPaymentStatus(p, now) === 'Atrasado';
@@ -948,13 +942,28 @@ function StudentsPageContent() {
         return true;
       });
     }
+
+    // Filter by selects
+    let peopleIdsInFilteredSessions = new Set<string>();
+
+    if (actividadFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') {
+      const filteredSessions = sessions.filter(s => 
+          (actividadFilter === 'all' || s.actividadId === actividadFilter) &&
+          (specialistFilter === 'all' || s.instructorId === specialistFilter) &&
+          (spaceFilter === 'all' || s.spaceId === spaceFilter)
+      );
+      filteredSessions.forEach(s => {
+          s.personIds.forEach(pid => peopleIdsInFilteredSessions.add(pid));
+      });
+      peopleToFilter = peopleToFilter.filter(p => peopleIdsInFilteredSessions.has(p.id));
+    }
     
     const finalFilteredPeople = peopleToFilter
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
       .sort((a,b) => a.name.localeCompare(b.name));
       
     return { recoveryBalances: balances, filteredPeople: finalFilteredPeople };
-  }, [people, searchTerm, actividadFilter, statusFilter, attendance, sessions, isMounted, isPersonOnVacation]);
+  }, [people, searchTerm, statusFilter, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, isMounted, isPersonOnVacation]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -993,13 +1002,6 @@ function StudentsPageContent() {
   const handleJustifyAbsenceClick = (person: Person) => {
     setPersonForAbsence(person);
   };
-
-  const statusFilters = [
-    { value: 'all', label: 'Todos' },
-    { value: 'overdue', label: 'Atrasados' },
-    { value: 'pending-recovery', label: 'Recuperos' },
-    { value: 'on-vacation', label: 'Vacaciones' },
-  ];
 
   if (!isMounted) {
     return (
@@ -1043,9 +1045,9 @@ function StudentsPageContent() {
                     className="pl-10 w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
                 />
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-col sm:flex-row">
                 <Select value={actividadFilter} onValueChange={setActividadFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                    <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
                         <SelectValue placeholder="Actividad" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1055,20 +1057,29 @@ function StudentsPageContent() {
                         ))}
                     </SelectContent>
                 </Select>
+                 <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
+                    <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                        <SelectValue placeholder="Especialista" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Especialista</SelectItem>
+                        {specialists.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                 <Select value={spaceFilter} onValueChange={setSpaceFilter}>
+                    <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                        <SelectValue placeholder="Espacio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Espacio</SelectItem>
+                        {spaces.map(s => (
+                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
-        </div>
-        <div className="flex flex-wrap gap-2 pt-4 mt-4 border-t border-border/50">
-            {statusFilters.map(filter => (
-                 <Button 
-                    key={filter.value}
-                    variant={statusFilter === filter.value ? 'default' : 'outline'} 
-                    size="sm"
-                    onClick={() => setStatusFilter(filter.value)}
-                    className={cn(statusFilter === filter.value && "shadow-md")}
-                 >
-                    {filter.label}
-                 </Button>
-            ))}
         </div>
       </Card>
 
@@ -1099,13 +1110,13 @@ function StudentsPageContent() {
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+              <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
               <CardDescription>
-                {searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
+                {searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-               {!(searchTerm || actividadFilter !== 'all' || statusFilter !== 'all') && (
+               {!(searchTerm || actividadFilter !== 'all' || statusFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') && (
                  <Button onClick={handleAddClick}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Persona
