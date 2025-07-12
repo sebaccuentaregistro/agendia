@@ -462,6 +462,7 @@ function DashboardPageContent() {
     { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
     { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
+    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
   ];
   
   const advancedCards = [

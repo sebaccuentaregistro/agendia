@@ -16,6 +16,7 @@ import type { Tariff } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/context/AuthContext';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -26,6 +27,7 @@ const formSchema = z.object({
 
 export default function TariffsPage() {
   const { tariffs, addTariff, updateTariff, deleteTariff } = useStudio();
+  const { isPinVerified } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedTariff, setSelectedTariff] = useState<Tariff | undefined>(undefined);
@@ -96,42 +98,44 @@ export default function TariffsPage() {
   return (
     <div>
       <PageHeader title="Aranceles y Planes">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAdd} size="icon">
-              <PlusCircle className="h-5 w-5" />
-              <span className="sr-only">Añadir Arancel</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-                <DialogTitle>{selectedTariff ? 'Editar Arancel' : 'Añadir Nuevo Arancel'}</DialogTitle>
-                 <DialogDescription>
-                    {selectedTariff ? 'Modifica los detalles de este plan.' : 'Crea un nuevo plan de precios para tu estudio.'}
-                </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField control={form.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel>Nombre del Plan</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <FormField control={form.control} name="price" render={({ field }) => (
-                  <FormItem><FormLabel>Precio ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <FormField control={form.control} name="description" render={({ field }) => (
-                  <FormItem><FormLabel>Descripción (Opcional)</FormLabel><FormControl><Textarea placeholder="Ej: Valor mensual, acceso a todas las clases..." {...field} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <FormField control={form.control} name="frequency" render={({ field }) => (
-                  <FormItem><FormLabel>Frecuencia Semanal Asociada (Opcional)</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.value)} /></FormControl><FormMessage /></FormItem>
-                )}/>
-                <DialogFooter>
-                    <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                    <Button type="submit">Guardar Cambios</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+        {isPinVerified && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={handleAdd}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Añadir Arancel
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                  <DialogTitle>{selectedTariff ? 'Editar Arancel' : 'Añadir Nuevo Arancel'}</DialogTitle>
+                  <DialogDescription>
+                      {selectedTariff ? 'Modifica los detalles de este plan.' : 'Crea un nuevo plan de precios para tu estudio.'}
+                  </DialogDescription>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                  <FormField control={form.control} name="name" render={({ field }) => (
+                    <FormItem><FormLabel>Nombre del Plan</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="price" render={({ field }) => (
+                    <FormItem><FormLabel>Precio ($)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="description" render={({ field }) => (
+                    <FormItem><FormLabel>Descripción (Opcional)</FormLabel><FormControl><Textarea placeholder="Ej: Valor mensual, acceso a todas las clases..." {...field} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <FormField control={form.control} name="frequency" render={({ field }) => (
+                    <FormItem><FormLabel>Frecuencia Semanal Asociada (Opcional)</FormLabel><FormControl><Input type="number" {...field} value={field.value ?? ""} onChange={e => field.onChange(e.target.value === '' ? undefined : e.target.value)} /></FormControl><FormMessage /></FormItem>
+                  )}/>
+                  <DialogFooter>
+                      <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+                      <Button type="submit">Guardar Cambios</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        )}
       </PageHeader>
       
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -152,15 +156,19 @@ export default function TariffsPage() {
                     <span className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Calendar className="h-4 w-4" /> {tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} por semana</span>
                 )}
             </CardContent>
-            <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2">
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(tariff)}>
-                <Pencil className="h-4 w-4" />
-                <span className="sr-only">Editar</span>
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(tariff)}>
-                <Trash2 className="h-4 w-4" />
-                <span className="sr-only">Eliminar</span>
-              </Button>
+            <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2 min-h-[48px]">
+              {isPinVerified && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(tariff)}>
+                    <Pencil className="h-4 w-4" />
+                    <span className="sr-only">Editar</span>
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(tariff)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Eliminar</span>
+                  </Button>
+                </>
+              )}
             </CardFooter>
           </Card>
         ))}
@@ -173,7 +181,9 @@ export default function TariffsPage() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {isPinVerified && (
                     <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Arancel</Button>
+                  )}
                 </CardContent>
             </Card>
         )}

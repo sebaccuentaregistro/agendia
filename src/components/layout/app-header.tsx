@@ -3,7 +3,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Info, LogOut } from 'lucide-react';
+import { Heart, Info, LogOut, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ const navItems = [
   { href: "/specializations", label: "Actividades" },
   { href: "/spaces", label: "Espacios" },
   { href: "/levels", label: "Niveles" },
+  { href: "/tariffs", label: "Aranceles" },
   { href: "/statistics", label: "Estadísticas" },
   { href: "/payments", label: "Pagos" },
 ];
