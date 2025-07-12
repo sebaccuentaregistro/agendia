@@ -455,12 +455,12 @@ function DashboardPageContent() {
     { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
     { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
-    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
-    { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
   
   const advancedCards = [
      { id: 'potential-income', href: null, label: "Ingreso Potencial", icon: TrendingUp, count: formatPrice(potentialIncome) },
+     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
+     { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
@@ -640,7 +640,7 @@ function DashboardPageContent() {
               </div>
 
               {isAdvancedViewUnlocked && advancedCards.map((item) => (
-                <div key={item.id} className="transition-transform hover:-translate-y-1">
+                <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
                   <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
                     <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
@@ -652,7 +652,7 @@ function DashboardPageContent() {
                     <p className="text-2xl font-bold text-foreground">{item.count}</p>
                     )}
                   </Card>
-                </div>
+                </Link>
               ))}
 
           </>
