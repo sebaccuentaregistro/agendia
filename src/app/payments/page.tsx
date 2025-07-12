@@ -19,8 +19,8 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 
 function PaymentsPageContent() {
-    const { payments, people, tariffs, loading, sessions, attendance } = useStudio();
-    const { institute } = useAuth();
+    const { payments, people, tariffs, loading } = useStudio();
+    const { institute, loading: authLoading } = useAuth();
     const router = useRouter();
 
     const [filters, setFilters] = useState<{ personId: string; dateRange: { from?: Date; to?: Date } }>({
@@ -31,10 +31,10 @@ function PaymentsPageContent() {
 
     useEffect(() => {
         setIsMounted(true);
-        if (!institute?.ownerPin) {
+        if (!authLoading && !institute?.ownerPin) {
              router.push('/');
         }
-    }, [institute, router]);
+    }, [institute, authLoading, router]);
 
     const financialData = useMemo(() => {
         if (!isMounted) return {
@@ -101,7 +101,7 @@ function PaymentsPageContent() {
         exportToCsv('historial_pagos.csv', dataToExport, headers);
     };
     
-    if (loading || !isMounted) {
+    if (loading || authLoading || !isMounted || !institute) {
         return (
             <div className="space-y-8">
                  <PageHeader title="Gestión de Pagos" />
@@ -207,7 +207,7 @@ function PaymentsPageContent() {
                                         initialFocus
                                         mode="range"
                                         defaultMonth={filters.dateRange.from}
-                                        selected={filters.dateRange}
+                                        selected={{from: filters.dateRange.from, to: filters.dateRange.to}}
                                         onSelect={(range) => setFilters(f => ({ ...f, dateRange: range || {} }))}
                                         numberOfMonths={2}
                                     />
