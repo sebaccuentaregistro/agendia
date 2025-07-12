@@ -660,12 +660,12 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const paymentStatus = getStudentPaymentStatus(person, new Date());
     
-    const getHeaderClass = () => {
+    const getStatusBadgeClass = () => {
         switch (paymentStatus) {
-            case 'Al día': return "bg-gradient-to-br from-green-500 to-emerald-600";
-            case 'Atrasado': return "bg-gradient-to-br from-red-500 to-rose-600";
-            case 'Pendiente de Pago': return "bg-gradient-to-br from-blue-500 to-sky-600";
-            default: return "bg-gray-500";
+            case 'Al día': return "bg-green-600 hover:bg-green-700 border-green-700";
+            case 'Atrasado': return "bg-red-600 hover:bg-red-700 border-red-700";
+            case 'Pendiente de Pago': return "bg-blue-600 hover:bg-blue-700 border-blue-700";
+            default: return "bg-gray-500 hover:bg-gray-600 border-gray-600";
         }
     };
     
@@ -709,7 +709,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
     return (
         <>
             <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <CardHeader className={cn("p-4 text-white", getHeaderClass())}>
+                <CardHeader className="p-4 text-white bg-gradient-to-br from-primary to-fuchsia-600">
                     <div className="flex items-start justify-between">
                          <div className="flex-1">
                             <div className="flex items-center gap-1 flex-wrap">
@@ -789,7 +789,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                                     </Popover>
                                 )}
                             </div>
-                            <Badge variant="secondary" className="font-semibold mt-1.5 border-0 bg-black/20 text-white">
+                            <Badge variant="secondary" className={cn("font-semibold mt-1.5 border-0 text-white", getStatusBadgeClass())}>
                                 {paymentStatus === 'Pendiente de Pago' ? 'Pago Pendiente' : paymentStatus}
                             </Badge>
                         </div>
@@ -1123,5 +1123,6 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
