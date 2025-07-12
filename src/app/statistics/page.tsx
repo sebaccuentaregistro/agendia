@@ -88,7 +88,7 @@ function StatisticsPageContent() {
         return acc;
       }, {} as Record<string, number>);
       return Object.entries(popularity).map(([actividadId, count]) => ({
-        name: actividades.find(a => a.id === actividadId)?.name || 'Desconocido',
+        name: actividades.find(a => a.id ===ividadId)?.name || 'Desconocido',
         value: count,
       })).filter(item => item.value > 0).sort((a, b) => b.value - a.value);
     })();
