@@ -1,3 +1,4 @@
+
 'use server';
 
 import { genkit } from 'genkit';
@@ -7,8 +8,7 @@ import { z } from 'zod';
 
 const ai = genkit({
   plugins: [
-    googleAI(),
-    firebase,
+    googleAI()
   ],
 });
 
