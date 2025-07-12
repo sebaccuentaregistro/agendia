@@ -29,7 +29,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { recoverPin } from '@/ai/flows/recover-pin-flow';
 
 
 function AppNotifications() {
@@ -247,30 +246,6 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
         }
     };
 
-    const handlePinRecovery = async () => {
-        if (!institute) return;
-        
-        toast({
-            title: 'Procesando...',
-            description: 'Solicitando recuperación de PIN.'
-        });
-
-        const result = await recoverPin(institute.id);
-
-        if (result.success) {
-            toast({
-                title: '¡Solicitud enviada!',
-                description: `${result.message} (${result.recoveryEmail})`,
-            });
-        } else {
-            toast({
-                title: 'Error de Recuperación',
-                description: result.message,
-                variant: 'destructive',
-            });
-        }
-    };
-    
     if (isSetupMode) {
       return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -343,8 +318,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
                     />
                     {error && <p className="text-sm text-destructive">{error}</p>}
                 </div>
-                <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between items-center w-full">
-                    <Button variant="link" onClick={handlePinRecovery}>¿Olvidaste tu PIN?</Button>
+                <DialogFooter>
                     <Button onClick={handlePinSubmit}>Desbloquear</Button>
                 </DialogFooter>
             </DialogContent>
