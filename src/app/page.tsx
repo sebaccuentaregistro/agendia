@@ -1,11 +1,11 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, Reports } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Institute } from '@/types';
@@ -471,6 +471,7 @@ function DashboardPageContent() {
      { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
+     { id: 'reports', href: "/reports", label: "Reportes", icon: Reports, count: null },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
@@ -557,10 +558,10 @@ function DashboardPageContent() {
         <>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
                 <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
-                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-red-500/50">
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent"></div>
+                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-red-500/20 to-transparent"></div>
+                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-red-500/10 text-red-500">
                         <AlertTriangle className="h-4 w-4" />
                     </div>
                     <CardTitle className="text-lg font-semibold text-foreground">
@@ -570,10 +571,22 @@ function DashboardPageContent() {
                     </Card>
                 </Link>
                 <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
-                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Card className={cn(
+                        "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
+                        pendingRecoveryCount > 0 ? "hover:border-yellow-500/50" : "hover:border-primary/50"
+                    )}>
+                    <div className={cn(
+                        "absolute inset-0 bg-gradient-to-br to-transparent",
+                        pendingRecoveryCount > 0 ? "from-yellow-500/10" : "from-primary/10"
+                    )}></div>
+                    <div className={cn(
+                        "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
+                        pendingRecoveryCount > 0 ? "from-yellow-500/20" : "from-primary/20"
+                    )}></div>
+                    <div className={cn(
+                        "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                         pendingRecoveryCount > 0 ? "bg-yellow-500/10 text-yellow-500" : "bg-primary/10 text-primary"
+                    )}>
                         <CalendarClock className="h-4 w-4" />
                     </div>
                     <CardTitle className="text-lg font-semibold text-foreground">
