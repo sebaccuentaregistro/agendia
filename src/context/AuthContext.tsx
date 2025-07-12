@@ -1,12 +1,14 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, writeBatch, updateDoc } from 'firebase/firestore';
 import type { LoginCredentials, SignupCredentials, UserProfile, Institute } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
+
+const PIN_VERIFIED_KEY = 'agendia-pin-verified';
 
 type AuthContextType = {
   user: User | null;
@@ -32,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [institute, setInstitute] = useState<Institute | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isPinVerified, setPinVerified] = useState(false);
+    const [isPinVerified, setIsPinVerified] = useState(false);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -47,8 +49,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setInstitute(null);
         return null;
     };
+    
+    const setPinVerified = useCallback((isVerified: boolean) => {
+        setIsPinVerified(isVerified);
+        if (isVerified) {
+            try {
+                sessionStorage.setItem(PIN_VERIFIED_KEY, 'true');
+            } catch (e) {
+                console.warn("Could not set sessionStorage item for PIN verification.");
+            }
+        } else {
+            try {
+                sessionStorage.removeItem(PIN_VERIFIED_KEY);
+            } catch (e) {
+                console.warn("Could not remove sessionStorage item for PIN verification.");
+            }
+        }
+    }, []);
 
     useEffect(() => {
+        try {
+            const storedPinStatus = sessionStorage.getItem(PIN_VERIFIED_KEY);
+            if (storedPinStatus === 'true') {
+                setIsPinVerified(true);
+            }
+        } catch(e) {
+            console.warn("Could not access sessionStorage for PIN verification.");
+        }
+
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setUser(user);
@@ -71,11 +99,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(null);
                 setUserProfile(null);
                 setInstitute(null);
+                setPinVerified(false); // Clear pin status on logout
             }
             setLoading(false);
         });
         return () => unsubscribe();
-    }, []);
+    }, [setPinVerified]);
 
     useEffect(() => {
         if (loading) return;
@@ -129,10 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         await signOut(auth);
-        setUser(null);
-        setUserProfile(null);
-        setInstitute(null);
-        setPinVerified(false); // Reset PIN on logout
+        setPinVerified(false);
         router.push('/login');
     };
     
@@ -149,7 +175,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             ownerPin: data.ownerPin,
             recoveryEmail: data.recoveryEmail,
         });
-        // After updating, refetch institute data to update the state
         const updatedInstitute = await fetchInstituteData(institute.id);
         setInstitute(updatedInstitute);
     };
@@ -178,5 +203,3 @@ export function useAuth() {
     }
     return context;
 }
-
-    

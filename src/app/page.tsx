@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ShieldCheck, ArrowRight, Banknote } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Institute } from '@/types';
@@ -199,14 +199,12 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 
     useEffect(() => {
         if (open && institute) {
-            // If the ownerPin is missing, we force the setup mode.
             if (!institute.ownerPin) {
                 setIsSetupMode(true);
             } else {
                 setIsSetupMode(false);
             }
         }
-        // Reset errors when dialog opens/closes or mode changes
         setError('');
         setPin('');
         setupForm.reset({ ownerPin: '', recoveryEmail: institute?.recoveryEmail || '' });
@@ -239,7 +237,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
                 description: 'Tu PIN de propietario ha sido guardado de forma segura.',
             });
             onPinVerified();
-            onOpenChange(false); // Close dialog on success
+            onOpenChange(false);
         } catch (err) {
             setError('Hubo un error al guardar el PIN. Inténtalo de nuevo.');
             console.error(err);
@@ -349,6 +347,15 @@ function DashboardPageContent() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+  
+  useEffect(() => {
+    if (isPinVerified && dashboardView === 'management') {
+      const advancedCard = document.getElementById('advanced-management-card');
+      if (advancedCard) {
+        advancedCard.click();
+      }
+    }
+  }, [isPinVerified, dashboardView, router]);
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
@@ -737,8 +744,8 @@ function DashboardPageContent() {
                 </Card>
               </Link>
             ))}
-            <div onClick={() => setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
-                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 hover:border-primary/50 border-transparent h-full">
+            <div onClick={() => isPinVerified ? router.push('/?view=advanced') : setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
+                <Card id="advanced-management-card" className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 hover:border-primary/50 border-transparent h-full">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
                   <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
