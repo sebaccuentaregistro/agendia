@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, AlertCircle, HelpCircle } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -855,14 +855,6 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                             </div>
                         </ScrollArea>
                     </div>
-                     <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-                        {typeof person.paymentBalance === 'number' && person.paymentBalance < 0 && (
-                             <Badge variant="destructive">Debe: {Math.abs(person.paymentBalance)} cuota(s)</Badge>
-                        )}
-                        {typeof person.paymentBalance === 'number' && person.paymentBalance > 0 && (
-                             <Badge className="bg-blue-600">Crédito: {person.paymentBalance} cuota(s)</Badge>
-                        )}
-                     </div>
                 </CardContent>
                 
                 <CardFooter className="grid grid-cols-2 gap-2 p-2 border-t mt-auto">
@@ -1123,6 +1115,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 
