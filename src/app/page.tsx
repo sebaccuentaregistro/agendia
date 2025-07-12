@@ -763,8 +763,8 @@ function DashboardPageContent() {
                       <item.icon className="h-4 w-4" />
                   </div>
                   <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                  {item.count !== null && (
-                  <p className="text-2xl font-bold text-foreground">{typeof item.count === 'number' ? item.count : formatPrice(item.count as number)}</p>
+                  {item.count !== null && typeof item.count === 'number' && (
+                  <p className="text-2xl font-bold text-foreground">{formatPrice(item.count)}</p>
                   )}
                 </Card>
               </Link>
@@ -798,3 +798,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
