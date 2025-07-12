@@ -897,8 +897,8 @@ function StudentsPageContent() {
   const [personForAbsence, setPersonForAbsence] = useState<Person | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const searchParams = useSearchParams();
-  const initialFilter = searchParams.get('filter') || 'all';
-  const [activeFilter, setActiveFilter] = useState(initialFilter);
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [actividadFilter, setActividadFilter] = useState('all');
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [personForAttendanceHistory, setPersonForAttendanceHistory] = useState<Person | null>(null);
@@ -906,7 +906,11 @@ function StudentsPageContent() {
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    const filterFromParams = searchParams.get('filter');
+    if (filterFromParams) {
+        setActiveFilter(filterFromParams);
+    }
+  }, [searchParams]);
 
   const { recoveryBalances, filteredPeople } = useMemo(() => {
     if (!isMounted) return { recoveryBalances: {}, filteredPeople: [] };
@@ -926,7 +930,19 @@ function StudentsPageContent() {
       });
     });
 
-    const finalFilteredPeople = people
+    let peopleToFilter = [...people];
+
+    // Filter by Actividad
+    if (actividadFilter !== 'all') {
+        const relevantSessions = sessions.filter(s => s.actividadId === actividadFilter);
+        const peopleInActivity = new Set<string>();
+        relevantSessions.forEach(s => {
+            s.personIds.forEach(pid => peopleInActivity.add(pid));
+        });
+        peopleToFilter = peopleToFilter.filter(p => peopleInActivity.has(p.id));
+    }
+    
+    const finalFilteredPeople = peopleToFilter
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
       .filter(person => {
         if (activeFilter === 'all') return true;
@@ -940,7 +956,7 @@ function StudentsPageContent() {
       .sort((a,b) => a.name.localeCompare(b.name));
       
     return { recoveryBalances: balances, filteredPeople: finalFilteredPeople };
-  }, [people, searchTerm, activeFilter, isPersonOnVacation, attendance, isMounted]);
+  }, [people, searchTerm, activeFilter, actividadFilter, isPersonOnVacation, attendance, sessions, isMounted]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -1023,15 +1039,19 @@ function StudentsPageContent() {
                     className="pl-10 w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
                 />
             </div>
-            <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full sm:w-auto">
-                <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
-                    <TabsTrigger value="all">Todos</TabsTrigger>
-                    <TabsTrigger value="pending-payment"><HelpCircle className="mr-1.5 h-3.5 w-3.5" />Pago Pend.</TabsTrigger>
-                    <TabsTrigger value="overdue"><AlertTriangle className="mr-1.5 h-3.5 w-3.5" />Atrasados</TabsTrigger>
-                    <TabsTrigger value="pending-recovery"><CalendarClock className="mr-1.5 h-3.5 w-3.5" />Recuperos</TabsTrigger>
-                    <TabsTrigger value="on-vacation"><Plane className="mr-1.5 h-3.5 w-3.5" />Vacaciones</TabsTrigger>
-                </TabsList>
-            </Tabs>
+            <div className="flex gap-2">
+                <Select value={actividadFilter} onValueChange={setActividadFilter}>
+                    <SelectTrigger className="w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                        <SelectValue placeholder="Actividad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas las actividades</SelectItem>
+                        {actividades.map(a => (
+                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+            </div>
         </div>
       </Card>
 
@@ -1062,13 +1082,13 @@ function StudentsPageContent() {
         ) : (
           <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
             <CardHeader>
-              <CardTitle>{searchTerm || activeFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+              <CardTitle>{searchTerm || actividadFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
               <CardDescription>
-                {searchTerm || activeFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
+                {searchTerm || actividadFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-               {!(searchTerm || activeFilter !== 'all') && (
+               {!(searchTerm || actividadFilter !== 'all') && (
                  <Button onClick={handleAddClick}>
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Añadir Persona
@@ -1115,6 +1135,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 
