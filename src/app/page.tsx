@@ -283,7 +283,6 @@ function DashboardPageContent() {
   };
   
   const managementCards = [
-    { id: 'potentialIncome', label: "Ingreso Potencial", icon: TrendingUp, count: formatPrice(potentialIncome), href: null },
     { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
     { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
