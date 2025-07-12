@@ -4,6 +4,7 @@
 // Y otra más para estar seguros.
 // Y una última modificación para resolver este problema persistente.
 // Y otra más para estar seguros.
+// Y una más para el error de _document.
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
