@@ -89,9 +89,9 @@ export default function LevelsPage() {
       <PageHeader title="Niveles de Práctica" description="Crea y gestiona los niveles de tus clases y alumnos.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={handleAdd} size="icon">
-              <PlusCircle className="h-5 w-5" />
-              <span className="sr-only">Añadir Nivel</span>
+            <Button onClick={handleAdd}>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Añadir Nivel
             </Button>
           </DialogTrigger>
           <DialogContent>
