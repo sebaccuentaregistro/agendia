@@ -426,10 +426,7 @@ function DashboardPageContent() {
           ) : (
           <>
               {managementCards.map((item) => {
-                const CardWrapper = item.href ? Link : 'div';
-                const wrapperProps = item.href ? { href: item.href } : {};
-                return (
-                  <CardWrapper key={item.id} {...wrapperProps} className="transition-transform hover:-translate-y-1">
+                const cardContent = (
                     <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
                       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
@@ -443,7 +440,20 @@ function DashboardPageContent() {
                       <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
                       )}
                     </Card>
-                  </CardWrapper>
+                );
+
+                if (item.href) {
+                  return (
+                    <Link key={item.id} href={item.href} className="transition-transform hover:-translate-y-1">
+                      {cardContent}
+                    </Link>
+                  );
+                }
+                
+                return (
+                  <div key={item.id} className="transition-transform hover:-translate-y-1">
+                    {cardContent}
+                  </div>
                 )
               })}
           </>
