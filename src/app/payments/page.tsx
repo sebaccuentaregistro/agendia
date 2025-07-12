@@ -52,11 +52,11 @@ function PaymentsPageContent() {
         const endOfPreviousMonth = endOfMonth(subMonths(now, 1));
 
         const currentMonthIncome = payments
-            .filter(p => p.date && p.date >= startOfCurrentMonth && p.date <= endOfCurrentMonth)
+            .filter(p => p.date && isWithinInterval(p.date, { start: startOfCurrentMonth, end: endOfCurrentMonth }))
             .reduce((acc, p) => acc + (tariffs.find(t => t.id === p.tariffId)?.price || 0), 0);
             
         const previousMonthIncome = payments
-            .filter(p => p.date && p.date >= startOfPreviousMonth && p.date <= endOfPreviousMonth)
+            .filter(p => p.date && isWithinInterval(p.date, { start: startOfPreviousMonth, end: endOfPreviousMonth }))
             .reduce((acc, p) => acc + (tariffs.find(t => t.id === p.tariffId)?.price || 0), 0);
 
         let incomeChange = 0;

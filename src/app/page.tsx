@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Institute } from '@/types';
@@ -16,7 +16,7 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
@@ -351,14 +351,24 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0 };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0 };
     }
     const now = new Date();
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const currentTodayName = dayMap[now.getDay()];
     const todayStr = format(now, 'yyyy-MM-dd');
+    const startOfCurrentMonth = startOfMonth(now);
+    const endOfCurrentMonth = endOfMonth(now);
 
-    const overdueCount = people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado').length;
+
+    const overduePeople = people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado');
+    const overdueCount = overduePeople.length;
+    
+    const totalDebt = overduePeople.reduce((acc, person) => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        return acc + (tariff?.price || 0);
+    }, 0);
+
     const onVacationCount = people.filter(p => isPersonOnVacation(p, now)).length;
 
     const balances: Record<string, number> = {};
@@ -373,6 +383,12 @@ function DashboardPageContent() {
         const tariff = tariffs.find(t => t.id === person.tariffId);
         return acc + (tariff?.price || 0);
     }, 0);
+    
+    const currentMonthIncome = payments
+        .filter(p => p.date && isWithinInterval(p.date, { start: startOfCurrentMonth, end: endOfCurrentMonth }))
+        .reduce((acc, p) => acc + (tariffs.find(t => t.id === p.tariffId)?.price || 0), 0);
+        
+    const collectionPercentage = potentialIncome > 0 ? (currentMonthIncome / potentialIncome) * 100 : 0;
 
     const todaysSessions = sessions
       .filter(session => session.dayOfWeek === currentTodayName)
@@ -399,9 +415,11 @@ function DashboardPageContent() {
       hasOverdue: overdueCount > 0,
       hasOnVacation: onVacationCount > 0,
       hasPendingRecovery: pendingRecoveryCount > 0,
-      potentialIncome
+      potentialIncome,
+      totalDebt,
+      collectionPercentage,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
 
   const {
     overdueCount,
@@ -410,6 +428,8 @@ function DashboardPageContent() {
     todaysSessions,
     todayName,
     potentialIncome,
+    totalDebt,
+    collectionPercentage,
   } = clientSideData;
 
   useEffect(() => {
@@ -446,6 +466,8 @@ function DashboardPageContent() {
   ];
   
   const advancedCards = [
+     { id: 'collectionPercentage', href: "/payments", label: "Cobranza", icon: Percent, value: `${collectionPercentage.toFixed(0)}%`, count: null},
+     { id: 'totalDebt', href: "/students?filter=overdue", label: "Deuda Total", icon: Landmark, value: formatPrice(totalDebt), count: null},
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
@@ -753,19 +775,17 @@ function DashboardPageContent() {
       )}
 
       {dashboardView === 'advanced' && isPinVerified && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4">
             {advancedCards.map((item) => (
               <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
-                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
+                <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-video overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
                   <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
                   <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                      <item.icon className="h-4 w-4" />
+                  <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                      <item.icon className="h-5 w-5" />
                   </div>
                   <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                  {item.count !== null && typeof item.count === 'number' && (
-                  <p className="text-2xl font-bold text-foreground">{formatPrice(item.count)}</p>
-                  )}
+                  <p className="text-2xl font-bold text-foreground">{item.value ?? item.count}</p>
                 </Card>
               </Link>
             ))}
@@ -798,5 +818,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-    
