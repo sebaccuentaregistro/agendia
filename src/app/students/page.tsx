@@ -365,21 +365,21 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                     <div key={day}>
                                         <h3 className="font-semibold mb-2 sticky top-0 bg-background py-1">{day}</h3>
                                         <div className="space-y-2">
-                                            {sessionsByDay[day].map(session => {
-                                                const actividad = actividades.find(a => a.id === session.actividadId);
-                                                const specialist = specialists.find(s => s.id === session.instructorId);
-                                                const space = spaces.find(s => s.id === session.spaceId);
-                                                const capacity = space?.capacity ?? 0;
-                                                const enrolledCount = session.personIds.length;
-                                                const isFull = enrolledCount >= capacity;
-                                                const isAlreadyEnrolled = field.value?.includes(session.id);
+                                            {sessionsByDay[day].map(session => (
+                                                <FormField
+                                                    key={session.id}
+                                                    control={form.control}
+                                                    name="sessionIds"
+                                                    render={({ field }) => {
+                                                        const actividad = actividades.find(a => a.id === session.actividadId);
+                                                        const specialist = specialists.find(s => s.id === session.instructorId);
+                                                        const space = spaces.find(s => s.id === session.spaceId);
+                                                        const capacity = space?.capacity ?? 0;
+                                                        const enrolledCount = session.personIds.length;
+                                                        const isFull = enrolledCount >= capacity;
+                                                        const isAlreadyEnrolled = field.value?.includes(session.id);
 
-                                                return (
-                                                    <FormField
-                                                        key={session.id}
-                                                        control={form.control}
-                                                        name="sessionIds"
-                                                        render={({ field }) => (
+                                                        return (
                                                             <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 hover:bg-accent/50 transition-colors data-[disabled]:opacity-50" data-disabled={isFull && !isAlreadyEnrolled}>
                                                                 <FormControl>
                                                                     <Checkbox
@@ -403,10 +403,10 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                                                     </div>
                                                                 </FormLabel>
                                                             </FormItem>
-                                                        )}
-                                                    />
-                                                );
-                                            })}
+                                                        );
+                                                    }}
+                                                />
+                                            ))}
                                         </div>
                                     </div>
                                 )) : (
