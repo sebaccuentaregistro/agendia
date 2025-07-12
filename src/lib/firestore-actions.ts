@@ -39,9 +39,7 @@ export const deleteEntity = async (docRef: any) => {
 // Specific Actions
 export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
     const joinDate = new Date();
-    // For a new person, the first payment is due one month from their join date.
-    const lastPaymentDate = calculateNextPaymentDate(joinDate);
-
+    
     const newPerson = {
         name: personData.name,
         phone: personData.phone,
@@ -50,10 +48,10 @@ export const addPersonAction = async (collectionRef: CollectionReference, person
         healthInfo: personData.healthInfo,
         notes: personData.notes,
         joinDate: joinDate,
-        lastPaymentDate: lastPaymentDate,
+        lastPaymentDate: null, // New members start with a null payment date
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
-        paymentBalance: 0, // All new members start with a balance of 0
+        paymentBalance: 0,
     };
     
     return addEntity(collectionRef, newPerson);
@@ -91,8 +89,9 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 
 export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff) => {
     const now = new Date();
-    // The new expiry date is always calculated from the last one, regardless of when the payment is made.
-    const newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now);
+    // If it's the first payment, the cycle starts today. Otherwise, it extends from the previous due date.
+    const baseDateForNextPayment = person.lastPaymentDate || now;
+    const newExpiryDate = calculateNextPaymentDate(baseDateForNextPayment, person.joinDate);
 
     const paymentRecord = {
         personId: person.id,
@@ -129,18 +128,25 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     const allPayments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment))
         .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
 
-    // 3. Delete the most recent payment
     const lastPayment = allPayments[0];
+    
+    // Determine the new state
+    let newLastPaymentDate: Date | null;
+    const newPaymentBalance = (currentPerson.paymentBalance || 0) - 1;
+
+    if (allPayments.length === 1) {
+        // If this was the only payment, revert to the initial state (null date)
+        newLastPaymentDate = null;
+    } else {
+        // If there are previous payments, calculate the previous due date
+        newLastPaymentDate = subMonths(currentPerson.lastPaymentDate || new Date(), 1);
+    }
+    
+    // 3. Delete the most recent payment document
     const lastPaymentRef = doc(paymentsRef, lastPayment.id);
     batch.delete(lastPaymentRef);
 
-    // 4. Calculate the new lastPaymentDate by subtracting one month from the current one
-    const newLastPaymentDate = subMonths(currentPerson.lastPaymentDate || new Date(), 1);
-
-    // 5. Decrement the payment balance
-    const newPaymentBalance = (currentPerson.paymentBalance || 0) - 1;
-
-    // 6. Update the person's lastPaymentDate and paymentBalance
+    // 4. Update the person's document
     batch.update(personRef, { 
         lastPaymentDate: newLastPaymentDate,
         paymentBalance: newPaymentBalance

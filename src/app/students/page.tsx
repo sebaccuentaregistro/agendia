@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, AlertCircle } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, AlertCircle, HelpCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -18,7 +18,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getStudentPaymentStatus, exportToCsv, calculateNextPaymentDate } from '@/lib/utils';
+import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useSearchParams } from 'next/navigation';
@@ -660,6 +660,15 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const paymentStatus = getStudentPaymentStatus(person, new Date());
     
+    const getHeaderClass = () => {
+        switch (paymentStatus) {
+            case 'Al día': return "bg-gradient-to-br from-primary to-fuchsia-600";
+            case 'Atrasado': return "bg-gradient-to-br from-red-500 to-orange-600";
+            case 'Pendiente de Pago': return "bg-gradient-to-br from-blue-500 to-sky-600";
+            default: return "bg-gray-500";
+        }
+    };
+    
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
         style: 'currency',
@@ -700,10 +709,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
     return (
         <>
             <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <CardHeader className={cn(
-                    "p-4 text-white",
-                    paymentStatus === 'Al día' ? "bg-gradient-to-br from-primary to-fuchsia-600" : "bg-gradient-to-br from-red-500 to-orange-600"
-                )}>
+                <CardHeader className={cn("p-4 text-white", getHeaderClass())}>
                     <div className="flex items-start justify-between">
                          <div className="flex-1">
                             <div className="flex items-center gap-1 flex-wrap">
@@ -783,11 +789,8 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                                     </Popover>
                                 )}
                             </div>
-                            <Badge variant="secondary" className={cn(
-                                "font-semibold mt-1.5 border-0", 
-                                paymentStatus === 'Al día' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
-                            )}>
-                                {paymentStatus}
+                            <Badge variant="secondary" className="font-semibold mt-1.5 border-0 bg-black/20 text-white">
+                                {paymentStatus === 'Pendiente de Pago' ? 'Pago Pendiente' : paymentStatus}
                             </Badge>
                         </div>
                         <DropdownMenu>
@@ -813,8 +816,10 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                             <p className="text-sm font-semibold opacity-90">{tariff?.name}</p>
                             {tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>}
                         </div>
-                        {person.lastPaymentDate && (
+                        {person.lastPaymentDate ? (
                             <p className="text-xs opacity-80 mt-1">Vence: {format(person.lastPaymentDate, 'dd/MM/yyyy')}</p>
+                        ) : (
+                            <p className="text-xs opacity-80 mt-1">Registra el primer pago para iniciar el ciclo.</p>
                         )}
                     </div>
                 </CardHeader>
@@ -933,7 +938,9 @@ function StudentsPageContent() {
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
       .filter(person => {
         if (activeFilter === 'all') return true;
-        if (activeFilter === 'overdue') return getStudentPaymentStatus(person, now) === 'Atrasado';
+        const status = getStudentPaymentStatus(person, now);
+        if (activeFilter === 'overdue') return status === 'Atrasado';
+        if (activeFilter === 'pending-payment') return status === 'Pendiente de Pago';
         if (activeFilter === 'on-vacation') return isPersonOnVacation(person, now);
         if (activeFilter === 'pending-recovery') return balances[person.id] > 0;
         return true;
@@ -1025,8 +1032,9 @@ function StudentsPageContent() {
                 />
             </div>
             <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full sm:w-auto">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
+                <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
                     <TabsTrigger value="all">Todos</TabsTrigger>
+                    <TabsTrigger value="pending-payment"><HelpCircle className="mr-1.5 h-3.5 w-3.5" />Pago Pend.</TabsTrigger>
                     <TabsTrigger value="overdue"><AlertTriangle className="mr-1.5 h-3.5 w-3.5" />Atrasados</TabsTrigger>
                     <TabsTrigger value="pending-recovery"><CalendarClock className="mr-1.5 h-3.5 w-3.5" />Recuperos</TabsTrigger>
                     <TabsTrigger value="on-vacation"><Plane className="mr-1.5 h-3.5 w-3.5" />Vacaciones</TabsTrigger>
@@ -1115,3 +1123,4 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+

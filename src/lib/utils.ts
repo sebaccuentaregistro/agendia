@@ -34,12 +34,12 @@ export function calculateNextPaymentDate(fromDate: Date, joinDate?: Date | null,
 
 
 // This function checks if a person's payment is up-to-date.
-export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' {
+export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' | 'Pendiente de Pago' {
   const nextDueDate = person.lastPaymentDate;
   
+  // If there's no payment date, they have a pending initial payment.
   if (!nextDueDate) {
-    // If there's no payment date, they are considered up-to-date unless they have a negative balance.
-    return (person.paymentBalance ?? 0) < 0 ? 'Atrasado' : 'Al día';
+    return 'Pendiente de Pago';
   }
   
   if (!(nextDueDate instanceof Date) || isNaN(nextDueDate.getTime())) {
