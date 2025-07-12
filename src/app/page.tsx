@@ -462,12 +462,12 @@ function DashboardPageContent() {
     { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
     { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
-    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
   ];
   
   const advancedCards = [
      { id: 'collectionPercentage', href: "/payments", label: "Cobranza", icon: Percent, value: `${collectionPercentage.toFixed(0)}%`, count: null},
      { id: 'totalDebt', href: "/students?filter=overdue", label: "Deuda Total", icon: Landmark, value: formatPrice(totalDebt), count: null},
+     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
