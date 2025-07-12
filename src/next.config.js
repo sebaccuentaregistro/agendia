@@ -3,7 +3,6 @@
 // Una modificación más para asegurar el reseteo de la caché.
 // Y otra más para estar seguros.
 // Y una última modificación para resolver este problema persistente.
-// Y otra más.
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
