@@ -662,8 +662,8 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
     
     const getHeaderClass = () => {
         switch (paymentStatus) {
-            case 'Al día': return "bg-gradient-to-br from-primary to-fuchsia-600";
-            case 'Atrasado': return "bg-gradient-to-br from-red-500 to-orange-600";
+            case 'Al día': return "bg-gradient-to-br from-green-500 to-emerald-600";
+            case 'Atrasado': return "bg-gradient-to-br from-red-500 to-rose-600";
             case 'Pendiente de Pago': return "bg-gradient-to-br from-blue-500 to-sky-600";
             default: return "bg-gray-500";
         }
@@ -1123,4 +1123,5 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
