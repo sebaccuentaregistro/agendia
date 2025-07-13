@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -34,6 +34,8 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -897,7 +899,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment } = useStudio();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
@@ -1009,6 +1011,24 @@ function StudentsPageContent() {
     setPersonForAbsence(person);
   };
 
+  const formatPrice = (price: number) => {
+      return new Intl.NumberFormat('es-AR', {
+        style: 'currency',
+        currency: 'ARS',
+        minimumFractionDigits: 0,
+      }).format(price);
+  };
+
+  const getStatusBadgeClass = (status: string) => {
+      switch (status) {
+          case 'Al día': return "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300";
+          case 'Atrasado': return "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300";
+          case 'Pendiente de Pago': return "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300";
+          default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300";
+      }
+  };
+
+
   if (!isMounted) {
     return (
         <div className="space-y-8">
@@ -1092,49 +1112,127 @@ function StudentsPageContent() {
             </div>
         </div>
       </Card>
+        
+        <Tabs defaultValue="cards" className="w-full">
+            <TabsList className="mb-4">
+                <TabsTrigger value="cards"><LayoutGrid className="mr-2 h-4 w-4"/>Tarjetas</TabsTrigger>
+                <TabsTrigger value="table"><List className="mr-2 h-4 w-4"/>Tabla</TabsTrigger>
+            </TabsList>
 
-      {loading ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[350px] w-full rounded-2xl" />)}
-        </div>
-      ) : filteredPeople.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-            {filteredPeople.map((person) => (
-                <PersonCard 
-                    key={person.id} 
-                    person={person}
-                    sessions={sessions}
-                    actividades={actividades}
-                    specialists={specialists}
-                    spaces={spaces}
-                    recoveryBalance={recoveryBalances[person.id] || 0}
-                    onManageVacations={setPersonForVacation}
-                    onEdit={handleEditClick}
-                    onViewHistory={setPersonForHistory}
-                    onViewAttendanceHistory={setPersonForAttendanceHistory}
-                    onManageEnrollments={handleEnrollmentClick}
-                    onJustifyAbsence={handleJustifyAbsenceClick}
-                />
-            ))}
-          </div>
-        ) : (
-          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
-            <CardHeader>
-              <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
-              <CardDescription>
-                {searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-               {!(searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') && (
-                 <Button onClick={handleAddClick}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Añadir Persona
-                  </Button>
-               )}
-            </CardContent>
-          </Card>
-        )}
+            <TabsContent value="cards">
+                {loading ? (
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+                    {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[350px] w-full rounded-2xl" />)}
+                    </div>
+                ) : filteredPeople.length > 0 ? (
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+                        {filteredPeople.map((person) => (
+                            <PersonCard 
+                                key={person.id} 
+                                person={person}
+                                sessions={sessions}
+                                actividades={actividades}
+                                specialists={specialists}
+                                spaces={spaces}
+                                recoveryBalance={recoveryBalances[person.id] || 0}
+                                onManageVacations={setPersonForVacation}
+                                onEdit={handleEditClick}
+                                onViewHistory={setPersonForHistory}
+                                onViewAttendanceHistory={setPersonForAttendanceHistory}
+                                onManageEnrollments={handleEnrollmentClick}
+                                onJustifyAbsence={handleJustifyAbsenceClick}
+                            />
+                        ))}
+                    </div>
+                    ) : (
+                    <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                        <CardHeader>
+                        <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+                        <CardDescription>
+                            {searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
+                        </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                        {!(searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') && (
+                            <Button onClick={handleAddClick}>
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Añadir Persona
+                            </Button>
+                        )}
+                        </CardContent>
+                    </Card>
+                    )}
+            </TabsContent>
+            <TabsContent value="table">
+                <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Nombre</TableHead>
+                                <TableHead>Contacto</TableHead>
+                                <TableHead>Arancel</TableHead>
+                                <TableHead>Estado</TableHead>
+                                <TableHead>Vencimiento</TableHead>
+                                <TableHead className="text-right">Acciones</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {loading ? (
+                                [...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={6}><Skeleton className="h-8 w-full"/></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredPeople.length > 0 ? (
+                                filteredPeople.map((person) => {
+                                    const tariff = tariffs.find(t => t.id === person.tariffId);
+                                    const paymentStatus = getStudentPaymentStatus(person, new Date());
+                                    return (
+                                        <TableRow key={person.id}>
+                                            <TableCell className="font-medium">{person.name}</TableCell>
+                                            <TableCell>{person.phone}</TableCell>
+                                            <TableCell>{tariff?.name || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={cn('font-semibold', getStatusBadgeClass(paymentStatus))}>
+                                                    {paymentStatus}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yyyy') : 'N/A'}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onSelect={() => recordPayment(person.id)}>Registrar Pago</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => handleEnrollmentClick(person)}>Gestionar Horarios</DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onSelect={() => handleEditClick(person)}>Editar Persona</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => handleJustifyAbsenceClick(person)}>Notificar Ausencia</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setPersonForVacation(person)}>Gestionar Vacaciones</DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onSelect={() => setPersonForHistory(person)}>Historial de Pagos</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setPersonForAttendanceHistory(person)}>Historial de Asistencia</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        No se encontraron personas con los filtros seleccionados.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </Card>
+            </TabsContent>
+        </Tabs>
 
       <PersonDialog 
         person={selectedPerson} 
@@ -1172,3 +1270,4 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
