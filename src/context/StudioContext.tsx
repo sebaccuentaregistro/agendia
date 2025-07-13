@@ -124,10 +124,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         toast({ title: `Error al cargar ${collectionName}`, description: error.message, variant: 'destructive' });
       });
     });
-
-    setLoading(false);
+    
+    // All listeners are set up, now we can set loading to false.
+    // A small timeout can prevent flicker on very fast connections.
+    const timer = setTimeout(() => setLoading(false), 250);
 
     return () => {
+      clearTimeout(timer);
       unsubscribes.forEach(unsub => unsub());
     };
   }, [instituteId, authLoading, toast]);
