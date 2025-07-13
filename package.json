@@ -1,4 +1,3 @@
-
 {
   "name": "agendia",
   "version": "1.0.0",
@@ -37,7 +36,7 @@
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
     "date-fns": "^3.6.0",
-    "firebase": "^10.12.3",
+    "firebase": "^11.10.0",
     "genkit": "^1.14.1",
     "lucide-react": "^0.378.0",
     "next": "14.2.4",
