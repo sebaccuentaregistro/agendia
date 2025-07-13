@@ -1,10 +1,10 @@
-
 {
   "name": "agendia",
   "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "rm -rf .next && next dev",
     "build": "rm -rf .next && next build",
     "start": "next start",
     "lint": "next lint",
