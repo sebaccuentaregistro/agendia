@@ -125,7 +125,7 @@ function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose
         return person && !isPersonOnVacation(person, today);
     });
     
-    const allEnrolledIds = [...new Set([...regularIds, ...oneTimeIds])];
+    const allEnrolledIds = Array.from(new Set([...regularIds, ...oneTimeIds]));
     
     const enrolledPeople = people
       .filter(p => allEnrolledIds.includes(p.id))
