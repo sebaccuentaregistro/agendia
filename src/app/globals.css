@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    --background: 265 60% 98%;
+    --background: 265 100% 98%;
     --foreground: 265 15% 25%;
 
     --card: 265 80% 100%;
@@ -15,7 +15,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 265 15% 25%;
  
-    --primary: 271 76% 53%; /* #6d28d9 */
+    --primary: 271 45% 62%;
     --primary-foreground: 265 100% 99%;
  
     --secondary: 265 20% 94%;
@@ -24,7 +24,7 @@
     --muted: 265 20% 96%;
     --muted-foreground: 265 10% 45%;
  
-    --accent: 265 30% 91%;
+    --accent: 283 45% 91%;
     --accent-foreground: 265 15% 25%;
  
     --destructive: 0 84.2% 60.2%;
@@ -32,7 +32,7 @@
 
     --border: 265 20% 90%;
     --input: 265 20% 92%;
-    --ring: 271 76% 53%;
+    --ring: 271 45% 62%;
  
     --radius: 1rem;
 
@@ -53,7 +53,7 @@
     --popover: 265 15% 10%;
     --popover-foreground: 0 0% 98%;
  
-    --primary: 271 76% 65%;
+    --primary: 271 45% 62%;
     --primary-foreground: 265 100% 99%;
  
     --secondary: 265 15% 25%;
@@ -62,7 +62,7 @@
     --muted: 265 15% 20%;
     --muted-foreground: 0 0% 63.9%;
  
-    --accent: 265 20% 28%;
+    --accent: 283 45% 91%;
     --accent-foreground: 0 0% 98%;
  
     --destructive: 0 62.8% 30.6%;
@@ -70,7 +70,7 @@
  
     --border: 265 15% 25%;
     --input: 265 15% 25%;
-    --ring: 271 76% 65%;
+    --ring: 271 45% 65%;
 
     --chart-1: 265 70% 60%;
     --chart-2: 160 60% 45%;
@@ -87,9 +87,6 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Poppins', sans-serif;
-    background-image: linear-gradient(to bottom right, hsl(var(--background)), hsl(265, 60%, 96%), hsl(var(--background)));
-  }
-  .dark body {
-    background-image: linear-gradient(to bottom right, hsl(var(--background)), hsl(265, 20%, 12%), hsl(var(--background)));
+    background-color: hsl(var(--background));
   }
 }
