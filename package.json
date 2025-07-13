@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "rm -rf .next && next dev",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
@@ -40,7 +40,7 @@
     "firebase": "^11.9.1",
     "genkit": "^1.0.0",
     "lucide-react": "^0.378.0",
-    "next": "14.1.0",
+    "next": "14.1.4",
     "next-themes": "^0.3.0",
     "postcss": "^8",
     "react": "^18",
