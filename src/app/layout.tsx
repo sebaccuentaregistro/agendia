@@ -9,9 +9,6 @@ import type { Metadata } from 'next';
 export const metadata: Metadata = {
   title: 'Agendia - Gestión para Estudios',
   description: 'Gestiona tu estudio de yoga o bienestar de forma sencilla y eficiente.',
-  icons: {
-    icon: '/favicon.ico', // This is a placeholder, but tells Next.js to not worry about generating one.
-  },
 };
 
 export default function RootLayout({
