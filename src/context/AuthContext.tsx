@@ -79,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            setLoading(true); // Start loading when auth state changes
             if (user) {
                 setUser(user);
                 const userDocRef = doc(db, 'users', user.uid);
