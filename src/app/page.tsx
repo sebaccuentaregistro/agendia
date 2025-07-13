@@ -474,7 +474,6 @@ function DashboardPageContent() {
      { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
-     { id: 'reports', href: "/reports", label: "Reportes", icon: FileText, count: null },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
@@ -870,4 +869,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-

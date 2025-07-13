@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useMemo, useState, useEffect, Suspense } from 'react';
-import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, XAxis, YAxis, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import { useStudio } from '@/context/StudioContext';
@@ -14,7 +14,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 
 function StatisticsPageContent() {
-  const { sessions, people, actividades, loading } = useStudio();
+  const { sessions, people, actividades, loading, payments, tariffs } = useStudio();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -26,7 +26,8 @@ function StatisticsPageContent() {
       sessionPopularityByTime: [],
       monthlyNewMembers: [],
       retentionData: { threeMonths: { rate: 0, total: 0, active: 0, label: '' }, sixMonths: { rate: 0, total: 0, active: 0, label: '' } },
-      activityPopularity: []
+      activityPopularity: [],
+      activityRevenue: [],
     };
     
     const now = new Date();
@@ -92,19 +93,56 @@ function StatisticsPageContent() {
         value: count,
       })).filter(item => item.value > 0).sort((a, b) => b.value - a.value);
     })();
+    
+    const activityRevenue = (() => {
+        const revenueByActivity: Record<string, number> = {};
+        
+        payments.forEach(payment => {
+            const person = people.find(p => p.id === payment.personId);
+            if (!person) return;
+
+            // Find all unique activities this person is enrolled in
+            const personActivities = new Set<string>();
+            sessions.forEach(session => {
+                if (session.personIds.includes(person.id)) {
+                    personActivities.add(session.actividadId);
+                }
+            });
+            
+            const tariff = tariffs.find(t => t.id === payment.tariffId);
+            const paymentAmount = tariff?.price || 0;
+
+            if (personActivities.size > 0) {
+                const amountPerActivity = paymentAmount / personActivities.size;
+                personActivities.forEach(actividadId => {
+                    if (!revenueByActivity[actividadId]) revenueByActivity[actividadId] = 0;
+                    revenueByActivity[actividadId] += amountPerActivity;
+                });
+            }
+        });
+
+        return Object.entries(revenueByActivity).map(([actividadId, total]) => ({
+            actividad: actividades.find(a => a.id === actividadId)?.name || 'Desconocido',
+            ingresos: total,
+        })).sort((a, b) => b.ingresos - a.ingresos);
+    })();
 
     return {
       sessionPopularityByTime: Object.entries(sessionPopularityByTime).map(([time, people]) => ({ time, personas: people })).sort((a, b) => a.time.localeCompare(b.time)),
       monthlyNewMembers,
       retentionData,
       activityPopularity,
+      activityRevenue,
     };
-  }, [sessions, people, actividades, isMounted]);
+  }, [sessions, people, actividades, isMounted, payments, tariffs]);
+  
+  const formatPrice = (price: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(price);
 
   const chartConfig = useMemo(() => {
     const config: any = {
       personas: { label: "Personas", color: "hsl(var(--chart-1))" },
       nuevasPersonas: { label: "Nuevas Personas", color: "hsl(var(--chart-2))" },
+      ingresos: { label: "Ingresos", color: "hsl(var(--chart-3))" },
     };
     chartData.activityPopularity.forEach((activity, index) => {
       config[activity.name] = {
@@ -170,6 +208,33 @@ function StatisticsPageContent() {
                 <Line type="monotone" dataKey="nuevasPersonas" stroke="var(--color-nuevasPersonas)" strokeWidth={2} dot={{ r: 4, fill: "var(--color-nuevasPersonas)" }} activeDot={{ r: 6 }} name="Nuevas Personas" />
               </LineChart>
             </ChartContainer>
+          </CardContent>
+        </Card>
+        
+        <Card className="lg:col-span-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
+          <CardHeader>
+            <CardTitle className="text-slate-800 dark:text-slate-100">Rentabilidad por Actividad</CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-400">Distribución de ingresos totales por tipo de actividad.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {chartData.activityRevenue.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <BarChart data={chartData.activityRevenue} layout="vertical" margin={{ top: 10, right: 30, left: 10, bottom: 10 }}>
+                    <CartesianGrid horizontal={false} />
+                    <YAxis dataKey="actividad" type="category" tickLine={false} axisLine={false} tickMargin={8} width={80} />
+                    <XAxis type="number" hide />
+                     <RechartsTooltip 
+                        cursor={{ fill: 'rgba(128, 128, 128, 0.1)' }}
+                        formatter={(value: number) => formatPrice(value)}
+                     />
+                    <Bar dataKey="ingresos" fill="var(--color-ingresos)" radius={[0, 4, 4, 0]} />
+                  </BarChart>
+                </ChartContainer>
+            ) : (
+                 <div className="flex h-[300px] w-full items-center justify-center text-center text-slate-500 dark:text-slate-400">
+                    <p>No hay suficientes datos de pagos para mostrar este gráfico.</p>
+                </div>
+            )}
           </CardContent>
         </Card>
 
@@ -243,5 +308,3 @@ export default function StatisticsPage() {
         </Suspense>
     );
 }
-
-    
