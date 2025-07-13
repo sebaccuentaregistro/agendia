@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "rm -rf node_modules package-lock.json .next && npm install --force --legacy-peer-deps && next dev",
-    "build": "rm -rf .next && next build",
+    "dev": "next dev",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
