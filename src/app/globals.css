@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -91,4 +93,3 @@
     background-image: linear-gradient(to bottom right, hsl(var(--background)), hsl(265, 20%, 12%), hsl(var(--background)));
   }
 }
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
