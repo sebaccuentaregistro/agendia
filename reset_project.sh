@@ -23,11 +23,15 @@ git reset --hard HEAD
 
 # 2. Limpiar archivos no rastreados.
 # - 'git clean -fd' elimina forzosamente todos los archivos y directorios que no están en el repositorio.
-# Esto es crucial para eliminar archivos de caché o compilaciones rotas.
-echo "🧹 Limpiando archivos y carpetas no rastreados (como node_modules y builds fallidos)..."
+echo "🧹 Limpiando archivos y carpetas no rastreados (como node_modules)..."
 git clean -fd
 
-# 3. Forzar la reinstalación de las dependencias.
+# 3. Eliminar la caché de Next.js (¡MUY IMPORTANTE!)
+# - La carpeta .next contiene la caché de compilación, que puede corromperse.
+echo "🔥 Eliminando la caché de compilación de Next.js (carpeta .next)..."
+rm -rf .next
+
+# 4. Forzar la reinstalación de las dependencias.
 # Al haber eliminado node_modules, este comando es esencial.
 echo "📦 Forzando la reinstalación de todas las dependencias desde package.json..."
 npm install
