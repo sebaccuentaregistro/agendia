@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'reac
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Institute } from '@/types';
@@ -328,7 +328,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments 
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
@@ -471,7 +471,7 @@ function DashboardPageContent() {
   const advancedCards = [
      { id: 'collectionPercentage', href: "/payments", label: "Cobranza", icon: Percent, value: `${collectionPercentage.toFixed(0)}%`, count: null},
      { id: 'totalDebt', href: "/students?filter=overdue", label: "Deuda Total", icon: Landmark, value: formatPrice(totalDebt), count: null},
-     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
+     { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, count: operators.length },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
   ];
