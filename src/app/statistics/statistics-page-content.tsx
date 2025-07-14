@@ -6,15 +6,17 @@ import { Bar, BarChart, CartesianGrid, Line, LineChart, Pie, PieChart, Cell, XAx
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { PageHeader } from '@/components/page-header';
 import { useStudio } from '@/context/StudioContext';
-import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns';
+import { format, subMonths, startOfMonth, endOfMonth, subDays, parse, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Users, ClipboardCheck, Divide } from 'lucide-react';
+
 
 export default function StatisticsPageContent() {
-  const { sessions, people, actividades, loading, payments, tariffs } = useStudio();
+  const { sessions, people, actividades, loading, payments, tariffs, attendance } = useStudio();
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -29,6 +31,7 @@ export default function StatisticsPageContent() {
       retentionData: { threeMonths: { rate: 0, total: 0, active: 0, label: '' }, sixMonths: { rate: 0, total: 0, active: 0, label: '' } },
       activityPopularity: [],
       activityRevenue: [],
+      attendanceMetrics: { totalAttendances: 0, totalClasses: 0, averageAttendance: '0.0' },
     };
     
     const now = new Date();
@@ -144,6 +147,28 @@ export default function StatisticsPageContent() {
             ingresos: total,
         })).sort((a, b) => b.ingresos - a.ingresos);
     })();
+    
+    const attendanceMetrics = (() => {
+        const thirtyDaysAgo = subDays(now, 30);
+        const recentAttendance = attendance.filter(a => {
+            try {
+                const recordDate = parse(a.date, 'yyyy-MM-dd', new Date());
+                return isAfter(recordDate, thirtyDaysAgo);
+            } catch {
+                return false;
+            }
+        });
+
+        const totalClasses = recentAttendance.length;
+        const totalAttendances = recentAttendance.reduce((sum, record) => sum + (record.presentIds?.length || 0), 0);
+        const averageAttendance = totalClasses > 0 ? (totalAttendances / totalClasses) : 0;
+        
+        return {
+            totalAttendances,
+            totalClasses,
+            averageAttendance: averageAttendance.toFixed(1)
+        }
+    })();
 
     return {
       sessionPopularityByTime: Object.entries(sessionPopularityByTime).map(([time, people]) => ({ time, personas: people })).sort((a, b) => a.time.localeCompare(b.time)),
@@ -152,8 +177,9 @@ export default function StatisticsPageContent() {
       retentionData,
       activityPopularity,
       activityRevenue,
+      attendanceMetrics,
     };
-  }, [sessions, people, actividades, isMounted, payments, tariffs]);
+  }, [sessions, people, actividades, isMounted, payments, tariffs, attendance]);
   
   const formatPrice = (price: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(price);
 
@@ -203,6 +229,31 @@ export default function StatisticsPageContent() {
   return (
     <div className="space-y-8">
       <PageHeader title="Estadísticas del Estudio" />
+        <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
+            <CardHeader>
+                <CardTitle className="text-slate-800 dark:text-slate-100">Métricas de Asistencia</CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-400">Datos de los últimos 30 días.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                    <div>
+                        <Users className="mx-auto h-8 w-8 text-primary mb-2"/>
+                        <p className="text-2xl font-bold">{chartData.attendanceMetrics.totalAttendances}</p>
+                        <p className="text-sm text-muted-foreground">Total de Asistencias</p>
+                    </div>
+                    <div>
+                        <ClipboardCheck className="mx-auto h-8 w-8 text-primary mb-2"/>
+                        <p className="text-2xl font-bold">{chartData.attendanceMetrics.totalClasses}</p>
+                        <p className="text-sm text-muted-foreground">Clases Dictadas</p>
+                    </div>
+                    <div>
+                        <Divide className="mx-auto h-8 w-8 text-primary mb-2"/>
+                        <p className="text-2xl font-bold">{chartData.attendanceMetrics.averageAttendance}</p>
+                        <p className="text-sm text-muted-foreground">Promedio por Clase</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
           <CardHeader><CardTitle className="text-slate-800 dark:text-slate-100">Popularidad por Horario</CardTitle></CardHeader>
