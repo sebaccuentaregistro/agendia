@@ -13,8 +13,10 @@ function ShellContent({ children }: { children: ReactNode }) {
     const { activeOperator } = useAuth();
     const pathname = usePathname();
     const isOperatorsPage = pathname === '/operators';
+    const isSuperAdminPage = pathname === '/superadmin';
 
-    if (!activeOperator && !isOperatorsPage) {
+    // Allow access to operators page and superadmin page without an active operator selected
+    if (!activeOperator && !isOperatorsPage && !isSuperAdminPage) {
         return <OperatorLoginScreen />;
     }
 

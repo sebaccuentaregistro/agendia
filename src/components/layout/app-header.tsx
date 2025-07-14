@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
+import { MobileBottomNav } from './mobile-bottom-nav';
 
 const navItems = [
   { href: "/", label: "Inicio" },
@@ -36,11 +37,11 @@ export function AppHeader() {
   const isSuperAdmin = userProfile?.isSuperAdmin === true;
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-transparent px-4 backdrop-blur-xl sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-background/90 px-4 backdrop-blur-xl sm:px-6">
       <div className="flex items-center gap-6">
         <Link href="/" className="flex flex-shrink-0 items-center gap-2.5 font-semibold text-slate-800 dark:text-white">
           <Heart className="h-7 w-7 text-fuchsia-500" />
-          <span className="text-lg">Agendia</span>
+          <span className="hidden text-lg sm:inline">Agendia</span>
         </Link>
         
         <nav className="hidden items-center gap-5 md:flex">
@@ -59,18 +60,6 @@ export function AppHeader() {
                 </Link>
              )
           })}
-          {isSuperAdmin && (
-             <Link
-                href="/superadmin"
-                className={cn(
-                  "flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary",
-                  pathname.startsWith('/superadmin') ? "text-primary" : "text-muted-foreground"
-                )}
-              >
-                <Shield className="h-4 w-4" />
-                Panel Admin
-              </Link>
-          )}
         </nav>
       </div>
       <div className="flex items-center gap-2">
@@ -89,6 +78,18 @@ export function AppHeader() {
             </Tooltip>
           </TooltipProvider>
         )}
+        {isSuperAdmin && (
+             <Link
+                href="/superadmin"
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-3 h-9 text-sm font-medium transition-colors hover:bg-accent hover:text-primary",
+                  pathname.startsWith('/superadmin') ? "text-primary bg-accent" : "text-muted-foreground"
+                )}
+              >
+                <Shield className="h-4 w-4" />
+                <span className="hidden sm:inline">Admin</span>
+              </Link>
+          )}
         <ThemeToggle />
          {activeOperator && (
             <DropdownMenu>
