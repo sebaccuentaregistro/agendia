@@ -87,10 +87,12 @@ export function AppHeader() {
               <DropdownMenuContent align="end">
                  <DropdownMenuLabel>Sesión activa</DropdownMenuLabel>
                  <DropdownMenuSeparator />
-                 <DropdownMenuItem onSelect={logoutOperator}>
-                   <LogOut className="mr-2 h-4 w-4" />
-                   Cambiar Operador
-                 </DropdownMenuItem>
+                 {activeOperator.role !== 'admin' && (
+                    <DropdownMenuItem onSelect={logoutOperator}>
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Cambiar Operador
+                    </DropdownMenuItem>
+                 )}
                  <DropdownMenuItem onSelect={handleFullLogout} className="text-destructive focus:text-destructive">
                    <LogOut className="mr-2 h-4 w-4" />
                    Cerrar Sesión General
