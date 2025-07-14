@@ -9,12 +9,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
 import type { Institute } from '@/types';
-import { getAllInstitutes, getPeopleCountForInstitute } from '@/lib/superadmin-actions';
+import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute } from '@/lib/superadmin-actions';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface InstituteWithCount extends Institute {
     peopleCount?: number;
+    sessionsCount?: number;
 }
 
 export default function SuperAdminPage() {
@@ -34,11 +35,11 @@ export default function SuperAdminPage() {
         setPageLoading(true);
         const instituteList = await getAllInstitutes();
         
-        // Fetch people count for each institute
         const institutesWithCounts = await Promise.all(
             instituteList.map(async (institute) => {
-                const count = await getPeopleCountForInstitute(institute.id);
-                return { ...institute, peopleCount: count };
+                const peopleCount = await getPeopleCountForInstitute(institute.id);
+                const sessionsCount = await getSessionsCountForInstitute(institute.id);
+                return { ...institute, peopleCount, sessionsCount };
             })
         );
 
@@ -84,6 +85,7 @@ export default function SuperAdminPage() {
               <TableRow>
                 <TableHead>Nombre del Instituto</TableHead>
                 <TableHead>Nº de Alumnos</TableHead>
+                <TableHead>Nº de Sesiones</TableHead>
                 <TableHead>Fecha de Creación</TableHead>
               </TableRow>
             </TableHeader>
@@ -96,13 +98,16 @@ export default function SuperAdminPage() {
                       <span className="font-semibold">{institute.peopleCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
                     </TableCell>
                     <TableCell>
+                      <span className="font-semibold">{institute.sessionsCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
+                    </TableCell>
+                    <TableCell>
                       {institute.createdAt ? format(institute.createdAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
                     </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                     Aún no hay institutos registrados.
                   </TableCell>
                 </TableRow>

@@ -45,3 +45,14 @@ export async function getPeopleCountForInstitute(instituteId: string): Promise<n
         return 0;
     }
 }
+
+export async function getSessionsCountForInstitute(instituteId: string): Promise<number> {
+    try {
+        const sessionsRef = collection(db, 'institutes', instituteId, 'sessions');
+        const snapshot = await getDocs(sessionsRef);
+        return snapshot.size;
+    } catch (error) {
+        console.error(`Error fetching sessions count for institute ${instituteId}:`, error);
+        return 0;
+    }
+}
