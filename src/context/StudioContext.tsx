@@ -2,7 +2,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { onSnapshot, collection, doc, Unsubscribe, query, orderBy } from 'firebase/firestore';
+import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator } from '@/types';
 import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity } from '@/lib/firestore-actions';
@@ -124,7 +124,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                 q = query(ref, orderBy('timestamp', 'desc'));
             }
 
-            const unsub = onSnapshot(q, (snapshot) => {
+            const unsub = onSnapshot(q, (snapshot: QuerySnapshot) => {
                 const items = snapshot.docs.map(doc => {
                     const docData = doc.data();
                     
