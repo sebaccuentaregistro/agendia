@@ -661,8 +661,8 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
   );
 }
 
-function PersonCard({ person, sessions, actividades, specialists, spaces, recoveryBalance, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], recoveryBalance: number, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void }) {
-    const { tariffs, deletePerson, recordPayment, revertLastPayment } = useStudio();
+function PersonCard({ person, sessions, actividades, specialists, spaces, recoveryBalance, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], recoveryBalance: number, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void, onRecordPayment: (person: Person) => void }) {
+    const { tariffs, deletePerson, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
     
@@ -883,7 +883,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                         <ClipboardList className="mr-2 h-4 w-4" />
                         Horarios
                     </Button>
-                    <Button onClick={() => recordPayment(person.id)} className="w-full font-bold">
+                    <Button onClick={() => onRecordPayment(person)} className="w-full font-bold">
                         Registrar Pago
                     </Button>
                 </CardFooter>
@@ -924,6 +924,8 @@ function StudentsPageContent() {
   const [personForVacation, setPersonForVacation] = useState<Person | null>(null);
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [personForAttendanceHistory, setPersonForAttendanceHistory] = useState<Person | null>(null);
+  const [personForPayment, setPersonForPayment] = useState<Person | null>(null);
+  const [isPaymentAlertOpen, setIsPaymentAlertOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -1018,6 +1020,25 @@ function StudentsPageContent() {
   const handleJustifyAbsenceClick = (person: Person) => {
     setPersonForAbsence(person);
   };
+
+  const handleRecordPaymentClick = (person: Person) => {
+    const status = getStudentPaymentStatus(person, new Date()).status;
+    if (status === 'Al día') {
+        setPersonForPayment(person);
+        setIsPaymentAlertOpen(true);
+    } else {
+        recordPayment(person.id);
+    }
+  };
+
+  const confirmRecordPayment = () => {
+    if (personForPayment) {
+        recordPayment(personForPayment.id);
+    }
+    setIsPaymentAlertOpen(false);
+    setPersonForPayment(null);
+  };
+
 
   const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
@@ -1149,6 +1170,7 @@ function StudentsPageContent() {
                                 onViewAttendanceHistory={setPersonForAttendanceHistory}
                                 onManageEnrollments={handleEnrollmentClick}
                                 onJustifyAbsence={handleJustifyAbsenceClick}
+                                onRecordPayment={handleRecordPaymentClick}
                             />
                         ))}
                     </div>
@@ -1218,7 +1240,7 @@ function StudentsPageContent() {
                                                         <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onSelect={() => recordPayment(person.id)}>Registrar Pago</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => handleRecordPaymentClick(person)}>Registrar Pago</DropdownMenuItem>
                                                         <DropdownMenuItem onSelect={() => handleEnrollmentClick(person)}>Gestionar Horarios</DropdownMenuItem>
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem onSelect={() => handleEditClick(person)}>Editar Persona</DropdownMenuItem>
@@ -1269,6 +1291,23 @@ function StudentsPageContent() {
         onClose={() => setPersonForAttendanceHistory(null)}
       />
 
+       <AlertDialog open={isPaymentAlertOpen} onOpenChange={setIsPaymentAlertOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                  <AlertDialogTitleAlert>¿Registrar Pago Adicional?</AlertDialogTitleAlert>
+                  <AlertDialogDescriptionAlert>
+                      Este alumno ya tiene su cuota al día. Si continúas, se registrará un pago por adelantado y su próxima fecha de vencimiento se extenderá otro mes. ¿Estás seguro?
+                  </AlertDialogDescriptionAlert>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => setIsPaymentAlertOpen(false)}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction onClick={confirmRecordPayment}>
+                      Sí, registrar pago
+                  </AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
+      </AlertDialog>
+
 
     </div>
   );
@@ -1282,5 +1321,6 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
