@@ -3,13 +3,14 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Info, LogOut, DollarSign } from 'lucide-react';
+import { Heart, Info, LogOut, DollarSign, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/AuthContext';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 
 const navItems = [
   { href: "/", label: "Inicio" },
@@ -19,16 +20,15 @@ const navItems = [
   { href: "/specializations", label: "Actividades" },
   { href: "/spaces", label: "Espacios" },
   { href: "/levels", label: "Niveles" },
-  { href: "/tariffs", label: "Aranceles" },
 ];
 
 export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial } = useStudio();
-  const { logout } = useAuth();
+  const { logout, activeOperator, logoutOperator } = useAuth();
   const router = useRouter();
 
-  const handleLogout = async () => {
+  const handleFullLogout = async () => {
     await logout();
     router.push('/login');
   };
@@ -76,19 +76,28 @@ export function AppHeader() {
           </TooltipProvider>
         )}
         <ThemeToggle />
-        <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-white/10">
-                  <LogOut className="h-5 w-5" />
-                  <span className="sr-only">Cerrar sesión</span>
+         {activeOperator && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="h-9">
+                  <User className="mr-2 h-4 w-4" />
+                  {activeOperator.name}
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Cerrar sesión</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                 <DropdownMenuLabel>Sesión activa</DropdownMenuLabel>
+                 <DropdownMenuSeparator />
+                 <DropdownMenuItem onSelect={logoutOperator}>
+                   <LogOut className="mr-2 h-4 w-4" />
+                   Cambiar Operador
+                 </DropdownMenuItem>
+                 <DropdownMenuItem onSelect={handleFullLogout} className="text-destructive focus:text-destructive">
+                   <LogOut className="mr-2 h-4 w-4" />
+                   Cerrar Sesión General
+                 </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+         )}
       </div>
     </header>
   );

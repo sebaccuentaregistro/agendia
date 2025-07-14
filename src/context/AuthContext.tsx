@@ -5,10 +5,11 @@ import React, { createContext, useContext, useEffect, useState, ReactNode, useCa
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, writeBatch, updateDoc } from 'firebase/firestore';
-import type { LoginCredentials, SignupCredentials, UserProfile, Institute } from '@/types';
+import type { LoginCredentials, SignupCredentials, UserProfile, Institute, Operator } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
 
 const PIN_VERIFIED_KEY = 'agendia-pin-verified';
+const ACTIVE_OPERATOR_KEY = 'agendia-active-operator';
 
 type AuthContextType = {
   user: User | null;
@@ -16,7 +17,10 @@ type AuthContextType = {
   institute: Institute | null;
   loading: boolean;
   isPinVerified: boolean;
+  activeOperator: Operator | null;
   setPinVerified: (isVerified: boolean) => void;
+  setActiveOperator: (operator: Operator) => void;
+  logoutOperator: () => void;
   login: (credentials: LoginCredentials) => Promise<void>;
   signup: (credentials: SignupCredentials) => Promise<void>;
   logout: () => Promise<void>;
@@ -36,6 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [institute, setInstitute] = useState<Institute | null>(null);
     const [loading, setLoading] = useState(true);
     const [isPinVerified, setIsPinVerified] = useState(false);
+    const [activeOperator, _setActiveOperator] = useState<Operator | null>(null);
     const router = useRouter();
     const pathname = usePathname();
 
@@ -68,14 +73,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
+    const setActiveOperator = useCallback((operator: Operator | null) => {
+        _setActiveOperator(operator);
+        if (operator) {
+            try {
+                sessionStorage.setItem(ACTIVE_OPERATOR_KEY, JSON.stringify(operator));
+            } catch (e) {
+                console.warn("Could not set sessionStorage item for active operator.");
+            }
+        } else {
+            try {
+                sessionStorage.removeItem(ACTIVE_OPERATOR_KEY);
+            } catch (e) {
+                console.warn("Could not remove sessionStorage item for active operator.");
+            }
+        }
+    }, []);
+
+    const logoutOperator = () => {
+        setActiveOperator(null);
+    };
+
     useEffect(() => {
         try {
             const storedPinStatus = sessionStorage.getItem(PIN_VERIFIED_KEY);
             if (storedPinStatus === 'true') {
                 setIsPinVerified(true);
             }
+            const storedOperator = sessionStorage.getItem(ACTIVE_OPERATOR_KEY);
+            if (storedOperator) {
+                _setActiveOperator(JSON.parse(storedOperator));
+            }
         } catch(e) {
-            console.warn("Could not access sessionStorage for PIN verification.");
+            console.warn("Could not access sessionStorage.");
         }
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -102,11 +132,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUserProfile(null);
                 setInstitute(null);
                 setPinVerified(false); // Clear pin status on logout
+                setActiveOperator(null); // Clear active operator on logout
             }
             setLoading(false);
         });
         return () => unsubscribe();
-    }, [setPinVerified, fetchInstituteData]);
+    }, [setPinVerified, fetchInstituteData, setActiveOperator]);
 
     useEffect(() => {
         if (loading) return;
@@ -161,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = async () => {
         await signOut(auth);
         setPinVerified(false);
+        setActiveOperator(null);
         router.push('/login');
     };
     
@@ -191,7 +223,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         institute,
         loading,
         isPinVerified,
+        activeOperator,
         setPinVerified,
+        setActiveOperator,
+        logoutOperator,
         login,
         signup,
         logout,
