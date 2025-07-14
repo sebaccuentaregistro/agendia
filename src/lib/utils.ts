@@ -1,3 +1,4 @@
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
@@ -54,7 +55,7 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): Pa
   const dueDateAtStartOfDay = startOfDay(nextDueDate);
 
   // A person is overdue if today is AT or AFTER the due date, and their balance is not positive.
-  const isOverdue = !isBefore(today, dueDateAtStartOfDay) && (person.paymentBalance ?? 0) <= 0;
+  const isOverdue = !isBefore(today, dueDateAtStartOfDay);
   
   if (isOverdue) {
     const daysOverdue = differenceInDays(today, dueDateAtStartOfDay);
