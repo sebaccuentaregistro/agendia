@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
-import { MobileBottomNav } from './mobile-bottom-nav';
+import { Badge } from '@/components/ui/badge';
 
 const navItems = [
   { href: "/", label: "Inicio" },
@@ -94,7 +94,7 @@ export function AppHeader() {
          {activeOperator && (
             <div className="flex items-center gap-2">
               {institute && (
-                <span className="hidden sm:block text-sm font-semibold text-muted-foreground">{institute.name}</span>
+                <Badge variant="secondary" className="hidden sm:inline-flex">{institute.name}</Badge>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
