@@ -38,6 +38,8 @@ export async function getAllInstitutes(): Promise<Institute[]> {
         name: instituteData.name,
         ownerId: instituteData.ownerId,
         createdAt: instituteData.createdAt instanceof Timestamp ? instituteData.createdAt.toDate() : null,
+        paymentStatus: instituteData.paymentStatus,
+        nextDueDate: instituteData.nextDueDate instanceof Timestamp ? instituteData.nextDueDate.toDate() : null,
         peopleCount: peopleSnapshot.size,
         sessionsCount: sessionsSnapshot.size,
         actividadesCount: actividadesSnapshot.size,

@@ -1,6 +1,5 @@
 
 
-
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -32,6 +31,8 @@ export type Institute = {
   sessionsCount?: number;
   actividadesCount?: number;
   lastActivity?: Date | null;
+  paymentStatus?: 'pagado' | 'pendiente' | 'vencido';
+  nextDueDate?: Date | null;
 };
 
 export type Operator = {
