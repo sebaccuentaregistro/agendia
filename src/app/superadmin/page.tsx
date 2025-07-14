@@ -10,8 +10,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2 } from 'lucide-react';
 import type { Institute } from '@/types';
 import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute, getLatestActivityForInstitute } from '@/lib/superadmin-actions';
-import { format } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 interface InstituteWithCount extends Institute {
     peopleCount?: number;
@@ -59,6 +61,19 @@ export default function SuperAdminPage() {
       return [...institutes].sort((a, b) => (b.peopleCount ?? 0) - (a.peopleCount ?? 0));
   }, [institutes]);
 
+  const getStatus = (lastActivity: string | null | undefined): { label: string, className: string } => {
+      if (!lastActivity) return { label: 'Sin Datos', className: 'bg-gray-500' };
+      
+      const daysSinceActivity = differenceInDays(new Date(), parseISO(lastActivity));
+
+      if (daysSinceActivity <= 30) {
+          return { label: 'Activo', className: 'bg-green-600' };
+      }
+      if (daysSinceActivity <= 60) {
+          return { label: 'Inactivo', className: 'bg-yellow-600' };
+      }
+      return { label: 'En Riesgo', className: 'bg-red-600' };
+  }
 
   if (authLoading || pageLoading) {
     return (
@@ -85,6 +100,7 @@ export default function SuperAdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Estado</TableHead>
                 <TableHead>Nombre del Instituto</TableHead>
                 <TableHead>Nº de Alumnos</TableHead>
                 <TableHead>Nº de Sesiones</TableHead>
@@ -94,26 +110,35 @@ export default function SuperAdminPage() {
             </TableHeader>
             <TableBody>
               {sortedInstitutes.length > 0 ? (
-                sortedInstitutes.map(institute => (
-                  <TableRow key={institute.id}>
-                    <TableCell className="font-medium">{institute.name}</TableCell>
-                    <TableCell>
-                      <span className="font-semibold">{institute.peopleCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-semibold">{institute.sessionsCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
-                    </TableCell>
-                    <TableCell>
-                      {institute.createdAt ? format(institute.createdAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      {institute.lastActivity ? format(new Date(institute.lastActivity), "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
-                    </TableCell>
-                  </TableRow>
-                ))
+                sortedInstitutes.map(institute => {
+                  const status = getStatus(institute.lastActivity);
+                  return (
+                    <TableRow key={institute.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className={cn("h-2.5 w-2.5 rounded-full", status.className)}></span>
+                          <span className="text-sm font-medium">{status.label}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{institute.name}</TableCell>
+                      <TableCell>
+                        <span className="font-semibold">{institute.peopleCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold">{institute.sessionsCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
+                      </TableCell>
+                      <TableCell>
+                        {institute.createdAt ? format(institute.createdAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        {institute.lastActivity ? format(parseISO(institute.lastActivity), "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                     Aún no hay institutos registrados.
                   </TableCell>
                 </TableRow>
@@ -125,4 +150,3 @@ export default function SuperAdminPage() {
     </div>
   );
 }
-
