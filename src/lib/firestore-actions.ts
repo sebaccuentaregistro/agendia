@@ -128,6 +128,7 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
         amount: tariff.price,
         tariffId: tariff.id,
         months: 1,
+        timestamp: now,
     };
     const batch = writeBatch(db);
 
@@ -157,8 +158,9 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
     return await batch.commit();
 };
 
-export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, currentPerson: Person) => {
+export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, currentPerson: Person, auditLogRef: CollectionReference, operator: Operator) => {
     const batch = writeBatch(db);
+    const now = new Date();
 
     // 1. Find all payments for the person
     const q = query(paymentsRef, where('personId', '==', personId));
@@ -196,6 +198,21 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
         paymentBalance: newPaymentBalance
     });
     
+    // 5. Create audit log for the reversion
+     batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'REVERTIR_PAGO',
+        entityType: 'pago',
+        entityId: currentPerson.id,
+        entityName: currentPerson.name,
+        timestamp: now,
+        details: {
+            amount: lastPayment.amount,
+            paymentDate: lastPayment.date
+        }
+    } as Omit<AuditLog, 'id'>);
+
     return await batch.commit();
 };
 
@@ -380,3 +397,4 @@ export const deleteWithUsageCheckAction = async (
         throw new Error(usageMessages.join('\n\n'));
     }
 };
+

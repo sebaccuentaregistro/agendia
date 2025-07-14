@@ -241,8 +241,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (!collectionRefs) return;
         const person = data.people.find((p: Person) => p.id === personId);
         if (!person) return;
-        await handleAction(
-            revertLastPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), personId, person),
+        await withOperator(
+            (operator) => revertLastPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), personId, person, collectionRefs.audit_logs, operator),
             `Último pago de ${person.name} revertido.`,
             `Error al revertir el pago.`
         );
