@@ -20,4 +20,5 @@ const nextConfig = {
   },
 };
 
+// Pequeño cambio para forzar la reconstrucción
 module.exports = nextConfig;
