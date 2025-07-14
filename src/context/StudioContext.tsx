@@ -1,560 +1,382 @@
-
-
-
-
-
-'use client';
-
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { collection, onSnapshot, doc, Timestamp, getDocs, query, where, writeBatch } from 'firebase/firestore';
-import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod, NewPersonData, Operator, AuditLog } from '@/types';
-import * as firestoreActions from '@/lib/firestore-actions';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { Skeleton } from '@/components/ui/skeleton';
+// This file contains all the functions that interact with Firestore.
+// It is separated from the React context to avoid issues with Next.js Fast Refresh.
+import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator } from '@/types';
 import { db } from '@/lib/firebase';
-import { addMonths, parse } from 'date-fns';
+import { format as formatDate, addMonths, subMonths } from 'date-fns';
+import { calculateNextPaymentDate } from '@/lib/utils';
 
-type State = {
-  actividades: Actividad[];
-  specialists: Specialist[];
-  people: Person[];
-  sessions: Session[];
-  payments: Payment[];
-  spaces: Space[];
-  attendance: SessionAttendance[];
-  notifications: AppNotification[];
-  tariffs: Tariff[];
-  levels: Level[];
-  operators: Operator[];
-  audit_logs: AuditLog[];
-};
-
-interface StudioContextType extends State {
-    loading: boolean;
-    addActividad: (data: Omit<Actividad, 'id'>) => Promise<void>;
-    updateActividad: (data: Actividad) => Promise<void>;
-    deleteActividad: (id: string) => Promise<void>;
-    addSpecialist: (data: Omit<Specialist, 'id' | 'avatar'>) => Promise<void>;
-    updateSpecialist: (data: Specialist) => Promise<void>;
-    deleteSpecialist: (id: string) => Promise<void>;
-    addPerson: (data: NewPersonData) => Promise<void>;
-    updatePerson: (data: Person) => Promise<void>;
-    deletePerson: (id: string) => Promise<void>;
-    recordPayment: (personId: string) => Promise<void>;
-    revertLastPayment: (personId: string) => Promise<void>;
-    addSpace: (data: Omit<Space, 'id'>) => Promise<void>;
-    updateSpace: (data: Space) => Promise<void>;
-    deleteSpace: (id: string) => Promise<void>;
-    addSession: (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => Promise<void>;
-    updateSession: (data: Session) => Promise<void>;
-    deleteSession: (id: string) => Promise<void>;
-    enrollPersonInSessions: (personId: string, sessionIds: string[]) => Promise<void>;
-    enrollPeopleInClass: (sessionId: string, personIds: string[]) => Promise<void>;
-    saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => Promise<void>;
-    addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => Promise<void>;
-    addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => Promise<void>;
-    addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => Promise<void>;
-    removeVacationPeriod: (personId: string, vacationId: string) => Promise<void>;
-    isPersonOnVacation: (person: Person, date: Date) => boolean;
-    enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => Promise<void>;
-    dismissNotification: (id: string) => Promise<void>;
-    addTariff: (data: Omit<Tariff, 'id'>) => Promise<void>;
-    updateTariff: (data: Tariff) => Promise<void>;
-    deleteTariff: (id: string) => Promise<void>;
-    addLevel: (data: Omit<Level, 'id'>) => Promise<void>;
-    updateLevel: (data: Level) => Promise<void>;
-    deleteLevel: (id: string) => Promise<void>;
-    addOperator: (data: Omit<Operator, 'id'>) => Promise<void>;
-    updateOperator: (data: Operator) => Promise<void>;
-    deleteOperator: (id: string) => Promise<void>;
-    isTutorialOpen: boolean;
-    openTutorial: () => void;
-    closeTutorial: () => void;
-}
-
-const StudioContext = createContext<StudioContextType | undefined>(undefined);
-
-// Helper to convert Firestore Timestamps to JS Dates in nested objects
-const convertTimestamps = (data: any) => {
-    const newData = { ...data };
-    for (const key in newData) {
-        if (newData[key] instanceof Timestamp) {
-            newData[key] = newData[key].toDate();
-        } else if (Array.isArray(newData[key])) {
-            newData[key] = newData[key].map(item =>
-                (typeof item === 'object' && item !== null) ? convertTimestamps(item) : item
-            );
+// Helper function to remove undefined fields from an object before Firestore operations.
+const cleanDataForFirestore = (data: any) => {
+    const cleanData = { ...data };
+    for (const key in cleanData) {
+        if (cleanData[key] === undefined) {
+            delete cleanData[key];
         }
     }
-    return newData;
+    return cleanData;
 };
 
-export function StudioProvider({ children }: { children: ReactNode }) {
-  const { toast } = useToast();
-  const { userProfile, loading: authLoading, activeOperator } = useAuth();
-  
-  const [state, setState] = useState<State>({
-    actividades: [], specialists: [], people: [], sessions: [],
-    payments: [], spaces: [], attendance: [], notifications: [], tariffs: [], levels: [], operators: [], audit_logs: [],
-  });
-  const [loading, setLoading] = useState(true);
-  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-  
-  const instituteId = userProfile?.instituteId;
 
-  useEffect(() => {
-    if (!instituteId) {
-      if (!authLoading) {
-        setLoading(false);
-      }
-      return;
+// Generic Actions
+export const addEntity = async (collectionRef: CollectionReference, data: any) => {
+    const cleanData = cleanDataForFirestore(data);
+    return await addDoc(collectionRef, cleanData);
+};
+
+export const updateEntity = async (docRef: any, data: any) => {
+    const { id, ...updateDataRaw } = data; // Don't save the id inside the document
+    const updateData = cleanDataForFirestore(updateDataRaw);
+    return await setDoc(docRef, updateData, { merge: true });
+};
+
+export const deleteEntity = async (docRef: any) => {
+    return await deleteDoc(docRef);
+};
+
+
+// Specific Actions
+export const addPersonAction = async (peopleRef: CollectionReference, personData: NewPersonData, auditLogRef: CollectionReference, operator: Operator) => {
+    const joinDate = new Date();
+    
+    const newPerson = {
+        name: personData.name,
+        phone: personData.phone,
+        tariffId: personData.tariffId,
+        levelId: personData.levelId,
+        healthInfo: personData.healthInfo,
+        notes: personData.notes,
+        joinDate: joinDate,
+        lastPaymentDate: null, // New members start with a null payment date
+        avatar: `https://placehold.co/100x100.png`,
+        vacationPeriods: [],
+        paymentBalance: 0,
+    };
+    
+    const batch = writeBatch(db);
+    const now = new Date();
+
+    // Create the person document
+    const personDocRef = doc(peopleRef);
+    batch.set(personDocRef, cleanDataForFirestore(newPerson));
+
+    // Add to audit log
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'CREAR_PERSONA',
+        entityType: 'persona',
+        entityId: personDocRef.id,
+        entityName: personData.name,
+        timestamp: now,
+    } as Omit<AuditLog, 'id'>);
+    
+    return await batch.commit();
+};
+
+export const deletePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string, personName: string, auditLogRef: CollectionReference, operator: Operator) => {
+    const batch = writeBatch(db);
+    const now = new Date();
+
+    // Add to audit log
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'ELIMINAR_PERSONA',
+        entityType: 'persona',
+        entityId: personId,
+        entityName: personName,
+        timestamp: now,
+    } as Omit<AuditLog, 'id'>);
+
+    // Remove person from all sessions they are enrolled in
+    const personSessionsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
+    const personSessionsSnap = await getDocs(personSessionsQuery);
+    
+    personSessionsSnap.forEach(sessionDoc => {
+        const sessionData = sessionDoc.data() as Session;
+        const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
+        batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
+    });
+
+    // Also remove from waitlists
+    const personWaitlistQuery = query(sessionsRef, where('waitlistPersonIds', 'array-contains', personId));
+    const personWaitlistSnap = await getDocs(personWaitlistQuery);
+    personWaitlistSnap.forEach(sessionDoc => {
+        const sessionData = sessionDoc.data() as Session;
+        const updatedWaitlistIds = (sessionData.waitlistPersonIds || []).filter(id => id !== personId);
+        batch.update(sessionDoc.ref, { waitlistPersonIds: updatedWaitlistIds });
+    });
+
+    // Delete the person document
+    const personRef = doc(peopleRef, personId);
+    batch.delete(personRef);
+
+    return await batch.commit();
+};
+
+
+export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
+    const now = new Date();
+    // If it's the first payment, the cycle starts today. Otherwise, it extends from the previous due date.
+    const baseDateForNextPayment = person.lastPaymentDate || now;
+    const newExpiryDate = calculateNextPaymentDate(baseDateForNextPayment, person.joinDate);
+
+    const paymentRecord = {
+        personId: person.id,
+        date: now, // The actual transaction date
+        amount: tariff.price,
+        tariffId: tariff.id,
+        months: 1,
+    };
+    const batch = writeBatch(db);
+
+    const paymentRef = doc(paymentsRef);
+    batch.set(paymentRef, paymentRecord);
+    
+    batch.update(personRef, { 
+        lastPaymentDate: newExpiryDate,
+        paymentBalance: (person.paymentBalance || 0) + 1,
+     });
+     
+    // Create audit log
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'REGISTRO_PAGO',
+        entityType: 'pago',
+        entityId: person.id,
+        entityName: person.name,
+        timestamp: now,
+        details: {
+            amount: tariff.price,
+            tariffName: tariff.name
+        }
+    } as Omit<AuditLog, 'id'>);
+
+    return await batch.commit();
+};
+
+export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, currentPerson: Person) => {
+    const batch = writeBatch(db);
+
+    // 1. Find all payments for the person
+    const q = query(paymentsRef, where('personId', '==', personId));
+    const paymentsSnap = await getDocs(q);
+
+    if (paymentsSnap.empty) {
+        throw new Error("No hay pagos para revertir para esta persona.");
+    }
+
+    // 2. Sort payments by date locally to find the latest one
+    const allPayments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment))
+        .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+
+    const lastPayment = allPayments[0];
+    
+    // Determine the new state
+    let newLastPaymentDate: Date | null;
+    const newPaymentBalance = (currentPerson.paymentBalance || 0) - 1;
+
+    if (allPayments.length === 1) {
+        // If this was the only payment, revert to the initial state (null date)
+        newLastPaymentDate = null;
+    } else {
+        // If there are previous payments, calculate the previous due date
+        newLastPaymentDate = subMonths(currentPerson.lastPaymentDate || new Date(), 1);
     }
     
-    setLoading(true);
-    const instituteRef = doc(db, 'institutes', instituteId);
-    
-    const collectionsToListen: (keyof State)[] = [
-      'actividades', 'specialists', 'people', 'sessions', 'payments', 
-      'spaces', 'attendance', 'notifications', 'tariffs', 'levels', 'operators', 'audit_logs'
-    ];
+    // 3. Delete the most recent payment document
+    const lastPaymentRef = doc(paymentsRef, lastPayment.id);
+    batch.delete(lastPaymentRef);
 
-    const unsubscribes = collectionsToListen.map((collectionName) => {
-      const collectionRef = collection(instituteRef, collectionName);
-      return onSnapshot(collectionRef, (snapshot) => {
-        const data = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...convertTimestamps(doc.data()),
-        }));
-        setState(prev => ({ ...prev, [collectionName]: data as any }));
-      }, (error) => {
-        console.error(`Error fetching ${collectionName}:`, error);
-        toast({ title: `Error al cargar ${collectionName}`, description: error.message, variant: 'destructive' });
-      });
+    // 4. Update the person's document
+    batch.update(personRef, { 
+        lastPaymentDate: newLastPaymentDate,
+        paymentBalance: newPaymentBalance
     });
     
-    // All listeners are set up, now we can set loading to false.
-    // A small timeout can prevent flicker on very fast connections.
-    const timer = setTimeout(() => setLoading(false), 250);
+    return await batch.commit();
+};
 
-    return () => {
-      clearTimeout(timer);
-      unsubscribes.forEach(unsub => unsub());
-    };
-  }, [instituteId, authLoading, toast]);
 
-   useEffect(() => {
-    if (authLoading || loading || !instituteId) return;
+export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[]) => {
+    const batch = writeBatch(db);
+    
+    // First, find all sessions the person is currently enrolled in
+    const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
+    const currentEnrollmentsSnap = await getDocs(currentEnrollmentsQuery);
+    const currentSessionIds = currentEnrollmentsSnap.docs.map(d => d.id);
 
-    const checkChurnRisk = async () => {
-        const CHURN_THRESHOLD = 3;
-        const notificationType = 'churnRisk';
+    // Determine which sessions to remove the person from
+    const sessionsToRemoveFrom = currentSessionIds.filter(id => !sessionIds.includes(id));
+    sessionsToRemoveFrom.forEach(sessionId => {
+        const sessionRef = doc(sessionsRef, sessionId);
+        const sessionDoc = currentEnrollmentsSnap.docs.find(d => d.id === sessionId);
+        if (sessionDoc) {
+            const sessionData = sessionDoc.data() as Session;
+            const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
+            batch.update(sessionRef, { personIds: updatedPersonIds });
+        }
+    });
 
-        for (const person of state.people) {
-            // Check if there's already an active churn notification for this person
-            const existingNotification = state.notifications.find(
-                n => n.type === notificationType && n.personId === person.id
-            );
-            if (existingNotification) {
-                continue; // Skip if notification already exists
-            }
+    // Determine which sessions to add the person to
+    const sessionsToAddTo = sessionIds.filter(id => !currentSessionIds.includes(id));
+    for (const sessionId of sessionsToAddTo) {
+        const sessionRef = doc(sessionsRef, sessionId);
+        // We need to fetch the session to safely add the person without removing others
+        // A simple getDoc would be more efficient if we know the doc exists
+        const sessionDocSnap = await getDocs(query(sessionsRef, where('__name__', '==', sessionId), limit(1)));
+        if (!sessionDocSnap.empty) {
+            const sessionData = sessionDocSnap.docs[0].data() as Session;
+            const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));
+            batch.update(sessionRef, { personIds: updatedPersonIds });
+        }
+    }
+    
+    return await batch.commit();
+};
 
-            // Find sessions this person is enrolled in
-            const personSessions = state.sessions.filter(s => s.personIds.includes(person.id));
-            if (personSessions.length === 0) continue;
+
+export const enrollPeopleInClassAction = async (sessionRef: any, personIds: string[]) => {
+    return await updateEntity(sessionRef, { personIds });
+};
+
+
+export const saveAttendanceAction = async (attendanceRef: CollectionReference, sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
+    const dateStr = formatDate(new Date(), 'yyyy-MM-dd');
+    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+    
+    const snap = await getDocs(attendanceQuery);
+    
+    if (snap.empty) {
+        const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
+        await addEntity(attendanceRef, record);
+    } else {
+        const docRef = snap.docs[0].ref;
+        const existingData = snap.docs[0].data() as SessionAttendance;
+        const updatedData = { 
+            ...existingData, 
+            presentIds, 
+            absentIds, 
+            justifiedAbsenceIds 
+        };
+        await updateEntity(docRef, updatedData);
+    }
+};
+
+export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
+    const dateStr = formatDate(date, 'yyyy-MM-dd');
+    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+    
+    const snap = await getDocs(attendanceQuery);
+    if (snap.empty) {
+        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [personId] });
+    } else {
+        const record = snap.docs[0].data() as SessionAttendance;
+        const updatedJustified = Array.from(new Set([...(record.justifiedAbsenceIds || []), personId]));
+        await updateEntity(snap.docs[0].ref, { justifiedAbsenceIds: updatedJustified });
+    }
+};
+
+export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReference, sessionId: string, personId: string, date: Date) => {
+    const dateStr = formatDate(date, 'yyyy-MM-dd');
+    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+
+    const snap = await getDocs(attendanceQuery);
+    if (snap.empty) {
+        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [], oneTimeAttendees: [personId] });
+    } else {
+        const record = snap.docs[0].data() as SessionAttendance;
+        const updatedAttendees = Array.from(new Set([...(record.oneTimeAttendees || []), personId]));
+        await updateEntity(snap.docs[0].ref, { oneTimeAttendees: updatedAttendees });
+    }
+};
+
+export const addVacationPeriodAction = async (personDocRef: any, person: Person, startDate: Date, endDate: Date) => {
+    const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
+    const updatedVacations = [...(person.vacationPeriods || []), newVacation];
+    return updateEntity(personDocRef, { vacationPeriods: updatedVacations });
+};
+
+export const removeVacationPeriodAction = async (personDocRef: any, person: Person, vacationId: string) => {
+    if (!person.vacationPeriods) return;
+    const updatedVacations = person.vacationPeriods.filter(v => v.id !== vacationId);
+    return updateEntity(personDocRef, { vacationPeriods: updatedVacations });
+};
+
+export const addToWaitlistAction = async (sessionDocRef: any, session: Session, personId: string) => {
+    const updatedWaitlist = Array.from(new Set([...(session.waitlistPersonIds || []), personId]));
+    return updateEntity(sessionDocRef, { waitlistPersonIds: updatedWaitlist });
+};
+
+export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference, notificationsRef: CollectionReference, notificationId: string, sessionId: string, personId: string, session: Session) => {
+    const batch = writeBatch(db);
+    const sessionRef = doc(sessionsRef, sessionId);
+    const newPersonIds = Array.from(new Set([...session.personIds, personId]));
+    const newWaitlist = session.waitlistPersonIds?.filter(id => id !== personId) || [];
+    batch.update(sessionRef, { personIds: newPersonIds, waitlistPersonIds: newWaitlist });
+    
+    const notifRef = doc(notificationsRef, notificationId);
+    batch.delete(notifRef);
+    
+    return await batch.commit();
+};
+
+type AllDataContext = {
+    sessions: Session[];
+    people: Person[];
+    actividades: Actividad[];
+    specialists: Specialist[];
+    spaces: Space[];
+    levels: Level[];
+};
+
+export const deleteWithUsageCheckAction = async (
+    entityId: string,
+    checks: { collection: string; field: string; label: string, type?: 'array' }[],
+    collectionRefs: Record<string, CollectionReference>,
+    allDataForMessages: AllDataContext
+) => {
+    const usageMessages: string[] = [];
+
+    for (const check of checks) {
+        const collectionToCheckRef = collectionRefs[check.collection];
+        if (!collectionToCheckRef) {
+            console.warn(`Collection reference not found for: ${check.collection}`);
+            continue;
+        }
+
+        const fieldToCheck = check.field;
+        const q = check.type === 'array'
+            ? query(collectionToCheckRef, where(fieldToCheck, 'array-contains', entityId))
+            : query(collectionToCheckRef, where(fieldToCheck, '==', entityId));
+        
+        const snapshot = await getDocs(q);
+
+        if (!snapshot.empty) {
+            const itemsInUse = snapshot.docs.map(d => d.data());
+            let details = '';
             
-            const personSessionIds = new Set(personSessions.map(s => s.id));
-
-            // Get all attendance records relevant to this person, sorted by most recent
-            const personAttendance = state.attendance
-                .filter(a => personSessionIds.has(a.sessionId))
-                .sort((a, b) => b.date.localeCompare(a.date));
-
-            let consecutiveAbsences = 0;
-
-            for (const record of personAttendance) {
-                // Ignore records for dates the person was on vacation
-                const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
-                if (isPersonOnVacation(person, recordDate)) {
-                    continue;
-                }
-                
-                // Only consider this record if the person was supposed to be there
-                // (i.e., not a justified absence or already present)
-                const wasSupposedToBeThere = !record.justifiedAbsenceIds?.includes(person.id) && !record.presentIds?.includes(person.id);
-
-                if (wasSupposedToBeThere && record.absentIds?.includes(person.id)) {
-                    consecutiveAbsences++;
-                } else if (record.presentIds?.includes(person.id)) {
-                    // If they were present, the streak is broken
-                    break;
-                }
-
-                if (consecutiveAbsences >= CHURN_THRESHOLD) {
-                    // Create notification
-                    const newNotification = {
-                        type: notificationType,
-                        personId: person.id,
-                        createdAt: new Date(),
-                    };
-                    try {
-                        await firestoreActions.addEntity(getCollectionRef('notifications'), newNotification);
-                    } catch (error) {
-                        console.error("Error creating churn risk notification:", error);
-                    }
-                    break; // Stop checking for this person once a notification is created
-                }
+            if (check.collection === 'sessions') {
+                details = itemsInUse.map(s => {
+                    const actividad = allDataForMessages.actividades.find(a => a.id === s.actividadId);
+                    return `- ${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`;
+                }).join('\n');
+                usageMessages.push(`Está asignado a ${itemsInUse.length} sesión(es):\n${details}`);
+            } else if (check.collection === 'people') {
+                 details = itemsInUse.map(p => `- ${p.name}`).join('\n');
+                 usageMessages.push(`Está asignado a ${itemsInUse.length} persona(s):\n${details}`);
+            } else if (check.collection === 'specialists') {
+                 details = itemsInUse.map(s => `- ${s.name}`).join('\n');
+                 usageMessages.push(`Está asignado a ${itemsInUse.length} especialista(s):\n${details}`);
+            } else {
+                usageMessages.push(`Está en uso por ${itemsInUse.length} ${check.label}(s).`);
             }
         }
-    };
-    
-    // Run the check once, a few seconds after data is loaded.
-    const timer = setTimeout(() => {
-        checkChurnRisk();
-    }, 3000);
-    
-    return () => clearTimeout(timer);
-
-  }, [state.people, state.sessions, state.attendance, state.notifications, authLoading, loading, instituteId]);
-
-
-  const openTutorial = useCallback(() => setIsTutorialOpen(true), []);
-  const closeTutorial = useCallback(() => {
-    setIsTutorialOpen(false);
-    try {
-      localStorage.setItem('agendia-tutorial-completed', 'true');
-    } catch (e) { console.warn("Could not save tutorial state."); }
-  }, []);
-
-
-  const isPersonOnVacation = useCallback((person: Person, date: Date): boolean => {
-    if (!person.vacationPeriods) return false;
-    const checkDate = new Date(date.setHours(0, 0, 0, 0));
-    return person.vacationPeriods.some(period => {
-        if (!period.startDate || !period.endDate) return false;
-        return checkDate >= new Date(new Date(period.startDate).setHours(0,0,0,0)) && checkDate <= new Date(new Date(period.endDate).setHours(23,59,59,999));
-    });
-  }, []);
-
-  const getCollectionRef = (name: string) => {
-    if (!instituteId) throw new Error("No hay un ID de instituto disponible.");
-    return collection(db, 'institutes', instituteId, name);
-  };
-  
-  const getDocRef = (collectionName: string, id: string) => {
-     if (!instituteId) throw new Error("No hay un ID de instituto disponible.");
-     return doc(db, 'institutes', instituteId, collectionName, id);
-  }
-
-  const performFirestoreAction = async (actionName: string, actionFn: () => Promise<any>) => {
-    try {
-      await actionFn();
-      toast({ title: `${actionName} con éxito`, description: 'La operación se completó correctamente.' });
-    } catch (error: any) {
-      console.error(`Error in ${actionName}:`, error);
-      toast({ title: `Error en ${actionName}`, description: error.message, variant: 'destructive' });
     }
-  };
-  
-  const allDataForMessages = {
-      sessions: state.sessions,
-      people: state.people,
-      actividades: state.actividades,
-      specialists: state.specialists,
-      spaces: state.spaces,
-      levels: state.levels,
-  };
-  
-  const deleteWithUsageCheck = async (entityId: string, checks: any[], collectionName: string) => {
-     if (!instituteId) throw new Error("Institute ID not found");
-     const collectionRefs = {
-        sessions: getCollectionRef('sessions'),
-        people: getCollectionRef('people'),
-        specialists: getCollectionRef('specialists'),
-     };
-     await firestoreActions.deleteWithUsageCheckAction(entityId, checks, collectionRefs, allDataForMessages);
-     await firestoreActions.deleteEntity(getDocRef(collectionName, entityId));
-  };
 
-  const addActividad = async (data: Omit<Actividad, 'id'>) => {
-    await performFirestoreAction('Añadir actividad', () => firestoreActions.addEntity(getCollectionRef('actividades'), data));
-  };
-  const updateActividad = async (data: Actividad) => {
-    await performFirestoreAction('Actualizar actividad', () => firestoreActions.updateEntity(getDocRef('actividades', data.id), data));
-  };
-  const deleteActividad = async (id: string) => {
-    await performFirestoreAction('Eliminar actividad', () => deleteWithUsageCheck(id,
-        [
-            { collection: 'sessions', field: 'actividadId', label: 'sesión' },
-            { collection: 'specialists', field: 'actividadIds', label: 'especialista', type: 'array' }
-        ],
-        'actividades'
-    ));
-  };
-  
-  const addLevel = async (data: Omit<Level, 'id'>) => {
-     await performFirestoreAction('Añadir nivel', () => firestoreActions.addEntity(getCollectionRef('levels'), data));
-  };
-  const updateLevel = async (data: Level) => {
-     await performFirestoreAction('Actualizar nivel', () => firestoreActions.updateEntity(getDocRef('levels', data.id), data));
-  };
-  const deleteLevel = async (id: string) => {
-    await performFirestoreAction('Eliminar nivel', () => deleteWithUsageCheck(id,
-        [
-            { collection: 'sessions', field: 'levelId', label: 'sesión' },
-            { collection: 'people', field: 'levelId', label: 'persona' }
-        ],
-        'levels'
-    ));
-  };
-
-  const addSpace = async (data: Omit<Space, 'id'>) => {
-    await performFirestoreAction('Añadir espacio', () => firestoreActions.addEntity(getCollectionRef('spaces'), data));
-  };
-  const updateSpace = async (data: Space) => {
-    await performFirestoreAction('Actualizar espacio', () => firestoreActions.updateEntity(getDocRef('spaces', data.id), data));
-  };
-  const deleteSpace = async (id: string) => {
-    await performFirestoreAction('Eliminar espacio', () => deleteWithUsageCheck(id,
-        [{ collection: 'sessions', field: 'spaceId', label: 'sesión' }],
-        'spaces'
-    ));
-  };
-  
-  const addTariff = async (data: Omit<Tariff, 'id'>) => {
-     await performFirestoreAction('Añadir arancel', () => firestoreActions.addEntity(getCollectionRef('tariffs'), data));
-  };
-  const updateTariff = async (data: Tariff) => {
-    await performFirestoreAction('Actualizar arancel', () => firestoreActions.updateEntity(getDocRef('tariffs', data.id), data));
-  };
-  const deleteTariff = async (id: string) => {
-     await performFirestoreAction('Eliminar arancel', () => deleteWithUsageCheck(id,
-        [{ collection: 'people', field: 'tariffId', label: 'persona' }],
-        'tariffs'
-     ));
-  };
-
-  const addSpecialist = async (data: Omit<Specialist, 'id' | 'avatar'>) => {
-    const newSpecialist = { ...data, avatar: `https://placehold.co/100x100.png` };
-    await performFirestoreAction('Añadir especialista', () => firestoreActions.addEntity(getCollectionRef('specialists'), newSpecialist));
-  };
-  const updateSpecialist = async (data: Specialist) => {
-     await performFirestoreAction('Actualizar especialista', () => firestoreActions.updateEntity(getDocRef('specialists', data.id), data));
-  };
-  const deleteSpecialist = async (id: string) => {
-     await performFirestoreAction('Eliminar especialista', () => deleteWithUsageCheck(id,
-        [{ collection: 'sessions', field: 'instructorId', label: 'sesión' }],
-        'specialists'
-    ));
-  };
-  
-  const addPerson = async (data: NewPersonData) => {
-    await performFirestoreAction('Añadir persona', () => firestoreActions.addPersonAction(getCollectionRef('people'), data));
-  };
-  const updatePerson = async (data: Person) => {
-    await performFirestoreAction('Actualizar persona', () => firestoreActions.updateEntity(getDocRef('people', data.id), data));
-  };
-  const deletePerson = async (id: string) => {
-    if (!activeOperator) {
-        toast({ title: 'Error', description: 'Se requiere un operador activo para esta acción.', variant: 'destructive' });
-        return;
+    if (usageMessages.length > 0) {
+        throw new Error(usageMessages.join('\n\n'));
     }
-    const personToDelete = state.people.find(p => p.id === id);
-    if (!personToDelete) {
-        toast({ title: 'Error', description: 'No se encontró a la persona a eliminar.', variant: 'destructive' });
-        return;
-    }
-    await performFirestoreAction('Eliminar persona', () => firestoreActions.deletePersonAction(
-        getCollectionRef('sessions'), 
-        getCollectionRef('people'), 
-        id,
-        personToDelete.name,
-        getCollectionRef('audit_logs'),
-        activeOperator
-    ));
-  };
-  
-  const recordPayment = async (personId: string) => {
-      if (!activeOperator) {
-        toast({ title: 'Error', description: 'No hay un operador activo para registrar la acción.', variant: 'destructive' });
-        return;
-      }
-      const person = state.people.find(p => p.id === personId);
-      if (!person) {
-        toast({ title: 'Error', description: 'No se encontró a la persona.', variant: 'destructive' });
-        return;
-      }
-       if (!person.tariffId) {
-        toast({ title: 'Error', description: 'La persona no tiene un arancel asignado.', variant: 'destructive' });
-        return;
-      }
-      const tariff = state.tariffs.find(t => t.id === person.tariffId);
-       if (!tariff) {
-        toast({ title: 'Error', description: 'No se encontró el arancel de la persona.', variant: 'destructive' });
-        return;
-      }
-      await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(
-        getCollectionRef('payments'), 
-        getDocRef('people', person.id), 
-        person, 
-        tariff, 
-        getCollectionRef('audit_logs'),
-        activeOperator
-      ));
-  };
-
-  const revertLastPayment = async (personId: string) => {
-      const person = state.people.find(p => p.id === personId);
-      if (!person) {
-        toast({ title: 'Error', description: 'No se encontró a la persona.', variant: 'destructive' });
-        return;
-      }
-      await performFirestoreAction('Revertir pago', () => firestoreActions.revertLastPaymentAction(
-          getCollectionRef('payments'),
-          getDocRef('people', person.id),
-          personId,
-          person
-      ));
-  }
-  
-  const addSession = async (data: Omit<Session, 'id'| 'personIds' | 'waitlistPersonIds'>) => {
-    const newSession = { ...data, personIds: [], waitlistPersonIds: [] };
-    await performFirestoreAction('Añadir sesión', () => firestoreActions.addEntity(getCollectionRef('sessions'), newSession));
-  };
-  const updateSession = async (data: Session) => {
-    await performFirestoreAction('Actualizar sesión', () => firestoreActions.updateEntity(getDocRef('sessions', data.id), data));
-  };
-  const deleteSession = async (id: string) => {
-    await performFirestoreAction('Eliminar sesión', () => {
-        const sessionToDelete = state.sessions.find(s => s.id === id);
-        if (sessionToDelete && sessionToDelete.personIds.length > 0) {
-            throw new Error(`No se puede eliminar. Hay ${sessionToDelete.personIds.length} persona(s) inscripta(s).`);
-        }
-        return firestoreActions.deleteEntity(getDocRef('sessions', id));
-    });
-  };
-  
-  const enrollPeopleInClass = async (sessionId: string, personIds: string[]) => {
-    await performFirestoreAction('Inscribir personas', () => firestoreActions.enrollPeopleInClassAction(getDocRef('sessions', sessionId), personIds));
-  };
-
-  const enrollPersonInSessions = async (personId: string, sessionIds: string[]) => {
-    await performFirestoreAction('Actualizar inscripciones', () => firestoreActions.enrollPersonInSessionsAction(getCollectionRef('sessions'), personId, sessionIds));
-  };
-  
-  const saveAttendance = async (sessionId: string, presentIds: string[], absentIds:string[], justifiedAbsenceIds:string[]) => {
-    await performFirestoreAction('Guardar asistencia', () => firestoreActions.saveAttendanceAction(getCollectionRef('attendance'), sessionId, presentIds, absentIds, justifiedAbsenceIds));
-  };
-  
-  const addJustifiedAbsence = async (personId: string, sessionId: string, date: Date) => {
-    await performFirestoreAction('Justificar ausencia', () => firestoreActions.addJustifiedAbsenceAction(getCollectionRef('attendance'), personId, sessionId, date));
-  };
-
-  const addOneTimeAttendee = async (sessionId: string, personId: string, date: Date) => {
-    await performFirestoreAction('Añadir asistente puntual', () => firestoreActions.addOneTimeAttendeeAction(getCollectionRef('attendance'), sessionId, personId, date));
-  };
-
-  const addVacationPeriod = async (personId: string, startDate: Date, endDate: Date) => {
-     const person = state.people.find(p => p.id === personId);
-     if (!person) return;
-     await performFirestoreAction('Añadir vacaciones', () => firestoreActions.addVacationPeriodAction(getDocRef('people', personId), person, startDate, endDate));
-  };
-  
-  const removeVacationPeriod = async (personId: string, vacationId: string) => {
-    const person = state.people.find(p => p.id === personId);
-    if (!person) return;
-    await performFirestoreAction('Eliminar vacaciones', () => firestoreActions.removeVacationPeriodAction(getDocRef('people', personId), person, vacationId));
-  };
-
-  const enrollFromWaitlist = async (notificationId: string, sessionId: string, personId: string) => {
-    const session = state.sessions.find(s => s.id === sessionId);
-    if (!session) return;
-    await performFirestoreAction('Inscribir desde lista de espera', () => firestoreActions.enrollFromWaitlistAction(getCollectionRef('sessions'), getCollectionRef('notifications'), notificationId, sessionId, personId, session));
-  };
-  
-  const dismissNotification = async (id: string) => {
-    await performFirestoreAction('Descartar notificación', () => firestoreActions.deleteEntity(getDocRef('notifications', id)));
-  };
-  
-  const addOperator = async (data: Omit<Operator, 'id'>) => {
-    await performFirestoreAction('Añadir operador', () => firestoreActions.addEntity(getCollectionRef('operators'), data));
-  };
-  const updateOperator = async (data: Operator) => {
-    await performFirestoreAction('Actualizar operador', () => firestoreActions.updateEntity(getDocRef('operators', data.id), data));
-  };
-  const deleteOperator = async (id: string) => {
-    await performFirestoreAction('Eliminar operador', () => firestoreActions.deleteEntity(getDocRef('operators', id)));
-  };
-
-  if (authLoading || loading) {
-    return (
-        <div className="flex h-screen w-full items-center justify-center">
-            <div className="space-y-8 w-full max-w-5xl p-8">
-                <Skeleton className="h-16 w-full rounded-2xl" />
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                    {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-auto w-full rounded-xl aspect-square" />)}
-                </div>
-                <Skeleton className="h-64 w-full rounded-2xl" />
-            </div>
-      </div>
-    );
-  }
-  
-  const contextValue: StudioContextType = {
-    ...state,
-    loading,
-    addActividad,
-    updateActividad,
-    deleteActividad,
-    addSpecialist,
-    updateSpecialist,
-    deleteSpecialist,
-    addPerson,
-    updatePerson,
-    deletePerson,
-    recordPayment,
-    revertLastPayment,
-    addSpace,
-    updateSpace,
-    deleteSpace,
-    addSession,
-    updateSession,
-    deleteSession,
-    enrollPeopleInClass,
-    enrollPersonInSessions,
-    saveAttendance,
-    addJustifiedAbsence,
-    addOneTimeAttendee,
-    addVacationPeriod,
-    removeVacationPeriod,
-    enrollFromWaitlist,
-    dismissNotification,
-    addTariff,
-    updateTariff,
-    deleteTariff,
-    addLevel,
-    updateLevel,
-    deleteLevel,
-    addOperator,
-    updateOperator,
-    deleteOperator,
-    isPersonOnVacation,
-    isTutorialOpen,
-    openTutorial,
-    closeTutorial,
-  };
-
-  return (
-    <StudioContext.Provider value={contextValue}>
-      {children}
-    </StudioContext.Provider>
-  );
-}
-
-export function useStudio() {
-  const context = useContext(StudioContext);
-  if (context === undefined) {
-    throw new Error('useStudio must be used within a StudioProvider');
-  }
-  return context;
-}
+};

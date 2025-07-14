@@ -1,7 +1,3 @@
-
-
-
-
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
@@ -40,7 +36,7 @@ export const deleteEntity = async (docRef: any) => {
 
 
 // Specific Actions
-export const addPersonAction = async (collectionRef: CollectionReference, personData: NewPersonData) => {
+export const addPersonAction = async (peopleRef: CollectionReference, personData: NewPersonData, auditLogRef: CollectionReference, operator: Operator) => {
     const joinDate = new Date();
     
     const newPerson = {
@@ -57,7 +53,25 @@ export const addPersonAction = async (collectionRef: CollectionReference, person
         paymentBalance: 0,
     };
     
-    return addEntity(collectionRef, newPerson);
+    const batch = writeBatch(db);
+    const now = new Date();
+
+    // Create the person document
+    const personDocRef = doc(peopleRef);
+    batch.set(personDocRef, cleanDataForFirestore(newPerson));
+
+    // Add to audit log
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'CREAR_PERSONA',
+        entityType: 'persona',
+        entityId: personDocRef.id,
+        entityName: personData.name,
+        timestamp: now,
+    } as Omit<AuditLog, 'id'>);
+    
+    return await batch.commit();
 };
 
 export const deletePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string, personName: string, auditLogRef: CollectionReference, operator: Operator) => {
