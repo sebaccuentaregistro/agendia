@@ -27,7 +27,7 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const protectedRoutes = ['/', '/schedule', '/students', '/instructors', '/specializations', '/spaces', '/levels', '/tariffs', '/statistics', '/payments'];
+const protectedRoutes = ['/', '/schedule', '/students', '/instructors', '/specializations', '/spaces', '/levels', '/tariffs', '/statistics', '/payments', '/operators'];
 const authRoutes = ['/login'];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const router = useRouter();
     const pathname = usePathname();
 
-    const fetchInstituteData = async (instituteId: string) => {
+    const fetchInstituteData = useCallback(async (instituteId: string) => {
         const instituteDocRef = doc(db, 'institutes', instituteId);
         const instituteDocSnap = await getDoc(instituteDocRef);
         if (instituteDocSnap.exists()) {
@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         setInstitute(null);
         return null;
-    };
+    }, []);
     
     const setPinVerified = useCallback((isVerified: boolean) => {
         setIsPinVerified(isVerified);
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(false);
         });
         return () => unsubscribe();
-    }, [setPinVerified]);
+    }, [setPinVerified, fetchInstituteData]);
 
     useEffect(() => {
         if (loading) return;

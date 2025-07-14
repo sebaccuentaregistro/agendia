@@ -43,12 +43,14 @@ export default function TariffsPage() {
   }, [tariffs]);
 
   function handleAdd() {
+    if (!isPinVerified) return;
     setSelectedTariff(undefined);
     form.reset({ name: '', price: 0, description: '', frequency: undefined });
     setIsDialogOpen(true);
   }
 
   function handleEdit(tariff: Tariff) {
+    if (!isPinVerified) return;
     setSelectedTariff(tariff);
     form.reset({
         name: tariff.name,
@@ -60,6 +62,7 @@ export default function TariffsPage() {
   }
 
   function openDeleteDialog(tariff: Tariff) {
+    if (!isPinVerified) return;
     setTariffToDelete(tariff);
     setIsDeleteDialogOpen(true);
   }
@@ -138,56 +141,69 @@ export default function TariffsPage() {
         )}
       </PageHeader>
       
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {sortedTariffs.map((tariff) => (
-          <Card key={tariff.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary/30">
-            <CardHeader className="p-4">
-                <CardTitle className="flex items-center gap-2 text-lg text-slate-800 dark:text-slate-100">
-                    <DollarSign className="h-5 w-5 text-primary" />
-                    <span>{tariff.name}</span>
-                </CardTitle>
-                {tariff.description && (
-                    <CardDescription>{tariff.description}</CardDescription>
-                )}
+       {!isPinVerified && (
+          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+            <CardHeader>
+              <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>
+              <CardDescription className="text-slate-600 dark:text-slate-400">
+                Esta sección solo puede ser gestionada por el propietario del estudio. Por favor, verifica tu PIN de propietario desde la pantalla de inicio para acceder.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="p-4 flex-grow flex flex-col items-center justify-center">
-                <p className="text-4xl font-bold text-slate-800 dark:text-slate-100">{formatPrice(tariff.price)}</p>
-                {tariff.frequency && (
-                    <span className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Calendar className="h-4 w-4" /> {tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} por semana</span>
-                )}
-            </CardContent>
-            <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2 min-h-[48px]">
-              {isPinVerified && (
-                <>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(tariff)}>
-                    <Pencil className="h-4 w-4" />
-                    <span className="sr-only">Editar</span>
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(tariff)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Eliminar</span>
-                  </Button>
-                </>
-              )}
-            </CardFooter>
           </Card>
-        ))}
-        {tariffs.length === 0 && (
-            <Card className="md:col-span-2 lg:col-span-3 xl:col-span-4 mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
-                <CardHeader>
-                <CardTitle className="text-slate-800 dark:text-slate-100">No Hay Aranceles Definidos</CardTitle>
-                <CardDescription className="text-slate-600 dark:text-slate-400">
-                    Empieza a definir tus planes de precios para organizar tu estudio.
-                </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {isPinVerified && (
-                    <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Arancel</Button>
+      )}
+
+      {isPinVerified && (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {sortedTariffs.map((tariff) => (
+            <Card key={tariff.id} className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary/30">
+              <CardHeader className="p-4">
+                  <CardTitle className="flex items-center gap-2 text-lg text-slate-800 dark:text-slate-100">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                      <span>{tariff.name}</span>
+                  </CardTitle>
+                  {tariff.description && (
+                      <CardDescription>{tariff.description}</CardDescription>
                   )}
-                </CardContent>
+              </CardHeader>
+              <CardContent className="p-4 flex-grow flex flex-col items-center justify-center">
+                  <p className="text-4xl font-bold text-slate-800 dark:text-slate-100">{formatPrice(tariff.price)}</p>
+                  {tariff.frequency && (
+                      <span className="mt-2 flex items-center gap-2 text-xs text-muted-foreground"><Calendar className="h-4 w-4" /> {tariff.frequency} {tariff.frequency === 1 ? 'vez' : 'veces'} por semana</span>
+                  )}
+              </CardContent>
+              <CardFooter className="flex justify-end gap-2 border-t border-white/20 p-2 min-h-[48px]">
+                {isPinVerified && (
+                  <>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 hover:bg-white/50" onClick={() => handleEdit(tariff)}>
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Editar</span>
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => openDeleteDialog(tariff)}>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Eliminar</span>
+                    </Button>
+                  </>
+                )}
+              </CardFooter>
             </Card>
-        )}
-      </div>
+          ))}
+          {sortedTariffs.length === 0 && (
+              <Card className="md:col-span-2 lg:col-span-3 xl:col-span-4 mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                  <CardHeader>
+                  <CardTitle className="text-slate-800 dark:text-slate-100">No Hay Aranceles Definidos</CardTitle>
+                  <CardDescription className="text-slate-600 dark:text-slate-400">
+                      Empieza a definir tus planes de precios para organizar tu estudio.
+                  </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {isPinVerified && (
+                      <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Arancel</Button>
+                    )}
+                  </CardContent>
+              </Card>
+          )}
+        </div>
+      )}
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
