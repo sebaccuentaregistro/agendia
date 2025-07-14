@@ -3,6 +3,7 @@
 
 
 
+
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -28,6 +29,13 @@ export type Institute = {
   ownerId: string;
   ownerPin?: string;
   recoveryEmail?: string;
+};
+
+export type Operator = {
+  id: string;
+  name: string;
+  pin: string;
+  role: 'admin' | 'staff';
 };
 
 export type Actividad = {
