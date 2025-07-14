@@ -2,12 +2,11 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { onSnapshot, collection, doc, Unsubscribe } from 'firebase/firestore';
+import { onSnapshot, collection, doc, Unsubscribe, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator } from '@/types';
 import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 
 interface StudioContextType {
     sessions: Session[];
@@ -26,14 +25,14 @@ interface StudioContextType {
     isTutorialOpen: boolean;
     openTutorial: () => void;
     closeTutorial: () => void;
-    addPerson: (person: NewPersonData) => void;
+    addPerson: (person: NewPersonData, operator: Operator) => void;
     updatePerson: (person: Person) => void;
-    deletePerson: (personId: string) => void;
+    deletePerson: (personId: string, operator: Operator) => void;
     addSession: (session: Omit<Session, 'id' | 'personIds'>) => void;
     updateSession: (session: Session) => void;
     deleteSession: (sessionId: string) => void;
     enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
-    recordPayment: (personId: string) => void;
+    recordPayment: (personId: string, operator: Operator) => void;
     revertLastPayment: (personId: string) => void;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
@@ -89,25 +88,46 @@ const safelyParseDate = (data: any, field: string) => {
 };
 
 export function StudioProvider({ children }: { children: ReactNode }) {
-    const { userProfile, institute, activeOperator } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<Record<string, any[]>>({
         ...Object.fromEntries(Object.keys(collections).map(key => [key, []]))
     });
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+    const [instituteId, setInstituteId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchInstituteId = async () => {
+            const { getAuth, onAuthStateChanged } = await import('firebase/auth');
+            const { getDoc, doc } = await import('firebase/firestore');
+            const { db } = await import('@/lib/firebase');
+            const auth = getAuth();
+            onAuthStateChanged(auth, async (user) => {
+                if(user){
+                    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
+                    if(userDocSnap.exists()) {
+                        setInstituteId(userDocSnap.data().instituteId);
+                    }
+                } else {
+                    setInstituteId(null);
+                }
+            });
+        };
+        fetchInstituteId();
+    }, []);
 
     const collectionRefs = useMemo(() => {
-        if (!institute) return null;
+        if (!instituteId) return null;
         return Object.entries(collections).reduce((acc, [key, name]) => {
-            acc[key] = collection(db, 'institutes', institute.id, name);
+            acc[key] = collection(db, 'institutes', instituteId, name);
             return acc;
         }, {} as Record<string, any>);
-    }, [institute]);
+    }, [instituteId]);
+
 
     useEffect(() => {
         if (!collectionRefs) {
-            setLoading(!userProfile);
+            setLoading(true);
             return;
         }
 
@@ -170,10 +190,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const addPerson = (personData: NewPersonData) => {
-        if (!collectionRefs || !activeOperator) return;
+    const addPerson = (personData: NewPersonData, operator: Operator) => {
+        if (!collectionRefs) return;
         handleAction(
-            addPersonAction(collectionRefs.people, personData, collectionRefs.audit_logs, activeOperator),
+            addPersonAction(collectionRefs.people, personData, collectionRefs.audit_logs, operator),
             `${personData.name} ha sido añadido con éxito.`,
             `Error al añadir a ${personData.name}.`
         );
@@ -188,20 +208,20 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const deletePerson = (personId: string) => {
-        if (!collectionRefs || !activeOperator) return;
+    const deletePerson = (personId: string, operator: Operator) => {
+        if (!collectionRefs) return;
         const personToDelete = data.people.find(p => p.id === personId);
         if (!personToDelete) return;
 
         handleAction(
-            deletePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, activeOperator),
+            deletePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, operator),
             `${personToDelete.name} ha sido eliminado.`,
             `Error al eliminar a ${personToDelete.name}.`
         );
     };
     
-    const recordPayment = async (personId: string) => {
-        if (!collectionRefs || !activeOperator) return;
+    const recordPayment = async (personId: string, operator: Operator) => {
+        if (!collectionRefs) return;
         const person = data.people.find((p: Person) => p.id === personId);
         if (!person) return;
         const tariff = data.tariffs.find((t: Tariff) => t.id === person.tariffId);
@@ -210,7 +230,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             return;
         }
         await handleAction(
-            recordPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), person, tariff, collectionRefs.audit_logs, activeOperator),
+            recordPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), person, tariff, collectionRefs.audit_logs, operator),
             `Pago registrado para ${person.name}.`,
             `Error al registrar el pago.`
         );
@@ -417,3 +437,5 @@ export function useStudio() {
     }
     return context;
 }
+
+    
