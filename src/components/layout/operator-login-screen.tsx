@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Loader2, LogOut, UserCheck } from 'lucide-react';
+import { Loader2, LogOut, UserCheck, Settings } from 'lucide-react';
 import type { Operator } from '@/types';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -164,10 +165,19 @@ export function OperatorLoginScreen() {
                         </Alert>
                     )}
                     </div>
-                    <Button type="button" variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={handleFullLogout}>
-                        <LogOut className="mr-2 h-4 w-4" />
-                        Cerrar sesión de {institute?.name || 'la cuenta'}
-                    </Button>
+
+                    <div className="border-t pt-4 space-y-2">
+                         <Button asChild variant="link" className="w-full text-muted-foreground p-0 h-auto font-normal text-xs">
+                           <Link href="/operators">
+                               <Settings className="mr-2 h-3 w-3" />
+                               ¿Eres el dueño? Gestiona los operadores aquí.
+                           </Link>
+                         </Button>
+                         <Button type="button" variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={handleFullLogout}>
+                            <LogOut className="mr-2 h-4 w-4" />
+                            Cerrar sesión de {institute?.name || 'la cuenta'}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
         </div>
