@@ -477,7 +477,7 @@ function DashboardPageContent() {
   ];
   
   const advancedCards = [
-     { id: 'collectionPercentage', href: "/payments", label: "Cobranza", icon: Percent, value: `${collectionPercentage.toFixed(0)}%`, count: null},
+     { id: 'collectionPercentage', href: "/students?filter=overdue", label: "Cobranza", icon: Percent, value: `${collectionPercentage.toFixed(0)}%`, count: null},
      { id: 'totalDebt', href: "/students?filter=overdue", label: "Deuda Total", icon: Landmark, value: formatPrice(totalDebt), count: null},
      { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, count: operators.length },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
@@ -913,4 +913,3 @@ export default function RootPage() {
   );
 }
 
-    
