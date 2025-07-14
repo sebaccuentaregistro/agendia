@@ -283,7 +283,7 @@ export default function OperatorsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente al operador y su acceso.</AlertDialogDescription>
-          </AlertDialogFooter>
+          </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setOperatorToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Sí, eliminar operador</AlertDialogAction>
