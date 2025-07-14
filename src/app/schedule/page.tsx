@@ -3,7 +3,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -34,6 +34,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -693,6 +694,26 @@ function SchedulePageContent() {
     return { now, todayName, todayIndex, appDayOrder };
   }, [isMounted]);
 
+    const isAttendanceAllowedForSession = (session: Session) => {
+        if (!isMounted) return false;
+        const { now, todayName, todayIndex, appDayOrder } = clientTimeData;
+        const sessionIndex = appDayOrder.indexOf(session.dayOfWeek);
+        const isFutureDay = todayIndex !== -1 && sessionIndex > todayIndex;
+        const isToday = todayIndex !== -1 && sessionIndex === todayIndex;
+        if (isFutureDay) return false;
+
+        if (isToday && now) {
+            const [hour, minute] = session.time.split(':').map(Number);
+            const sessionStartTime = new Date(now);
+            sessionStartTime.setHours(hour, minute, 0, 0);
+            const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
+            if (now < attendanceWindowStart) {
+                return false;
+            }
+        }
+        return true;
+    };
+
 
   if (!isMounted) {
     return (
@@ -710,9 +731,10 @@ function SchedulePageContent() {
           </div>
         </Card>
         <Tabs defaultValue="cards" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 md:w-[300px]">
+          <TabsList className="grid w-full grid-cols-3 mb-4 md:w-[450px]">
             <TabsTrigger value="cards"><LayoutGrid className="mr-2 h-4 w-4" />Tarjetas</TabsTrigger>
             <TabsTrigger value="calendar"><CalendarDays className="mr-2 h-4 w-4" />Calendario</TabsTrigger>
+            <TabsTrigger value="list"><List className="mr-2 h-4 w-4" />Lista</TabsTrigger>
           </TabsList>
           <TabsContent value="cards">
             <div className="grid grid-cols-1 gap-8 md:grid-cols-2 xl:grid-cols-3">
@@ -720,6 +742,9 @@ function SchedulePageContent() {
             </div>
           </TabsContent>
           <TabsContent value="calendar">
+            <Skeleton className="h-[500px] w-full bg-white/30 rounded-2xl" />
+          </TabsContent>
+           <TabsContent value="list">
             <Skeleton className="h-[500px] w-full bg-white/30 rounded-2xl" />
           </TabsContent>
         </Tabs>
@@ -897,8 +922,9 @@ function SchedulePageContent() {
       </Card>
       
       <Tabs defaultValue="cards" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 mb-4 md:w-[300px]">
+        <TabsList className="grid w-full grid-cols-3 mb-4 md:w-[450px]">
             <TabsTrigger value="cards"><LayoutGrid className="mr-2 h-4 w-4" />Tarjetas</TabsTrigger>
+            <TabsTrigger value="list"><List className="mr-2 h-4 w-4" />Lista</TabsTrigger>
             <TabsTrigger value="calendar"><CalendarDays className="mr-2 h-4 w-4" />Calendario</TabsTrigger>
         </TabsList>
         <TabsContent value="cards">
@@ -925,33 +951,10 @@ function SchedulePageContent() {
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
                       const isFull = availableSpots <= 0;
                       const waitlistCount = session.waitlistPersonIds?.length || 0;
-
-                      const { now, todayIndex, appDayOrder } = clientTimeData;
-                      const sessionIndex = appDayOrder.indexOf(session.dayOfWeek);
-                      const isFutureDay = todayIndex !== -1 && sessionIndex > todayIndex;
-                      const isToday = todayIndex !== -1 && sessionIndex === todayIndex;
-
-                      let isAttendanceAllowed = true;
-                      let tooltipMessage = "Pasar Lista";
                       
-                      if (now) {
-                        if (isFutureDay) {
-                            isAttendanceAllowed = false;
-                            tooltipMessage = "No se puede pasar lista para una clase futura.";
-                        } else if (isToday) {
-                            const [hour, minute] = session.time.split(':').map(Number);
-                            const sessionStartTime = new Date(now);
-                            sessionStartTime.setHours(hour, minute, 0, 0);
-                            const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
-                            if (now < attendanceWindowStart) {
-                                isAttendanceAllowed = false;
-                                tooltipMessage = "La asistencia se habilita 20 minutos antes de la clase.";
-                            }
-                        }
-                      } else {
-                          isAttendanceAllowed = false;
-                          tooltipMessage = "Cargando disponibilidad...";
-                      }
+                      const isAttendanceAllowed = isAttendanceAllowedForSession(session);
+                      const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
+
 
                       return (
                         <Card 
@@ -1096,6 +1099,93 @@ function SchedulePageContent() {
                   </div>
                 )}
             </div>
+        </TabsContent>
+        <TabsContent value="list">
+             <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
+                 <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Actividad</TableHead>
+                            <TableHead>Día y Hora</TableHead>
+                            <TableHead>Especialista</TableHead>
+                            <TableHead>Espacio</TableHead>
+                            <TableHead>Ocupación</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                         {loading ? (
+                                [...Array(5)].map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell colSpan={6}><Skeleton className="h-8 w-full"/></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredSessions.length > 0 ? (
+                                filteredSessions.map(session => {
+                                    const { specialist, actividad, space, level } = getSessionDetails(session);
+                                    const capacity = space?.capacity || 0;
+                                    const enrolledCount = session.personIds.length;
+                                    const isAttendanceAllowed = isAttendanceAllowedForSession(session);
+
+                                    return (
+                                        <TableRow key={session.id}>
+                                            <TableCell>
+                                                <div className="font-medium text-foreground">{actividad?.name || 'N/A'}</div>
+                                                {level && <div className="text-xs text-muted-foreground">{level.name}</div>}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div>{session.dayOfWeek}</div>
+                                                <div className="text-muted-foreground">{formatTime(session.time)}</div>
+                                            </TableCell>
+                                            <TableCell>{specialist?.name || 'N/A'}</TableCell>
+                                            <TableCell>{space?.name || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={enrolledCount >= capacity ? 'destructive' : 'secondary'}>
+                                                    {enrolledCount} / {capacity}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onSelect={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                                          <ClipboardCheck className="mr-2 h-4 w-4" />Asistencia
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)}>
+                                                          <Users className="mr-2 h-4 w-4" />Inscripción Fija
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)}>
+                                                          <CalendarDays className="mr-2 h-4 w-4" />Inscripción Recupero
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onSelect={() => handleEdit(session)}>
+                                                            <Pencil className="mr-2 h-4 w-4" />Editar
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setSessionToNotify(session)}>
+                                                            <Send className="mr-2 h-4 w-4" />Notificar
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuSeparator />
+                                                        <DropdownMenuItem onSelect={() => openDeleteDialog(session)} className="text-destructive focus:text-destructive">
+                                                            <Trash2 className="mr-2 h-4 w-4" />Eliminar
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">
+                                        No se encontraron sesiones con los filtros seleccionados.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                    </TableBody>
+                 </Table>
+             </Card>
         </TabsContent>
         <TabsContent value="calendar">
           {loading ? (
