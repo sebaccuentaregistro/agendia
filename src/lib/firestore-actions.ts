@@ -37,7 +37,6 @@ export const deleteEntity = async (docRef: any) => {
 
 // Specific Actions
 export const addPersonAction = async (peopleRef: CollectionReference, personData: NewPersonData, auditLogRef: CollectionReference, operator: Operator) => {
-    const joinDate = new Date();
     
     const newPerson = {
         name: personData.name,
@@ -46,7 +45,7 @@ export const addPersonAction = async (peopleRef: CollectionReference, personData
         levelId: personData.levelId,
         healthInfo: personData.healthInfo,
         notes: personData.notes,
-        joinDate: joinDate,
+        joinDate: personData.joinDate || new Date(),
         lastPaymentDate: personData.lastPaymentDate || null, // Allow setting initial due date
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
@@ -397,5 +396,6 @@ export const deleteWithUsageCheckAction = async (
         throw new Error(usageMessages.join('\n\n'));
     }
 };
+
 
 

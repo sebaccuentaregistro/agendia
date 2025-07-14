@@ -44,6 +44,7 @@ const personFormSchema = z.object({
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
+  joinDate: z.date().optional(),
   lastPaymentDate: z.date().nullable().optional(),
 });
 
@@ -571,6 +572,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
         tariffId: '',
         healthInfo: '',
         notes: '',
+        joinDate: new Date(),
         lastPaymentDate: null,
     }
   });
@@ -585,6 +587,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
+            joinDate: person.joinDate || new Date(),
             lastPaymentDate: person.lastPaymentDate,
           });
         } else {
@@ -595,6 +598,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
             tariffId: '',
             healthInfo: '',
             notes: '',
+            joinDate: new Date(),
             lastPaymentDate: null,
           });
         }
@@ -609,6 +613,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
         levelId: values.levelId === 'none' ? undefined : values.levelId,
         healthInfo: values.healthInfo,
         notes: values.notes,
+        joinDate: values.joinDate,
         lastPaymentDate: values.lastPaymentDate,
     };
     
@@ -658,6 +663,33 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
                 )}/>
                 <FormField
                   control={form.control}
+                  name="joinDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fecha de Ingreso</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                            >
+                              {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Sin fecha</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
+             <FormField
+                  control={form.control}
                   name="lastPaymentDate"
                   render={({ field }) => (
                     <FormItem>
@@ -685,7 +717,6 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
                     </FormItem>
                   )}
                 />
-            </div>
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
             )}/>
@@ -1360,6 +1391,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 

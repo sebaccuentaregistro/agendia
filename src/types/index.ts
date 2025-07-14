@@ -88,6 +88,7 @@ export type NewPersonData = {
     levelId?: string;
     healthInfo?: string;
     notes?: string;
+    joinDate?: Date;
     lastPaymentDate?: Date | null;
 };
 
@@ -163,3 +164,4 @@ export type AuditLog = {
     timestamp: Date;
     details?: Record<string, any>; // e.g., { amount: 8000, tariff: 'Plan Mensual' }
 };
+
