@@ -9,11 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Landmark, Users, Calendar, Star } from 'lucide-react';
 import type { Institute } from '@/types';
-import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute, getLatestActivityForInstitute, getActividadesCountForInstitute } from '@/lib/superadmin-actions';
+import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute, getLatestActivityForInstitute, getActividadesCountForInstitute, getMonthlyNewPeopleCount } from '@/lib/superadmin-actions';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { AdminCharts } from './charts';
 
 interface InstituteWithCount extends Institute {
     peopleCount?: number;
@@ -22,11 +22,18 @@ interface InstituteWithCount extends Institute {
     lastActivity?: string | null;
 }
 
+interface MonthlyData {
+  month: string;
+  "Nuevos Alumnos": number;
+}
+
+
 export default function SuperAdminPage() {
   const { userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
   const [institutes, setInstitutes] = useState<InstituteWithCount[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
+  const [monthlyNewPeople, setMonthlyNewPeople] = useState<MonthlyData[]>([]);
 
   useEffect(() => {
     if (!authLoading) {
@@ -35,9 +42,12 @@ export default function SuperAdminPage() {
         return;
       }
       
-      const fetchInstitutesAndCounts = async () => {
+      const fetchAllData = async () => {
         setPageLoading(true);
-        const instituteList = await getAllInstitutes();
+        const [instituteList, monthlyData] = await Promise.all([
+            getAllInstitutes(),
+            getMonthlyNewPeopleCount()
+        ]);
         
         const institutesWithCounts = await Promise.all(
             instituteList.map(async (institute) => {
@@ -50,11 +60,12 @@ export default function SuperAdminPage() {
         );
 
         setInstitutes(institutesWithCounts);
+        setMonthlyNewPeople(monthlyData);
         setPageLoading(false);
       };
 
       if (userProfile?.isSuperAdmin) {
-        fetchInstitutesAndCounts();
+        fetchAllData();
       }
     }
   }, [userProfile, authLoading, router]);
@@ -140,6 +151,8 @@ export default function SuperAdminPage() {
         </Card>
       </div>
 
+      <AdminCharts monthlyNewPeople={monthlyNewPeople} />
+
       <Card>
         <CardHeader>
           <CardTitle>Institutos Registrados</CardTitle>
@@ -164,6 +177,8 @@ export default function SuperAdminPage() {
               {sortedInstitutes.length > 0 ? (
                 sortedInstitutes.map(institute => {
                   const status = getStatus(institute.lastActivity);
+                  const instituteCreatedAt = institute.createdAt ? parseISO(institute.createdAt) : null;
+                  
                   return (
                     <TableRow key={institute.id}>
                       <TableCell>
@@ -183,7 +198,7 @@ export default function SuperAdminPage() {
                         <span className="font-semibold">{institute.actividadesCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
                       </TableCell>
                       <TableCell>
-                        {institute.createdAt ? format(institute.createdAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
+                        {instituteCreatedAt ? format(instituteCreatedAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
                       </TableCell>
                       <TableCell>
                         {institute.lastActivity ? format(parseISO(institute.lastActivity), "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}

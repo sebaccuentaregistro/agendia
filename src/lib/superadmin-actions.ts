@@ -4,6 +4,8 @@
 import { collection, getDocs, query, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Institute } from '@/types';
+import { startOfMonth, subMonths, format as formatDate, parseISO } from 'date-fns';
+
 
 // This function is only for the superadmin panel
 export async function getAllInstitutes(): Promise<Institute[]> {
@@ -22,7 +24,7 @@ export async function getAllInstitutes(): Promise<Institute[]> {
         id: doc.id,
         name: data.name,
         ownerId: data.ownerId,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : null,
+        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : null,
       } as Institute;
     });
 
@@ -87,4 +89,49 @@ export async function getLatestActivityForInstitute(instituteId: string): Promis
         console.error(`Error fetching latest activity for institute ${instituteId}:`, error);
         return null;
     }
+}
+
+
+export async function getMonthlyNewPeopleCount(): Promise<{ month: string, "Nuevos Alumnos": number }[]> {
+  try {
+    const now = new Date();
+    const monthlyCounts: Record<string, number> = {};
+    const monthLabels: string[] = [];
+
+    // Initialize last 12 months
+    for (let i = 11; i >= 0; i--) {
+        const d = subMonths(now, i);
+        const monthKey = formatDate(d, 'MMM yy');
+        monthLabels.push(monthKey);
+        monthlyCounts[monthKey] = 0;
+    }
+
+    const institutesRef = collection(db, 'institutes');
+    const institutesSnap = await getDocs(institutesRef);
+
+    for (const instituteDoc of institutesSnap.docs) {
+      const peopleRef = collection(db, 'institutes', instituteDoc.id, 'people');
+      const peopleSnap = await getDocs(peopleRef);
+      
+      peopleSnap.forEach(personDoc => {
+        const personData = personDoc.data();
+        if (personData.joinDate && personData.joinDate instanceof Timestamp) {
+          const joinDate = personData.joinDate.toDate();
+          const monthKey = formatDate(joinDate, 'MMM yy');
+          if (monthlyCounts.hasOwnProperty(monthKey)) {
+            monthlyCounts[monthKey]++;
+          }
+        }
+      });
+    }
+
+    return monthLabels.map(month => ({
+        month: month,
+        "Nuevos Alumnos": monthlyCounts[month]
+    }));
+
+  } catch (error) {
+    console.error("Error fetching monthly new people count:", error);
+    return [];
+  }
 }
