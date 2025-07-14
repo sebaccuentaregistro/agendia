@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
 import type { Institute } from '@/types';
-import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute, getLatestActivityForInstitute } from '@/lib/superadmin-actions';
+import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute, getLatestActivityForInstitute, getActividadesCountForInstitute } from '@/lib/superadmin-actions';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 interface InstituteWithCount extends Institute {
     peopleCount?: number;
     sessionsCount?: number;
+    actividadesCount?: number;
     lastActivity?: string | null;
 }
 
@@ -42,8 +43,9 @@ export default function SuperAdminPage() {
             instituteList.map(async (institute) => {
                 const peopleCount = await getPeopleCountForInstitute(institute.id);
                 const sessionsCount = await getSessionsCountForInstitute(institute.id);
+                const actividadesCount = await getActividadesCountForInstitute(institute.id);
                 const lastActivity = await getLatestActivityForInstitute(institute.id);
-                return { ...institute, peopleCount, sessionsCount, lastActivity };
+                return { ...institute, peopleCount, sessionsCount, actividadesCount, lastActivity };
             })
         );
 
@@ -104,6 +106,7 @@ export default function SuperAdminPage() {
                 <TableHead>Nombre del Instituto</TableHead>
                 <TableHead>Nº de Alumnos</TableHead>
                 <TableHead>Nº de Sesiones</TableHead>
+                <TableHead>Nº de Actividades</TableHead>
                 <TableHead>Fecha de Creación</TableHead>
                 <TableHead>Última Actividad</TableHead>
               </TableRow>
@@ -128,6 +131,9 @@ export default function SuperAdminPage() {
                         <span className="font-semibold">{institute.sessionsCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
                       </TableCell>
                       <TableCell>
+                        <span className="font-semibold">{institute.actividadesCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
+                      </TableCell>
+                      <TableCell>
                         {institute.createdAt ? format(institute.createdAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
                       </TableCell>
                       <TableCell>
@@ -138,7 +144,7 @@ export default function SuperAdminPage() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={7} className="h-24 text-center">
                     Aún no hay institutos registrados.
                   </TableCell>
                 </TableRow>

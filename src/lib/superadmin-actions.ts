@@ -57,6 +57,18 @@ export async function getSessionsCountForInstitute(instituteId: string): Promise
     }
 }
 
+export async function getActividadesCountForInstitute(instituteId: string): Promise<number> {
+    try {
+        const actividadesRef = collection(db, 'institutes', instituteId, 'actividades');
+        const snapshot = await getDocs(actividadesRef);
+        return snapshot.size;
+    } catch (error) {
+        console.error(`Error fetching actividades count for institute ${instituteId}:`, error);
+        return 0;
+    }
+}
+
+
 export async function getLatestActivityForInstitute(instituteId: string): Promise<string | null> {
     try {
         const auditLogRef = collection(db, 'institutes', instituteId, 'audit_logs');
@@ -76,4 +88,3 @@ export async function getLatestActivityForInstitute(instituteId: string): Promis
         return null;
     }
 }
-
