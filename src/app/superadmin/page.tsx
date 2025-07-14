@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Landmark, Users, Calendar, Star } from 'lucide-react';
 import type { Institute } from '@/types';
-import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute, getLatestActivityForInstitute, getActividadesCountForInstitute, getMonthlyNewPeopleCount } from '@/lib/superadmin-actions';
+import { getAllInstitutes, getMonthlyNewPeopleCount } from '@/lib/superadmin-actions';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -49,17 +49,7 @@ export default function SuperAdminPage() {
             getMonthlyNewPeopleCount()
         ]);
         
-        const institutesWithCounts = await Promise.all(
-            instituteList.map(async (institute) => {
-                const peopleCount = await getPeopleCountForInstitute(institute.id);
-                const sessionsCount = await getSessionsCountForInstitute(institute.id);
-                const actividadesCount = await getActividadesCountForInstitute(institute.id);
-                const lastActivity = await getLatestActivityForInstitute(institute.id);
-                return { ...institute, peopleCount, sessionsCount, actividadesCount, lastActivity };
-            })
-        );
-
-        setInstitutes(institutesWithCounts);
+        setInstitutes(instituteList);
         setMonthlyNewPeople(monthlyData);
         setPageLoading(false);
       };

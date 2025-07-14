@@ -12,27 +12,45 @@ export async function getAllInstitutes(): Promise<Institute[]> {
   try {
     const institutesRef = collection(db, 'institutes');
     const q = query(institutesRef, orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
+    const institutesSnapshot = await getDocs(q);
     
-    if (snapshot.empty) {
+    if (institutesSnapshot.empty) {
       return [];
     }
     
-    const institutes = snapshot.docs.map(doc => {
-      const data = doc.data();
+    const institutesDataPromises = institutesSnapshot.docs.map(async (doc) => {
+      const instituteData = doc.data();
+      const instituteId = doc.id;
+
+      // Fetch all counts and latest activity concurrently for this institute
+      const [peopleSnapshot, sessionsSnapshot, actividadesSnapshot, latestLogSnapshot] = await Promise.all([
+        getDocs(collection(db, 'institutes', instituteId, 'people')),
+        getDocs(collection(db, 'institutes', instituteId, 'sessions')),
+        getDocs(collection(db, 'institutes', instituteId, 'actividades')),
+        getDocs(query(collection(db, 'institutes', instituteId, 'audit_logs'), orderBy('timestamp', 'desc'), limit(1)))
+      ]);
+
+      const lastActivity = !latestLogSnapshot.empty 
+        ? (latestLogSnapshot.docs[0].data().timestamp as Timestamp).toDate().toISOString() 
+        : null;
+
       return {
-        id: doc.id,
-        name: data.name,
-        ownerId: data.ownerId,
-        createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate().toISOString() : null,
+        id: instituteId,
+        name: instituteData.name,
+        ownerId: instituteData.ownerId,
+        createdAt: instituteData.createdAt instanceof Timestamp ? instituteData.createdAt.toDate().toISOString() : null,
+        peopleCount: peopleSnapshot.size,
+        sessionsCount: sessionsSnapshot.size,
+        actividadesCount: actividadesSnapshot.size,
+        lastActivity: lastActivity,
       } as Institute;
     });
 
+    const institutes = await Promise.all(institutesDataPromises);
     return institutes;
 
   } catch (error) {
     console.error("Error fetching institutes for superadmin:", error);
-    // In a real app, you might want to handle this more gracefully
     return [];
   }
 }
