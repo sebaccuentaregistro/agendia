@@ -1,4 +1,5 @@
 
+
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -25,6 +26,7 @@ export type Institute = {
   ownerId: string;
   ownerPin?: string;
   recoveryEmail?: string;
+  createdAt: Date | null;
 };
 
 export type Operator = {
