@@ -10,9 +10,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Loader2, LogOut, UserCheck } from 'lucide-react';
 import type { Operator } from '@/types';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export function OperatorLoginScreen() {
-    const { operators } = useStudio();
+    const { operators, loading: studioLoading } = useStudio();
     const { setActiveOperator, logout: fullLogout, institute } = useAuth();
     const router = useRouter();
 
@@ -54,6 +55,44 @@ export function OperatorLoginScreen() {
         await fullLogout();
         router.push('/login');
     };
+
+    if (studioLoading) {
+        return (
+             <div className="flex h-screen w-full items-center justify-center">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            </div>
+        )
+    }
+
+    if (operators.length === 0) {
+       return (
+         <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+            <Card className="w-full max-w-sm text-center">
+                <CardHeader>
+                    <CardTitle>¡Primer Paso!</CardTitle>
+                    <CardDescription>
+                       Para empezar, el propietario del estudio debe crear su propio perfil de operador. Esto le permitirá acceder y gestionar el sistema.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                   <Alert>
+                        <AlertTitle>Acción Requerida</AlertTitle>
+                        <AlertDescription>
+                           Ve a la sección de "Operadores" para crear tu perfil de administrador. Necesitarás tu PIN de propietario para acceder.
+                        </AlertDescription>
+                    </Alert>
+                    <Button asChild className="w-full">
+                        <Link href="/operators">Ir a Crear Operador</Link>
+                    </Button>
+                     <Button type="button" variant="ghost" size="sm" className="w-full text-muted-foreground" onClick={handleFullLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Cerrar sesión de {institute?.name || 'la cuenta'}
+                    </Button>
+                </CardContent>
+            </Card>
+        </div>
+       )
+    }
 
     if (selectedOperator) {
         return (
@@ -117,7 +156,7 @@ export function OperatorLoginScreen() {
                             {op.name}
                         </Button>
                     )) : (
-                        <Alert>
+                         <Alert>
                             <AlertTitle>No hay operadores</AlertTitle>
                             <AlertDescription>
                                 El propietario del estudio debe crear al menos un operador.
