@@ -26,7 +26,7 @@ const navItems = [
 export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial } = useStudio();
-  const { logout, activeOperator, logoutOperator, userProfile } = useAuth();
+  const { logout, activeOperator, logoutOperator, userProfile, institute } = useAuth();
   const router = useRouter();
 
   const handleFullLogout = async () => {
@@ -100,6 +100,8 @@ export function AppHeader() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                 {institute && <DropdownMenuLabel>{institute.name}</DropdownMenuLabel>}
+                 <DropdownMenuSeparator />
                  <DropdownMenuLabel>Sesión activa</DropdownMenuLabel>
                  <DropdownMenuSeparator />
                  {activeOperator.role !== 'admin' && (
