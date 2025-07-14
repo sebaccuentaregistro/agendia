@@ -1,5 +1,6 @@
 
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -24,9 +25,10 @@ type State = {
   tariffs: Tariff[];
   levels: Level[];
   operators: Operator[];
+  audit_logs: any[]; // Placeholder for now
 };
 
-interface StudioContextType extends State {
+interface StudioContextType extends Omit<State, 'audit_logs'> {
     loading: boolean;
     addActividad: (data: Omit<Actividad, 'id'>) => Promise<void>;
     updateActividad: (data: Actividad) => Promise<void>;
@@ -88,11 +90,11 @@ const convertTimestamps = (data: any) => {
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
-  const { userProfile, loading: authLoading } = useAuth();
+  const { userProfile, loading: authLoading, activeOperator } = useAuth();
   
   const [state, setState] = useState<State>({
     actividades: [], specialists: [], people: [], sessions: [],
-    payments: [], spaces: [], attendance: [], notifications: [], tariffs: [], levels: [], operators: [],
+    payments: [], spaces: [], attendance: [], notifications: [], tariffs: [], levels: [], operators: [], audit_logs: [],
   });
   const [loading, setLoading] = useState(true);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -112,7 +114,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     
     const collectionsToListen: (keyof State)[] = [
       'actividades', 'specialists', 'people', 'sessions', 'payments', 
-      'spaces', 'attendance', 'notifications', 'tariffs', 'levels', 'operators'
+      'spaces', 'attendance', 'notifications', 'tariffs', 'levels', 'operators', 'audit_logs'
     ];
 
     const unsubscribes = collectionsToListen.map((collectionName) => {
@@ -355,6 +357,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   };
   
   const recordPayment = async (personId: string) => {
+      if (!activeOperator) {
+        toast({ title: 'Error', description: 'No hay un operador activo para registrar la acción.', variant: 'destructive' });
+        return;
+      }
       const person = state.people.find(p => p.id === personId);
       if (!person) {
         toast({ title: 'Error', description: 'No se encontró a la persona.', variant: 'destructive' });
@@ -369,7 +375,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         toast({ title: 'Error', description: 'No se encontró el arancel de la persona.', variant: 'destructive' });
         return;
       }
-      await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(getCollectionRef('payments'), getDocRef('people', person.id), person, tariff));
+      await performFirestoreAction('Registrar pago', () => firestoreActions.recordPaymentAction(
+        getCollectionRef('payments'), 
+        getDocRef('people', person.id), 
+        person, 
+        tariff, 
+        getCollectionRef('audit_logs'),
+        activeOperator
+      ));
   };
 
   const revertLastPayment = async (personId: string) => {
@@ -468,9 +481,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       </div>
     );
   }
+  
+  const { audit_logs, ...restOfState } = state;
 
   const contextValue: StudioContextType = {
-    ...state,
+    ...restOfState,
     loading,
     addActividad,
     updateActividad,

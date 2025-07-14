@@ -4,6 +4,7 @@
 
 
 
+
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -140,4 +141,16 @@ export type Tariff = {
   price: number;
   description?: string;
   frequency?: number;
+};
+
+export type AuditLog = {
+    id?: string;
+    operatorId: string;
+    operatorName: string;
+    action: string; // e.g., 'REGISTRO_PAGO', 'ELIMINAR_PERSONA'
+    entityType: 'persona' | 'pago' | 'clase' | 'asistencia' | 'sistema'; // The type of entity affected
+    entityId?: string; // ID of the person, payment, etc.
+    entityName?: string; // Name of the person, class, etc. for quick display
+    timestamp: Date;
+    details?: Record<string, any>; // e.g., { amount: 8000, tariff: 'Plan Mensual' }
 };

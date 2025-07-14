@@ -1,8 +1,9 @@
 
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
@@ -87,7 +88,7 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 };
 
 
-export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff) => {
+export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
     const now = new Date();
     // If it's the first payment, the cycle starts today. Otherwise, it extends from the previous due date.
     const baseDateForNextPayment = person.lastPaymentDate || now;
@@ -109,6 +110,21 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
         lastPaymentDate: newExpiryDate,
         paymentBalance: (person.paymentBalance || 0) + 1,
      });
+     
+    // Create audit log
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'REGISTRO_PAGO',
+        entityType: 'pago',
+        entityId: person.id,
+        entityName: person.name,
+        timestamp: now,
+        details: {
+            amount: tariff.price,
+            tariffName: tariff.name
+        }
+    } as Omit<AuditLog, 'id'>);
 
     return await batch.commit();
 };
