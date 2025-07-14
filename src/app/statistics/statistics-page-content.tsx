@@ -58,12 +58,12 @@ export default function StatisticsPageContent() {
       const threeMonthsAgo = subMonths(now, 3);
       const startOfThreeMonthCohort = startOfMonth(threeMonthsAgo);
       const threeMonthCohortPeople = getCohort(startOfThreeMonthCohort, endOfMonth(threeMonthsAgo));
-      const activeInThreeMonthCohort = threeMonthCohortPeople.filter(p => getStudentPaymentStatus(p, now) === 'Al día').length;
+      const activeInThreeMonthCohort = threeMonthCohortPeople.filter(p => getStudentPaymentStatus(p, now).status === 'Al día').length;
       
       const sixMonthsAgo = subMonths(now, 6);
       const startOfSixMonthCohort = startOfMonth(sixMonthsAgo);
       const sixMonthCohortPeople = getCohort(startOfSixMonthCohort, endOfMonth(sixMonthsAgo));
-      const activeInSixMonthCohort = sixMonthCohortPeople.filter(p => getStudentPaymentStatus(p, now) === 'Al día').length;
+      const activeInSixMonthCohort = sixMonthCohortPeople.filter(p => getStudentPaymentStatus(p, now).status === 'Al día').length;
       
       return {
         threeMonths: {
