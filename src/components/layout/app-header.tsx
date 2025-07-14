@@ -3,7 +3,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Info, LogOut, DollarSign, User } from 'lucide-react';
+import { Heart, Info, LogOut, DollarSign, User, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
@@ -25,13 +25,16 @@ const navItems = [
 export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial } = useStudio();
-  const { logout, activeOperator, logoutOperator } = useAuth();
+  const { logout, activeOperator, logoutOperator, userProfile } = useAuth();
   const router = useRouter();
 
   const handleFullLogout = async () => {
     await logout();
     router.push('/login');
   };
+  
+  // Por ahora, esta condición siempre será falsa. Es el primer paso seguro.
+  const isSuperAdmin = userProfile?.isSuperAdmin === true;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-transparent px-4 backdrop-blur-xl sm:px-6">
@@ -57,6 +60,18 @@ export function AppHeader() {
                 </Link>
              )
           })}
+          {isSuperAdmin && (
+             <Link
+                href="/superadmin"
+                className={cn(
+                  "flex items-center gap-1 text-sm font-medium transition-colors hover:text-primary",
+                  pathname.startsWith('/superadmin') ? "text-primary" : "text-muted-foreground"
+                )}
+              >
+                <Shield className="h-4 w-4" />
+                Panel Admin
+              </Link>
+          )}
         </nav>
       </div>
       <div className="flex items-center gap-2">

@@ -1,10 +1,4 @@
 
-
-
-
-
-
-
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -22,6 +16,7 @@ export type UserProfile = {
   instituteId: string;
   status: 'active' | 'pending';
   email: string;
+  isSuperAdmin?: boolean;
 };
 
 export type Institute = {
