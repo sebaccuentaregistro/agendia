@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, Landmark, Users, Calendar, Star } from 'lucide-react';
 import type { Institute } from '@/types';
 import { getAllInstitutes, getMonthlyNewPeopleCount } from '@/lib/superadmin-actions';
-import { format, parseISO, differenceInDays } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { AdminCharts } from './charts';
@@ -19,7 +19,7 @@ interface InstituteWithCount extends Institute {
     peopleCount?: number;
     sessionsCount?: number;
     actividadesCount?: number;
-    lastActivity?: string | null;
+    lastActivity?: Date | null;
 }
 
 interface MonthlyData {
@@ -73,10 +73,10 @@ export default function SuperAdminPage() {
     }
   }, [sortedInstitutes]);
 
-  const getStatus = (lastActivity: string | null | undefined): { label: string, className: string } => {
+  const getStatus = (lastActivity: Date | null | undefined): { label: string, className: string } => {
       if (!lastActivity) return { label: 'Sin Datos', className: 'bg-gray-500' };
       
-      const daysSinceActivity = differenceInDays(new Date(), parseISO(lastActivity));
+      const daysSinceActivity = differenceInDays(new Date(), lastActivity);
 
       if (daysSinceActivity <= 30) {
           return { label: 'Activo', className: 'bg-green-600' };
@@ -191,7 +191,7 @@ export default function SuperAdminPage() {
                         {instituteCreatedAt ? format(instituteCreatedAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
                       </TableCell>
                       <TableCell>
-                        {institute.lastActivity ? format(parseISO(institute.lastActivity), "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
+                        {institute.lastActivity ? format(institute.lastActivity, "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
                       </TableCell>
                     </TableRow>
                   );

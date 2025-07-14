@@ -26,11 +26,11 @@ export type Institute = {
   ownerId: string;
   ownerPin?: string;
   recoveryEmail?: string;
-  createdAt: string | null;
+  createdAt: Date | null;
   peopleCount?: number;
   sessionsCount?: number;
   actividadesCount?: number;
-  lastActivity?: string | null;
+  lastActivity?: Date | null;
 };
 
 export type Operator = {

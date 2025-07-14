@@ -4,7 +4,7 @@
 import { collection, getDocs, query, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Institute } from '@/types';
-import { startOfMonth, subMonths, format as formatDate, parseISO } from 'date-fns';
+import { startOfMonth, subMonths, format as formatDate } from 'date-fns';
 
 
 // This function is only for the superadmin panel
@@ -15,7 +15,7 @@ export async function getAllInstitutes(): Promise<Institute[]> {
     const institutesSnapshot = await getDocs(q);
     
     if (institutesSnapshot.empty) {
-      return [];
+      return []; // Always return an array
     }
     
     const institutesDataPromises = institutesSnapshot.docs.map(async (doc) => {
@@ -31,14 +31,14 @@ export async function getAllInstitutes(): Promise<Institute[]> {
       ]);
 
       const lastActivity = !latestLogSnapshot.empty 
-        ? (latestLogSnapshot.docs[0].data().timestamp as Timestamp).toDate().toISOString() 
+        ? (latestLogSnapshot.docs[0].data().timestamp as Timestamp).toDate()
         : null;
 
       return {
         id: instituteId,
         name: instituteData.name,
         ownerId: instituteData.ownerId,
-        createdAt: instituteData.createdAt instanceof Timestamp ? instituteData.createdAt.toDate().toISOString() : null,
+        createdAt: instituteData.createdAt instanceof Timestamp ? instituteData.createdAt.toDate() : null,
         peopleCount: peopleSnapshot.size,
         sessionsCount: sessionsSnapshot.size,
         actividadesCount: actividadesSnapshot.size,
@@ -51,7 +51,7 @@ export async function getAllInstitutes(): Promise<Institute[]> {
 
   } catch (error) {
     console.error("Error fetching institutes for superadmin:", error);
-    return [];
+    return []; // Always return an array on error
   }
 }
 
@@ -89,7 +89,7 @@ export async function getActividadesCountForInstitute(instituteId: string): Prom
 }
 
 
-export async function getLatestActivityForInstitute(instituteId: string): Promise<string | null> {
+export async function getLatestActivityForInstitute(instituteId: string): Promise<Date | null> {
     try {
         const auditLogRef = collection(db, 'institutes', instituteId, 'audit_logs');
         const q = query(auditLogRef, orderBy('timestamp', 'desc'), limit(1));
@@ -101,7 +101,7 @@ export async function getLatestActivityForInstitute(instituteId: string): Promis
         
         const latestLog = snapshot.docs[0].data();
         const timestamp = latestLog.timestamp instanceof Timestamp ? latestLog.timestamp.toDate() : null;
-        return timestamp ? timestamp.toISOString() : null;
+        return timestamp;
 
     } catch (error) {
         console.error(`Error fetching latest activity for institute ${instituteId}:`, error);
