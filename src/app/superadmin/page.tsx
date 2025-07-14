@@ -16,7 +16,7 @@ import { es } from 'date-fns/locale';
 interface InstituteWithCount extends Institute {
     peopleCount?: number;
     sessionsCount?: number;
-    lastActivity?: Date | null;
+    lastActivity?: string | null;
 }
 
 export default function SuperAdminPage() {
@@ -107,7 +107,7 @@ export default function SuperAdminPage() {
                       {institute.createdAt ? format(institute.createdAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {institute.lastActivity ? format(institute.lastActivity, "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
+                      {institute.lastActivity ? format(new Date(institute.lastActivity), "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
                     </TableCell>
                   </TableRow>
                 ))
@@ -125,3 +125,4 @@ export default function SuperAdminPage() {
     </div>
   );
 }
+

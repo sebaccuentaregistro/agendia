@@ -57,7 +57,7 @@ export async function getSessionsCountForInstitute(instituteId: string): Promise
     }
 }
 
-export async function getLatestActivityForInstitute(instituteId: string): Promise<Date | null> {
+export async function getLatestActivityForInstitute(instituteId: string): Promise<string | null> {
     try {
         const auditLogRef = collection(db, 'institutes', instituteId, 'audit_logs');
         const q = query(auditLogRef, orderBy('timestamp', 'desc'), limit(1));
@@ -68,10 +68,12 @@ export async function getLatestActivityForInstitute(instituteId: string): Promis
         }
         
         const latestLog = snapshot.docs[0].data();
-        return latestLog.timestamp instanceof Timestamp ? latestLog.timestamp.toDate() : null;
+        const timestamp = latestLog.timestamp instanceof Timestamp ? latestLog.timestamp.toDate() : null;
+        return timestamp ? timestamp.toISOString() : null;
 
     } catch (error) {
         console.error(`Error fetching latest activity for institute ${instituteId}:`, error);
         return null;
     }
 }
+
