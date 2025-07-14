@@ -899,7 +899,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, deletePerson } = useStudio();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);

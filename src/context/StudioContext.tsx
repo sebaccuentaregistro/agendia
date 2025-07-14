@@ -1,382 +1,419 @@
-// This file contains all the functions that interact with Firestore.
-// It is separated from the React context to avoid issues with Next.js Fast Refresh.
-import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator } from '@/types';
+
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
+import { onSnapshot, collection, doc, Unsubscribe } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { format as formatDate, addMonths, subMonths } from 'date-fns';
-import { calculateNextPaymentDate } from '@/lib/utils';
+import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator } from '@/types';
+import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity } from '@/lib/firestore-actions';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
-// Helper function to remove undefined fields from an object before Firestore operations.
-const cleanDataForFirestore = (data: any) => {
-    const cleanData = { ...data };
-    for (const key in cleanData) {
-        if (cleanData[key] === undefined) {
-            delete cleanData[key];
-        }
-    }
-    return cleanData;
-};
-
-
-// Generic Actions
-export const addEntity = async (collectionRef: CollectionReference, data: any) => {
-    const cleanData = cleanDataForFirestore(data);
-    return await addDoc(collectionRef, cleanData);
-};
-
-export const updateEntity = async (docRef: any, data: any) => {
-    const { id, ...updateDataRaw } = data; // Don't save the id inside the document
-    const updateData = cleanDataForFirestore(updateDataRaw);
-    return await setDoc(docRef, updateData, { merge: true });
-};
-
-export const deleteEntity = async (docRef: any) => {
-    return await deleteDoc(docRef);
-};
-
-
-// Specific Actions
-export const addPersonAction = async (peopleRef: CollectionReference, personData: NewPersonData, auditLogRef: CollectionReference, operator: Operator) => {
-    const joinDate = new Date();
-    
-    const newPerson = {
-        name: personData.name,
-        phone: personData.phone,
-        tariffId: personData.tariffId,
-        levelId: personData.levelId,
-        healthInfo: personData.healthInfo,
-        notes: personData.notes,
-        joinDate: joinDate,
-        lastPaymentDate: null, // New members start with a null payment date
-        avatar: `https://placehold.co/100x100.png`,
-        vacationPeriods: [],
-        paymentBalance: 0,
-    };
-    
-    const batch = writeBatch(db);
-    const now = new Date();
-
-    // Create the person document
-    const personDocRef = doc(peopleRef);
-    batch.set(personDocRef, cleanDataForFirestore(newPerson));
-
-    // Add to audit log
-    batch.set(doc(auditLogRef), {
-        operatorId: operator.id,
-        operatorName: operator.name,
-        action: 'CREAR_PERSONA',
-        entityType: 'persona',
-        entityId: personDocRef.id,
-        entityName: personData.name,
-        timestamp: now,
-    } as Omit<AuditLog, 'id'>);
-    
-    return await batch.commit();
-};
-
-export const deletePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string, personName: string, auditLogRef: CollectionReference, operator: Operator) => {
-    const batch = writeBatch(db);
-    const now = new Date();
-
-    // Add to audit log
-    batch.set(doc(auditLogRef), {
-        operatorId: operator.id,
-        operatorName: operator.name,
-        action: 'ELIMINAR_PERSONA',
-        entityType: 'persona',
-        entityId: personId,
-        entityName: personName,
-        timestamp: now,
-    } as Omit<AuditLog, 'id'>);
-
-    // Remove person from all sessions they are enrolled in
-    const personSessionsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
-    const personSessionsSnap = await getDocs(personSessionsQuery);
-    
-    personSessionsSnap.forEach(sessionDoc => {
-        const sessionData = sessionDoc.data() as Session;
-        const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
-        batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
-    });
-
-    // Also remove from waitlists
-    const personWaitlistQuery = query(sessionsRef, where('waitlistPersonIds', 'array-contains', personId));
-    const personWaitlistSnap = await getDocs(personWaitlistQuery);
-    personWaitlistSnap.forEach(sessionDoc => {
-        const sessionData = sessionDoc.data() as Session;
-        const updatedWaitlistIds = (sessionData.waitlistPersonIds || []).filter(id => id !== personId);
-        batch.update(sessionDoc.ref, { waitlistPersonIds: updatedWaitlistIds });
-    });
-
-    // Delete the person document
-    const personRef = doc(peopleRef, personId);
-    batch.delete(personRef);
-
-    return await batch.commit();
-};
-
-
-export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
-    const now = new Date();
-    // If it's the first payment, the cycle starts today. Otherwise, it extends from the previous due date.
-    const baseDateForNextPayment = person.lastPaymentDate || now;
-    const newExpiryDate = calculateNextPaymentDate(baseDateForNextPayment, person.joinDate);
-
-    const paymentRecord = {
-        personId: person.id,
-        date: now, // The actual transaction date
-        amount: tariff.price,
-        tariffId: tariff.id,
-        months: 1,
-    };
-    const batch = writeBatch(db);
-
-    const paymentRef = doc(paymentsRef);
-    batch.set(paymentRef, paymentRecord);
-    
-    batch.update(personRef, { 
-        lastPaymentDate: newExpiryDate,
-        paymentBalance: (person.paymentBalance || 0) + 1,
-     });
-     
-    // Create audit log
-    batch.set(doc(auditLogRef), {
-        operatorId: operator.id,
-        operatorName: operator.name,
-        action: 'REGISTRO_PAGO',
-        entityType: 'pago',
-        entityId: person.id,
-        entityName: person.name,
-        timestamp: now,
-        details: {
-            amount: tariff.price,
-            tariffName: tariff.name
-        }
-    } as Omit<AuditLog, 'id'>);
-
-    return await batch.commit();
-};
-
-export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, currentPerson: Person) => {
-    const batch = writeBatch(db);
-
-    // 1. Find all payments for the person
-    const q = query(paymentsRef, where('personId', '==', personId));
-    const paymentsSnap = await getDocs(q);
-
-    if (paymentsSnap.empty) {
-        throw new Error("No hay pagos para revertir para esta persona.");
-    }
-
-    // 2. Sort payments by date locally to find the latest one
-    const allPayments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment))
-        .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-
-    const lastPayment = allPayments[0];
-    
-    // Determine the new state
-    let newLastPaymentDate: Date | null;
-    const newPaymentBalance = (currentPerson.paymentBalance || 0) - 1;
-
-    if (allPayments.length === 1) {
-        // If this was the only payment, revert to the initial state (null date)
-        newLastPaymentDate = null;
-    } else {
-        // If there are previous payments, calculate the previous due date
-        newLastPaymentDate = subMonths(currentPerson.lastPaymentDate || new Date(), 1);
-    }
-    
-    // 3. Delete the most recent payment document
-    const lastPaymentRef = doc(paymentsRef, lastPayment.id);
-    batch.delete(lastPaymentRef);
-
-    // 4. Update the person's document
-    batch.update(personRef, { 
-        lastPaymentDate: newLastPaymentDate,
-        paymentBalance: newPaymentBalance
-    });
-    
-    return await batch.commit();
-};
-
-
-export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[]) => {
-    const batch = writeBatch(db);
-    
-    // First, find all sessions the person is currently enrolled in
-    const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
-    const currentEnrollmentsSnap = await getDocs(currentEnrollmentsQuery);
-    const currentSessionIds = currentEnrollmentsSnap.docs.map(d => d.id);
-
-    // Determine which sessions to remove the person from
-    const sessionsToRemoveFrom = currentSessionIds.filter(id => !sessionIds.includes(id));
-    sessionsToRemoveFrom.forEach(sessionId => {
-        const sessionRef = doc(sessionsRef, sessionId);
-        const sessionDoc = currentEnrollmentsSnap.docs.find(d => d.id === sessionId);
-        if (sessionDoc) {
-            const sessionData = sessionDoc.data() as Session;
-            const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
-            batch.update(sessionRef, { personIds: updatedPersonIds });
-        }
-    });
-
-    // Determine which sessions to add the person to
-    const sessionsToAddTo = sessionIds.filter(id => !currentSessionIds.includes(id));
-    for (const sessionId of sessionsToAddTo) {
-        const sessionRef = doc(sessionsRef, sessionId);
-        // We need to fetch the session to safely add the person without removing others
-        // A simple getDoc would be more efficient if we know the doc exists
-        const sessionDocSnap = await getDocs(query(sessionsRef, where('__name__', '==', sessionId), limit(1)));
-        if (!sessionDocSnap.empty) {
-            const sessionData = sessionDocSnap.docs[0].data() as Session;
-            const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));
-            batch.update(sessionRef, { personIds: updatedPersonIds });
-        }
-    }
-    
-    return await batch.commit();
-};
-
-
-export const enrollPeopleInClassAction = async (sessionRef: any, personIds: string[]) => {
-    return await updateEntity(sessionRef, { personIds });
-};
-
-
-export const saveAttendanceAction = async (attendanceRef: CollectionReference, sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
-    const dateStr = formatDate(new Date(), 'yyyy-MM-dd');
-    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-    
-    const snap = await getDocs(attendanceQuery);
-    
-    if (snap.empty) {
-        const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
-        await addEntity(attendanceRef, record);
-    } else {
-        const docRef = snap.docs[0].ref;
-        const existingData = snap.docs[0].data() as SessionAttendance;
-        const updatedData = { 
-            ...existingData, 
-            presentIds, 
-            absentIds, 
-            justifiedAbsenceIds 
-        };
-        await updateEntity(docRef, updatedData);
-    }
-};
-
-export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
-    const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-    
-    const snap = await getDocs(attendanceQuery);
-    if (snap.empty) {
-        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [personId] });
-    } else {
-        const record = snap.docs[0].data() as SessionAttendance;
-        const updatedJustified = Array.from(new Set([...(record.justifiedAbsenceIds || []), personId]));
-        await updateEntity(snap.docs[0].ref, { justifiedAbsenceIds: updatedJustified });
-    }
-};
-
-export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReference, sessionId: string, personId: string, date: Date) => {
-    const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-
-    const snap = await getDocs(attendanceQuery);
-    if (snap.empty) {
-        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [], oneTimeAttendees: [personId] });
-    } else {
-        const record = snap.docs[0].data() as SessionAttendance;
-        const updatedAttendees = Array.from(new Set([...(record.oneTimeAttendees || []), personId]));
-        await updateEntity(snap.docs[0].ref, { oneTimeAttendees: updatedAttendees });
-    }
-};
-
-export const addVacationPeriodAction = async (personDocRef: any, person: Person, startDate: Date, endDate: Date) => {
-    const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
-    const updatedVacations = [...(person.vacationPeriods || []), newVacation];
-    return updateEntity(personDocRef, { vacationPeriods: updatedVacations });
-};
-
-export const removeVacationPeriodAction = async (personDocRef: any, person: Person, vacationId: string) => {
-    if (!person.vacationPeriods) return;
-    const updatedVacations = person.vacationPeriods.filter(v => v.id !== vacationId);
-    return updateEntity(personDocRef, { vacationPeriods: updatedVacations });
-};
-
-export const addToWaitlistAction = async (sessionDocRef: any, session: Session, personId: string) => {
-    const updatedWaitlist = Array.from(new Set([...(session.waitlistPersonIds || []), personId]));
-    return updateEntity(sessionDocRef, { waitlistPersonIds: updatedWaitlist });
-};
-
-export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference, notificationsRef: CollectionReference, notificationId: string, sessionId: string, personId: string, session: Session) => {
-    const batch = writeBatch(db);
-    const sessionRef = doc(sessionsRef, sessionId);
-    const newPersonIds = Array.from(new Set([...session.personIds, personId]));
-    const newWaitlist = session.waitlistPersonIds?.filter(id => id !== personId) || [];
-    batch.update(sessionRef, { personIds: newPersonIds, waitlistPersonIds: newWaitlist });
-    
-    const notifRef = doc(notificationsRef, notificationId);
-    batch.delete(notifRef);
-    
-    return await batch.commit();
-};
-
-type AllDataContext = {
+interface StudioContextType {
     sessions: Session[];
     people: Person[];
     actividades: Actividad[];
     specialists: Specialist[];
     spaces: Space[];
     levels: Level[];
+    tariffs: Tariff[];
+    payments: Payment[];
+    attendance: SessionAttendance[];
+    notifications: AppNotification[];
+    audit_logs: AuditLog[];
+    operators: Operator[];
+    loading: boolean;
+    isTutorialOpen: boolean;
+    openTutorial: () => void;
+    closeTutorial: () => void;
+    addPerson: (person: NewPersonData) => void;
+    updatePerson: (person: Person) => void;
+    deletePerson: (personId: string) => void;
+    addSession: (session: Omit<Session, 'id' | 'personIds'>) => void;
+    updateSession: (session: Session) => void;
+    deleteSession: (sessionId: string) => void;
+    enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
+    recordPayment: (personId: string) => void;
+    revertLastPayment: (personId: string) => void;
+    saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
+    isPersonOnVacation: (person: Person, date: Date) => boolean;
+    addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
+    removeVacationPeriod: (personId: string, vacationId: string) => void;
+    addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
+    addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
+    enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => void;
+    dismissNotification: (notificationId: string) => void;
+    addActividad: (actividad: Omit<Actividad, 'id'>) => void;
+    updateActividad: (actividad: Actividad) => void;
+    deleteActividad: (actividadId: string) => void;
+    addSpecialist: (specialist: Omit<Specialist, 'id' | 'avatar'>) => void;
+    updateSpecialist: (specialist: Specialist) => void;
+    deleteSpecialist: (specialistId: string) => void;
+    addSpace: (space: Omit<Space, 'id'>) => void;
+    updateSpace: (space: Space) => void;
+    deleteSpace: (spaceId: string) => void;
+    addLevel: (level: Omit<Level, 'id'>) => void;
+    updateLevel: (level: Level) => void;
+    deleteLevel: (levelId: string) => void;
+    addTariff: (tariff: Omit<Tariff, 'id'>) => void;
+    updateTariff: (tariff: Tariff) => void;
+    deleteTariff: (tariffId: string) => void;
+    enrollPersonInSessions: (personId: string, sessionIds: string[]) => void;
+    addOperator: (operator: Omit<Operator, 'id'>) => void;
+    updateOperator: (operator: Operator) => void;
+    deleteOperator: (operatorId: string) => void;
+}
+
+const StudioContext = createContext<StudioContextType | undefined>(undefined);
+
+const collections = {
+    actividades: 'actividades',
+    specialists: 'specialists',
+    people: 'people',
+    sessions: 'sessions',
+    spaces: 'spaces',
+    payments: 'payments',
+    attendance: 'attendance',
+    notifications: 'notifications',
+    tariffs: 'tariffs',
+    levels: 'levels',
+    audit_logs: 'audit_logs',
+    operators: 'operators',
 };
 
-export const deleteWithUsageCheckAction = async (
-    entityId: string,
-    checks: { collection: string; field: string; label: string, type?: 'array' }[],
-    collectionRefs: Record<string, CollectionReference>,
-    allDataForMessages: AllDataContext
-) => {
-    const usageMessages: string[] = [];
+const safelyParseDate = (data: any, field: string) => {
+    if (data && data[field] && typeof data[field].toDate === 'function') {
+        return data[field].toDate();
+    }
+    return null;
+};
 
-    for (const check of checks) {
-        const collectionToCheckRef = collectionRefs[check.collection];
-        if (!collectionToCheckRef) {
-            console.warn(`Collection reference not found for: ${check.collection}`);
-            continue;
+export function StudioProvider({ children }: { children: ReactNode }) {
+    const { userProfile, institute, activeOperator } = useAuth();
+    const { toast } = useToast();
+    const [loading, setLoading] = useState(true);
+    const [data, setData] = useState<Record<string, any[]>>({
+        ...Object.fromEntries(Object.keys(collections).map(key => [key, []]))
+    });
+    const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+
+    const collectionRefs = useMemo(() => {
+        if (!institute) return null;
+        return Object.entries(collections).reduce((acc, [key, name]) => {
+            acc[key] = collection(db, 'institutes', institute.id, name);
+            return acc;
+        }, {} as Record<string, any>);
+    }, [institute]);
+
+    useEffect(() => {
+        if (!collectionRefs) {
+            setLoading(!userProfile);
+            return;
         }
 
-        const fieldToCheck = check.field;
-        const q = check.type === 'array'
-            ? query(collectionToCheckRef, where(fieldToCheck, 'array-contains', entityId))
-            : query(collectionToCheckRef, where(fieldToCheck, '==', entityId));
-        
-        const snapshot = await getDocs(q);
-
-        if (!snapshot.empty) {
-            const itemsInUse = snapshot.docs.map(d => d.data());
-            let details = '';
-            
-            if (check.collection === 'sessions') {
-                details = itemsInUse.map(s => {
-                    const actividad = allDataForMessages.actividades.find(a => a.id === s.actividadId);
-                    return `- ${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`;
-                }).join('\n');
-                usageMessages.push(`Está asignado a ${itemsInUse.length} sesión(es):\n${details}`);
-            } else if (check.collection === 'people') {
-                 details = itemsInUse.map(p => `- ${p.name}`).join('\n');
-                 usageMessages.push(`Está asignado a ${itemsInUse.length} persona(s):\n${details}`);
-            } else if (check.collection === 'specialists') {
-                 details = itemsInUse.map(s => `- ${s.name}`).join('\n');
-                 usageMessages.push(`Está asignado a ${itemsInUse.length} especialista(s):\n${details}`);
-            } else {
-                usageMessages.push(`Está en uso por ${itemsInUse.length} ${check.label}(s).`);
+        setLoading(true);
+        const unsubscribers = Object.entries(collectionRefs).map(([key, ref]) => {
+            let q = ref;
+            // Apply sorting for specific collections if needed
+            if (['audit_logs', 'payments'].includes(key)) {
+                q = query(ref, orderBy('timestamp', 'desc'));
             }
-        }
-    }
 
-    if (usageMessages.length > 0) {
-        throw new Error(usageMessages.join('\n\n'));
+            return onSnapshot(q, (snapshot) => {
+                const items = snapshot.docs.map(doc => {
+                    const docData = doc.data();
+                    
+                    if (['payments', 'people', 'notifications', 'audit_logs'].includes(key)) {
+                         docData.joinDate = safelyParseDate(docData, 'joinDate');
+                         docData.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
+                         docData.date = safelyParseDate(docData, 'date');
+                         docData.createdAt = safelyParseDate(docData, 'createdAt');
+                         docData.timestamp = safelyParseDate(docData, 'timestamp');
+
+                        if (docData.vacationPeriods) {
+                            docData.vacationPeriods = docData.vacationPeriods.map((v: any) => ({
+                                ...v,
+                                startDate: safelyParseDate(v, 'startDate'),
+                                endDate: safelyParseDate(v, 'endDate'),
+                            }));
+                        }
+                    }
+                    return { id: doc.id, ...docData };
+                });
+
+                setData(prevData => ({ ...prevData, [key]: items }));
+            }, (error) => {
+                console.error(`Error fetching ${key}:`, error);
+                toast({ variant: 'destructive', title: 'Error de Sincronización', description: `No se pudo cargar la colección ${key}.` });
+            });
+        });
+
+        const allDataLoaded = () => Object.values(data).every(arr => arr.length > 0 || !loading);
+        if (allDataLoaded()) setLoading(false);
+        
+        // This is a failsafe to ensure loading state becomes false even if some collections are empty
+        const timer = setTimeout(() => setLoading(false), 3000);
+
+        return () => {
+            unsubscribers.forEach(unsub => unsub());
+            clearTimeout(timer);
+        };
+    }, [collectionRefs, toast]);
+
+    const handleAction = async (action: Promise<any>, successMessage: string, errorMessage: string) => {
+        try {
+            await action;
+            toast({ title: "¡Éxito!", description: successMessage });
+        } catch (error: any) {
+            console.error(errorMessage, error);
+            toast({ variant: 'destructive', title: "Error", description: error.message || errorMessage });
+        }
+    };
+
+    const addPerson = (personData: NewPersonData) => {
+        if (!collectionRefs || !activeOperator) return;
+        handleAction(
+            addPersonAction(collectionRefs.people, personData, collectionRefs.audit_logs, activeOperator),
+            `${personData.name} ha sido añadido con éxito.`,
+            `Error al añadir a ${personData.name}.`
+        );
+    };
+
+    const updatePerson = (person: Person) => {
+        if (!collectionRefs) return;
+        handleAction(
+            updateEntity(doc(collectionRefs.people, person.id), person),
+            `${person.name} ha sido actualizado.`,
+            `Error al actualizar a ${person.name}.`
+        );
+    };
+
+    const deletePerson = (personId: string) => {
+        if (!collectionRefs || !activeOperator) return;
+        const personToDelete = data.people.find(p => p.id === personId);
+        if (!personToDelete) return;
+
+        handleAction(
+            deletePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, activeOperator),
+            `${personToDelete.name} ha sido eliminado.`,
+            `Error al eliminar a ${personToDelete.name}.`
+        );
+    };
+    
+    const recordPayment = async (personId: string) => {
+        if (!collectionRefs || !activeOperator) return;
+        const person = data.people.find((p: Person) => p.id === personId);
+        if (!person) return;
+        const tariff = data.tariffs.find((t: Tariff) => t.id === person.tariffId);
+        if (!tariff) {
+            toast({ variant: 'destructive', title: 'Error', description: 'La persona no tiene un arancel asignado.' });
+            return;
+        }
+        await handleAction(
+            recordPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), person, tariff, collectionRefs.audit_logs, activeOperator),
+            `Pago registrado para ${person.name}.`,
+            `Error al registrar el pago.`
+        );
+    };
+
+     const revertLastPayment = async (personId: string) => {
+        if (!collectionRefs) return;
+        const person = data.people.find((p: Person) => p.id === personId);
+        if (!person) return;
+        await handleAction(
+            revertLastPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), personId, person),
+            `Último pago de ${person.name} revertido.`,
+            `Error al revertir el pago.`
+        );
+    };
+
+    const addGenericEntity = (collectionKey: keyof typeof collections, entityData: any, successMessage: string, errorMessage: string) => {
+        if (!collectionRefs) return;
+        handleAction(addEntity(collectionRefs[collectionKey], entityData), successMessage, errorMessage);
+    };
+
+    const updateGenericEntity = (collectionKey: keyof typeof collections, entity: { id: string }, successMessage: string, errorMessage: string) => {
+        if (!collectionRefs) return;
+        handleAction(updateEntity(doc(collectionRefs[collectionKey], entity.id), entity), successMessage, errorMessage);
+    };
+    
+    const deleteGenericEntityWithUsageCheck = async (collectionKey: keyof typeof collections, entityId: string, successMessage: string, errorMessage: string, checks: any[]) => {
+        if (!collectionRefs) return;
+        try {
+            const allDataForMessages = {
+                sessions: data.sessions, people: data.people, actividades: data.actividades,
+                specialists: data.specialists, spaces: data.spaces, levels: data.levels,
+            };
+            await deleteWithUsageCheckAction(entityId, checks, collectionRefs, allDataForMessages);
+            await handleAction(deleteEntity(doc(collectionRefs[collectionKey], entityId)), successMessage, errorMessage);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "No se puede eliminar", description: error.message });
+        }
+    };
+    
+    const addSession = (session: Omit<Session, 'id' | 'personIds'>) => addGenericEntity('sessions', { ...session, personIds: [], waitlistPersonIds: [] }, "Sesión creada.", "Error al crear la sesión.");
+    const updateSession = (session: Session) => updateGenericEntity('sessions', session, "Sesión actualizada.", "Error al actualizar la sesión.");
+    const deleteSession = (id: string) => deleteGenericEntityWithUsageCheck('sessions', id, "Sesión eliminada.", "Error al eliminar la sesión.", [{collection: 'attendance', field: 'sessionId', label: 'asistencias'}]);
+
+    const addActividad = (actividad: Omit<Actividad, 'id'>) => addGenericEntity('actividades', actividad, "Actividad creada.", "Error al crear la actividad.");
+    const updateActividad = (actividad: Actividad) => updateGenericEntity('actividades', actividad, "Actividad actualizada.", "Error al actualizar la actividad.");
+    const deleteActividad = (id: string) => deleteGenericEntityWithUsageCheck('actividades', id, "Actividad eliminada.", "Error al eliminar la actividad.", [
+        {collection: 'sessions', field: 'actividadId', label: 'sesiones'}, {collection: 'specialists', field: 'actividadIds', label: 'especialistas', type: 'array'}
+    ]);
+
+    const addSpecialist = (specialist: Omit<Specialist, 'id' | 'avatar'>) => addGenericEntity('specialists', { ...specialist, avatar: `https://placehold.co/100x100.png` }, "Especialista creado.", "Error al crear el especialista.");
+    const updateSpecialist = (specialist: Specialist) => updateGenericEntity('specialists', specialist, "Especialista actualizado.", "Error al actualizar el especialista.");
+    const deleteSpecialist = (id: string) => deleteGenericEntityWithUsageCheck('specialists', id, "Especialista eliminado.", "Error al eliminar el especialista.", [{collection: 'sessions', field: 'instructorId', label: 'sesiones'}]);
+
+    const addSpace = (space: Omit<Space, 'id'>) => addGenericEntity('spaces', space, "Espacio creado.", "Error al crear el espacio.");
+    const updateSpace = (space: Space) => updateGenericEntity('spaces', space, "Espacio actualizado.", "Error al actualizar el espacio.");
+    const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId', label: 'sesiones'}]);
+    
+    const addLevel = (level: Omit<Level, 'id'>) => addGenericEntity('levels', level, "Nivel creado.", "Error al crear el nivel.");
+    const updateLevel = (level: Level) => updateGenericEntity('levels', level, "Nivel actualizado.", "Error al actualizar el nivel.");
+    const deleteLevel = (id: string) => deleteGenericEntityWithUsageCheck('levels', id, "Nivel eliminado.", "Error al eliminar el nivel.", [
+        {collection: 'sessions', field: 'levelId', label: 'sesiones'}, {collection: 'people', field: 'levelId', label: 'personas'}
+    ]);
+    
+    const addTariff = (tariff: Omit<Tariff, 'id'>) => addGenericEntity('tariffs', tariff, "Arancel creado.", "Error al crear el arancel.");
+    const updateTariff = (tariff: Tariff) => updateGenericEntity('tariffs', tariff, "Arancel actualizado.", "Error al actualizar el arancel.");
+    const deleteTariff = (id: string) => deleteGenericEntityWithUsageCheck('tariffs', id, "Arancel eliminado.", "Error al eliminar el arancel.", [{collection: 'people', field: 'tariffId', label: 'personas'}]);
+    
+    const addOperator = (operator: Omit<Operator, 'id'>) => addGenericEntity('operators', operator, "Operador creado.", "Error al crear operador.");
+    const updateOperator = (operator: Operator) => updateGenericEntity('operators', operator, "Operador actualizado.", "Error al actualizar operador.");
+    const deleteOperator = (id: string) => handleAction(deleteEntity(doc(collectionRefs!.operators, id)), "Operador eliminado.", "Error al eliminar operador.");
+
+
+    const enrollPeopleInClass = (sessionId: string, personIds: string[]) => handleAction(
+        enrollPeopleInClassAction(doc(collectionRefs!.sessions, sessionId), personIds),
+        'Inscripciones actualizadas.',
+        'Error al actualizar inscripciones.'
+    );
+
+    const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => handleAction(
+        saveAttendanceAction(collectionRefs!.attendance, sessionId, presentIds, absentIds, justifiedAbsenceIds),
+        'Asistencia guardada.',
+        'Error al guardar asistencia.'
+    );
+    
+    const isPersonOnVacation = useCallback((person: Person, date: Date) => {
+        if (!person.vacationPeriods) return false;
+        return person.vacationPeriods.some(period => {
+            if (!period.startDate || !period.endDate) return false;
+            return date >= period.startDate && date <= period.endDate;
+        });
+    }, []);
+    
+    const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
+        const person = data.people.find(p => p.id === personId);
+        if (!person) return;
+        handleAction(
+            addVacationPeriodAction(doc(collectionRefs!.people, personId), person, startDate, endDate),
+            'Período de vacaciones añadido.',
+            'Error al añadir vacaciones.'
+        );
+    };
+
+    const removeVacationPeriod = (personId: string, vacationId: string) => {
+        const person = data.people.find(p => p.id === personId);
+        if (!person) return;
+        handleAction(
+            removeVacationPeriodAction(doc(collectionRefs!.people, personId), person, vacationId),
+            'Período de vacaciones eliminado.',
+            'Error al eliminar vacaciones.'
+        );
+    };
+
+    const addJustifiedAbsence = (personId: string, sessionId: string, date: Date) => handleAction(
+        addJustifiedAbsenceAction(collectionRefs!.attendance, personId, sessionId, date),
+        'Ausencia justificada registrada.',
+        'Error al justificar la ausencia.'
+    );
+    
+    const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => handleAction(
+        addOneTimeAttendeeAction(collectionRefs!.attendance, sessionId, personId, date),
+        'Asistente puntual añadido.',
+        'Error al añadir asistente puntual.'
+    );
+    
+    const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
+        const session = data.sessions.find(s => s.id === sessionId);
+        if (!session) return;
+        handleAction(
+            enrollFromWaitlistAction(collectionRefs!.sessions, collectionRefs!.notifications, notificationId, sessionId, personId, session),
+            'Inscripto desde lista de espera.',
+            'Error al inscribir.'
+        );
+    };
+    
+    const dismissNotification = (notificationId: string) => handleAction(
+        deleteEntity(doc(collectionRefs!.notifications, notificationId)),
+        'Notificación descartada.',
+        'Error al descartar notificación.'
+    );
+
+    const enrollPersonInSessions = (personId: string, sessionIds: string[]) => handleAction(
+        enrollPersonInSessionsAction(collectionRefs!.sessions, personId, sessionIds),
+        "Horarios de la persona actualizados.",
+        "Error al actualizar los horarios."
+    );
+
+    return (
+        <StudioContext.Provider value={{
+            ...(data as any),
+            loading,
+            isTutorialOpen,
+            openTutorial: () => setIsTutorialOpen(true),
+            closeTutorial: () => {
+                setIsTutorialOpen(false);
+                try { localStorage.setItem('agendia-tutorial-completed', 'true'); } catch (e) {}
+            },
+            addPerson,
+            updatePerson,
+            deletePerson,
+            recordPayment,
+            revertLastPayment,
+            addSession,
+            updateSession,
+            deleteSession,
+            enrollPeopleInClass,
+            saveAttendance,
+            isPersonOnVacation,
+            addVacationPeriod,
+            removeVacationPeriod,
+            addJustifiedAbsence,
+            addOneTimeAttendee,
+            enrollFromWaitlist,
+            dismissNotification,
+            addActividad,
+            updateActividad,
+            deleteActividad,
+            addSpecialist,
+            updateSpecialist,
+            deleteSpecialist,
+            addSpace,
+            updateSpace,
+            deleteSpace,
+            addLevel,
+            updateLevel,
+            deleteLevel,
+            addTariff,
+            updateTariff,
+            deleteTariff,
+            enrollPersonInSessions,
+            addOperator,
+            updateOperator,
+            deleteOperator
+        }}>
+            {children}
+        </StudioContext.Provider>
+    );
+}
+
+export function useStudio() {
+    const context = useContext(StudioContext);
+    if (context === undefined) {
+        throw new Error('useStudio must be used within a StudioProvider');
     }
-};
+    return context;
+}
