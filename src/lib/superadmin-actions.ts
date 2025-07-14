@@ -1,6 +1,6 @@
 
 
-import { collection, getDocs, query, orderBy, Timestamp, limit } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, Timestamp, limit, doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Institute } from '@/types';
 import { startOfMonth, subMonths, format as formatDate } from 'date-fns';
@@ -153,4 +153,16 @@ export async function getMonthlyNewPeopleCount(): Promise<{ month: string, "Nuev
     console.error("Error fetching monthly new people count:", error);
     return [];
   }
+}
+
+export async function updateInstitutePaymentStatus(
+  instituteId: string,
+  status: Institute['paymentStatus'],
+  nextDueDate: Date | null
+) {
+  const instituteRef = doc(db, 'institutes', instituteId);
+  return updateDoc(instituteRef, {
+    paymentStatus: status,
+    nextDueDate: nextDueDate
+  });
 }

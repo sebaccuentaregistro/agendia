@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -7,14 +8,17 @@ import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Landmark, Users, Calendar, Star } from 'lucide-react';
+import { Loader2, Landmark, Users, Calendar, Star, MoreHorizontal, Edit } from 'lucide-react';
 import type { Institute } from '@/types';
-import { getAllInstitutes, getMonthlyNewPeopleCount } from '@/lib/superadmin-actions';
-import { format, differenceInDays } from 'date-fns';
+import { getAllInstitutes } from '@/lib/superadmin-actions';
+import { format, differenceInDays, addMonths, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { AdminCharts } from './charts';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { UpdatePaymentStatusDialog } from './update-payment-status-dialog';
 
 interface InstituteWithCount extends Institute {
     peopleCount?: number;
@@ -35,6 +39,19 @@ export default function SuperAdminPage() {
   const [institutes, setInstitutes] = useState<InstituteWithCount[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
   const [monthlyNewPeople, setMonthlyNewPeople] = useState<MonthlyData[]>([]);
+  const [selectedInstitute, setSelectedInstitute] = useState<InstituteWithCount | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+
+  const fetchAllData = async () => {
+    const [instituteList, monthlyData] = await Promise.all([
+        getAllInstitutes(),
+        getMonthlyNewPeopleCount()
+    ]);
+    
+    setInstitutes(instituteList);
+    setMonthlyNewPeople(monthlyData);
+    setPageLoading(false);
+  };
 
   useEffect(() => {
     if (!authLoading) {
@@ -43,19 +60,8 @@ export default function SuperAdminPage() {
         return;
       }
       
-      const fetchAllData = async () => {
-        setPageLoading(true);
-        const [instituteList, monthlyData] = await Promise.all([
-            getAllInstitutes(),
-            getMonthlyNewPeopleCount()
-        ]);
-        
-        setInstitutes(instituteList);
-        setMonthlyNewPeople(monthlyData);
-        setPageLoading(false);
-      };
-
       if (userProfile?.isSuperAdmin) {
+        setPageLoading(true);
         fetchAllData();
       }
     }
@@ -100,6 +106,20 @@ export default function SuperAdminPage() {
             return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600';
     }
   };
+
+  const handleManagePayment = (institute: InstituteWithCount) => {
+    setSelectedInstitute(institute);
+    setIsPaymentDialogOpen(true);
+  };
+  
+  const handleDialogClose = (updated: boolean) => {
+    setIsPaymentDialogOpen(false);
+    setSelectedInstitute(null);
+    if (updated) {
+      setPageLoading(true);
+      fetchAllData();
+    }
+  }
 
 
   if (authLoading || pageLoading) {
@@ -175,6 +195,7 @@ export default function SuperAdminPage() {
                 <TableHead>Próximo Vencimiento</TableHead>
                 <TableHead>Nº de Alumnos</TableHead>
                 <TableHead>Última Actividad</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -206,6 +227,19 @@ export default function SuperAdminPage() {
                       <TableCell>
                         {institute.lastActivity ? format(institute.lastActivity, "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleManagePayment(institute)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Gestionar Pago
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   );
                 })
@@ -220,6 +254,14 @@ export default function SuperAdminPage() {
           </Table>
         </CardContent>
       </Card>
+      
+      {selectedInstitute && (
+        <UpdatePaymentStatusDialog
+            isOpen={isPaymentDialogOpen}
+            onClose={handleDialogClose}
+            institute={selectedInstitute}
+        />
+      )}
     </div>
   );
 }
