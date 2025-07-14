@@ -1,5 +1,6 @@
 
 
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
@@ -58,8 +59,20 @@ export const addPersonAction = async (collectionRef: CollectionReference, person
     return addEntity(collectionRef, newPerson);
 };
 
-export const deletePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string) => {
+export const deletePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string, personName: string, auditLogRef: CollectionReference, operator: Operator) => {
     const batch = writeBatch(db);
+    const now = new Date();
+
+    // Add to audit log
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'ELIMINAR_PERSONA',
+        entityType: 'persona',
+        entityId: personId,
+        entityName: personName,
+        timestamp: now,
+    } as Omit<AuditLog, 'id'>);
 
     // Remove person from all sessions they are enrolled in
     const personSessionsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
@@ -356,3 +369,4 @@ export const deleteWithUsageCheckAction = async (
     
 
     
+

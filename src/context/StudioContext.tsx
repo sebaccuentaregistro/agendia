@@ -1,6 +1,7 @@
 
 
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
@@ -353,7 +354,23 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     await performFirestoreAction('Actualizar persona', () => firestoreActions.updateEntity(getDocRef('people', data.id), data));
   };
   const deletePerson = async (id: string) => {
-    await performFirestoreAction('Eliminar persona', () => firestoreActions.deletePersonAction(getCollectionRef('sessions'), getCollectionRef('people'), id));
+    if (!activeOperator) {
+        toast({ title: 'Error', description: 'Se requiere un operador activo para esta acción.', variant: 'destructive' });
+        return;
+    }
+    const personToDelete = state.people.find(p => p.id === id);
+    if (!personToDelete) {
+        toast({ title: 'Error', description: 'No se encontró a la persona a eliminar.', variant: 'destructive' });
+        return;
+    }
+    await performFirestoreAction('Eliminar persona', () => firestoreActions.deletePersonAction(
+        getCollectionRef('sessions'), 
+        getCollectionRef('people'), 
+        id,
+        personToDelete.name,
+        getCollectionRef('audit_logs'),
+        activeOperator
+    ));
   };
   
   const recordPayment = async (personId: string) => {
