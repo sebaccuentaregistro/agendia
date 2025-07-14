@@ -33,7 +33,6 @@ export function AppHeader() {
     router.push('/login');
   };
   
-  // Por ahora, esta condición siempre será falsa. Es el primer paso seguro.
   const isSuperAdmin = userProfile?.isSuperAdmin === true;
 
   return (
