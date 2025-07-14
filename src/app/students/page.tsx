@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance } from '@/types';
+import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -667,10 +667,10 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
     
     const tariff = tariffs.find(t => t.id === person.tariffId);
-    const paymentStatus = getStudentPaymentStatus(person, new Date());
+    const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     
     const getStatusBadgeClass = () => {
-        switch (paymentStatus) {
+        switch (paymentStatusInfo.status) {
             case 'Al día': return "bg-green-600 hover:bg-green-700 border-green-700 text-white";
             case 'Atrasado': return "bg-red-600 hover:bg-red-700 border-red-700 text-white";
             case 'Pendiente de Pago': return "bg-blue-600 hover:bg-blue-700 border-blue-700 text-white";
@@ -714,6 +714,14 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                 return a.time.localeCompare(b.time);
             });
     }, [sessions, actividades, specialists, spaces, person.id]);
+    
+    const renderPaymentStatus = (statusInfo: PaymentStatusInfo) => {
+      let statusText = statusInfo.status === 'Pendiente de Pago' ? 'Pago Pendiente' : statusInfo.status;
+      if (statusInfo.status === 'Atrasado' && statusInfo.daysOverdue !== undefined) {
+        statusText += ` (hace ${statusInfo.daysOverdue} ${statusInfo.daysOverdue === 1 ? 'día' : 'días'})`;
+      }
+      return statusText;
+    };
     
     return (
         <>
@@ -798,8 +806,8 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                                     </Popover>
                                 )}
                             </div>
-                            <Badge variant="secondary" className={cn("font-semibold mt-1.5 border-0", getStatusBadgeClass())}>
-                                {paymentStatus === 'Pendiente de Pago' ? 'Pago Pendiente' : paymentStatus}
+                            <Badge variant="secondary" className={cn("font-semibold mt-1.5 border-0 text-xs", getStatusBadgeClass())}>
+                               {renderPaymentStatus(paymentStatusInfo)}
                             </Badge>
                         </div>
                         <DropdownMenu>
@@ -945,7 +953,7 @@ function StudentsPageContent() {
     // Pre-filter by status from URL param
     if (statusFilterFromUrl !== 'all') {
       peopleToFilter = peopleToFilter.filter(p => {
-        if (statusFilterFromUrl === 'overdue') return getStudentPaymentStatus(p, now) === 'Atrasado';
+        if (statusFilterFromUrl === 'overdue') return getStudentPaymentStatus(p, now).status === 'Atrasado';
         if (statusFilterFromUrl === 'on-vacation') return isPersonOnVacation(p, now);
         if (statusFilterFromUrl === 'pending-recovery') return (balances[p.id] || 0) > 0;
         return true;
@@ -978,7 +986,7 @@ function StudentsPageContent() {
         nombre: p.name,
         telefono: p.phone,
         arancel: tariffs.find(t => t.id === p.tariffId)?.name || 'N/A',
-        estado_pago: getStudentPaymentStatus(p, new Date()),
+        estado_pago: getStudentPaymentStatus(p, new Date()).status,
         fecha_ingreso: p.joinDate ? format(p.joinDate, 'dd/MM/yyyy') : 'N/A',
         vencimiento_pago: p.lastPaymentDate ? format(p.lastPaymentDate, 'dd/MM/yyyy') : 'N/A',
     }));
@@ -1186,15 +1194,19 @@ function StudentsPageContent() {
                             ) : filteredPeople.length > 0 ? (
                                 filteredPeople.map((person) => {
                                     const tariff = tariffs.find(t => t.id === person.tariffId);
-                                    const paymentStatus = getStudentPaymentStatus(person, new Date());
+                                    const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
+                                    const paymentStatusText = paymentStatusInfo.status === 'Atrasado'
+                                        ? `${paymentStatusInfo.status} (${paymentStatusInfo.daysOverdue} d)`
+                                        : paymentStatusInfo.status;
+
                                     return (
                                         <TableRow key={person.id}>
                                             <TableCell className="font-medium">{person.name}</TableCell>
                                             <TableCell>{person.phone}</TableCell>
                                             <TableCell>{tariff?.name || 'N/A'}</TableCell>
                                             <TableCell>
-                                                <Badge variant="outline" className={cn('font-semibold', getStatusBadgeClass(paymentStatus))}>
-                                                    {paymentStatus}
+                                                <Badge variant="outline" className={cn('font-semibold', getStatusBadgeClass(paymentStatusInfo.status))}>
+                                                    {paymentStatusText}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
@@ -1270,4 +1282,5 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 

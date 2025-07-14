@@ -1,5 +1,6 @@
 
 
+
 export type LoginCredentials = {
   email: string;
   password: string;
@@ -108,6 +109,11 @@ export type Payment = {
   amount: number;
   tariffId: string;
   months: number;
+};
+
+export type PaymentStatusInfo = {
+  status: 'Al día' | 'Atrasado' | 'Pendiente de Pago';
+  daysOverdue?: number;
 };
 
 export type Space = {

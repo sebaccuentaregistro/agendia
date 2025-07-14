@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
@@ -364,7 +365,7 @@ function DashboardPageContent() {
     const endOfCurrentMonth = endOfMonth(now);
 
 
-    const overduePeople = people.filter(p => getStudentPaymentStatus(p, now) === 'Atrasado');
+    const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
     const overdueCount = overduePeople.length;
     
     const totalDebt = overduePeople.reduce((acc, person) => {
