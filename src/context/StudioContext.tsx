@@ -4,7 +4,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { collection, onSnapshot, doc, Timestamp, getDocs, query, where, writeBatch } from 'firebase/firestore';
-import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod, NewPersonData } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod, NewPersonData, Operator } from '@/types';
 import * as firestoreActions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
@@ -23,6 +23,7 @@ type State = {
   notifications: AppNotification[];
   tariffs: Tariff[];
   levels: Level[];
+  operators: Operator[];
 };
 
 interface StudioContextType extends State {
@@ -60,6 +61,9 @@ interface StudioContextType extends State {
     addLevel: (data: Omit<Level, 'id'>) => Promise<void>;
     updateLevel: (data: Level) => Promise<void>;
     deleteLevel: (id: string) => Promise<void>;
+    addOperator: (data: Omit<Operator, 'id'>) => Promise<void>;
+    updateOperator: (data: Operator) => Promise<void>;
+    deleteOperator: (id: string) => Promise<void>;
     isTutorialOpen: boolean;
     openTutorial: () => void;
     closeTutorial: () => void;
@@ -88,7 +92,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   
   const [state, setState] = useState<State>({
     actividades: [], specialists: [], people: [], sessions: [],
-    payments: [], spaces: [], attendance: [], notifications: [], tariffs: [], levels: [],
+    payments: [], spaces: [], attendance: [], notifications: [], tariffs: [], levels: [], operators: [],
   });
   const [loading, setLoading] = useState(true);
   const [isTutorialOpen, setIsTutorialOpen] = useState(false);
@@ -108,7 +112,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     
     const collectionsToListen: (keyof State)[] = [
       'actividades', 'specialists', 'people', 'sessions', 'payments', 
-      'spaces', 'attendance', 'notifications', 'tariffs', 'levels'
+      'spaces', 'attendance', 'notifications', 'tariffs', 'levels', 'operators'
     ];
 
     const unsubscribes = collectionsToListen.map((collectionName) => {
@@ -440,6 +444,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const dismissNotification = async (id: string) => {
     await performFirestoreAction('Descartar notificación', () => firestoreActions.deleteEntity(getDocRef('notifications', id)));
   };
+  
+  const addOperator = async (data: Omit<Operator, 'id'>) => {
+    await performFirestoreAction('Añadir operador', () => firestoreActions.addEntity(getCollectionRef('operators'), data));
+  };
+  const updateOperator = async (data: Operator) => {
+    await performFirestoreAction('Actualizar operador', () => firestoreActions.updateEntity(getDocRef('operators', data.id), data));
+  };
+  const deleteOperator = async (id: string) => {
+    await performFirestoreAction('Eliminar operador', () => firestoreActions.deleteEntity(getDocRef('operators', id)));
+  };
 
   if (authLoading || loading) {
     return (
@@ -490,6 +504,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     addLevel,
     updateLevel,
     deleteLevel,
+    addOperator,
+    updateOperator,
+    deleteOperator,
     isPersonOnVacation,
     isTutorialOpen,
     openTutorial,
