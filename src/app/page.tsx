@@ -355,7 +355,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0 };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [] };
     }
     const now = new Date();
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
@@ -368,6 +368,11 @@ function DashboardPageContent() {
     const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
     const overdueCount = overduePeople.length;
     
+    const topDebtors = overduePeople.map(person => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        return { ...person, debt: tariff?.price || 0 };
+    }).sort((a, b) => b.debt - a.debt).slice(0, 5);
+
     const totalDebt = overduePeople.reduce((acc, person) => {
         const tariff = tariffs.find(t => t.id === person.tariffId);
         return acc + (tariff?.price || 0);
@@ -389,7 +394,7 @@ function DashboardPageContent() {
     }, 0);
     
     const currentMonthIncome = payments
-        .filter(p => p.date && isWithinInterval(p.date, { start: startOfCurrentMonth, end: endOfCurrentMonth }))
+        .filter(p => p.date && isWithinInterval(p.date, { start: startOfCurrentMonth, end: endOfMonth(now) }))
         .reduce((acc, p) => acc + (tariffs.find(t => t.id === p.tariffId)?.price || 0), 0);
         
     const collectionPercentage = potentialIncome > 0 ? (currentMonthIncome / potentialIncome) * 100 : 0;
@@ -422,6 +427,7 @@ function DashboardPageContent() {
       potentialIncome,
       totalDebt,
       collectionPercentage,
+      topDebtors,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
 
@@ -434,6 +440,7 @@ function DashboardPageContent() {
     potentialIncome,
     totalDebt,
     collectionPercentage,
+    topDebtors,
   } = clientSideData;
 
   useEffect(() => {
@@ -556,294 +563,328 @@ function DashboardPageContent() {
         </Button>
       )}
 
-      <AppNotifications />
-      
-      {dashboardView === 'main' && (
-        <>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
-                    <Card className={cn(
-                        "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                        overdueCount > 0 ? "hover:border-red-500/50" : "hover:border-green-500/50"
-                    )}>
-                    <div className={cn(
-                        "absolute inset-0 bg-gradient-to-br to-transparent",
-                        overdueCount > 0 ? "from-red-500/10" : "from-green-500/10"
-                    )}></div>
-                    <div className={cn(
-                        "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                        overdueCount > 0 ? "from-red-500/20" : "from-green-500/20"
-                    )}></div>
-                    <div className={cn(
-                        "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                        overdueCount > 0 ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"
-                    )}>
-                        {overdueCount > 0 ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                    </div>
-                    <CardTitle className="text-lg font-semibold text-foreground">
-                        Atrasados
-                    </CardTitle>
-                    <p className="text-2xl font-bold text-foreground">{overdueCount}</p>
-                    </Card>
-                </Link>
-                <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
-                    <Card className={cn(
-                        "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                        pendingRecoveryCount > 0 ? "hover:border-yellow-500/50" : "hover:border-primary/50"
-                    )}>
-                    <div className={cn(
-                        "absolute inset-0 bg-gradient-to-br to-transparent",
-                        pendingRecoveryCount > 0 ? "from-yellow-500/10" : "from-primary/10"
-                    )}></div>
-                    <div className={cn(
-                        "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                        pendingRecoveryCount > 0 ? "from-yellow-500/20" : "from-primary/20"
-                    )}></div>
-                    <div className={cn(
-                        "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                         pendingRecoveryCount > 0 ? "bg-yellow-500/10 text-yellow-500" : "bg-primary/10 text-primary"
-                    )}>
-                        <CalendarClock className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold text-foreground">
-                        Recuperos
-                    </CardTitle>
-                    <p className="text-2xl font-bold text-foreground">{pendingRecoveryCount}</p>
-                    </Card>
-                </Link>
-                <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
-                    <Card className={cn(
-                        "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                        onVacationCount > 0 ? "hover:border-cyan-500/50" : "hover:border-primary/50"
-                    )}>
-                    <div className={cn(
-                        "absolute inset-0 bg-gradient-to-br to-transparent",
-                        onVacationCount > 0 ? "from-cyan-500/10" : "from-primary/10"
-                    )}></div>
-                    <div className={cn(
-                        "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                        onVacationCount > 0 ? "from-cyan-500/20" : "from-primary/20"
-                    )}></div>
-                    <div className={cn(
-                        "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                         onVacationCount > 0 ? "bg-cyan-500/10 text-cyan-500" : "bg-primary/10 text-primary"
-                    )}>
-                        <Plane className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold text-foreground">
-                        Vacaciones
-                    </CardTitle>
-                    <p className="text-2xl font-bold text-foreground">{onVacationCount}</p>
-                    </Card>
-                </Link>
-                {mainCards.map((item) => (
-                <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2 space-y-8">
+          <AppNotifications />
+        
+          {dashboardView === 'main' && (
+            <>
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                    <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
+                        <Card className={cn(
+                            "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
+                            overdueCount > 0 ? "hover:border-red-500/50" : "hover:border-green-500/50"
+                        )}>
+                        <div className={cn(
+                            "absolute inset-0 bg-gradient-to-br to-transparent",
+                            overdueCount > 0 ? "from-red-500/10" : "from-green-500/10"
+                        )}></div>
+                        <div className={cn(
+                            "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
+                            overdueCount > 0 ? "from-red-500/20" : "from-green-500/20"
+                        )}></div>
+                        <div className={cn(
+                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                            overdueCount > 0 ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"
+                        )}>
+                            {overdueCount > 0 ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
+                        </div>
+                        <CardTitle className="text-lg font-semibold text-foreground">
+                            Atrasados
+                        </CardTitle>
+                        <p className="text-2xl font-bold text-foreground">{overdueCount}</p>
+                        </Card>
+                    </Link>
+                    <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
+                        <Card className={cn(
+                            "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
+                            pendingRecoveryCount > 0 ? "hover:border-yellow-500/50" : "hover:border-primary/50"
+                        )}>
+                        <div className={cn(
+                            "absolute inset-0 bg-gradient-to-br to-transparent",
+                            pendingRecoveryCount > 0 ? "from-yellow-500/10" : "from-primary/10"
+                        )}></div>
+                        <div className={cn(
+                            "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
+                            pendingRecoveryCount > 0 ? "from-yellow-500/20" : "from-primary/20"
+                        )}></div>
+                        <div className={cn(
+                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                            pendingRecoveryCount > 0 ? "bg-yellow-500/10 text-yellow-500" : "bg-primary/10 text-primary"
+                        )}>
+                            <CalendarClock className="h-4 w-4" />
+                        </div>
+                        <CardTitle className="text-lg font-semibold text-foreground">
+                            Recuperos
+                        </CardTitle>
+                        <p className="text-2xl font-bold text-foreground">{pendingRecoveryCount}</p>
+                        </Card>
+                    </Link>
+                    <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
+                        <Card className={cn(
+                            "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
+                            onVacationCount > 0 ? "hover:border-cyan-500/50" : "hover:border-primary/50"
+                        )}>
+                        <div className={cn(
+                            "absolute inset-0 bg-gradient-to-br to-transparent",
+                            onVacationCount > 0 ? "from-cyan-500/10" : "from-primary/10"
+                        )}></div>
+                        <div className={cn(
+                            "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
+                            onVacationCount > 0 ? "from-cyan-500/20" : "from-primary/20"
+                        )}></div>
+                        <div className={cn(
+                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
+                            onVacationCount > 0 ? "bg-cyan-500/10 text-cyan-500" : "bg-primary/10 text-primary"
+                        )}>
+                            <Plane className="h-4 w-4" />
+                        </div>
+                        <CardTitle className="text-lg font-semibold text-foreground">
+                            Vacaciones
+                        </CardTitle>
+                        <p className="text-2xl font-bold text-foreground">{onVacationCount}</p>
+                        </Card>
+                    </Link>
+                    {mainCards.map((item) => (
+                    <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
+                        <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                        <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <item.icon className="h-4 w-4" />
+                        </div>
+                        <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                        {item.count !== null && (
+                        <p className="text-2xl font-bold text-foreground">{item.count}</p>
+                        )}
+                        </Card>
+                    </Link>
+                    ))}
+                    <Link href="/?view=management" className="transition-transform hover:-translate-y-1">
                     <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <item.icon className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                    {item.count !== null && (
-                    <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                    )}
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                        <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <Settings className="h-4 w-4" />
+                        </div>
+                        <CardTitle className="text-lg font-semibold text-foreground">Gestión</CardTitle>
+                        <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
                     </Card>
-                </Link>
-                ))}
-                <Link href="/?view=management" className="transition-transform hover:-translate-y-1">
-                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                    <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                    <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <Settings className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-lg font-semibold text-foreground">Gestión</CardTitle>
-                    <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-                </Card>
-                </Link>
-            </div>
-            <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
-                <CardHeader>
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <CardTitle className="text-lg text-foreground">Sesiones de Hoy - {todayName}</CardTitle>
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                        <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
-                            <SelectValue placeholder="Especialista" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Especialista</SelectItem>
-                            {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                        </Select>
-                        <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                        <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
-                            <SelectValue placeholder="Actividad" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Actividades</SelectItem>
-                            {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                        </SelectContent>
-                        </Select>
-                        <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
-                        <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
-                            <SelectValue placeholder="Espacio" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Espacios</SelectItem>
-                            {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                        </Select>
-                        <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                        <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
-                            <SelectValue placeholder="Horario" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Todo el Día</SelectItem>
-                            <SelectItem value="Mañana">Mañana</SelectItem>
-                            <SelectItem value="Tarde">Tarde</SelectItem>
-                            <SelectItem value="Noche">Noche</SelectItem>
-                        </SelectContent>
-                        </Select>
-                    </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="flex-grow">
-                    {todaysSessions.length > 0 ? (
-                    filteredSessions.length > 0 ? (
-                        <ul className="space-y-4">
-                        {filteredSessions.map(session => {
-                            const { specialist, actividad, space } = getSessionDetails(session);
-                            const enrolledCount = (session as any).enrolledCount;
-                            const capacity = space?.capacity ?? 0;
-                            const utilization = capacity > 0 ? enrolledCount / capacity : 0;
-                            const isFull = utilization >= 1;
-                            const isNearlyFull = utilization >= 0.8 && !isFull;
+                    </Link>
+                </div>
+                <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
+                    <CardHeader>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <CardTitle className="text-lg text-foreground">Sesiones de Hoy - {todayName}</CardTitle>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
+                            <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
+                                <SelectValue placeholder="Especialista" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Especialista</SelectItem>
+                                {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                            <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
+                            <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
+                                <SelectValue placeholder="Actividad" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Actividades</SelectItem>
+                                {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                            <Select value={filters.spaceId} onValueChange={(value) => handleFilterChange('spaceId', value)}>
+                            <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
+                                <SelectValue placeholder="Espacio" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Espacios</SelectItem>
+                                {spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                            <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
+                            <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
+                                <SelectValue placeholder="Horario" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Todo el Día</SelectItem>
+                                <SelectItem value="Mañana">Mañana</SelectItem>
+                                <SelectItem value="Tarde">Tarde</SelectItem>
+                                <SelectItem value="Noche">Noche</SelectItem>
+                            </SelectContent>
+                            </Select>
+                        </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                        {todaysSessions.length > 0 ? (
+                        filteredSessions.length > 0 ? (
+                            <ul className="space-y-4">
+                            {filteredSessions.map(session => {
+                                const { specialist, actividad, space } = getSessionDetails(session);
+                                const enrolledCount = (session as any).enrolledCount;
+                                const capacity = space?.capacity ?? 0;
+                                const utilization = capacity > 0 ? enrolledCount / capacity : 0;
+                                const isFull = utilization >= 1;
+                                const isNearlyFull = utilization >= 0.8 && !isFull;
 
-                            const now = new Date();
-                            const [hour, minute] = session.time.split(':').map(Number);
-                            const sessionStartTime = new Date();
-                            sessionStartTime.setHours(hour, minute, 0, 0);
-                            const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
-                            const isAttendanceAllowed = now >= attendanceWindowStart;
-                            const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes de la clase.";
+                                const now = new Date();
+                                const [hour, minute] = session.time.split(':').map(Number);
+                                const sessionStartTime = new Date();
+                                sessionStartTime.setHours(hour, minute, 0, 0);
+                                const attendanceWindowStart = new Date(sessionStartTime.getTime() - 20 * 60 * 1000);
+                                const isAttendanceAllowed = now >= attendanceWindowStart;
+                                const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes de la clase.";
 
-                            return (
-                            <li 
-                                key={session.id}
-                                className={cn(
-                                "flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-background/60 shadow-md hover:shadow-lg hover:border-primary/30",
-                                isFull && "bg-pink-500/10 border-pink-500/30",
-                                isNearlyFull && "bg-amber-500/10 border-amber-500/20"
-                                )}
-                            >
-                                <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
-                                <p className="font-semibold text-foreground">{actividad?.name || 'Sesión'}</p>
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                                    <span className="flex items-center gap-1.5"><UserIcon className="h-4 w-4" />{specialist?.name || 'N/A'}</span>
-                                    <span className="flex items-center gap-1.5"><DoorOpen className="h-4 w-4" />{space?.name || 'N/A'}</span>
-                                </div>
-                                </div>
-                                <div className="flex items-center gap-2 text-right self-end sm:self-center">
-                                    <div>
-                                    <p className="font-bold text-primary">{formatTime(session.time)}</p>
-                                    <p className={cn(
-                                        "text-base font-semibold",
-                                        isFull 
-                                        ? "text-pink-600 dark:text-pink-400" 
-                                        : isNearlyFull 
-                                        ? "text-amber-600 dark:text-amber-500" 
-                                        : "text-foreground"
-                                    )}>
-                                        {enrolledCount}/{capacity} inscriptos
-                                    </p>
+                                return (
+                                <li 
+                                    key={session.id}
+                                    className={cn(
+                                    "flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-background/60 shadow-md hover:shadow-lg hover:border-primary/30",
+                                    isFull && "bg-pink-500/10 border-pink-500/30",
+                                    isNearlyFull && "bg-amber-500/10 border-amber-500/20"
+                                    )}
+                                >
+                                    <div className="flex-1 space-y-1 cursor-pointer" onClick={() => setSelectedSessionForStudents(session)}>
+                                    <p className="font-semibold text-foreground">{actividad?.name || 'Sesión'}</p>
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                        <span className="flex items-center gap-1.5"><UserIcon className="h-4 w-4" />{specialist?.name || 'N/A'}</span>
+                                        <span className="flex items-center gap-1.5"><DoorOpen className="h-4 w-4" />{space?.name || 'N/A'}</span>
                                     </div>
-                                    <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                        <span tabIndex={0}>
-                                            <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:bg-accent" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
-                                            <ClipboardCheck className="h-5 w-5" />
-                                            <span className="sr-only">Pasar Lista</span>
-                                            </Button>
-                                        </span>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                        <p>{tooltipMessage}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                    </TooltipProvider>
-                                </div>
-                            </li>
-                            );
-                        })}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-right self-end sm:self-center">
+                                        <div>
+                                        <p className="font-bold text-primary">{formatTime(session.time)}</p>
+                                        <p className={cn(
+                                            "text-base font-semibold",
+                                            isFull 
+                                            ? "text-pink-600 dark:text-pink-400" 
+                                            : isNearlyFull 
+                                            ? "text-amber-600 dark:text-amber-500" 
+                                            : "text-foreground"
+                                        )}>
+                                            {enrolledCount}/{capacity} inscriptos
+                                        </p>
+                                        </div>
+                                        <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                            <span tabIndex={0}>
+                                                <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:bg-accent" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                                <ClipboardCheck className="h-5 w-5" />
+                                                <span className="sr-only">Pasar Lista</span>
+                                                </Button>
+                                            </span>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                            <p>{tooltipMessage}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                </li>
+                                );
+                            })}
+                            </ul>
+                        ) : (
+                            <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/60 p-10 text-center bg-muted/40 backdrop-blur-sm">
+                            <h3 className="text-lg font-semibold text-foreground">No se encontraron sesiones</h3>
+                            <p className="text-sm text-muted-foreground">Prueba a cambiar o limpiar los filtros.</p>
+                            </div>
+                        )
+                        ) : (
+                        <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/60 p-10 text-center bg-muted/40 backdrop-blur-sm">
+                            <h3 className="text-lg font-semibold text-foreground">No hay sesiones hoy</h3>
+                            <p className="text-sm text-muted-foreground">¡Día libre! Disfruta del descanso.</p>
+                        </div>
+                        )}
+                    </CardContent>
+                </Card>
+            </>
+          )}
+
+          {dashboardView === 'management' && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+                {managementCards.map((item) => (
+                  <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
+                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                      <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                          <item.icon className="h-4 w-4" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                      <p className="text-2xl font-bold text-foreground">{item.count}</p>
+                    </Card>
+                  </Link>
+                ))}
+                <div onClick={() => isPinVerified ? router.push('/?view=advanced') : setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
+                    <Card id="advanced-management-card" className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 hover:border-primary/50 border-transparent h-full">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
+                      <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                          <Lock className="h-4 w-4" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold text-foreground">Gestión Avanzada</CardTitle>
+                        <div className="text-sm text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
+                        Acceder <ArrowRight className="h-3 w-3" />
+                        </div>
+                    </Card>
+                </div>
+            </div>
+          )}
+
+          {dashboardView === 'advanced' && isPinVerified && (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                {advancedCards.map((item) => (
+                  <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
+                    <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
+                      <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                          <item.icon className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                      <p className="text-2xl font-bold text-foreground">{item.value ?? item.count}</p>
+                    </Card>
+                  </Link>
+                ))}
+            </div>
+          )}
+        </div>
+        <div className="space-y-8">
+            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                        <DollarSign className="h-5 w-5 text-red-500" />
+                        Top Deudores
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {topDebtors.length > 0 ? (
+                        <ul className="space-y-3">
+                            {topDebtors.map(person => (
+                                <li key={person.id} className="flex items-center justify-between text-sm">
+                                    <span className="font-medium text-foreground">{person.name}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="font-semibold text-red-600 dark:text-red-400">{formatPrice(person.debt)}</span>
+                                      <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                        <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                                        <span className="sr-only">Enviar WhatsApp a {person.name}</span>
+                                      </a>
+                                    </div>
+                                </li>
+                            ))}
                         </ul>
                     ) : (
-                        <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/60 p-10 text-center bg-muted/40 backdrop-blur-sm">
-                        <h3 className="text-lg font-semibold text-foreground">No se encontraron sesiones</h3>
-                        <p className="text-sm text-muted-foreground">Prueba a cambiar o limpiar los filtros.</p>
-                        </div>
-                    )
-                    ) : (
-                    <div className="flex h-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border/60 p-10 text-center bg-muted/40 backdrop-blur-sm">
-                        <h3 className="text-lg font-semibold text-foreground">No hay sesiones hoy</h3>
-                        <p className="text-sm text-muted-foreground">¡Día libre! Disfruta del descanso.</p>
-                    </div>
+                        <p className="text-sm text-center text-muted-foreground py-4">¡Excelente! No hay deudores por el momento.</p>
                     )}
                 </CardContent>
             </Card>
-        </>
-      )}
-
-      {dashboardView === 'management' && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {managementCards.map((item) => (
-              <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
-                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <item.icon className="h-4 w-4" />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                  <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                </Card>
-              </Link>
-            ))}
-            <div onClick={() => isPinVerified ? router.push('/?view=advanced') : setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
-                <Card id="advanced-management-card" className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 hover:border-primary/50 border-transparent h-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                      <Lock className="h-4 w-4" />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-foreground">Gestión Avanzada</CardTitle>
-                    <div className="text-sm text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
-                    Acceder <ArrowRight className="h-3 w-3" />
-                    </div>
-                </Card>
-            </div>
         </div>
-      )}
-
-      {dashboardView === 'advanced' && isPinVerified && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            {advancedCards.map((item) => (
-              <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
-                <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
-                  <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                      <item.icon className="h-5 w-5" />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                  <p className="text-2xl font-bold text-foreground">{item.value ?? item.count}</p>
-                </Card>
-              </Link>
-            ))}
-        </div>
-      )}
+      </div>
     
       <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
 
@@ -871,3 +912,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
