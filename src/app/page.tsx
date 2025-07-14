@@ -477,12 +477,12 @@ function DashboardPageContent() {
   ];
   
   const advancedCards = [
-     { id: 'collectionPercentage', href: "/students?filter=overdue", label: "Cobranza", icon: Percent, value: `${collectionPercentage.toFixed(0)}%`, count: null},
-     { id: 'totalDebt', href: "/students?filter=overdue", label: "Deuda Total", icon: Landmark, value: formatPrice(totalDebt), count: null},
-     { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, count: operators.length },
-     { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
-     { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
-     { id: 'activity-log', href: "/activity-log", label: "Registro Actividad", icon: ListChecks, count: null },
+     { id: 'collectionPercentage', href: "/payments", label: "Cobranza", icon: Percent, value: `${collectionPercentage.toFixed(0)}%`, count: null, colorClass: "purple" },
+     { id: 'totalDebt', href: "/students?filter=overdue", label: "Deuda Total", icon: Landmark, value: formatPrice(totalDebt), count: null, colorClass: totalDebt > 0 ? "red" : "purple" },
+     { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, count: operators.length, colorClass: "purple" },
+     { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length, colorClass: "purple" },
+     { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null, colorClass: "purple" },
+     { id: 'activity-log', href: "/activity-log", label: "Registro Actividad", icon: ListChecks, count: null, colorClass: "purple" },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
@@ -838,19 +838,38 @@ function DashboardPageContent() {
 
           {dashboardView === 'advanced' && isPinVerified && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                {advancedCards.map((item) => (
-                  <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
-                    <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
-                      <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                          <item.icon className="h-5 w-5" />
-                      </div>
-                      <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                      <p className="text-2xl font-bold text-foreground">{item.value ?? item.count}</p>
-                    </Card>
-                  </Link>
-                ))}
+                {advancedCards.map((item) => {
+                  const colorClass = item.colorClass || 'purple';
+                  return (
+                    <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
+                        <Card className={cn(
+                            "group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent h-full",
+                            colorClass === 'purple' && "hover:border-purple-500/50",
+                            colorClass === 'red' && "hover:border-red-500/50"
+                        )}>
+                            <div className={cn(
+                                "absolute inset-0 bg-gradient-to-br to-transparent",
+                                colorClass === 'purple' && "from-purple-500/10",
+                                colorClass === 'red' && "from-red-500/10"
+                            )}></div>
+                            <div className={cn(
+                                "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
+                                colorClass === 'purple' && "from-purple-500/20",
+                                colorClass === 'red' && "from-red-500/20"
+                            )}></div>
+                            <div className={cn(
+                                "flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full",
+                                colorClass === 'purple' && "bg-purple-500/10 text-purple-500",
+                                colorClass === 'red' && "bg-red-500/10 text-red-500"
+                            )}>
+                                <item.icon className="h-5 w-5" />
+                            </div>
+                            <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                            <p className="text-2xl font-bold text-foreground">{item.value ?? item.count}</p>
+                        </Card>
+                    </Link>
+                  );
+                })}
             </div>
           )}
         </div>
@@ -912,4 +931,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
