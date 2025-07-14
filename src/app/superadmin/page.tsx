@@ -7,7 +7,7 @@ import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Landmark, Users, Calendar, Star } from 'lucide-react';
 import type { Institute } from '@/types';
 import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute, getLatestActivityForInstitute, getActividadesCountForInstitute } from '@/lib/superadmin-actions';
 import { format, parseISO, differenceInDays } from 'date-fns';
@@ -62,6 +62,15 @@ export default function SuperAdminPage() {
   const sortedInstitutes = useMemo(() => {
       return [...institutes].sort((a, b) => (b.peopleCount ?? 0) - (a.peopleCount ?? 0));
   }, [institutes]);
+  
+  const globalMetrics = useMemo(() => {
+    return {
+      totalInstitutes: sortedInstitutes.length,
+      totalPeople: sortedInstitutes.reduce((sum, i) => sum + (i.peopleCount ?? 0), 0),
+      totalSessions: sortedInstitutes.reduce((sum, i) => sum + (i.sessionsCount ?? 0), 0),
+      totalActividades: sortedInstitutes.reduce((sum, i) => sum + (i.actividadesCount ?? 0), 0),
+    }
+  }, [sortedInstitutes]);
 
   const getStatus = (lastActivity: string | null | undefined): { label: string, className: string } => {
       if (!lastActivity) return { label: 'Sin Datos', className: 'bg-gray-500' };
@@ -91,6 +100,46 @@ export default function SuperAdminPage() {
         title="Panel de Superadministrador"
         description="Vista general de todos los institutos en la plataforma."
       />
+      
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Institutos</CardTitle>
+            <Landmark className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{globalMetrics.totalInstitutes}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Alumnos</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{globalMetrics.totalPeople}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Sesiones</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{globalMetrics.totalSessions}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Actividades</CardTitle>
+            <Star className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{globalMetrics.totalActividades}</div>
+          </CardContent>
+        </Card>
+      </div>
+
       <Card>
         <CardHeader>
           <CardTitle>Institutos Registrados</CardTitle>
