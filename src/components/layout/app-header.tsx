@@ -92,30 +92,33 @@ export function AppHeader() {
           )}
         <ThemeToggle />
          {activeOperator && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="h-9">
-                  <User className="mr-2 h-4 w-4" />
-                  {activeOperator.name}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                 {institute && <DropdownMenuLabel>{institute.name}</DropdownMenuLabel>}
-                 <DropdownMenuSeparator />
-                 <DropdownMenuLabel>Sesión activa</DropdownMenuLabel>
-                 <DropdownMenuSeparator />
-                 {activeOperator.role !== 'admin' && (
-                    <DropdownMenuItem onSelect={logoutOperator}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Cambiar Operador
-                    </DropdownMenuItem>
-                 )}
-                 <DropdownMenuItem onSelect={handleFullLogout} className="text-destructive focus:text-destructive">
-                   <LogOut className="mr-2 h-4 w-4" />
-                   Cerrar Sesión General
-                 </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center gap-2">
+              {institute && (
+                <span className="hidden sm:block text-sm font-semibold text-muted-foreground">{institute.name}</span>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-9">
+                    <User className="mr-2 h-4 w-4" />
+                    {activeOperator.name}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                   <DropdownMenuLabel>Sesión activa</DropdownMenuLabel>
+                   <DropdownMenuSeparator />
+                   {activeOperator.role !== 'admin' && (
+                      <DropdownMenuItem onSelect={logoutOperator}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Cambiar Operador
+                      </DropdownMenuItem>
+                   )}
+                   <DropdownMenuItem onSelect={handleFullLogout} className="text-destructive focus:text-destructive">
+                     <LogOut className="mr-2 h-4 w-4" />
+                     Cerrar Sesión General
+                   </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
          )}
       </div>
     </header>
