@@ -9,13 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
 import type { Institute } from '@/types';
-import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute } from '@/lib/superadmin-actions';
+import { getAllInstitutes, getPeopleCountForInstitute, getSessionsCountForInstitute, getLatestActivityForInstitute } from '@/lib/superadmin-actions';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 interface InstituteWithCount extends Institute {
     peopleCount?: number;
     sessionsCount?: number;
+    lastActivity?: Date | null;
 }
 
 export default function SuperAdminPage() {
@@ -39,7 +40,8 @@ export default function SuperAdminPage() {
             instituteList.map(async (institute) => {
                 const peopleCount = await getPeopleCountForInstitute(institute.id);
                 const sessionsCount = await getSessionsCountForInstitute(institute.id);
-                return { ...institute, peopleCount, sessionsCount };
+                const lastActivity = await getLatestActivityForInstitute(institute.id);
+                return { ...institute, peopleCount, sessionsCount, lastActivity };
             })
         );
 
@@ -87,6 +89,7 @@ export default function SuperAdminPage() {
                 <TableHead>Nº de Alumnos</TableHead>
                 <TableHead>Nº de Sesiones</TableHead>
                 <TableHead>Fecha de Creación</TableHead>
+                <TableHead>Última Actividad</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -103,11 +106,14 @@ export default function SuperAdminPage() {
                     <TableCell>
                       {institute.createdAt ? format(institute.createdAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
                     </TableCell>
+                    <TableCell>
+                      {institute.lastActivity ? format(institute.lastActivity, "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                     Aún no hay institutos registrados.
                   </TableCell>
                 </TableRow>

@@ -1,7 +1,7 @@
 
 'use server';
 
-import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
+import { collection, getDocs, query, orderBy, Timestamp, limit } from 'firebase/firestore';
 import { db } from './firebase';
 import type { Institute } from '@/types';
 
@@ -54,5 +54,24 @@ export async function getSessionsCountForInstitute(instituteId: string): Promise
     } catch (error) {
         console.error(`Error fetching sessions count for institute ${instituteId}:`, error);
         return 0;
+    }
+}
+
+export async function getLatestActivityForInstitute(instituteId: string): Promise<Date | null> {
+    try {
+        const auditLogRef = collection(db, 'institutes', instituteId, 'audit_logs');
+        const q = query(auditLogRef, orderBy('timestamp', 'desc'), limit(1));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) {
+            return null;
+        }
+        
+        const latestLog = snapshot.docs[0].data();
+        return latestLog.timestamp instanceof Timestamp ? latestLog.timestamp.toDate() : null;
+
+    } catch (error) {
+        console.error(`Error fetching latest activity for institute ${instituteId}:`, error);
+        return null;
     }
 }
