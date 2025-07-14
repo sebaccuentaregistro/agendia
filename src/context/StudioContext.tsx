@@ -7,6 +7,7 @@ import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator } from '@/types';
 import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from './AuthContext';
 
 interface StudioContextType {
     sessions: Session[];
@@ -25,14 +26,14 @@ interface StudioContextType {
     isTutorialOpen: boolean;
     openTutorial: () => void;
     closeTutorial: () => void;
-    addPerson: (person: NewPersonData, operator: Operator) => void;
+    addPerson: (person: NewPersonData) => void;
     updatePerson: (person: Person) => void;
-    deletePerson: (personId: string, operator: Operator) => void;
+    deletePerson: (personId: string) => void;
     addSession: (session: Omit<Session, 'id' | 'personIds'>) => void;
     updateSession: (session: Session) => void;
     deleteSession: (sessionId: string) => void;
     enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
-    recordPayment: (personId: string, operator: Operator) => void;
+    recordPayment: (personId: string) => void;
     revertLastPayment: (personId: string) => void;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
@@ -89,32 +90,13 @@ const safelyParseDate = (data: any, field: string) => {
 
 export function StudioProvider({ children }: { children: ReactNode }) {
     const { toast } = useToast();
+    const { activeOperator, institute } = useAuth();
     const [loading, setLoading] = useState(true);
     const [data, setData] = useState<Record<string, any[]>>({
         ...Object.fromEntries(Object.keys(collections).map(key => [key, []]))
     });
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
-    const [instituteId, setInstituteId] = useState<string | null>(null);
-
-    useEffect(() => {
-        const fetchInstituteId = async () => {
-            const { getAuth, onAuthStateChanged } = await import('firebase/auth');
-            const { getDoc, doc } = await import('firebase/firestore');
-            const { db } = await import('@/lib/firebase');
-            const auth = getAuth();
-            onAuthStateChanged(auth, async (user) => {
-                if(user){
-                    const userDocSnap = await getDoc(doc(db, 'users', user.uid));
-                    if(userDocSnap.exists()) {
-                        setInstituteId(userDocSnap.data().instituteId);
-                    }
-                } else {
-                    setInstituteId(null);
-                }
-            });
-        };
-        fetchInstituteId();
-    }, []);
+    const instituteId = institute?.id;
 
     const collectionRefs = useMemo(() => {
         if (!instituteId) return null;
@@ -127,19 +109,22 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     useEffect(() => {
         if (!collectionRefs) {
-            setLoading(true);
+            setLoading(false);
+            // Clear all data if there's no institute ID
+            setData({ ...Object.fromEntries(Object.keys(collections).map(key => [key, []])) });
             return;
         }
 
         setLoading(true);
-        const unsubscribers = Object.entries(collectionRefs).map(([key, ref]) => {
+        const unsubscribers: Unsubscribe[] = [];
+
+        Object.entries(collectionRefs).forEach(([key, ref]) => {
             let q = ref;
-            // Apply sorting for specific collections if needed
             if (['audit_logs', 'payments'].includes(key)) {
                 q = query(ref, orderBy('timestamp', 'desc'));
             }
 
-            return onSnapshot(q, (snapshot) => {
+            const unsub = onSnapshot(q, (snapshot) => {
                 const items = snapshot.docs.map(doc => {
                     const docData = doc.data();
                     
@@ -160,16 +145,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     }
                     return { id: doc.id, ...docData };
                 });
-
+                
                 setData(prevData => ({ ...prevData, [key]: items }));
+
             }, (error) => {
                 console.error(`Error fetching ${key}:`, error);
                 toast({ variant: 'destructive', title: 'Error de Sincronización', description: `No se pudo cargar la colección ${key}.` });
             });
+            unsubscribers.push(unsub);
         });
-
-        const allDataLoaded = () => Object.values(data).every(arr => arr.length > 0 || !loading);
-        if (allDataLoaded()) setLoading(false);
         
         // This is a failsafe to ensure loading state becomes false even if some collections are empty
         const timer = setTimeout(() => setLoading(false), 3000);
@@ -180,6 +164,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         };
     }, [collectionRefs, toast]);
 
+     // Update loading state only when all collections have been processed at least once
+    useEffect(() => {
+        if (!collectionRefs) return;
+        const initialLoadComplete = Object.keys(collectionRefs).every(key => data[key] !== undefined);
+        if(initialLoadComplete) {
+            setLoading(false);
+        }
+    }, [data, collectionRefs]);
+
     const handleAction = async (action: Promise<any>, successMessage: string, errorMessage: string) => {
         try {
             await action;
@@ -189,11 +182,19 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             toast({ variant: 'destructive', title: "Error", description: error.message || errorMessage });
         }
     };
+    
+    const withOperator = (action: (op: Operator) => Promise<any>, successMessage: string, errorMessage: string) => {
+        if (!activeOperator) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo identificar al operador. Por favor, reinicia sesión.' });
+            return;
+        }
+        handleAction(action(activeOperator), successMessage, errorMessage);
+    };
 
-    const addPerson = (personData: NewPersonData, operator: Operator) => {
+    const addPerson = (personData: NewPersonData) => {
         if (!collectionRefs) return;
-        handleAction(
-            addPersonAction(collectionRefs.people, personData, collectionRefs.audit_logs, operator),
+        withOperator(
+            (operator) => addPersonAction(collectionRefs.people, personData, collectionRefs.audit_logs, operator),
             `${personData.name} ha sido añadido con éxito.`,
             `Error al añadir a ${personData.name}.`
         );
@@ -208,20 +209,20 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const deletePerson = (personId: string, operator: Operator) => {
+    const deletePerson = (personId: string) => {
         if (!collectionRefs) return;
         const personToDelete = data.people.find(p => p.id === personId);
         if (!personToDelete) return;
 
-        handleAction(
-            deletePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, operator),
+        withOperator(
+            (operator) => deletePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, operator),
             `${personToDelete.name} ha sido eliminado.`,
             `Error al eliminar a ${personToDelete.name}.`
         );
     };
     
-    const recordPayment = async (personId: string, operator: Operator) => {
-        if (!collectionRefs) return;
+    const recordPayment = async (personId: string) => {
+        if (!collectionRefs || !activeOperator) return;
         const person = data.people.find((p: Person) => p.id === personId);
         if (!person) return;
         const tariff = data.tariffs.find((t: Tariff) => t.id === person.tariffId);
@@ -229,8 +230,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             toast({ variant: 'destructive', title: 'Error', description: 'La persona no tiene un arancel asignado.' });
             return;
         }
-        await handleAction(
-            recordPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), person, tariff, collectionRefs.audit_logs, operator),
+        await withOperator(
+            (operator) => recordPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), person, tariff, collectionRefs.audit_logs, operator),
             `Pago registrado para ${person.name}.`,
             `Error al registrar el pago.`
         );
