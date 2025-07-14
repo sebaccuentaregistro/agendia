@@ -167,7 +167,7 @@ export default function SuperAdminPage() {
               {sortedInstitutes.length > 0 ? (
                 sortedInstitutes.map(institute => {
                   const status = getStatus(institute.lastActivity);
-                  const instituteCreatedAt = institute.createdAt ? parseISO(institute.createdAt) : null;
+                  const instituteCreatedAt = institute.createdAt;
                   
                   return (
                     <TableRow key={institute.id}>
