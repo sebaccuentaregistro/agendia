@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { Person } from "@/types";
-import { set, isBefore, addMonths, isAfter, differenceInDays, addDays, format, getDate, getDaysInMonth } from "date-fns";
+import { set, isBefore, addMonths, isAfter, differenceInDays, addDays, format, getDate, getDaysInMonth, startOfDay } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -50,15 +50,18 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): Pa
     return { status: 'Atrasado', daysOverdue: 999 };
   }
   
-  const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
+  const today = startOfDay(referenceDate);
+  const dueDateAtStartOfDay = startOfDay(nextDueDate);
 
-  const isOverdue = isAfter(today, nextDueDate) && (person.paymentBalance ?? 0) <= 0;
+  // A person is overdue if today is AT or AFTER the due date, and their balance is not positive.
+  const isOverdue = !isBefore(today, dueDateAtStartOfDay) && (person.paymentBalance ?? 0) <= 0;
   
   if (isOverdue) {
-    const daysOverdue = differenceInDays(today, nextDueDate);
-    return { status: 'Atrasado', daysOverdue };
+    const daysOverdue = differenceInDays(today, dueDateAtStartOfDay);
+    return { status: 'Atrasado', daysOverdue: Math.max(0, daysOverdue) }; // Ensure it's not negative if paid on the same day
   }
   
+  // This can happen if a payment is reverted manually
   if ((person.paymentBalance ?? 0) < 0) {
     return { status: 'Atrasado', daysOverdue: 0 };
   }
