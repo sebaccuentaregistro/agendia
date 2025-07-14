@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { KeyRound, MoreVertical, Pencil, PlusCircle, Shield, Trash2, User } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -19,6 +19,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -26,13 +27,67 @@ const formSchema = z.object({
   role: z.enum(['admin', 'staff'], { required_error: 'Debes seleccionar un rol.' }),
 });
 
+function PinVerificationDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
+  const { validatePin, setPinVerified } = useAuth();
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
+  const { toast } = useToast();
+  
+  const handleVerify = async () => {
+    setError('');
+    const isValid = await validatePin(pin);
+    if (isValid) {
+      setPinVerified(true);
+      toast({ title: "Acceso concedido", description: "PIN de propietario verificado." });
+      onOpenChange(false);
+    } else {
+      setError("PIN incorrecto. Inténtalo de nuevo.");
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Verificar PIN de Propietario</DialogTitle>
+          <DialogDescription>
+            Para gestionar operadores, primero debes introducir tu PIN de 4 dígitos.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4 space-y-2">
+          <Input
+            type="password"
+            maxLength={4}
+            value={pin}
+            onChange={e => setPin(e.target.value)}
+            className="w-40 mx-auto text-center text-2xl tracking-[1rem]"
+            placeholder="----"
+          />
+          {error && <p className="text-sm text-center text-destructive">{error}</p>}
+        </div>
+        <DialogFooter>
+          <Button onClick={handleVerify}>Verificar y Desbloquear</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 export default function OperatorsPage() {
   const { operators, addOperator, updateOperator, deleteOperator, loading } = useStudio();
-  const { isPinVerified } = useAuth();
+  const { isPinVerified, setPinVerified } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPinVerificationOpen, setIsPinVerificationOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedOperator, setSelectedOperator] = useState<Operator | undefined>(undefined);
   const [operatorToDelete, setOperatorToDelete] = useState<Operator | null>(null);
+
+  useEffect(() => {
+    if (!isPinVerified) {
+      setIsPinVerificationOpen(true);
+    }
+  }, [isPinVerified]);
 
   const sortedOperators = useMemo(() => {
     return [...operators].sort((a, b) => a.name.localeCompare(b.name));
@@ -136,14 +191,23 @@ export default function OperatorsPage() {
       </PageHeader>
       
        {!isPinVerified && (
-          <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
-            <CardHeader>
-              <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>
-              <CardDescription className="text-slate-600 dark:text-slate-400">
-                Esta sección solo puede ser gestionada por el propietario del estudio. Por favor, verifica tu PIN de propietario desde la pantalla de inicio para acceder.
-              </CardDescription>
-            </CardHeader>
-          </Card>
+          <>
+            <PinVerificationDialog open={isPinVerificationOpen} onOpenChange={setIsPinVerificationOpen} />
+            <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                <CardHeader>
+                <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-400">
+                    Necesitas verificar tu PIN de propietario para gestionar esta sección.
+                </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={() => setIsPinVerificationOpen(true)}>
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        Verificar PIN
+                    </Button>
+                </CardContent>
+            </Card>
+          </>
       )}
 
       {isPinVerified && (
