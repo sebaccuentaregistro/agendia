@@ -44,6 +44,7 @@ const personFormSchema = z.object({
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
+  lastPaymentDate: z.date().nullable().optional(),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -570,6 +571,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
         tariffId: '',
         healthInfo: '',
         notes: '',
+        lastPaymentDate: null,
     }
   });
   
@@ -583,6 +585,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
+            lastPaymentDate: person.lastPaymentDate,
           });
         } else {
           form.reset({
@@ -592,6 +595,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
             tariffId: '',
             healthInfo: '',
             notes: '',
+            lastPaymentDate: null,
           });
         }
     }
@@ -605,6 +609,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
         levelId: values.levelId === 'none' ? undefined : values.levelId,
         healthInfo: values.healthInfo,
         notes: values.notes,
+        lastPaymentDate: values.lastPaymentDate,
     };
     
     if (person) {
@@ -621,13 +626,16 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{person ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle>
+           <DialogDescription>
+            {person ? 'Actualiza los datos de la persona.' : 'Añade un nuevo alumno a tu estudio.'}
+          </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField control={form.control} name="name" render={({ field }) => (
               <FormItem><FormLabel>Nombre completo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <FormField control={form.control} name="phone" render={({ field }) => (
                 <FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
               )}/>
@@ -638,15 +646,46 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
                 </Select><FormMessage /></FormItem>
               )}/>
             </div>
-             <FormField control={form.control} name="levelId" render={({ field }) => (
-                <FormItem><FormLabel>Nivel (Opcional)</FormLabel><Select onValueChange={field.onChange} value={field.value || 'none'}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">Sin nivel</SelectItem>
-                      {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                    </SelectContent>
-                </Select><FormMessage /></FormItem>
-            )}/>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <FormField control={form.control} name="levelId" render={({ field }) => (
+                    <FormItem><FormLabel>Nivel (Opcional)</FormLabel><Select onValueChange={field.onChange} value={field.value || 'none'}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Sin nivel</SelectItem>
+                          {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select><FormMessage /></FormItem>
+                )}/>
+                <FormField
+                  control={form.control}
+                  name="lastPaymentDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Próximo Vencimiento</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                            >
+                              {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Sin fecha</span>}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
+                        </PopoverContent>
+                      </Popover>
+                       <FormDescription className="text-xs">
+                        Si se deja en blanco, el estado será "Pendiente de Pago".
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+            </div>
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
             )}/>
@@ -1321,6 +1360,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 

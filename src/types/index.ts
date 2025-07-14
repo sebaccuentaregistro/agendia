@@ -88,6 +88,7 @@ export type NewPersonData = {
     levelId?: string;
     healthInfo?: string;
     notes?: string;
+    lastPaymentDate?: Date | null;
 };
 
 

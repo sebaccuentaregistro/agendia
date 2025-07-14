@@ -47,7 +47,7 @@ export const addPersonAction = async (peopleRef: CollectionReference, personData
         healthInfo: personData.healthInfo,
         notes: personData.notes,
         joinDate: joinDate,
-        lastPaymentDate: null, // New members start with a null payment date
+        lastPaymentDate: personData.lastPaymentDate || null, // Allow setting initial due date
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
         paymentBalance: 0,
@@ -397,4 +397,5 @@ export const deleteWithUsageCheckAction = async (
         throw new Error(usageMessages.join('\n\n'));
     }
 };
+
 
