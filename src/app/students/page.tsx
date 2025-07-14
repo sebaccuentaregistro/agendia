@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -12,7 +11,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +32,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertTitle, AlertDescription as AlertDescriptionComponent } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 
@@ -354,10 +353,10 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                 {isOverLimit && (
                     <Alert variant="destructive" className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 [&>svg]:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle className="text-sm font-semibold">Atención</AlertTitle>
-                        <AlertDescription>
+                        <AlertTitle>Atención</AlertTitle>
+                        <AlertDescriptionComponent>
                             Con {watchedSessionIds.length} clases, {person.name} supera el límite de {tariffFrequency} de su plan. Puedes inscribirlo igualmente.
-                        </AlertDescription>
+                        </AlertDescriptionComponent>
                     </Alert>
                 )}
 
@@ -1392,7 +1391,4 @@ export default function StudentsPage() {
   );
 }
 
-
-
-
-
+    
