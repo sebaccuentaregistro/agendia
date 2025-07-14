@@ -3,8 +3,8 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { KeyRound, MoreVertical, Pencil, PlusCircle, Shield, Trash2, User } from 'lucide-react';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { KeyRound, MoreVertical, Pencil, PlusCircle, Shield, Trash2, User, ArrowLeft } from 'lucide-react';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -20,6 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -141,7 +142,17 @@ export default function OperatorsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-8">
+      {isPinVerified && (
+        <div className="flex justify-start">
+            <Button variant="outline" asChild>
+                <Link href="/?view=advanced">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Volver a Gestión Avanzada
+                </Link>
+            </Button>
+        </div>
+      )}
       <PageHeader title="Operadores del Sistema">
         {isPinVerified && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -272,7 +283,7 @@ export default function OperatorsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
             <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente al operador y su acceso.</AlertDialogDescription>
-          </AlertDialogHeader>
+          </AlertDialogFooter>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => setOperatorToDelete(null)}>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Sí, eliminar operador</AlertDialogAction>

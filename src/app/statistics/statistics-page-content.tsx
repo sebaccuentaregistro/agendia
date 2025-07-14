@@ -12,7 +12,9 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, ClipboardCheck, Divide } from 'lucide-react';
+import { Users, ClipboardCheck, Divide, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 
 export default function StatisticsPageContent() {
@@ -228,6 +230,14 @@ export default function StatisticsPageContent() {
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-start">
+            <Button variant="outline" asChild>
+                <Link href="/?view=advanced">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Volver a Gestión Avanzada
+                </Link>
+            </Button>
+        </div>
       <PageHeader title="Estadísticas del Estudio" />
         <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
             <CardHeader>

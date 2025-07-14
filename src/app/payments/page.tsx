@@ -4,7 +4,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { FileDown, Calendar as CalendarIcon, Wallet, TrendingUp, ArrowDownUp, Banknote } from 'lucide-react';
+import { FileDown, Calendar as CalendarIcon, Wallet, TrendingUp, ArrowDownUp, Banknote, ArrowLeft } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,6 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 function PaymentsPageContent() {
     const { payments, people, tariffs, loading } = useStudio();
@@ -118,6 +119,14 @@ function PaymentsPageContent() {
 
     return (
         <div className="space-y-8">
+            <div className="flex justify-start">
+                 <Button variant="outline" asChild>
+                    <Link href="/?view=advanced">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Volver a Gestión Avanzada
+                    </Link>
+                </Button>
+            </div>
             <PageHeader title="Gestión de Pagos" description="Analiza y gestiona los ingresos de tu estudio." />
             
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

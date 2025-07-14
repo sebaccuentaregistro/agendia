@@ -13,6 +13,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { ArrowLeft } from 'lucide-react';
 
 function ActivityLogContent() {
     const { audit_logs, loading } = useStudio();
@@ -57,6 +60,14 @@ function ActivityLogContent() {
     
     return (
         <div className="space-y-8">
+            <div className="flex justify-start">
+                <Button variant="outline" asChild>
+                    <Link href="/?view=advanced">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Volver a Gestión Avanzada
+                    </Link>
+                </Button>
+            </div>
             <PageHeader title="Registro de Actividad" description="Historial de acciones importantes realizadas en el sistema." />
             <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
                 <CardContent className="p-0">
