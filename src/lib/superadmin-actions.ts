@@ -34,3 +34,14 @@ export async function getAllInstitutes(): Promise<Institute[]> {
     return [];
   }
 }
+
+export async function getPeopleCountForInstitute(instituteId: string): Promise<number> {
+    try {
+        const peopleRef = collection(db, 'institutes', instituteId, 'people');
+        const snapshot = await getDocs(peopleRef);
+        return snapshot.size;
+    } catch (error) {
+        console.error(`Error fetching people count for institute ${instituteId}:`, error);
+        return 0;
+    }
+}

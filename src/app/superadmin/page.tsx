@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/page-header';
@@ -9,32 +9,53 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2 } from 'lucide-react';
 import type { Institute } from '@/types';
-import { getAllInstitutes } from '@/lib/superadmin-actions';
+import { getAllInstitutes, getPeopleCountForInstitute } from '@/lib/superadmin-actions';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+interface InstituteWithCount extends Institute {
+    peopleCount?: number;
+}
 
 export default function SuperAdminPage() {
   const { userProfile, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [institutes, setInstitutes] = useState<Institute[]>([]);
+  const [institutes, setInstitutes] = useState<InstituteWithCount[]>([]);
   const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
-    if (!authLoading && userProfile?.isSuperAdmin !== true) {
-      router.push('/');
-      return;
-    }
-    
-    if (userProfile?.isSuperAdmin) {
-      const fetchInstitutes = async () => {
+    if (!authLoading) {
+      if (userProfile?.isSuperAdmin !== true) {
+        router.push('/');
+        return;
+      }
+      
+      const fetchInstitutesAndCounts = async () => {
         setPageLoading(true);
         const instituteList = await getAllInstitutes();
-        setInstitutes(instituteList);
+        
+        // Fetch people count for each institute
+        const institutesWithCounts = await Promise.all(
+            instituteList.map(async (institute) => {
+                const count = await getPeopleCountForInstitute(institute.id);
+                return { ...institute, peopleCount: count };
+            })
+        );
+
+        setInstitutes(institutesWithCounts);
         setPageLoading(false);
       };
-      fetchInstitutes();
+
+      if (userProfile?.isSuperAdmin) {
+        fetchInstitutesAndCounts();
+      }
     }
   }, [userProfile, authLoading, router]);
+
+  const sortedInstitutes = useMemo(() => {
+      return [...institutes].sort((a, b) => (b.peopleCount ?? 0) - (a.peopleCount ?? 0));
+  }, [institutes]);
+
 
   if (authLoading || pageLoading) {
     return (
@@ -62,14 +83,18 @@ export default function SuperAdminPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre del Instituto</TableHead>
+                <TableHead>Nº de Alumnos</TableHead>
                 <TableHead>Fecha de Creación</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {institutes.length > 0 ? (
-                institutes.map(institute => (
+              {sortedInstitutes.length > 0 ? (
+                sortedInstitutes.map(institute => (
                   <TableRow key={institute.id}>
                     <TableCell className="font-medium">{institute.name}</TableCell>
+                    <TableCell>
+                      <span className="font-semibold">{institute.peopleCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
+                    </TableCell>
                     <TableCell>
                       {institute.createdAt ? format(institute.createdAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
                     </TableCell>
@@ -77,7 +102,7 @@ export default function SuperAdminPage() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={2} className="h-24 text-center">
+                  <TableCell colSpan={3} className="h-24 text-center">
                     Aún no hay institutos registrados.
                   </TableCell>
                 </TableRow>
