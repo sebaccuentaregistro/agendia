@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ReactNode } from 'react';
@@ -13,6 +14,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     const pathname = usePathname();
 
     const isAuthPage = pathname === '/login';
+    const isOperatorsPage = pathname === '/operators';
 
     if (loading) {
         return (
@@ -27,16 +29,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     
     if (!user || !userProfile || userProfile.status !== 'active') {
+        // This should be handled by the redirect effect in AuthContext, but as a fallback:
         return (
             <div className="flex h-screen w-full items-center justify-center">
                 <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
             </div>
         );
     }
-
-    // After main login, if no operator is active, show the PIN screen.
-    // The PIN screen needs StudioProvider to get the list of operators.
-    if (!activeOperator) {
+    
+    // If no operator is selected, show the PIN screen, UNLESS we're trying to access the operators page itself.
+    if (!activeOperator && !isOperatorsPage) {
         return (
              <StudioProvider>
                 <OperatorLoginScreen />
@@ -44,7 +46,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         )
     }
 
-    // If we are on a protected route and the user and operator are fully authenticated
+    // If we are on a protected route and the user and operator are fully authenticated (or going to operators page)
     return (
         <StudioProvider>
             <div className="flex min-h-screen w-full flex-col">
