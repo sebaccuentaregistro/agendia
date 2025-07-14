@@ -33,33 +33,37 @@ export function calculateNextPaymentDate(fromDate: Date, joinDate?: Date | null,
 }
 
 
-// This function checks if a person's payment is up-to-date.
-export function getStudentPaymentStatus(person: Person, referenceDate: Date): 'Al día' | 'Atrasado' | 'Pendiente de Pago' {
+export type PaymentStatus = {
+  status: 'Al día' | 'Atrasado' | 'Pendiente de Pago';
+  daysOverdue?: number;
+};
+
+export function getStudentPaymentStatus(person: Person, referenceDate: Date): PaymentStatus {
   const nextDueDate = person.lastPaymentDate;
   
-  // If there's no payment date, they have a pending initial payment.
   if (!nextDueDate) {
-    return 'Pendiente de Pago';
+    return { status: 'Pendiente de Pago' };
   }
   
   if (!(nextDueDate instanceof Date) || isNaN(nextDueDate.getTime())) {
     console.warn(`Invalid 'lastPaymentDate' for person ${person.id}:`, nextDueDate);
-    return 'Atrasado'; // Treat invalid dates as overdue.
+    return { status: 'Atrasado', daysOverdue: 999 };
   }
   
   const today = set(referenceDate, { hours: 0, minutes: 0, seconds: 0, milliseconds: 0 });
 
-  // A person is overdue if their next payment date has passed AND their balance isn't positive.
-  if (isAfter(today, nextDueDate) && (person.paymentBalance ?? 0) <= 0) {
-     return 'Atrasado';
+  const isOverdue = isAfter(today, nextDueDate) && (person.paymentBalance ?? 0) <= 0;
+  
+  if (isOverdue) {
+    const daysOverdue = differenceInDays(today, nextDueDate);
+    return { status: 'Atrasado', daysOverdue };
   }
   
-  // Also, if their balance is negative, they are overdue regardless of the date.
   if ((person.paymentBalance ?? 0) < 0) {
-    return 'Atrasado';
+    return { status: 'Atrasado', daysOverdue: 0 };
   }
   
-  return 'Al día';
+  return { status: 'Al día' };
 }
 
 
