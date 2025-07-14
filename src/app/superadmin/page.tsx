@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Loader2, Landmark, Users, Calendar, Star, MoreHorizontal, Edit } from 'lucide-react';
 import type { Institute } from '@/types';
-import { getAllInstitutes } from '@/lib/superadmin-actions';
+import { getAllInstitutes, getMonthlyNewPeopleCount } from '@/lib/superadmin-actions';
 import { format, differenceInDays, addMonths, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
