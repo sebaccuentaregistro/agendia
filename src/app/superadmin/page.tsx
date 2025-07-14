@@ -14,6 +14,7 @@ import { format, differenceInDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { AdminCharts } from './charts';
+import { Badge } from '@/components/ui/badge';
 
 interface InstituteWithCount extends Institute {
     peopleCount?: number;
@@ -73,7 +74,7 @@ export default function SuperAdminPage() {
     }
   }, [sortedInstitutes]);
 
-  const getStatus = (lastActivity: Date | null | undefined): { label: string, className: string } => {
+  const getUsageStatus = (lastActivity: Date | null | undefined): { label: string, className: string } => {
       if (!lastActivity) return { label: 'Sin Datos', className: 'bg-gray-500' };
       
       const daysSinceActivity = differenceInDays(new Date(), lastActivity);
@@ -86,6 +87,20 @@ export default function SuperAdminPage() {
       }
       return { label: 'En Riesgo', className: 'bg-red-600' };
   }
+  
+  const getPaymentStatusBadge = (status: Institute['paymentStatus']) => {
+    switch (status) {
+        case 'pagado':
+            return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700';
+        case 'vencido':
+            return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700';
+        case 'pendiente':
+            return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700';
+        default:
+            return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600';
+    }
+  };
+
 
   if (authLoading || pageLoading) {
     return (
@@ -154,41 +169,39 @@ export default function SuperAdminPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Estado</TableHead>
+                <TableHead>Estado de Uso</TableHead>
                 <TableHead>Nombre del Instituto</TableHead>
+                <TableHead>Estado de Pago</TableHead>
+                <TableHead>Próximo Vencimiento</TableHead>
                 <TableHead>Nº de Alumnos</TableHead>
-                <TableHead>Nº de Sesiones</TableHead>
-                <TableHead>Nº de Actividades</TableHead>
-                <TableHead>Fecha de Creación</TableHead>
                 <TableHead>Última Actividad</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {sortedInstitutes.length > 0 ? (
                 sortedInstitutes.map(institute => {
-                  const status = getStatus(institute.lastActivity);
+                  const usageStatus = getUsageStatus(institute.lastActivity);
                   const instituteCreatedAt = institute.createdAt;
                   
                   return (
                     <TableRow key={institute.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          <span className={cn("h-2.5 w-2.5 rounded-full", status.className)}></span>
-                          <span className="text-sm font-medium">{status.label}</span>
+                          <span className={cn("h-2.5 w-2.5 rounded-full", usageStatus.className)}></span>
+                          <span className="text-sm font-medium">{usageStatus.label}</span>
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{institute.name}</TableCell>
                       <TableCell>
+                        <Badge variant="outline" className={cn("capitalize", getPaymentStatusBadge(institute.paymentStatus))}>
+                            {institute.paymentStatus || 'N/A'}
+                        </Badge>
+                      </TableCell>
+                       <TableCell>
+                        {institute.nextDueDate ? format(institute.nextDueDate, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
+                      </TableCell>
+                      <TableCell>
                         <span className="font-semibold">{institute.peopleCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-semibold">{institute.sessionsCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-semibold">{institute.actividadesCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
-                      </TableCell>
-                      <TableCell>
-                        {instituteCreatedAt ? format(instituteCreatedAt, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
                       </TableCell>
                       <TableCell>
                         {institute.lastActivity ? format(institute.lastActivity, "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
