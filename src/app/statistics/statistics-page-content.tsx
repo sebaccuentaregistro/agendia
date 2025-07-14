@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo, useState, useEffect } from 'react';
@@ -24,6 +25,7 @@ export default function StatisticsPageContent() {
     if (!isMounted) return {
       sessionPopularityByTime: [],
       monthlyNewMembers: [],
+      monthlyRevenue: [],
       retentionData: { threeMonths: { rate: 0, total: 0, active: 0, label: '' }, sixMonths: { rate: 0, total: 0, active: 0, label: '' } },
       activityPopularity: [],
       activityRevenue: [],
@@ -38,8 +40,9 @@ export default function StatisticsPageContent() {
       return acc;
     }, {});
 
+    const monthLabels = Array.from({ length: 12 }).map((_, i) => format(startOfMonth(subMonths(now, i)), 'yyyy-MM')).reverse();
+    
     const monthlyNewMembers = (() => {
-      const monthLabels = Array.from({ length: 12 }).map((_, i) => format(startOfMonth(subMonths(now, i)), 'yyyy-MM')).reverse();
       const memberCounts = people.reduce<Record<string, number>>((acc, person) => {
         if (!person.joinDate || !(person.joinDate instanceof Date) || isNaN(person.joinDate.getTime())) return acc;
         const monthKey = format(person.joinDate, 'yyyy-MM');
@@ -50,6 +53,22 @@ export default function StatisticsPageContent() {
         month: format(new Date(`${monthKey}-02`), 'MMM yy', { locale: es }),
         nuevasPersonas: memberCounts[monthKey] || 0,
       }));
+    })();
+    
+    const monthlyRevenue = (() => {
+        const revenueCounts = payments.reduce<Record<string, number>>((acc, payment) => {
+            if (!payment.date || !(payment.date instanceof Date) || isNaN(payment.date.getTime())) return acc;
+            const monthKey = format(payment.date, 'yyyy-MM');
+            const tariff = tariffs.find(t => t.id === payment.tariffId);
+            if (tariff && monthLabels.includes(monthKey)) {
+                acc[monthKey] = (acc[monthKey] || 0) + tariff.price;
+            }
+            return acc;
+        }, {});
+         return monthLabels.map(monthKey => ({
+            month: format(new Date(`${monthKey}-02`), 'MMM yy', { locale: es }),
+            ingresos: revenueCounts[monthKey] || 0,
+        }));
     })();
 
     const retentionData = (() => {
@@ -129,6 +148,7 @@ export default function StatisticsPageContent() {
     return {
       sessionPopularityByTime: Object.entries(sessionPopularityByTime).map(([time, people]) => ({ time, personas: people })).sort((a, b) => a.time.localeCompare(b.time)),
       monthlyNewMembers,
+      monthlyRevenue,
       retentionData,
       activityPopularity,
       activityRevenue,
@@ -208,6 +228,27 @@ export default function StatisticsPageContent() {
               </LineChart>
             </ChartContainer>
           </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
+            <CardHeader>
+                <CardTitle className="text-slate-800 dark:text-slate-100">Evolución de Ingresos Mensuales</CardTitle>
+                <CardDescription className="text-slate-600 dark:text-slate-400">Total de ingresos registrados por mes en los últimos 12 meses.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                    <LineChart data={chartData.monthlyRevenue} margin={{ top: 20, right: 30, left: 10, bottom: 5 }}>
+                        <CartesianGrid vertical={false} />
+                        <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                        <YAxis tickFormatter={(value) => `$${value / 1000}k`} />
+                        <RechartsTooltip 
+                            cursor={{ fill: 'rgba(128, 128, 128, 0.1)' }}
+                            formatter={(value: number) => formatPrice(value)}
+                        />
+                        <Line type="monotone" dataKey="ingresos" stroke="var(--color-ingresos)" strokeWidth={2} dot={{ r: 4, fill: "var(--color-ingresos)" }} activeDot={{ r: 6 }} name="Ingresos" />
+                    </LineChart>
+                </ChartContainer>
+            </CardContent>
         </Card>
         
         <Card className="lg:col-span-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
@@ -299,3 +340,4 @@ export default function StatisticsPageContent() {
     </div>
   );
 }
+
