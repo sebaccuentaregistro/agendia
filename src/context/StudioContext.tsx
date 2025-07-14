@@ -2,11 +2,12 @@
 
 
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { collection, onSnapshot, doc, Timestamp, getDocs, query, where, writeBatch } from 'firebase/firestore';
-import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod, NewPersonData, Operator } from '@/types';
+import type { Actividad, Specialist, Person, Session, Payment, Space, SessionAttendance, AppNotification, Tariff, Level, VacationPeriod, NewPersonData, Operator, AuditLog } from '@/types';
 import * as firestoreActions from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
@@ -26,10 +27,10 @@ type State = {
   tariffs: Tariff[];
   levels: Level[];
   operators: Operator[];
-  audit_logs: any[]; // Placeholder for now
+  audit_logs: AuditLog[];
 };
 
-interface StudioContextType extends Omit<State, 'audit_logs'> {
+interface StudioContextType extends State {
     loading: boolean;
     addActividad: (data: Omit<Actividad, 'id'>) => Promise<void>;
     updateActividad: (data: Actividad) => Promise<void>;
@@ -125,7 +126,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             id: doc.id,
             ...convertTimestamps(doc.data()),
         }));
-        setState(prev => ({ ...prev, [collectionName]: data }));
+        setState(prev => ({ ...prev, [collectionName]: data as any }));
       }, (error) => {
         console.error(`Error fetching ${collectionName}:`, error);
         toast({ title: `Error al cargar ${collectionName}`, description: error.message, variant: 'destructive' });
@@ -499,10 +500,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     );
   }
   
-  const { audit_logs, ...restOfState } = state;
-
   const contextValue: StudioContextType = {
-    ...restOfState,
+    ...state,
     loading,
     addActividad,
     updateActividad,

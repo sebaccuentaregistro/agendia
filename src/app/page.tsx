@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'reac
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Institute } from '@/types';
@@ -474,6 +474,7 @@ function DashboardPageContent() {
      { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, count: operators.length },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null },
+     { id: 'activity-log', href: "/activity-log", label: "Registro Actividad", icon: ListChecks, count: null },
   ];
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {

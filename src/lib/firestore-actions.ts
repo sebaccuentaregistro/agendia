@@ -1,6 +1,7 @@
 
 
 
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
@@ -365,8 +366,3 @@ export const deleteWithUsageCheckAction = async (
         throw new Error(usageMessages.join('\n\n'));
     }
 };
-
-    
-
-    
-
