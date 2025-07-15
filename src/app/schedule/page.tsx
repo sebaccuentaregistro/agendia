@@ -1040,7 +1040,12 @@ function SchedulePageContent() {
                                           <Plane className="h-4 w-4 text-blue-500" />
                                         </TooltipTrigger>
                                         <TooltipContent>
-                                          <p>{peopleOnVacationToday.length} persona(s) de vacaciones</p>
+                                          <div className="text-sm">
+                                            <p className="font-semibold mb-1">En vacaciones hoy:</p>
+                                            <ul className="list-disc pl-4">
+                                                {peopleOnVacationToday.map(p => <li key={p.id}>{p.name}</li>)}
+                                            </ul>
+                                          </div>
                                         </TooltipContent>
                                       </Tooltip>
                                     </TooltipProvider>
