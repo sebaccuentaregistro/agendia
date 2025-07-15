@@ -4,10 +4,10 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { FileDown, Calendar as CalendarIcon, Wallet, TrendingUp, ArrowDownUp, Banknote, ArrowLeft } from 'lucide-react';
+import { FileDown, Calendar as CalendarIcon, Wallet, TrendingUp, ArrowDownUp, Banknote, ArrowLeft, Check, ChevronsUpDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Calendar } from '@/components/ui/calendar';
 import { useStudio } from '@/context/StudioContext';
 import { format, startOfMonth, endOfMonth, subMonths, isWithinInterval } from 'date-fns';
@@ -29,6 +29,7 @@ function PaymentsPageContent() {
         dateRange: { from: startOfMonth(new Date()), to: endOfMonth(new Date()) },
     });
     const [isMounted, setIsMounted] = useState(false);
+    const [isPersonComboboxOpen, setIsPersonComboboxOpen] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -184,13 +185,54 @@ function PaymentsPageContent() {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <CardTitle>Historial de Pagos</CardTitle>
                         <div className="flex gap-2 flex-wrap">
-                             <Select value={filters.personId} onValueChange={(value) => setFilters(f => ({ ...f, personId: value }))}>
-                                <SelectTrigger className="w-full sm:w-[200px] bg-background/70 border-border/50 shadow-sm rounded-xl"><SelectValue placeholder="Filtrar por persona..." /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Todas las personas</SelectItem>
-                                    {people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
+                            <Popover open={isPersonComboboxOpen} onOpenChange={setIsPersonComboboxOpen}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={isPersonComboboxOpen}
+                                        className="w-full sm:w-[200px] justify-between bg-background/70 border-border/50 shadow-sm rounded-xl"
+                                    >
+                                        {filters.personId === 'all'
+                                            ? "Todas las personas"
+                                            : people.find((p) => p.id === filters.personId)?.name}
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[200px] p-0">
+                                    <Command>
+                                        <CommandInput placeholder="Buscar persona..." />
+                                        <CommandList>
+                                            <CommandEmpty>No se encontraron personas.</CommandEmpty>
+                                            <CommandGroup>
+                                                <CommandItem
+                                                    value="all"
+                                                    onSelect={() => {
+                                                        setFilters(f => ({ ...f, personId: 'all' }));
+                                                        setIsPersonComboboxOpen(false);
+                                                    }}
+                                                >
+                                                    <Check className={cn("mr-2 h-4 w-4", filters.personId === 'all' ? "opacity-100" : "opacity-0")} />
+                                                    Todas las personas
+                                                </CommandItem>
+                                                {people.map((p) => (
+                                                    <CommandItem
+                                                        key={p.id}
+                                                        value={p.id}
+                                                        onSelect={(currentValue) => {
+                                                            setFilters(f => ({ ...f, personId: currentValue === 'all' ? 'all' : currentValue }));
+                                                            setIsPersonComboboxOpen(false);
+                                                        }}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", filters.personId === p.id ? "opacity-100" : "opacity-0")} />
+                                                        {p.name}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
