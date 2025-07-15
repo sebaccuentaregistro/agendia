@@ -882,6 +882,14 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                                                         ))}
                                                     </ul>
                                                 </ScrollArea>
+                                                {recoveryCredits.length > 0 && (
+                                                    <Button asChild className="w-full">
+                                                        <Link href={`/schedule?recoveryMode=true&personId=${person.id}`}>
+                                                            <CalendarClock className="mr-2 h-4 w-4" />
+                                                            Recuperar Sesión
+                                                        </Link>
+                                                    </Button>
+                                                )}
                                             </div>
                                         </PopoverContent>
                                     </Popover>

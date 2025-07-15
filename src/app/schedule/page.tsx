@@ -143,7 +143,7 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
   );
 }
 
-function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void }) {
+function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }: { session: Session; preselectedPersonId?: string | null; onClose: () => void }) {
   const { people, addOneTimeAttendee, actividades, attendance, spaces, isPersonOnVacation } = useStudio();
   const actividad = actividades.find(a => a.id === session.actividadId);
   const space = spaces.find(s => s.id === session.spaceId);
@@ -152,6 +152,9 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
   
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
     resolver: zodResolver(oneTimeAttendeeSchema),
+    defaultValues: {
+        personId: preselectedPersonId || undefined,
+    }
   });
 
   const selectedDate = form.watch('date');
@@ -194,9 +197,9 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
     });
 
     return people
-      .filter(person => balances[person.id] > 0)
+      .filter(person => balances[person.id] > 0 || person.id === preselectedPersonId)
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [people, attendance]);
+  }, [people, attendance, preselectedPersonId]);
 
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
@@ -269,7 +272,7 @@ function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Persona con recuperos pendientes</FormLabel>
-                                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={!selectedDate || isFull}>
+                                <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || isFull || !!preselectedPersonId}>
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecciona una persona" />
@@ -475,6 +478,11 @@ function SchedulePageContent() {
   const searchParams = useSearchParams();
   const [conflictInfo, setConflictInfo] = useState<{ specialist: string | null; space: string | null, operatingHours: string | null }>({ specialist: null, space: null, operatingHours: null });
   const [isMounted, setIsMounted] = useState(false);
+
+  // Recovery Mode
+  const recoveryMode = searchParams.get('recoveryMode') === 'true';
+  const personIdForRecovery = searchParams.get('personId');
+  const personForRecovery = useMemo(() => people.find(p => p.id === personIdForRecovery), [people, personIdForRecovery]);
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -867,7 +875,17 @@ function SchedulePageContent() {
             </Dialog>
         </div>
       </PageHeader>
-      
+       
+      {recoveryMode && personForRecovery && (
+        <Alert className="mb-4 border-primary/50 text-primary bg-primary/5">
+            <CalendarClock className="h-4 w-4 !text-primary" />
+            <AlertTitle>Modo Recuperación</AlertTitle>
+            <AlertDescription>
+              Estás buscando un lugar para que recupere una clase <strong>{personForRecovery.name}</strong>. Haz clic en "Recuperar Aquí" en la clase deseada.
+            </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-6">
         <CardHeader className="p-0 mb-4">
           <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-100">Filtrar Horarios</CardTitle>
@@ -963,7 +981,8 @@ function SchedulePageContent() {
                         <Card 
                           key={session.id} 
                           className={cn(
-                            "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden"
+                            "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden",
+                            recoveryMode && !isFull && "border-primary/40 hover:border-primary"
                           )}
                         >
                           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
@@ -1033,12 +1052,16 @@ function SchedulePageContent() {
                                         </Badge>
                                     )}
                                   </div>
-                                  {peopleOnVacationToday.length > 0 && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger>
-                                          <Plane className="h-4 w-4 text-blue-500" />
-                                        </TooltipTrigger>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className="flex items-center">
+                                          {peopleOnVacationToday.length > 0 && (
+                                              <Plane className="h-4 w-4 text-blue-500" />
+                                          )}
+                                        </div>
+                                      </TooltipTrigger>
+                                      {peopleOnVacationToday.length > 0 && (
                                         <TooltipContent>
                                           <div className="text-sm">
                                             <p className="font-semibold mb-1">En vacaciones hoy:</p>
@@ -1047,9 +1070,9 @@ function SchedulePageContent() {
                                             </ul>
                                           </div>
                                         </TooltipContent>
-                                      </Tooltip>
-                                    </TooltipProvider>
-                                  )}
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
                                </div>
                               <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
                                 <div
@@ -1059,38 +1082,47 @@ function SchedulePageContent() {
                               </div>
                             </div>
                           </CardContent>
-                          <CardFooter className="grid grid-cols-2 gap-4 p-4 mt-auto border-t border-slate-100 dark:border-zinc-700/80">
-                             <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span tabIndex={0} className="w-full">
-                                      <Button variant="outline" className="w-full font-semibold border-slate-300 dark:border-zinc-600" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
-                                          <ClipboardCheck className="mr-2 h-4 w-4"/>
-                                          Asistencia
-                                      </Button>
-                                    </span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>{tooltipMessage}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95">
-                                        <UserPlus className="mr-2 h-4 w-4" />
-                                        Inscribir
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                    <DropdownMenuItem onClick={() => setSessionToManage(session)}>
-                                        <Users className="mr-2 h-4 w-4" /> Inscripción Fija
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => setSessionForPuntual(session)}>
-                                        <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                          <CardFooter className="grid grid-cols-1 gap-4 p-4 mt-auto border-t border-slate-100 dark:border-zinc-700/80">
+                            {recoveryMode ? (
+                                <Button className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={isFull}>
+                                    <CalendarClock className="mr-2 h-4 w-4" />
+                                    Recuperar Aquí
+                                </Button>
+                            ) : (
+                               <div className="grid grid-cols-2 gap-4">
+                                 <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span tabIndex={0} className="w-full">
+                                          <Button variant="outline" className="w-full font-semibold border-slate-300 dark:border-zinc-600" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                              <ClipboardCheck className="mr-2 h-4 w-4"/>
+                                              Asistencia
+                                          </Button>
+                                        </span>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{tooltipMessage}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95">
+                                            <UserPlus className="mr-2 h-4 w-4" />
+                                            Inscribir
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onClick={() => setSessionToManage(session)}>
+                                            <Users className="mr-2 h-4 w-4" /> Inscripción Fija
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => setSessionForPuntual(session)}>
+                                            <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                               </div>
+                            )}
                           </CardFooter>
                         </Card>
                       );
@@ -1240,7 +1272,7 @@ function SchedulePageContent() {
       </AlertDialog>
 
       {sessionToManage && <EnrollPeopleDialog session={sessionToManage} onClose={() => setSessionToManage(null)} />}
-      {sessionForPuntual && <OneTimeAttendeeDialog session={sessionForPuntual} onClose={() => setSessionForPuntual(null)} />}
+      {sessionForPuntual && <OneTimeAttendeeDialog session={sessionForPuntual} preselectedPersonId={personIdForRecovery} onClose={() => setSessionForPuntual(null)} />}
       {sessionForRoster && <EnrolledPeopleSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
       {sessionForAttendance && <AttendanceSheet session={sessionForAttendance} onClose={() => setSessionForAttendance(null)} />}
       {sessionToNotify && <NotifyAttendeesDialog session={sessionToNotify} onClose={() => setSessionToNotify(null)} />}
