@@ -124,6 +124,13 @@ export type PaymentStatusInfo = {
   daysOverdue?: number;
 };
 
+export type PaymentReminderInfo = {
+  person: Person;
+  dueDate: Date;
+  daysUntilDue: number;
+};
+
+
 export type Space = {
   id: string;
   name: string;
@@ -169,4 +176,3 @@ export type AuditLog = {
     timestamp: Date;
     details?: Record<string, any>; // e.g., { amount: 8000, tariff: 'Plan Mensual' }
 };
-

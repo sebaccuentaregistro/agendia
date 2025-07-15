@@ -6,10 +6,10 @@ import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'reac
 
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person } from '@/types';
+import type { Session, Institute, Person, PaymentReminderInfo } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -17,7 +17,8 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
@@ -30,6 +31,76 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+
+function PaymentReminderDialog({ reminderInfo, onOpenChange }: { reminderInfo: PaymentReminderInfo | null; onOpenChange: (open: boolean) => void; }) {
+    const { institute } = useAuth();
+
+    if (!reminderInfo) return null;
+
+    const { person, dueDate } = reminderInfo;
+    const formattedDueDate = format(dueDate, "dd 'de' MMMM", { locale: es });
+    const reminderMessage = `¡Hola, ${person.name}! Te recordamos que tu próximo pago para ${institute?.name || 'el estudio'} vence el ${formattedDueDate}. ¡Puedes abonar en tu próxima clase! Gracias 😊`;
+
+    const encodedMessage = encodeURIComponent(reminderMessage);
+    const whatsappLink = `https://wa.me/${person.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+
+    return (
+        <Dialog open={!!reminderInfo} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Recordatorio para {person.name}</DialogTitle>
+                    <DialogDescription>
+                        Puedes copiar este mensaje o enviarlo directamente por WhatsApp.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="my-4 space-y-4">
+                    <div className="rounded-md border bg-muted/50 p-4 text-sm">
+                        <p>{reminderMessage}</p>
+                    </div>
+                    <Button asChild className="w-full">
+                        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" onClick={() => onOpenChange(false)}>
+                            <Send className="mr-2 h-4 w-4" />
+                            Enviar Recordatorio por WhatsApp
+                        </a>
+                    </Button>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Cerrar
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function PaymentReminders({ reminders, onSendReminder }: { reminders: PaymentReminderInfo[]; onSendReminder: (reminder: PaymentReminderInfo) => void; }) {
+    if (reminders.length === 0) return null;
+
+    return (
+        <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                    <Bell className="h-5 w-5 text-yellow-500" />
+                    Recordatorios de Vencimiento
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                {reminders.map(reminder => (
+                    <div key={reminder.person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
+                        <p className="flex-grow text-yellow-800 dark:text-yellow-200">
+                            A <span className="font-semibold">{reminder.person.name}</span> le vence el pago en <span className="font-semibold">{reminder.daysUntilDue} {reminder.daysUntilDue === 1 ? 'día' : 'días'}</span>.
+                        </p>
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                            <Button size="sm" onClick={() => onSendReminder(reminder)}>Enviar Recordatorio</Button>
+                        </div>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
+    );
+}
 
 
 function AppNotifications() {
@@ -342,6 +413,7 @@ function DashboardPageContent() {
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -355,14 +427,28 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [] };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [] };
     }
     const now = new Date();
+    const today = startOfDay(now);
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const currentTodayName = dayMap[now.getDay()];
     const todayStr = format(now, 'yyyy-MM-dd');
     const startOfCurrentMonth = startOfMonth(now);
     const endOfCurrentMonth = endOfMonth(now);
+
+    const paymentReminders = people
+      .map(person => {
+          if (!person.lastPaymentDate) return null;
+          const dueDate = person.lastPaymentDate;
+          const daysUntilDue = differenceInDays(dueDate, today);
+          if (daysUntilDue >= 0 && daysUntilDue <= 3) {
+              return { person, dueDate, daysUntilDue };
+          }
+          return null;
+      })
+      .filter((p): p is PaymentReminderInfo => p !== null)
+      .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 
 
     const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
@@ -429,6 +515,7 @@ function DashboardPageContent() {
       totalDebt,
       collectionPercentage,
       topDebtors,
+      paymentReminders,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
 
@@ -442,6 +529,7 @@ function DashboardPageContent() {
     totalDebt,
     collectionPercentage,
     topDebtors,
+    paymentReminders,
   } = clientSideData;
 
   useEffect(() => {
@@ -566,6 +654,7 @@ function DashboardPageContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
+          <PaymentReminders reminders={paymentReminders} onSendReminder={setPaymentReminderInfo} />
           <AppNotifications />
         
           {dashboardView === 'main' && (
@@ -913,6 +1002,7 @@ function DashboardPageContent() {
       </div>
     
       <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
+      <PaymentReminderDialog reminderInfo={paymentReminderInfo} onOpenChange={() => setPaymentReminderInfo(null)} />
 
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
