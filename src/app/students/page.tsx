@@ -264,7 +264,7 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
     const [searchTerm, setSearchTerm] = useState('');
 
     const { enrolledSessionIds, filteredAndSortedSessions } = useMemo(() => {
-        const enrolledSessionIds = sessions.filter(s => s.personIds.includes(person?.id || '')).map(s => s.id);
+        const enrolledIds = person ? sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id) : [];
         const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
         const filtered = sessions.filter(session => {
@@ -279,7 +279,7 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
             return a.time.localeCompare(b.time);
         });
 
-        return { enrolledSessionIds, filteredAndSortedSessions: sorted };
+        return { enrolledSessionIds: enrolledIds, filteredAndSortedSessions: sorted };
     }, [sessions, person, filters]);
     
     const form = useForm<{ sessionIds: string[] }>({
@@ -289,7 +289,7 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
     const watchedSessionIds = form.watch('sessionIds');
 
     const personTariff = useMemo(() => {
-        return tariffs.find(t => t.id === person?.tariffId);
+        return person ? tariffs.find(t => t.id === person.tariffId) : undefined;
     }, [tariffs, person]);
 
     const tariffFrequency = personTariff?.frequency;
@@ -298,10 +298,12 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
     useEffect(() => {
         form.reset({ sessionIds: enrolledSessionIds });
     }, [person, enrolledSessionIds, form]);
-
-    if (!person) return null;
+    
+    // This is the conditional return that was causing the error. It's now moved to the end.
+    // if (!person) return null;
 
     const onSubmit = (data: { sessionIds: string[] }) => {
+        if (!person) return;
         enrollPersonInSessions(person.id, data.sessionIds);
         onClose();
     };
@@ -328,6 +330,8 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
     }, [filteredAndSortedSessions, searchTerm, actividades, specialists]);
     
     const daysOfWeekWithSessions = Object.keys(sessionsByDay);
+
+    if (!person) return null;
 
     return (
         <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
@@ -427,13 +431,13 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                                                     <div className="space-y-1">
                                                                         <p className="font-semibold">{actividad?.name || 'Clase'}</p>
                                                                         <div className="flex items-center gap-4 flex-wrap">
-                                                                            <span className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3 w-3" /> {specialist?.name || 'N/A'}</span>
-                                                                            <span className="text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {space?.name || 'N/A'}</span>
+                                                                            <span className="text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><User className="h-3 w-3" /> {specialist?.name || 'N/A'}</span>
+                                                                            <span className="text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {space?.name || 'N/A'}</span>
                                                                         </div>
-                                                                        {level && <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium mt-1 flex items-center gap-1.5"><Signal className="h-3 w-3" />{level.name}</Badge>}
+                                                                        {level && <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium mt-1 flex items-center gap-1.5"><Signal className="h-3 w-3"/>{level.name}</Badge>}
                                                                     </div>
                                                                     <div className="text-right flex-shrink-0 ml-4">
-                                                                        <p className="text-sm font-mono text-slate-700 dark:text-slate-300">{session.time}</p>
+                                                                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{session.time}</p>
                                                                         <Badge variant={isFull ? 'destructive' : 'secondary'} className="text-xs">{enrolledCount}/{capacity}</Badge>
                                                                     </div>
                                                                 </FormLabel>
