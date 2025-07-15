@@ -398,9 +398,10 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                                                     />
                                                                 </FormControl>
                                                                 <FormLabel className="font-normal flex-grow cursor-pointer flex justify-between items-center">
-                                                                    <div>
+                                                                    <div className="space-y-1">
                                                                         <p className="font-semibold">{actividad?.name || 'Clase'}</p>
                                                                         <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
+                                                                        <p className="text-xs text-muted-foreground">{space?.name || 'N/A'}</p>
                                                                     </div>
                                                                     <div className="text-right">
                                                                         <p className="text-sm font-mono">{session.time}</p>
