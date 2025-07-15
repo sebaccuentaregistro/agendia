@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
@@ -653,9 +652,7 @@ function DashboardPageContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
-          <PaymentReminders reminders={paymentReminders} onSendReminder={setPaymentReminderInfo} />
-          <AppNotifications />
-        
+          
           {dashboardView === 'main' && (
             <>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
@@ -761,6 +758,12 @@ function DashboardPageContent() {
                     </Card>
                     </Link>
                 </div>
+                
+                <div className="space-y-8 mt-8">
+                    <PaymentReminders reminders={paymentReminders} onSendReminder={setPaymentReminderInfo} />
+                    <AppNotifications />
+                </div>
+                
                 <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
                     <CardHeader>
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1027,7 +1030,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-
-
-
