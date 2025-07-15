@@ -665,6 +665,30 @@ function SchedulePageContent() {
     });
   }, [sortedSessions, filters]);
 
+  const sessionsWithDetails = useMemo(() => {
+    if (!isMounted) return [];
+    const today = new Date();
+    const todayStr = format(today, 'yyyy-MM-dd');
+    
+    return filteredSessions.map(session => {
+        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        
+        const peopleOnVacationToday = session.personIds
+            .map(pid => people.find(p => p.id === pid))
+            .filter((p): p is Person => !!p && isPersonOnVacation(p, today));
+
+        const activeRegulars = session.personIds.filter(pid => !peopleOnVacationToday.some(p => p.id === pid));
+        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+
+        return {
+            ...session,
+            enrolledCount,
+            peopleOnVacationToday,
+        };
+    });
+  }, [filteredSessions, attendance, people, isPersonOnVacation, isMounted]);
+
 
   const handleExportSchedule = () => {
     const headers = {
@@ -952,25 +976,11 @@ function SchedulePageContent() {
               {loading ? (
                 [...Array(6)].map((_, i) => <Skeleton key={i} className="h-[22rem] w-full bg-white/30 rounded-2xl" />)
               ) : sessions.length > 0 ? (
-                  filteredSessions.length > 0 ? (
-                      filteredSessions.map((session) => {
+                  sessionsWithDetails.length > 0 ? (
+                      sessionsWithDetails.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
-                      
-                      const today = new Date();
-                      const todayStr = format(today, 'yyyy-MM-dd');
-                      const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-                      const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-                      
-                      const peopleOnVacationToday = useMemo(() => {
-                        return session.personIds
-                          .map(pid => people.find(p => p.id === pid))
-                          .filter((p): p is Person => !!p && isPersonOnVacation(p, today));
-                      }, [session.personIds, people, isPersonOnVacation, today]);
-
-                      const activeRegulars = session.personIds.filter(pid => !peopleOnVacationToday.some(p => p.id === pid));
-
-                      const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+                      const { enrolledCount, peopleOnVacationToday } = session;
 
                       const availableSpots = capacity - enrolledCount;
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
