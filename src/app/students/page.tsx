@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo, RecoveryCredit } from '@/types';
+import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo, RecoveryCredit, Level } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -261,6 +261,7 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
 function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
     const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces, levels } = useStudio();
     const [filters, setFilters] = useState({ day: 'all', actividadId: 'all', specialistId: 'all' });
+    const [searchTerm, setSearchTerm] = useState('');
 
     const { enrolledSessionIds, filteredAndSortedSessions } = useMemo(() => {
         const enrolledSessionIds = sessions.filter(s => s.personIds.includes(person?.id || '')).map(s => s.id);
@@ -305,10 +306,26 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
         onClose();
     };
 
-    const sessionsByDay = filteredAndSortedSessions.reduce((acc, session) => {
-        (acc[session.dayOfWeek] = acc[session.dayOfWeek] || []).push(session);
-        return acc;
-    }, {} as Record<string, Session[]>);
+    const sessionsByDay = useMemo(() => {
+        const lowercasedFilter = searchTerm.toLowerCase();
+        
+        const sessionsMatchingSearch = searchTerm 
+            ? filteredAndSortedSessions.filter(session => {
+                const actividad = actividades.find(a => a.id === session.actividadId);
+                const specialist = specialists.find(s => s.id === session.instructorId);
+                return (
+                    actividad?.name.toLowerCase().includes(lowercasedFilter) ||
+                    specialist?.name.toLowerCase().includes(lowercasedFilter)
+                );
+            })
+            : filteredAndSortedSessions;
+
+        return sessionsMatchingSearch.reduce((acc, session) => {
+            (acc[session.dayOfWeek] = acc[session.dayOfWeek] || []).push(session);
+            return acc;
+        }, {} as Record<string, Session[]>);
+
+    }, [filteredAndSortedSessions, searchTerm, actividades, specialists]);
     
     const daysOfWeekWithSessions = Object.keys(sessionsByDay);
 
@@ -326,31 +343,39 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                         )}
                     </DialogDescription>
                 </DialogHeader>
+                
+                <div className="space-y-4">
+                    <Input
+                        placeholder="Buscar por actividad o especialista..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full"
+                    />
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 my-4 p-4 border rounded-lg bg-muted/50">
-                    <Select value={filters.day} onValueChange={(value) => setFilters(f => ({ ...f, day: value }))}>
-                        <SelectTrigger><SelectValue placeholder="Día" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Día</SelectItem>
-                            {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select value={filters.actividadId} onValueChange={(value) => setFilters(f => ({ ...f, actividadId: value }))}>
-                        <SelectTrigger><SelectValue placeholder="Actividad" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Actividad</SelectItem>
-                            {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <Select value={filters.specialistId} onValueChange={(value) => setFilters(f => ({ ...f, specialistId: value }))}>
-                        <SelectTrigger><SelectValue placeholder="Especialista" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">Especialista</SelectItem>
-                            {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-4 border rounded-lg bg-muted/50">
+                        <Select value={filters.day} onValueChange={(value) => setFilters(f => ({ ...f, day: value }))}>
+                            <SelectTrigger><SelectValue placeholder="Día" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Día</SelectItem>
+                                {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={filters.actividadId} onValueChange={(value) => setFilters(f => ({ ...f, actividadId: value }))}>
+                            <SelectTrigger><SelectValue placeholder="Actividad" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Actividad</SelectItem>
+                                {actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        <Select value={filters.specialistId} onValueChange={(value) => setFilters(f => ({ ...f, specialistId: value }))}>
+                            <SelectTrigger><SelectValue placeholder="Especialista" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Especialista</SelectItem>
+                                {specialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
-
 
                 {isOverLimit && (
                     <Alert variant="destructive" className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 [&>svg]:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20">
@@ -401,15 +426,14 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                                                 <FormLabel className="font-normal flex-grow cursor-pointer flex justify-between items-center">
                                                                     <div className="space-y-1">
                                                                         <p className="font-semibold">{actividad?.name || 'Clase'}</p>
-                                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                                            <span className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</span>
-                                                                            <span className="text-xs text-muted-foreground">/</span>
-                                                                            <span className="text-xs text-muted-foreground">{space?.name || 'N/A'}</span>
+                                                                        <div className="flex items-center gap-4 flex-wrap">
+                                                                            <span className="text-xs text-muted-foreground flex items-center gap-1.5"><User className="h-3 w-3" /> {specialist?.name || 'N/A'}</span>
+                                                                            <span className="text-xs text-muted-foreground flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {space?.name || 'N/A'}</span>
                                                                         </div>
-                                                                        {level && <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium">{level.name}</Badge>}
+                                                                        {level && <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium mt-1 flex items-center gap-1.5"><Signal className="h-3 w-3" />{level.name}</Badge>}
                                                                     </div>
-                                                                    <div className="text-right">
-                                                                        <p className="text-sm font-mono">{session.time}</p>
+                                                                    <div className="text-right flex-shrink-0 ml-4">
+                                                                        <p className="text-sm font-mono text-slate-700 dark:text-slate-300">{session.time}</p>
                                                                         <Badge variant={isFull ? 'destructive' : 'secondary'} className="text-xs">{enrolledCount}/{capacity}</Badge>
                                                                     </div>
                                                                 </FormLabel>
@@ -1002,7 +1026,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, deletePerson } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, deletePerson, levels } = useStudio();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
