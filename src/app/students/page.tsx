@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft, Signal } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -259,7 +259,7 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
 }
 
 function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
-    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces } = useStudio();
+    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces, levels } = useStudio();
     const [filters, setFilters] = useState({ day: 'all', actividadId: 'all', specialistId: 'all' });
 
     const { enrolledSessionIds, filteredAndSortedSessions } = useMemo(() => {
@@ -379,6 +379,7 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                                         const actividad = actividades.find(a => a.id === session.actividadId);
                                                         const specialist = specialists.find(s => s.id === session.instructorId);
                                                         const space = spaces.find(s => s.id === session.spaceId);
+                                                        const level = levels.find(l => l.id === session.levelId);
                                                         const capacity = space?.capacity ?? 0;
                                                         const enrolledCount = session.personIds.length;
                                                         const isFull = enrolledCount >= capacity;
@@ -400,8 +401,12 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
                                                                 <FormLabel className="font-normal flex-grow cursor-pointer flex justify-between items-center">
                                                                     <div className="space-y-1">
                                                                         <p className="font-semibold">{actividad?.name || 'Clase'}</p>
-                                                                        <p className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</p>
-                                                                        <p className="text-xs text-muted-foreground">{space?.name || 'N/A'}</p>
+                                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                                            <span className="text-xs text-muted-foreground">{specialist?.name || 'N/A'}</span>
+                                                                            <span className="text-xs text-muted-foreground">/</span>
+                                                                            <span className="text-xs text-muted-foreground">{space?.name || 'N/A'}</span>
+                                                                        </div>
+                                                                        {level && <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium">{level.name}</Badge>}
                                                                     </div>
                                                                     <div className="text-right">
                                                                         <p className="text-sm font-mono">{session.time}</p>
