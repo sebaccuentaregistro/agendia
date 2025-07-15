@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute } from '@/types';
+import type { Session, Institute, Person } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -370,7 +370,8 @@ function DashboardPageContent() {
     
     const topDebtors = overduePeople.map(person => {
         const tariff = tariffs.find(t => t.id === person.tariffId);
-        return { ...person, debt: tariff?.price || 0 };
+        const statusInfo = getStudentPaymentStatus(person, now);
+        return { ...person, debt: tariff?.price || 0, daysOverdue: statusInfo.daysOverdue || 0 };
     }).sort((a, b) => b.debt - a.debt).slice(0, 5);
 
     const totalDebt = overduePeople.reduce((acc, person) => {
@@ -886,13 +887,19 @@ function DashboardPageContent() {
                         <ul className="space-y-3">
                             {topDebtors.map(person => (
                                 <li key={person.id} className="flex items-center justify-between text-sm">
-                                    <span className="font-medium text-foreground">{person.name}</span>
-                                    <div className="flex items-center gap-3">
-                                      <span className="font-semibold text-red-600 dark:text-red-400">{formatPrice(person.debt)}</span>
-                                      <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                                        <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                                        <span className="sr-only">Enviar WhatsApp a {person.name}</span>
-                                      </a>
+                                    <div>
+                                        <span className="font-medium text-foreground">{person.name}</span>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                            <span>{person.phone}</span>
+                                            <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                                <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                                                <span className="sr-only">Enviar WhatsApp a {person.name}</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="font-semibold text-red-600 dark:text-red-400">{formatPrice(person.debt)}</span>
+                                        <p className="text-xs text-muted-foreground">hace {person.daysOverdue} {person.daysOverdue === 1 ? 'día' : 'días'}</p>
                                     </div>
                                 </li>
                             ))}
@@ -931,5 +938,6 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
 
