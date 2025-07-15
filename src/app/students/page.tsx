@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo } from '@/types';
+import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo, RecoveryCredit } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -732,7 +732,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
   );
 }
 
-function PersonCard({ person, sessions, actividades, specialists, spaces, recoveryBalance, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], recoveryBalance: number, onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void, onRecordPayment: (person: Person) => void }) {
+function PersonCard({ person, sessions, actividades, specialists, spaces, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], recoveryCredits: RecoveryCredit[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void, onRecordPayment: (person: Person) => void }) {
     const { tariffs, deletePerson, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -859,19 +859,29 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                                         </PopoverContent>
                                     </Popover>
                                 )}
-                                {recoveryBalance > 0 && (
+                                {recoveryCredits.length > 0 && (
                                      <Popover>
                                         <PopoverTrigger asChild>
                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
                                                 <CalendarClock className="h-4 w-4" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-60">
+                                        <PopoverContent className="w-80">
                                             <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">Recuperos Pendientes</h4>
+                                                <h4 className="font-medium leading-none">Recuperos Pendientes ({recoveryCredits.length})</h4>
                                                 <p className="text-sm text-muted-foreground">
-                                                    Esta persona tiene <strong>{recoveryBalance}</strong> {recoveryBalance === 1 ? 'clase' : 'clases'} para recuperar.
+                                                    Clases con ausencia justificada para recuperar:
                                                 </p>
+                                                <ScrollArea className="h-40">
+                                                    <ul className="space-y-2 pr-4">
+                                                        {recoveryCredits.map((credit, index) => (
+                                                          <li key={index} className="text-xs p-2 rounded-md bg-muted/50">
+                                                            <p className="font-bold text-foreground">{credit.className}</p>
+                                                            <p className="text-muted-foreground">{credit.date}</p>
+                                                          </li>
+                                                        ))}
+                                                    </ul>
+                                                </ScrollArea>
                                             </div>
                                         </PopoverContent>
                                     </Popover>
@@ -1003,56 +1013,77 @@ function StudentsPageContent() {
     setIsMounted(true);
   }, []);
 
-  const { recoveryBalances, filteredPeople } = useMemo(() => {
-    if (!isMounted) return { recoveryBalances: {}, filteredPeople: [] };
-    
+  const { recoveryDetails, filteredPeople } = useMemo(() => {
+    if (!isMounted) return { recoveryDetails: {}, filteredPeople: [] };
+
     const now = new Date();
     const term = searchTerm.toLowerCase();
 
-    const balances: Record<string, number> = {};
-    people.forEach(p => (balances[p.id] = 0));
+    const allRecoveryCredits: Record<string, RecoveryCredit[]> = {};
+    people.forEach(p => (allRecoveryCredits[p.id] = []));
+    
+    let usedRecoveryCounts: Record<string, number> = {};
+    people.forEach(p => (usedRecoveryCounts[p.id] = 0));
 
     attendance.forEach(record => {
-      record.justifiedAbsenceIds?.forEach(personId => {
-        if (balances[personId] !== undefined) balances[personId]++;
-      });
-      record.oneTimeAttendees?.forEach(personId => {
-        if (balances[personId] !== undefined) balances[personId]--;
-      });
+        // Count used recoveries
+        record.oneTimeAttendees?.forEach(personId => {
+            usedRecoveryCounts[personId] = (usedRecoveryCounts[personId] || 0) + 1;
+        });
+        
+        // Collect earned recoveries
+        record.justifiedAbsenceIds?.forEach(personId => {
+            if (allRecoveryCredits[personId]) {
+                const session = sessions.find(s => s.id === record.sessionId);
+                const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                allRecoveryCredits[personId].push({
+                    className: actividad?.name || 'Clase',
+                    date: format(parse(record.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy'),
+                });
+            }
+        });
+    });
+    
+    // Filter credits that have been used
+    Object.keys(allRecoveryCredits).forEach(personId => {
+        const usedCount = usedRecoveryCounts[personId] || 0;
+        if (usedCount > 0) {
+            allRecoveryCredits[personId] = allRecoveryCredits[personId].slice(usedCount);
+        }
     });
 
     let peopleToFilter = [...people];
 
     // Pre-filter by status from URL param
     if (statusFilterFromUrl !== 'all') {
-      peopleToFilter = peopleToFilter.filter(p => {
-        if (statusFilterFromUrl === 'overdue') return getStudentPaymentStatus(p, now).status === 'Atrasado';
-        if (statusFilterFromUrl === 'on-vacation') return isPersonOnVacation(p, now);
-        if (statusFilterFromUrl === 'pending-recovery') return (balances[p.id] || 0) > 0;
-        return true;
-      });
+        peopleToFilter = peopleToFilter.filter(p => {
+            if (statusFilterFromUrl === 'overdue') return getStudentPaymentStatus(p, now).status === 'Atrasado';
+            if (statusFilterFromUrl === 'on-vacation') return isPersonOnVacation(p, now);
+            if (statusFilterFromUrl === 'pending-recovery') return (allRecoveryCredits[p.id]?.length || 0) > 0;
+            return true;
+        });
     }
 
     // Filter by selects if any is active
     if (actividadFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') {
-      const filteredSessions = sessions.filter(s => 
-          (actividadFilter === 'all' || s.actividadId === actividadFilter) &&
-          (specialistFilter === 'all' || s.instructorId === specialistFilter) &&
-          (spaceFilter === 'all' || s.spaceId === spaceFilter)
-      );
-      const peopleIdsInFilteredSessions = new Set<string>();
-      filteredSessions.forEach(s => {
-          s.personIds.forEach(pid => peopleIdsInFilteredSessions.add(pid));
-      });
-      peopleToFilter = peopleToFilter.filter(p => peopleIdsInFilteredSessions.has(p.id));
+        const filteredSessions = sessions.filter(s => 
+            (actividadFilter === 'all' || s.actividadId === actividadFilter) &&
+            (specialistFilter === 'all' || s.instructorId === specialistFilter) &&
+            (spaceFilter === 'all' || s.spaceId === spaceFilter)
+        );
+        const peopleIdsInFilteredSessions = new Set<string>();
+        filteredSessions.forEach(s => {
+            s.personIds.forEach(pid => peopleIdsInFilteredSessions.add(pid));
+        });
+        peopleToFilter = peopleToFilter.filter(p => peopleIdsInFilteredSessions.has(p.id));
     }
     
     const finalFilteredPeople = peopleToFilter
-      .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
-      .sort((a,b) => a.name.localeCompare(b.name));
+        .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
+        .sort((a,b) => a.name.localeCompare(b.name));
       
-    return { recoveryBalances: balances, filteredPeople: finalFilteredPeople };
-  }, [people, searchTerm, statusFilterFromUrl, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, isMounted, isPersonOnVacation]);
+    return { recoveryDetails: allRecoveryCredits, filteredPeople: finalFilteredPeople };
+  }, [people, searchTerm, statusFilterFromUrl, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, actividades, isMounted, isPersonOnVacation]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -1244,7 +1275,7 @@ function StudentsPageContent() {
                                 actividades={actividades}
                                 specialists={specialists}
                                 spaces={spaces}
-                                recoveryBalance={recoveryBalances[person.id] || 0}
+                                recoveryCredits={recoveryDetails[person.id] || []}
                                 onManageVacations={setPersonForVacation}
                                 onEdit={handleEditClick}
                                 onViewHistory={setPersonForHistory}

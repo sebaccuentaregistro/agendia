@@ -1,5 +1,10 @@
 
 
+export type RecoveryCredit = {
+  className: string;
+  date: string;
+};
+
 export type LoginCredentials = {
   email: string;
   password: string;
