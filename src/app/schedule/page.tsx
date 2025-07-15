@@ -20,7 +20,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
@@ -311,7 +311,8 @@ function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }: { sess
 
 function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
   const { people, spaces, enrollPeopleInClass, actividades } = useStudio();
-  
+  const [searchTerm, setSearchTerm] = useState('');
+
   const form = useForm<{ personIds: string[] }>({
     defaultValues: { personIds: session.personIds || [] },
   });
@@ -328,6 +329,15 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
 
   const sortedPeople = useMemo(() => [...people].sort((a, b) => a.name.localeCompare(b.name)), [people]);
 
+  const filteredPeople = useMemo(() => {
+    const lowercasedFilter = searchTerm.toLowerCase();
+    return sortedPeople.filter(person => {
+      const isSelected = watchedPersonIds.includes(person.id);
+      const nameMatches = person.name.toLowerCase().includes(lowercasedFilter);
+      return isSelected || nameMatches;
+    });
+  }, [searchTerm, sortedPeople, watchedPersonIds]);
+
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
       <DialogContent>
@@ -339,13 +349,21 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="my-2">
+              <Input
+                placeholder="Buscar por nombre..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
             <FormField
               control={form.control}
               name="personIds"
               render={() => (
                 <FormItem>
                   <ScrollArea className="h-72 rounded-md border p-4">
-                    {sortedPeople.length > 0 ? sortedPeople.map(person => (
+                    {filteredPeople.length > 0 ? filteredPeople.map(person => (
                       <FormField
                         key={person.id}
                         control={form.control}
@@ -373,7 +391,7 @@ function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: (
                           </FormItem>
                         )}
                       />
-                    )) : <p className="text-center text-sm text-muted-foreground">No hay personas para inscribir.</p>}
+                    )) : <p className="text-center text-sm text-muted-foreground">No se encontraron personas.</p>}
                   </ScrollArea>
                   <FormMessage />
                 </FormItem>
@@ -479,6 +497,7 @@ function SchedulePageContent() {
   const searchParams = useSearchParams();
   const [conflictInfo, setConflictInfo] = useState<{ specialist: string | null; space: string | null, operatingHours: string | null }>({ specialist: null, space: null, operatingHours: null });
   const [isMounted, setIsMounted] = useState(false);
+  const router = useRouter();
 
   // Recovery Mode
   const recoveryMode = searchParams.get('recoveryMode') === 'true';
@@ -632,6 +651,9 @@ function SchedulePageContent() {
     }
     setIsDialogOpen(false);
     setSelectedSession(undefined);
+    if (recoveryMode) {
+        router.replace('/schedule', { scroll: false });
+    }
   }
   
   const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
@@ -1070,7 +1092,9 @@ function SchedulePageContent() {
                                       <TooltipTrigger asChild>
                                         <div className="flex items-center">
                                           {peopleOnVacationToday.length > 0 && (
-                                              <Plane className="h-4 w-4 text-blue-500" />
+                                            <span className="flex items-center gap-1 text-blue-500">
+                                              <Plane className="h-4 w-4" />
+                                            </span>
                                           )}
                                         </div>
                                       </TooltipTrigger>
@@ -1300,4 +1324,5 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
