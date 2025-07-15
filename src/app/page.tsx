@@ -588,7 +588,6 @@ function DashboardPageContent() {
     };
 
     return todaysSessions.filter(session => {
-        const timeOfDay = getTimeOfDay(session.time);
         return (
             (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
             (filters.spaceId === 'all' || session.spaceId === filters.spaceId) &&
@@ -1028,6 +1027,7 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
 
 
