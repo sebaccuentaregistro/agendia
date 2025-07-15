@@ -299,9 +299,6 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
         form.reset({ sessionIds: enrolledSessionIds });
     }, [person, enrolledSessionIds, form]);
     
-    // This is the conditional return that was causing the error. It's now moved to the end.
-    // if (!person) return null;
-
     const onSubmit = (data: { sessionIds: string[] }) => {
         if (!person) return;
         enrollPersonInSessions(person.id, data.sessionIds);
@@ -766,7 +763,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
   );
 }
 
-function PersonCard({ person, sessions, actividades, specialists, spaces, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], recoveryCredits: RecoveryCredit[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void, onRecordPayment: (person: Person) => void }) {
+function PersonCard({ person, sessions, actividades, specialists, spaces, levels, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], levels: Level[], recoveryCredits: RecoveryCredit[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void, onRecordPayment: (person: Person) => void }) {
     const { tariffs, deletePerson, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -806,11 +803,13 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                 const actividad = actividades.find(a => a.id === s.actividadId);
                 const specialist = specialists.find(sp => sp.id === s.instructorId);
                 const space = spaces.find(sp => sp.id === s.spaceId);
+                const level = levels.find(l => l.id === s.levelId);
                 return { 
                     ...s, 
                     actividadName: actividad?.name || 'Clase',
                     specialistName: specialist?.name || 'N/A',
-                    spaceName: space?.name || 'N/A'
+                    spaceName: space?.name || 'N/A',
+                    levelName: level?.name
                 };
             })
             .sort((a, b) => {
@@ -818,7 +817,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                 if (dayComparison !== 0) return dayComparison;
                 return a.time.localeCompare(b.time);
             });
-    }, [sessions, actividades, specialists, spaces, person.id]);
+    }, [sessions, actividades, specialists, spaces, levels, person.id]);
     
     const renderPaymentStatus = (statusInfo: PaymentStatusInfo) => {
       let statusText = statusInfo.status === 'Pendiente de Pago' ? 'Pago Pendiente' : statusInfo.status;
@@ -981,7 +980,10 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, recove
                             {personSessions.length > 0 ? (
                                 personSessions.map(session => (
                                     <div key={session.id} className="text-xs p-2 rounded-md bg-muted/50">
-                                        <p className="font-bold text-foreground">{session.actividadName}</p>
+                                        <div className="flex justify-between items-start">
+                                          <p className="font-bold text-foreground">{session.actividadName}</p>
+                                          {session.levelName && <Badge variant="outline" className="text-[9px] px-1 py-0">{session.levelName}</Badge>}
+                                        </div>
                                         <p className="text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
                                         <div className="flex items-center gap-4 mt-1 text-muted-foreground">
                                           <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
@@ -1317,6 +1319,7 @@ function StudentsPageContent() {
                                 actividades={actividades}
                                 specialists={specialists}
                                 spaces={spaces}
+                                levels={levels}
                                 recoveryCredits={recoveryDetails[person.id] || []}
                                 onManageVacations={setPersonForVacation}
                                 onEdit={handleEditClick}
