@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft, Signal } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft, Signal, Send } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -36,6 +35,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertTitle, AlertDescription as AlertDescriptionComponent } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
 
 
 const personFormSchema = z.object({
@@ -62,6 +62,49 @@ const vacationFormSchema = z.object({
     path: ['endDate'],
 });
 
+
+function WelcomeDialog({ person, onOpenChange }: { person: NewPersonData | null; onOpenChange: (open: boolean) => void; }) {
+    const { institute } = useAuth();
+    const { tariffs } = useStudio();
+    
+    if (!person) return null;
+
+    const tariff = tariffs.find(t => t.id === person.tariffId);
+
+    const welcomeMessage = `¡Hola, ${person.name}! 👋 Te damos la bienvenida a ${institute?.name || 'nuestro estudio'}. ¡Estamos muy contentos de tenerte con nosotros! Tu plan es "${tariff?.name || 'No especificado'}". ¡Nos vemos pronto en clase!`;
+
+    const encodedMessage = encodeURIComponent(welcomeMessage);
+    const whatsappLink = `https://wa.me/${person.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+
+    return (
+        <Dialog open={!!person} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>¡Nueva Persona Añadida!</DialogTitle>
+                    <DialogDescription>
+                        ¿Quieres enviarle un mensaje de bienvenida a {person.name} por WhatsApp?
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="my-4 space-y-4">
+                    <div className="rounded-md border bg-muted/50 p-4 text-sm">
+                        <p>{welcomeMessage}</p>
+                    </div>
+                    <Button asChild className="w-full">
+                        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" onClick={() => onOpenChange(false)}>
+                            <Send className="mr-2 h-4 w-4" />
+                            Enviar Bienvenida por WhatsApp
+                        </a>
+                    </Button>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        No, gracias
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function AttendanceHistoryDialog({ person, sessions, actividades, attendance, onClose }: { person: Person | null; sessions: Session[]; actividades: Actividad[]; attendance: SessionAttendance[]; onClose: () => void; }) {
     if (!person) return null;
@@ -597,7 +640,7 @@ function VacationDialog({ person, onClose }: { person: Person | null; onClose: (
     )
 }
 
-function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setSearchTerm: (term: string) => void; }) {
+function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreated }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setSearchTerm: (term: string) => void; onPersonCreated: (person: NewPersonData) => void; }) {
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
@@ -657,6 +700,7 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm }: { person?: 
       updatePerson({ ...person, ...finalValues });
     } else {
       addPerson(finalValues);
+      onPersonCreated(finalValues);
       setSearchTerm('');
     }
     onOpenChange(false);
@@ -1070,6 +1114,7 @@ function StudentsPageContent() {
   const [personForHistory, setPersonForHistory] = useState<Person | null>(null);
   const [personForAttendanceHistory, setPersonForAttendanceHistory] = useState<Person | null>(null);
   const [personForPayment, setPersonForPayment] = useState<Person | null>(null);
+  const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
   const [isPaymentAlertOpen, setIsPaymentAlertOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -1455,7 +1500,9 @@ function StudentsPageContent() {
         onOpenChange={setIsPersonDialogOpen} 
         open={isPersonDialogOpen}
         setSearchTerm={setSearchTerm}
+        onPersonCreated={(person) => setPersonForWelcome(person)}
       />
+      <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
       <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />
       <EnrollmentsDialog person={personForEnrollment} onClose={() => setPersonForEnrollment(null)} />
       <JustifiedAbsenceDialog person={personForAbsence} onClose={() => setPersonForAbsence(null)} />
@@ -1503,5 +1550,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
-    
