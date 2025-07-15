@@ -1,9 +1,10 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -941,10 +942,13 @@ function SchedulePageContent() {
                       const todayStr = format(today, 'yyyy-MM-dd');
                       const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
                       const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-                      const activeRegulars = session.personIds.filter(pid => {
-                          const person = people.find(p => p.id === pid);
-                          return person && !isPersonOnVacation(person, today);
-                      });
+                      
+                      const peopleOnVacationToday = session.personIds
+                        .map(pid => people.find(p => p.id === pid))
+                        .filter((p): p is Person => !!p && isPersonOnVacation(p, today));
+
+                      const activeRegulars = session.personIds.filter(pid => !peopleOnVacationToday.some(p => p.id === pid));
+
                       const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
 
                       const availableSpots = capacity - enrolledCount;
@@ -954,7 +958,6 @@ function SchedulePageContent() {
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
-
 
                       return (
                         <Card 
@@ -1015,20 +1018,34 @@ function SchedulePageContent() {
                               </div>
                             </div>
                             <div className="space-y-1">
-                               <div
-                                  className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
-                                  onClick={() => setSessionForRoster(session)}
-                                >
-                                <Users className="h-4 w-4" />
-                                <span>
-                                    {enrolledCount}/{capacity} inscriptos
-                                </span>
-                                {waitlistCount > 0 && (
-                                    <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-700 dark:text-amber-400 bg-amber-500/10 text-xs">
-                                        {waitlistCount} en espera
-                                    </Badge>
-                                )}
-                              </div>
+                               <div className="flex items-center justify-between">
+                                  <div
+                                      className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
+                                      onClick={() => setSessionForRoster(session)}
+                                    >
+                                    <Users className="h-4 w-4" />
+                                    <span>
+                                        {enrolledCount}/{capacity} inscriptos
+                                    </span>
+                                    {waitlistCount > 0 && (
+                                        <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-700 dark:text-amber-400 bg-amber-500/10 text-xs">
+                                            {waitlistCount} en espera
+                                        </Badge>
+                                    )}
+                                  </div>
+                                  {peopleOnVacationToday.length > 0 && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger>
+                                          <Plane className="h-4 w-4 text-blue-500" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>{peopleOnVacationToday.length} persona(s) de vacaciones</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                               </div>
                               <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
                                 <div
                                   className={cn("h-2 rounded-full", isFull ? "bg-pink-500" : "bg-green-500")}
