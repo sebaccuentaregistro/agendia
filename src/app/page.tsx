@@ -423,6 +423,13 @@ function DashboardPageContent() {
     setIsMounted(true);
   }, []);
   
+  const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
+    if (!time) return 'Tarde';
+    const hour = parseInt(time.split(':')[0], 10);
+    if (hour < 12) return 'Mañana';
+    if (hour < 18) return 'Tarde';
+    return 'Noche';
+  };
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
@@ -578,20 +585,12 @@ function DashboardPageContent() {
   };
 
   const filteredSessions = useMemo(() => {
-    const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
-        if (!time) return 'Tarde';
-        const hour = parseInt(time.split(':')[0], 10);
-        if (hour < 12) return 'Mañana';
-        if (hour < 18) return 'Tarde';
-        return 'Noche';
-    };
-
     return todaysSessions.filter(session => {
         return (
             (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
             (filters.spaceId === 'all' || session.spaceId === filters.spaceId) &&
             (filters.specialistId === 'all' || session.instructorId === filters.specialistId) &&
-            (filters.timeOfDay === 'all' || timeOfDay === filters.timeOfDay)
+            (filters.timeOfDay === 'all' || getTimeOfDay(session.time) === filters.timeOfDay)
         );
     });
   }, [todaysSessions, filters]);
