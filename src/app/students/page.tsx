@@ -260,9 +260,15 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
 
 function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
     const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces, levels } = useStudio();
+    
     const [filters, setFilters] = useState({ day: 'all', actividadId: 'all', specialistId: 'all' });
     const [searchTerm, setSearchTerm] = useState('');
+    
+    // This hook must be called unconditionally at the top level.
+    const form = useForm<{ sessionIds: string[] }>();
+    const watchedSessionIds = form.watch('sessionIds');
 
+    // All other hooks must also be called unconditionally.
     const { enrolledSessionIds, filteredAndSortedSessions } = useMemo(() => {
         const enrolledIds = person ? sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id) : [];
         const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -282,28 +288,9 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
         return { enrolledSessionIds: enrolledIds, filteredAndSortedSessions: sorted };
     }, [sessions, person, filters]);
     
-    const form = useForm<{ sessionIds: string[] }>({
-        defaultValues: { sessionIds: enrolledSessionIds },
-    });
-    
-    const watchedSessionIds = form.watch('sessionIds');
-
     const personTariff = useMemo(() => {
         return person ? tariffs.find(t => t.id === person.tariffId) : undefined;
     }, [tariffs, person]);
-
-    const tariffFrequency = personTariff?.frequency;
-    const isOverLimit = tariffFrequency !== undefined && watchedSessionIds.length > tariffFrequency;
-
-    useEffect(() => {
-        form.reset({ sessionIds: enrolledSessionIds });
-    }, [person, enrolledSessionIds, form]);
-    
-    const onSubmit = (data: { sessionIds: string[] }) => {
-        if (!person) return;
-        enrollPersonInSessions(person.id, data.sessionIds);
-        onClose();
-    };
 
     const sessionsByDay = useMemo(() => {
         const lowercasedFilter = searchTerm.toLowerCase();
@@ -326,9 +313,26 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
 
     }, [filteredAndSortedSessions, searchTerm, actividades, specialists]);
     
-    const daysOfWeekWithSessions = Object.keys(sessionsByDay);
+    // useEffect is a hook and must be called unconditionally.
+    useEffect(() => {
+        form.reset({ sessionIds: enrolledSessionIds });
+    }, [person, enrolledSessionIds, form]);
+    
+    // Now that all hooks have been called, we can return early if needed.
+    if (!person) {
+        return null;
+    }
 
-    if (!person) return null;
+    const tariffFrequency = personTariff?.frequency;
+    const isOverLimit = tariffFrequency !== undefined && watchedSessionIds.length > tariffFrequency;
+    
+    const onSubmit = (data: { sessionIds: string[] }) => {
+        if (!person) return;
+        enrollPersonInSessions(person.id, data.sessionIds);
+        onClose();
+    };
+
+    const daysOfWeekWithSessions = Object.keys(sessionsByDay);
 
     return (
         <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
@@ -770,6 +774,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
     
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
+    const level = levels.find(l => l.id === person.levelId);
     
     const getStatusBadgeClass = () => {
         switch (paymentStatusInfo.status) {
@@ -927,6 +932,21 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
                                         </PopoverContent>
                                     </Popover>
                                 )}
+                                 {level && (
+                                     <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
+                                                <Signal className="h-4 w-4" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto">
+                                            <div className="space-y-2 text-center">
+                                                <h4 className="font-medium leading-none">Nivel Asignado</h4>
+                                                <Badge variant="outline">{level.name}</Badge>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+                                 )}
                             </div>
                             <Badge variant="secondary" className={cn("font-semibold mt-1.5 border-0 text-xs", getStatusBadgeClass())}>
                                {renderPaymentStatus(paymentStatusInfo)}
@@ -1357,6 +1377,7 @@ function StudentsPageContent() {
                             <TableRow>
                                 <TableHead>Nombre</TableHead>
                                 <TableHead>Contacto</TableHead>
+                                <TableHead>Nivel</TableHead>
                                 <TableHead>Arancel</TableHead>
                                 <TableHead>Estado</TableHead>
                                 <TableHead>Vencimiento</TableHead>
@@ -1367,12 +1388,13 @@ function StudentsPageContent() {
                             {loading ? (
                                 [...Array(5)].map((_, i) => (
                                     <TableRow key={i}>
-                                        <TableCell colSpan={6}><Skeleton className="h-8 w-full"/></TableCell>
+                                        <TableCell colSpan={7}><Skeleton className="h-8 w-full"/></TableCell>
                                     </TableRow>
                                 ))
                             ) : filteredPeople.length > 0 ? (
                                 filteredPeople.map((person) => {
                                     const tariff = tariffs.find(t => t.id === person.tariffId);
+                                    const level = levels.find(l => l.id === person.levelId);
                                     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
                                     const paymentStatusText = paymentStatusInfo.status === 'Atrasado'
                                         ? `${paymentStatusInfo.status} (${paymentStatusInfo.daysOverdue} d)`
@@ -1382,6 +1404,9 @@ function StudentsPageContent() {
                                         <TableRow key={person.id}>
                                             <TableCell className="font-medium">{person.name}</TableCell>
                                             <TableCell>{person.phone}</TableCell>
+                                            <TableCell>
+                                                {level ? <Badge variant="outline">{level.name}</Badge> : <span className="text-muted-foreground">-</span>}
+                                            </TableCell>
                                             <TableCell>{tariff?.name || 'N/A'}</TableCell>
                                             <TableCell>
                                                 <Badge variant="outline" className={cn('font-semibold', getStatusBadgeClass(paymentStatusInfo.status))}>
@@ -1414,7 +1439,7 @@ function StudentsPageContent() {
                                 })
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="h-24 text-center">
+                                    <TableCell colSpan={7} className="h-24 text-center">
                                         No se encontraron personas con los filtros seleccionados.
                                     </TableCell>
                                 </TableRow>
