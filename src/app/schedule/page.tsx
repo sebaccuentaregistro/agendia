@@ -4,7 +4,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -36,6 +36,7 @@ import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -961,9 +962,11 @@ function SchedulePageContent() {
                       const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
                       const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
                       
-                      const peopleOnVacationToday = session.personIds
-                        .map(pid => people.find(p => p.id === pid))
-                        .filter((p): p is Person => !!p && isPersonOnVacation(p, today));
+                      const peopleOnVacationToday = useMemo(() => {
+                        return session.personIds
+                          .map(pid => people.find(p => p.id === pid))
+                          .filter((p): p is Person => !!p && isPersonOnVacation(p, today));
+                      }, [session.personIds, people, isPersonOnVacation, today]);
 
                       const activeRegulars = session.personIds.filter(pid => !peopleOnVacationToday.some(p => p.id === pid));
 
