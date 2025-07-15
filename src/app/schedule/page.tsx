@@ -1187,11 +1187,11 @@ function SchedulePageContent() {
                                         <TableCell colSpan={6}><Skeleton className="h-8 w-full"/></TableCell>
                                     </TableRow>
                                 ))
-                            ) : filteredSessions.length > 0 ? (
-                                filteredSessions.map(session => {
+                            ) : sessionsWithDetails.length > 0 ? (
+                                sessionsWithDetails.map(session => {
                                     const { specialist, actividad, space, level } = getSessionDetails(session);
                                     const capacity = space?.capacity || 0;
-                                    const enrolledCount = session.personIds.length;
+                                    const { enrolledCount } = session;
                                     const isAttendanceAllowed = isAttendanceAllowedForSession(session);
 
                                     return (
@@ -1300,3 +1300,4 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
