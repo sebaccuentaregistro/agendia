@@ -1,6 +1,6 @@
 # Agendia
 
-Agendia es una aplicación web moderna construida con Next.js y diseñada para la gestión integral de centros de bienestar, como estudios de yoga o gimnasios.
+Agendia es una aplicación web moderna construida con Next.js y diseñada para la gestión integral de centros de bienestar, como estudios de yoga o   gimnasios.
 
 ## 🛠️ Stack Tecnológico
 
@@ -45,4 +45,4 @@ firebase deploy
 
 Al finalizar, la terminal te mostrará la URL pública de tu aplicación (normalmente `https://[tu-id-de-proyecto].web.app`).
 
-¡Felicitaciones! Tu aplicación estará en producción.
+¡Felicitaciones! Tu aplicación estará en     producción.
