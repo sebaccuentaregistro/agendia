@@ -1,8 +1,9 @@
+
 {
   "name": "agendia",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
-  "description": "Forcing a clean install to fix persistent build issues.",
+  "description": "Forcing a full clean reinstall to resolve persistent build errors.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
