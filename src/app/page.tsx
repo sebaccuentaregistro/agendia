@@ -586,11 +586,12 @@ function DashboardPageContent() {
 
   const filteredSessions = useMemo(() => {
     return todaysSessions.filter(session => {
+        const sessionTimeOfDay = getTimeOfDay(session.time);
         return (
             (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
             (filters.spaceId === 'all' || session.spaceId === filters.spaceId) &&
             (filters.specialistId === 'all' || session.instructorId === filters.specialistId) &&
-            (filters.timeOfDay === 'all' || getTimeOfDay(session.time) === filters.timeOfDay)
+            (filters.timeOfDay === 'all' || sessionTimeOfDay === filters.timeOfDay)
         );
     });
   }, [todaysSessions, filters]);
