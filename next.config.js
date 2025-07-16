@@ -6,6 +6,16 @@ const nextConfig = {
     if (!isServer) {
       config.externals.push('undici');
     }
+    
+    // Solución para el error de empaquetado de chunks de Firebase en el servidor
+    if (isServer) {
+      config.externals.push({
+        '@firebase/app': 'commonjs @firebase/app',
+        '@firebase/auth': 'commonjs @firebase/auth',
+        '@firebase/firestore': 'commonjs @firebase/firestore',
+      });
+    }
+    
     return config;
   },
   images: {

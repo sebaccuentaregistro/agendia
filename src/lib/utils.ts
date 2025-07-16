@@ -1,36 +1,44 @@
 
+
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Person } from "@/types";
-import { set, isBefore, addMonths, isAfter, differenceInDays, addDays, format, getDate, getDaysInMonth, startOfDay } from "date-fns";
+import type { Person, Tariff } from "@/types";
+import { set, isBefore, addMonths, addDays, isAfter, differenceInDays, format, getDate, getDaysInMonth, startOfDay } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 /**
- * Calculates the next payment date based on a starting date.
- * If the original join date is provided, it tries to maintain the same day of the month.
+ * Calculates the next payment date based on a starting date and a tariff's payment cycle.
  * @param fromDate The date to calculate from (e.g., the current expiry date or today).
- * @param joinDate The original date the person joined, used to anchor the day of the month. (Optional)
- * @param monthsToAdd The number of months to add (can be negative to go back).
+ * @param joinDate The original date the person joined, used to anchor the day of the month for monthly cycles. (Optional)
+ * @param tariff The tariff object, which may contain a paymentCycle property.
  * @returns The new calculated payment date.
  */
-export function calculateNextPaymentDate(fromDate: Date, joinDate?: Date | null, monthsToAdd: number = 1): Date {
-  const fromDateInFuture = addMonths(fromDate, monthsToAdd);
-  
-  if (joinDate) {
-    let targetDay = getDate(joinDate);
-    const daysInNewMonth = getDaysInMonth(fromDateInFuture);
+export function calculateNextPaymentDate(fromDate: Date, joinDate: Date | null | undefined, tariff: Tariff): Date {
+  const cycle = tariff.paymentCycle || 'monthly';
 
-    if (targetDay > daysInNewMonth) {
-      targetDay = daysInNewMonth;
-    }
-    return set(fromDateInFuture, { date: targetDay });
+  switch (cycle) {
+    case 'weekly':
+      return addDays(fromDate, 7);
+    case 'biweekly':
+      return addDays(fromDate, 14);
+    case 'bimonthly':
+      return addMonths(fromDate, 2);
+    case 'monthly':
+    default:
+      const fromDateInFuture = addMonths(fromDate, 1);
+      if (joinDate) {
+        let targetDay = getDate(joinDate);
+        const daysInNewMonth = getDaysInMonth(fromDateInFuture);
+        if (targetDay > daysInNewMonth) {
+          targetDay = daysInNewMonth;
+        }
+        return set(fromDateInFuture, { date: targetDay });
+      }
+      return fromDateInFuture;
   }
-
-  // If no join date, just add the months
-  return fromDateInFuture;
 }
 
 

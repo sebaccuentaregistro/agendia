@@ -163,6 +163,7 @@ export type Tariff = {
   price: number;
   description?: string;
   frequency?: number;
+  paymentCycle?: 'weekly' | 'biweekly' | 'monthly' | 'bimonthly';
 };
 
 export type AuditLog = {

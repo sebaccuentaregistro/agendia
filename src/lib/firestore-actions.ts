@@ -119,14 +119,14 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
     const now = new Date();
     // If it's the first payment, the cycle starts today. Otherwise, it extends from the previous due date.
     const baseDateForNextPayment = person.lastPaymentDate || now;
-    const newExpiryDate = calculateNextPaymentDate(baseDateForNextPayment, person.joinDate);
+    const newExpiryDate = calculateNextPaymentDate(baseDateForNextPayment, person.joinDate, tariff);
 
     const paymentRecord = {
         personId: person.id,
         date: now, // The actual transaction date
         amount: tariff.price,
         tariffId: tariff.id,
-        months: 1,
+        months: 1, // This might need rethinking if we have different cycles
         timestamp: now,
     };
     const batch = writeBatch(db);
@@ -184,7 +184,7 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
         newLastPaymentDate = null;
     } else {
         // If there are previous payments, calculate the previous due date
-        newLastPaymentDate = subMonths(currentPerson.lastPaymentDate || new Date(), 1);
+        newLastPaymentDate = subMonths(currentPerson.lastPaymentDate || new Date(), 1); // This logic needs to be cycle-aware if we revert non-monthly payments. For now, it's a simplification.
     }
     
     // 3. Delete the most recent payment document
@@ -396,6 +396,7 @@ export const deleteWithUsageCheckAction = async (
         throw new Error(usageMessages.join('\n\n'));
     }
 };
+
 
 
 

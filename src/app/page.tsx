@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
 
-import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardTitle, CardContent, CardHeader, CardDescription as CardDescriptionComponent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send } from 'lucide-react';
 import Link from 'next/link';
@@ -30,6 +30,64 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+
+function MassReminderDialog({ reminders, onOpenChange }: { reminders: PaymentReminderInfo[]; onOpenChange: (open: boolean) => void; }) {
+    const { institute } = useAuth();
+    const { toast } = useToast();
+    
+    if (reminders.length === 0) return null;
+
+    const genericMessage = `¡Hola! Te recordamos que tu próximo pago para ${institute?.name || 'el estudio'} está por vencer. ¡Puedes abonar en tu próxima clase! Gracias 😊`;
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(genericMessage);
+        toast({ title: 'Mensaje copiado', description: 'El recordatorio está listo para ser pegado.' });
+    };
+
+    return (
+        <Dialog open={true} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Enviar Recordatorios a Todos</DialogTitle>
+                    <DialogDescription>
+                        Copia el mensaje y luego haz clic en cada contacto para enviar el recordatorio por WhatsApp.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="my-4 space-y-4">
+                    <div>
+                        <Label htmlFor="reminder-message" className="text-sm font-medium">Mensaje a Enviar</Label>
+                        <Textarea id="reminder-message" readOnly value={genericMessage} rows={4} className="mt-2" />
+                        <Button onClick={handleCopy} size="sm" className="w-full mt-2">Copiar Mensaje</Button>
+                    </div>
+                    <div>
+                        <h4 className="font-medium text-sm mb-2">Destinatarios ({reminders.length})</h4>
+                         <ScrollArea className="h-48 rounded-md border">
+                            <div className="p-2 space-y-1">
+                                {reminders.map(reminder => (
+                                    <div key={reminder.person.id} className="flex items-center justify-between p-2 rounded-md bg-muted/50">
+                                        <p className="font-medium text-sm">{reminder.person.name}</p>
+                                        <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700">
+                                            <a href={`https://wa.me/${reminder.person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                                <WhatsAppIcon />
+                                            </a>
+                                        </Button>
+                                    </div>
+                                ))}
+                            </div>
+                        </ScrollArea>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => onOpenChange(false)}>
+                        Cerrar
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 
 function PaymentReminderDialog({ reminderInfo, onOpenChange }: { reminderInfo: PaymentReminderInfo | null; onOpenChange: (open: boolean) => void; }) {
@@ -74,16 +132,20 @@ function PaymentReminderDialog({ reminderInfo, onOpenChange }: { reminderInfo: P
     );
 }
 
-function PaymentReminders({ reminders, onSendReminder }: { reminders: PaymentReminderInfo[]; onSendReminder: (reminder: PaymentReminderInfo) => void; }) {
+function PaymentReminders({ reminders, onSendReminder, onSendAll }: { reminders: PaymentReminderInfo[]; onSendReminder: (reminder: PaymentReminderInfo) => void; onSendAll: () => void; }) {
     if (reminders.length === 0) return null;
 
     return (
         <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
-            <CardHeader>
+            <CardHeader className="flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2 text-foreground">
                     <Bell className="h-5 w-5 text-yellow-500" />
                     Recordatorios de Vencimiento
                 </CardTitle>
+                <Button variant="outline" size="sm" onClick={onSendAll}>
+                    <Send className="mr-2 h-4 w-4" />
+                    Enviar a Todos
+                </Button>
             </CardHeader>
             <CardContent className="space-y-3">
                 {reminders.map(reminder => (
@@ -413,6 +475,7 @@ function DashboardPageContent() {
   const [isMounted, setIsMounted] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
+  const [isMassReminderOpen, setIsMassReminderOpen] = useState(false);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -760,7 +823,11 @@ function DashboardPageContent() {
                 </div>
                 
                 <div className="space-y-8 mt-8">
-                    <PaymentReminders reminders={paymentReminders} onSendReminder={setPaymentReminderInfo} />
+                    <PaymentReminders 
+                        reminders={paymentReminders} 
+                        onSendReminder={setPaymentReminderInfo}
+                        onSendAll={() => setIsMassReminderOpen(true)}
+                    />
                     <AppNotifications />
                 </div>
                 
@@ -1005,6 +1072,8 @@ function DashboardPageContent() {
     
       <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
       <PaymentReminderDialog reminderInfo={paymentReminderInfo} onOpenChange={() => setPaymentReminderInfo(null)} />
+      {isMassReminderOpen && <MassReminderDialog reminders={paymentReminders} onOpenChange={setIsMassReminderOpen} />}
+
 
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 

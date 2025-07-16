@@ -94,6 +94,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setActiveOperator(null);
     };
 
+    const fetchUserData = useCallback(async (user: User) => {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userDocRef);
+
+        if (userDocSnap.exists()) {
+            const profileData = userDocSnap.data() as UserProfile;
+            setUserProfile(profileData);
+
+            if (profileData.instituteId) {
+                await fetchInstituteData(profileData.instituteId);
+            }
+            return profileData;
+        } else {
+            setUserProfile(null);
+            setInstitute(null);
+            return null;
+        }
+    }, [fetchInstituteData]);
+
     useEffect(() => {
         try {
             const storedPinStatus = sessionStorage.getItem(PIN_VERIFIED_KEY);
@@ -112,21 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(true); // Start loading when auth state changes
             if (user) {
                 setUser(user);
-                const userDocRef = doc(db, 'users', user.uid);
-                const userDocSnap = await getDoc(userDocRef);
-
-                if (userDocSnap.exists()) {
-                    const profileData = userDocSnap.data() as UserProfile;
-                    setUserProfile(profileData);
-
-                    if (profileData.instituteId) {
-                       await fetchInstituteData(profileData.instituteId);
-                    }
-
-                } else {
-                    setUserProfile(null);
-                    setInstitute(null);
-                }
+                await fetchUserData(user);
             } else {
                 setUser(null);
                 setUserProfile(null);
@@ -137,7 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setLoading(false);
         });
         return () => unsubscribe();
-    }, [setPinVerified, fetchInstituteData, setActiveOperator]);
+    }, [setPinVerified, fetchUserData, setActiveOperator]);
 
     useEffect(() => {
         if (loading) return;
@@ -160,7 +165,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }, [user, userProfile, loading, pathname, router]);
 
     const login = async ({ email, password }: LoginCredentials) => {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        if (userCredential.user) {
+            // Force refetch of user data upon login
+            await fetchUserData(userCredential.user);
+        }
     };
 
     const signup = async ({ instituteName, email, password, ownerPin, recoveryEmail }: SignupCredentials) => {
