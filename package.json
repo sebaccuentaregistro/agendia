@@ -1,9 +1,8 @@
-
 {
   "name": "agendia",
   "version": "1.0.1",
   "private": true,
-  "description": "Forcing a full clean reinstall to resolve persistent build errors.",
+  "description": "Final build fix attempt by clearing webpack config and forcing a clean reinstall.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
