@@ -255,9 +255,12 @@ function ChurnRiskNotifications() {
                         <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
                             <div className="flex items-start gap-3">
                                 <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                                <p className="flex-grow text-yellow-800 dark:text-yellow-200">
-                                    <span className="font-semibold">{person.name}</span> ha faltado a 3 clases seguidas. Considera contactarle.
-                                </p>
+                                <div className="flex-grow text-yellow-800 dark:text-yellow-200">
+                                    <Link href={`/students?search=${encodeURIComponent(person.name)}`} className="group">
+                                        <span className="font-semibold group-hover:text-primary group-hover:underline">{person.name}</span>
+                                    </Link>
+                                    <span> ha faltado a 3 clases seguidas. Considera contactarle.</span>
+                                </div>
                             </div>
                             <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                                 <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
