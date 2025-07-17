@@ -253,12 +253,18 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
 
 
 export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[], notificationsRef: CollectionReference, spacesRef: CollectionReference) => {
-    return runTransaction(db, async (transaction) => {
-        // First, find all sessions the person is currently enrolled in
-        const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
-        const currentEnrollmentsSnap = await transaction.get(currentEnrollmentsQuery);
-        const currentSessionIds = new Set(currentEnrollmentsSnap.docs.map(d => d.id));
+    // Perform all reads first
+    const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
+    const currentEnrollmentsSnap = await getDocs(currentEnrollmentsQuery);
+    const currentSessionIds = new Set(currentEnrollmentsSnap.docs.map(d => d.id));
 
+    const sessionsToAddToRefs = sessionIds
+        .filter(id => !currentSessionIds.has(id))
+        .map(id => doc(sessionsRef, id));
+    
+    const sessionsToAddToSnaps = await Promise.all(sessionsToAddToRefs.map(ref => getDoc(ref)));
+
+    return runTransaction(db, async (transaction) => {
         // Determine which sessions to remove the person from
         const sessionsToRemoveFromIds = Array.from(currentSessionIds).filter(id => !sessionIds.includes(id));
         
@@ -272,38 +278,39 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
 
                 // Check for waitlist and create a notification if a spot opens up
                 if (sessionData.waitlist && sessionData.waitlist.length > 0) {
-                    const spaceDocSnap = await getDocs(query(spacesRef, where('__name__', '==', sessionData.spaceId), limit(1)));
-                    const space = spaceDocSnap.empty ? null : spaceDocSnap.docs[0].data() as Space;
-                    const capacity = space?.capacity || 0;
-                    
-                    if (updatedPersonIds.length < capacity) {
-                         const firstOnWaitlist = sessionData.waitlist[0];
+                    const spaceDocSnap = await getDoc(doc(spacesRef, sessionData.spaceId));
+                    if (spaceDocSnap.exists()) {
+                        const space = spaceDocSnap.data() as Space;
+                        const capacity = space.capacity;
                         
-                        const notifData: Partial<AppNotification> = {
-                            type: 'waitlist',
-                            sessionId: sessionId,
-                            createdAt: new Date(),
-                        };
+                        if (updatedPersonIds.length < capacity) {
+                            const firstOnWaitlist = sessionData.waitlist[0];
+                            const notifData: Partial<AppNotification> = {
+                                type: 'waitlist',
+                                sessionId: sessionId,
+                                createdAt: new Date(),
+                            };
 
-                        if (typeof firstOnWaitlist === 'string') {
-                            notifData.personId = firstOnWaitlist;
-                        } else {
-                            notifData.prospectDetails = firstOnWaitlist;
+                            if (typeof firstOnWaitlist === 'string') {
+                                notifData.personId = firstOnWaitlist;
+                            } else if (firstOnWaitlist) {
+                                notifData.prospectDetails = firstOnWaitlist;
+                            }
+                            
+                            if (notifData.personId || notifData.prospectDetails) {
+                                const notifRef = doc(notificationsRef);
+                                transaction.set(notifRef, notifData);
+                            }
                         }
-
-                        const notifRef = doc(notificationsRef);
-                        transaction.set(notifRef, notifData);
                     }
                 }
             }
         }
 
         // Determine which sessions to add the person to
-        const sessionsToAddToIds = sessionIds.filter(id => !currentSessionIds.has(id));
-        for (const sessionId of sessionsToAddToIds) {
-            const sessionRef = doc(sessionsRef, sessionId);
-            const sessionDoc = await transaction.get(sessionRef);
-            if (sessionDoc.exists()) {
+        for (const sessionDoc of sessionsToAddToSnaps) {
+             if (sessionDoc.exists()) {
+                 const sessionRef = sessionDoc.ref;
                  const sessionData = sessionDoc.data() as Session;
                  const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));
                  transaction.update(sessionRef, { personIds: updatedPersonIds });
@@ -395,7 +402,6 @@ export const addToWaitlistAction = async (
     notificationsRef: CollectionReference
 ) => {
     return runTransaction(db, async (transaction) => {
-        // READ FIRST
         const sessionSnap = await transaction.get(sessionDocRef);
         if (!sessionSnap.exists()) {
             throw new Error("La sesión no existe.");
@@ -444,8 +450,9 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
         }
         
         const session = sessionSnap.data() as Session;
-        const spaceSnap = await getDocs(query(spacesRef, where('__name__', '==', session.spaceId), limit(1)));
-        const space = spaceSnap.empty ? null : spaceSnap.docs[0].data() as Space;
+        const spaceSnap = await getDoc(doc(spacesRef, session.spaceId));
+        
+        const space = spaceSnap.exists() ? spaceSnap.data() as Space : null;
         const capacity = space?.capacity || 0;
 
         // Double check there's still a spot
