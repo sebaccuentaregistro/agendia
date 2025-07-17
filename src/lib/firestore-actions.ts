@@ -414,7 +414,7 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
             let cyclesMissed = 0;
             let dateCursor = dueDate;
             
-            // Calculate how many payment cycles have been missed
+            // Calculate how many payment cycles have been missed since the due date
             while (isBefore(dateCursor, today)) {
                 cyclesMissed++;
                 dateCursor = calculateNextPaymentDate(dateCursor, person.joinDate, tariff);
@@ -423,14 +423,12 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
             if (cyclesMissed > 0) {
                  const currentOutstanding = person.outstandingPayments || 0;
                  const newOutstandingPayments = currentOutstanding + cyclesMissed;
-
-                 // We only update if the number of outstanding payments has actually increased
-                 if (newOutstandingPayments > currentOutstanding) {
-                     updatedCount++;
-                     const personDocRef = doc(peopleRef, person.id);
-                     // DO NOT update lastPaymentDate. Only increase the debt counter.
-                     batch.update(personDocRef, { outstandingPayments: newOutstandingPayments });
-                 }
+                 
+                 updatedCount++;
+                 const personDocRef = doc(peopleRef, person.id);
+                 // We DO NOT update lastPaymentDate here. That only happens on payment.
+                 // We only update the debt counter.
+                 batch.update(personDocRef, { outstandingPayments: newOutstandingPayments });
             }
         }
     }
@@ -446,7 +444,7 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
         } as Omit<AuditLog, 'id'>);
     }
 
-    if (batch.length > 0) {
+    if (updatedCount > 0) {
         await batch.commit();
     }
     
