@@ -1102,6 +1102,14 @@ function SchedulePageContent() {
                                           <Send className="mr-2 h-4 w-4" />
                                           Notificar Asistentes
                                       </DropdownMenuItem>
+                                      {isFull && (
+                                        <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => setSessionForWaitlist(session)}>
+                                                <ListPlus className="mr-2 h-4 w-4" /> Anotar en Espera
+                                            </DropdownMenuItem>
+                                        </>
+                                      )}
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem onSelect={() => openDeleteDialog(session)} className="text-destructive focus:text-destructive">
                                           <Trash2 className="mr-2 h-4 w-4" />
@@ -1211,14 +1219,6 @@ function SchedulePageContent() {
                                         <DropdownMenuItem onClick={() => setSessionForPuntual(session)} disabled={isFull}>
                                             <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
                                         </DropdownMenuItem>
-                                        {isFull && (
-                                            <>
-                                                <DropdownMenuSeparator />
-                                                <DropdownMenuItem onClick={() => setSessionForWaitlist(session)}>
-                                                    <ListPlus className="mr-2 h-4 w-4" /> Anotar en Espera
-                                                </DropdownMenuItem>
-                                            </>
-                                        )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                                </div>
