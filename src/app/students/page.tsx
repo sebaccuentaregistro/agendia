@@ -1342,7 +1342,11 @@ function StudentsPageContent() {
         person={selectedPerson} 
         onOpenChange={setIsPersonDialogOpen} 
         open={isPersonDialogOpen}
-        onPersonCreated={(person) => setPersonForWelcome(person)}
+        onPersonCreated={(person) => {
+          if (person.tariffId) {
+            setPersonForWelcome(person as NewPersonData);
+          }
+        }}
         isLimitReached={isLimitReached}
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
@@ -1393,5 +1397,6 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
