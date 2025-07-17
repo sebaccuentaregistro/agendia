@@ -1,3 +1,4 @@
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
@@ -49,7 +50,6 @@ export const addPersonAction = async (peopleRef: CollectionReference, personData
         lastPaymentDate: personData.lastPaymentDate || null, // Allow setting initial due date
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
-        paymentBalance: 0,
         outstandingPayments: personData.lastPaymentDate ? 0 : 1, // Start with 1 outstanding payment if no due date is set
     };
     
@@ -118,18 +118,14 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 
 export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
     const now = new Date();
-    // If it's the first payment, the cycle starts today. Otherwise, it extends from the previous due date.
+    
+    // Decrease the number of outstanding payments by one.
+    const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
+
+    // The due date only advances if the person is fully paid up.
     let newExpiryDate = person.lastPaymentDate;
-    let newOutstandingPayments = person.outstandingPayments || 0;
-
-    if (newOutstandingPayments > 0) {
-        newOutstandingPayments -= 1;
-    }
-
-    if (newOutstandingPayments === 0 && person.lastPaymentDate && new Date() > person.lastPaymentDate) {
-        newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate, person.joinDate, tariff);
-    } else if (!person.lastPaymentDate) {
-        newExpiryDate = calculateNextPaymentDate(now, person.joinDate, tariff);
+    if (newOutstandingPayments === 0) {
+        newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff);
     }
     
     const paymentRecord = {
@@ -405,6 +401,7 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     let updatedCount = 0;
 
     for (const person of people) {
+        // Skip people who have never had a payment cycle started
         if (!person.lastPaymentDate) continue;
 
         let lastDueDate = person.lastPaymentDate;
@@ -414,15 +411,26 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
         if (!tariff) continue;
 
         let hasChanged = false;
+        // While the person's due date is in the past, add to their debt and advance the due date.
         while (lastDueDate < today) {
             outstandingPayments += 1;
-            lastDueDate = calculateNextPaymentDate(lastDueDate, person.joinDate, tariff);
+            // Calculate the *next* due date based on the *current* one to avoid infinite loops.
+            const nextDueDate = calculateNextPaymentDate(lastDueDate, person.joinDate, tariff);
+            
+            // Safety break: if the date doesn't advance, something is wrong.
+            if (nextDueDate <= lastDueDate) {
+                console.error(`Next due date calculation failed for person ${person.id}. Aborting to prevent infinite loop.`);
+                break;
+            }
+            
+            lastDueDate = nextDueDate;
             hasChanged = true;
         }
 
         if (hasChanged) {
             updatedCount++;
             const personDocRef = doc(peopleRef, person.id);
+            // Update the person with the new future due date and the accumulated debt.
             batch.update(personDocRef, {
                 lastPaymentDate: lastDueDate,
                 outstandingPayments: outstandingPayments
@@ -440,7 +448,6 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
             timestamp: new Date(),
         } as Omit<AuditLog, 'id'>);
     }
-
 
     await batch.commit();
     return updatedCount;

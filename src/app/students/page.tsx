@@ -1027,7 +1027,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
                             {paymentStatusInfo.status === 'Atrasado' && totalDebt > 0 ? (
                                 <div className="text-right">
                                     <p className="text-xs opacity-80">Deuda Total</p>
-                                    <p className="text-lg font-bold text-white">{formatPrice(totalDebt)}</p>
+                                    <p className="text-lg font-bold">{formatPrice(totalDebt)}</p>
                                 </div>
                             ) : (
                                 tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>

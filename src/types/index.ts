@@ -85,7 +85,7 @@ export type Person = {
   healthInfo?: string;
   levelId?: string;
   notes?: string;
-  paymentBalance?: number;
+  outstandingPayments?: number;
 };
 
 export type NewPersonData = {
