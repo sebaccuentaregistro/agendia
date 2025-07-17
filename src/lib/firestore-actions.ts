@@ -2,7 +2,7 @@
 
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
-import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse } from 'date-fns';
@@ -399,17 +399,21 @@ export const addToWaitlistAction = async (
         
         const session = sessionSnap.data() as Session;
         
-        // Add to waitlist
         const newWaitlist = [...(session.waitlist || []), entry];
         transaction.update(sessionDocRef, { waitlist: newWaitlist });
 
-        // Check if there's a spot available right now
-        const spaceSnap = await getDocs(query(spacesRef, where('__name__', '==', session.spaceId), limit(1)));
-        const space = spaceSnap.empty ? null : spaceSnap.docs[0].data() as Space;
-        const capacity = space?.capacity || 0;
+        const spaceDocRef = doc(spacesRef, session.spaceId);
+        const spaceSnap = await transaction.get(spaceDocRef);
+        if (!spaceSnap.exists()) {
+            console.warn(`Space with id ${session.spaceId} not found for waitlist check.`);
+            return; 
+        }
 
-        if (session.personIds.length < capacity) {
-             // A spot is available! Create a notification immediately.
+        const space = spaceSnap.data() as Space;
+        const capacity = space.capacity;
+        const enrolledCount = session.personIds.length;
+
+        if (enrolledCount < capacity) {
             const notifData: Partial<AppNotification> = {
                 type: 'waitlist',
                 sessionId: session.id,

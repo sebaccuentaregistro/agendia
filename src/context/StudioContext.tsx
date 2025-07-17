@@ -27,7 +27,7 @@ interface StudioContextType {
     isTutorialOpen: boolean;
     openTutorial: () => void;
     closeTutorial: () => void;
-    addPerson: (person: NewPersonData) => void;
+    addPerson: (person: NewPersonData) => Promise<string | undefined>;
     updatePerson: (person: Person) => void;
     deletePerson: (personId: string) => void;
     addSession: (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => void;
@@ -178,8 +178,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     const handleAction = async (action: Promise<any>, successMessage: string, errorMessage: string) => {
         try {
-            await action;
+            const result = await action;
             toast({ title: "¡Éxito!", description: successMessage });
+            return result;
         } catch (error: any) {
             console.error(errorMessage, error);
             toast({ variant: 'destructive', title: "Error", description: error.message || errorMessage });
@@ -189,14 +190,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const withOperator = (action: (op: Operator) => Promise<any>, successMessage: string, errorMessage: string) => {
         if (!activeOperator) {
             toast({ variant: 'destructive', title: 'Error', description: 'No se pudo identificar al operador. Por favor, reinicia sesión.' });
-            return;
+            return Promise.reject(new Error("No active operator"));
         }
-        handleAction(action(activeOperator), successMessage, errorMessage);
+        return handleAction(action(activeOperator), successMessage, errorMessage);
     };
 
-    const addPerson = (personData: NewPersonData) => {
+    const addPerson = async (personData: NewPersonData) => {
         if (!collectionRefs) return;
-        withOperator(
+        return withOperator(
             (operator) => addPersonAction(collectionRefs.people, personData, collectionRefs.audit_logs, operator),
             `${personData.name} ha sido añadido con éxito.`,
             `Error al añadir a ${personData.name}.`
@@ -364,16 +365,17 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     );
     
     const addToWaitlist = (sessionId: string, entry: WaitlistEntry) => handleAction(
-        addToWaitlistAction(doc(collectionRefs!.sessions, sessionId), entry),
+        addToWaitlistAction(doc(collectionRefs!.sessions, sessionId), entry, collectionRefs!.spaces, collectionRefs!.notifications),
         'Añadido a la lista de espera.',
         'Error al añadir a la lista de espera.'
     );
 
     const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
-        const session = data.sessions.find(s => s.id === sessionId);
+        if (!collectionRefs) return;
+        const session = data.sessions.find((s: Session) => s.id === sessionId);
         if (!session) return;
         handleAction(
-            enrollFromWaitlistAction(collectionRefs!.sessions, collectionRefs!.notifications, notificationId, sessionId, personId, session),
+            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, notificationId, sessionId, personId, collectionRefs.spaces),
             'Inscripto desde lista de espera.',
             'Error al inscribir.'
         );
@@ -386,7 +388,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     );
 
     const enrollPersonInSessions = (personId: string, sessionIds: string[]) => handleAction(
-        enrollPersonInSessionsAction(collectionRefs!.sessions, personId, sessionIds, collectionRefs!.notifications),
+        enrollPersonInSessionsAction(collectionRefs!.sessions, personId, sessionIds, collectionRefs!.notifications, collectionRefs!.spaces),
         "Horarios de la persona actualizados.",
         "Error al actualizar los horarios."
     );
