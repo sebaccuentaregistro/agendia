@@ -5,7 +5,7 @@
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator } from '@/types';
 import { db } from './firebase';
-import { format as formatDate, addMonths, subMonths, startOfDay } from 'date-fns';
+import { format as formatDate, addMonths, subMonths, startOfDay, isBefore } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -402,36 +402,36 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     let updatedCount = 0;
 
     for (const person of people) {
-        if (!person.lastPaymentDate) continue;
+        if (!person.lastPaymentDate || !(person.lastPaymentDate instanceof Date)) continue;
 
         const tariff = tariffs.find(t => t.id === person.tariffId);
         if (!tariff) continue;
+        
+        const dueDate = startOfDay(person.lastPaymentDate);
 
-        let newDueDate = person.lastPaymentDate;
-        let newOutstandingPayments = person.outstandingPayments || 0;
-        let hasChanged = false;
-
-        // Loop as long as the due date is in the past
-        while (startOfDay(newDueDate) < today) {
-            newOutstandingPayments += 1;
-            // CRITICAL FIX: Calculate the next due date based on the CURRENT newDueDate, not today's date.
-            const nextDate = calculateNextPaymentDate(newDueDate, person.joinDate, tariff);
+        // Check if the person is already overdue
+        if (isBefore(dueDate, today)) {
+            let cyclesMissed = 0;
+            let dateCursor = dueDate;
             
-            if (nextDate <= newDueDate) {
-                console.error(`Date calculation did not advance for person ${person.id}. Breaking loop.`);
-                break;
+            // Calculate how many payment cycles have been missed
+            while (isBefore(dateCursor, today)) {
+                cyclesMissed++;
+                dateCursor = calculateNextPaymentDate(dateCursor, person.joinDate, tariff);
             }
-            newDueDate = nextDate;
-            hasChanged = true;
-        }
+            
+            if (cyclesMissed > 0) {
+                 const currentOutstanding = person.outstandingPayments || 0;
+                 const newOutstandingPayments = currentOutstanding + cyclesMissed;
 
-        if (hasChanged) {
-            updatedCount++;
-            const personDocRef = doc(peopleRef, person.id);
-            batch.update(personDocRef, {
-                lastPaymentDate: newDueDate,
-                outstandingPayments: newOutstandingPayments,
-            });
+                 // We only update if the number of outstanding payments has actually increased
+                 if (newOutstandingPayments > currentOutstanding) {
+                     updatedCount++;
+                     const personDocRef = doc(peopleRef, person.id);
+                     // DO NOT update lastPaymentDate. Only increase the debt counter.
+                     batch.update(personDocRef, { outstandingPayments: newOutstandingPayments });
+                 }
+            }
         }
     }
     
@@ -446,6 +446,9 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
         } as Omit<AuditLog, 'id'>);
     }
 
-    await batch.commit();
+    if (batch.length > 0) {
+        await batch.commit();
+    }
+    
     return updatedCount;
 };
