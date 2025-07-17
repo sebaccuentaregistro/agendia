@@ -1004,7 +1004,6 @@ function DashboardPageContent() {
                         onSendReminder={setPaymentReminderInfo}
                         onSendAll={() => setIsMassReminderOpen(true)}
                     />
-                    <AppNotifications onOpenPersonDialog={handleOpenPersonDialog} />
                 </div>
                 
                 <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
@@ -1230,6 +1229,7 @@ function DashboardPageContent() {
           )}
         </div>
         <div className="space-y-8">
+            <AppNotifications onOpenPersonDialog={handleOpenPersonDialog} />
             <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-foreground">
