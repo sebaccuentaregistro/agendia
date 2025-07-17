@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
@@ -1043,17 +1044,24 @@ function DashboardPageContent() {
                     </Link>
                   );
                 })}
-                <div className="transition-transform hover:-translate-y-1">
+                <div
+                  onClick={!isUpdatingDebts ? handleUpdateDebts : undefined}
+                  className={cn(
+                    "transition-transform hover:-translate-y-1",
+                    isUpdatingDebts ? 'cursor-not-allowed' : 'cursor-pointer'
+                  )}
+                >
                   <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
                       <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
                       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
                       <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                          <RefreshCw className="h-5 w-5" />
+                          <RefreshCw className={cn("h-5 w-5", isUpdatingDebts && "animate-spin")} />
                       </div>
                       <CardTitle className="text-lg font-semibold text-foreground">Actualizar Deudas</CardTitle>
-                      <Button onClick={handleUpdateDebts} disabled={isUpdatingDebts} size="sm" className="mt-2">
-                        {isUpdatingDebts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                        Ejecutar
+                      <Button asChild size="sm" className="mt-2" variant={isUpdatingDebts ? "ghost" : "default"}>
+                        <div>
+                          {isUpdatingDebts ? 'Actualizando...' : 'Ejecutar'}
+                        </div>
                       </Button>
                   </Card>
                 </div>
