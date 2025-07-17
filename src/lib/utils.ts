@@ -62,17 +62,12 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): Pa
   const today = startOfDay(referenceDate);
   const dueDateAtStartOfDay = startOfDay(nextDueDate);
 
-  // A person is overdue if today is AT or AFTER the due date, and their balance is not positive.
+  // A person is overdue if today is AT or AFTER the due date.
   const isOverdue = !isBefore(today, dueDateAtStartOfDay);
   
   if (isOverdue) {
     const daysOverdue = differenceInDays(today, dueDateAtStartOfDay);
     return { status: 'Atrasado', daysOverdue: Math.max(0, daysOverdue) }; // Ensure it's not negative if paid on the same day
-  }
-  
-  // This can happen if a payment is reverted manually
-  if ((person.paymentBalance ?? 0) < 0) {
-    return { status: 'Atrasado', daysOverdue: 0 };
   }
   
   return { status: 'Al día' };
