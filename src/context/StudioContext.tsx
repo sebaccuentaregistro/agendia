@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry } from '@/types';
-import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, checkAndNotifyWaitlist } from '@/lib/firestore-actions';
+import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -365,7 +365,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const addToWaitlist = (sessionId: string, entry: WaitlistEntry) => {
         if (!collectionRefs) return;
         handleAction(
-            addToWaitlistAction(doc(collectionRefs.sessions, sessionId), entry),
+            addToWaitlistAction(doc(collectionRefs.sessions, sessionId), entry, collectionRefs.spaces, collectionRefs.notifications),
             'Añadido a la lista de espera.',
             'Error al añadir a la lista de espera.'
         );
@@ -373,20 +373,20 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     const enrollPersonInSessions = async (personId: string, sessionIds: string[]) => {
         if (!collectionRefs) return;
-        return handleAction(
+        const removedFromSessionIds = await handleAction(
             enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds),
             "Horarios de la persona actualizados.",
             "Error al actualizar los horarios."
         );
+         if (removedFromSessionIds && Array.isArray(removedFromSessionIds)) {
+            removedFromSessionIds.forEach(sessionId => triggerWaitlistCheck(sessionId));
+        }
     };
 
     const triggerWaitlistCheck = (sessionId: string) => {
-        if (!collectionRefs) return;
-        handleAction(
-            checkAndNotifyWaitlist(sessionId),
-            'Comprobación de lista de espera realizada.', // This message probably won't be seen by user, but good for debugging
-            'Error al comprobar la lista de espera.'
-        );
+       // This function is currently a placeholder as the direct notification logic was removed.
+       // It can be re-implemented if a new notification strategy is decided.
+       console.log(`Verificación de lista de espera gatillada para la sesión: ${sessionId}`);
     };
 
     const updateOverdueStatuses = useCallback(async (): Promise<number> => {
