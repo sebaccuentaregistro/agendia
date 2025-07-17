@@ -19,7 +19,6 @@ const cleanDataForFirestore = (data: any) => {
     return cleanData;
 };
 
-
 // Generic Actions
 export const addEntity = async (collectionRef: CollectionReference, data: any) => {
     const cleanData = cleanDataForFirestore(data);
@@ -315,6 +314,11 @@ export const saveAttendanceAction = async (
         const updatedData = { ...existingData, presentIds, absentIds, justifiedAbsenceIds };
         await updateEntity(docRef, updatedData);
     }
+    
+    // Check for churn risk for each absent person
+    for (const personId of absentIds) {
+        await checkForChurnRisk(personId, allPersonSessions, allAttendance, notificationsRef);
+    }
 };
 
 export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
@@ -360,6 +364,8 @@ export const removeVacationPeriodAction = async (personDocRef: any, person: Pers
 export const addToWaitlistAction = async (
     sessionDocRef: DocumentReference,
     entry: WaitlistEntry,
+    spacesRef: CollectionReference,
+    notificationsRef: CollectionReference
 ) => {
     return runTransaction(db, async (transaction) => {
         const freshSessionSnap = await transaction.get(sessionDocRef);
@@ -367,10 +373,29 @@ export const addToWaitlistAction = async (
              throw new Error("La sesión no existe.");
         }
         const session = freshSessionSnap.data() as Session;
-        
-        // Add the new entry to the waitlist
-        const newWaitlist = [...(session.waitlist || []), entry];
-        transaction.update(sessionDocRef, { waitlist: newWaitlist });
+
+        const spaceSnap = await getDoc(doc(spacesRef, session.spaceId));
+        if (!spaceSnap.exists()) {
+            throw new Error("El espacio para esta sesión no se encontró.");
+        }
+        const space = spaceSnap.data() as Space;
+        const capacity = space.capacity;
+
+        // Check for available spots right now
+        if (session.personIds.length < capacity) {
+             const newNotification: Omit<AppNotification, 'id'> = {
+                type: 'waitlist',
+                sessionId: session.id,
+                personId: typeof entry === 'string' ? entry : undefined,
+                prospectDetails: typeof entry !== 'string' ? entry : undefined,
+                createdAt: new Date(),
+            };
+            transaction.set(doc(notificationsRef), newNotification);
+        } else {
+            // Add the new entry to the waitlist if no spot is free
+            const newWaitlist = [...(session.waitlist || []), entry];
+            transaction.update(sessionDocRef, { waitlist: newWaitlist });
+        }
     });
 };
 
@@ -515,11 +540,4 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     }
     
     return updatedCount;
-};
-
-// This function is now deprecated and its logic is merged into `enrollPersonInSessionsAction`.
-// It is kept here to avoid breaking changes if it's referenced elsewhere, but it does nothing.
-export const checkAndNotifyWaitlist = async (sessionId: string) => {
-    // Deprecated. 
-    console.log("checkAndNotifyWaitlist is deprecated and will be removed.");
 };

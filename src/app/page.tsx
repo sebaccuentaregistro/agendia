@@ -6,10 +6,10 @@ import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'reac
 
 import { Card, CardTitle, CardContent, CardHeader, CardDescription as CardDescriptionComponent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2 } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData } from '@/types';
+import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, AppNotification } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,49 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { PersonDialog } from '@/app/students/person-dialog';
+import { deleteEntity } from '@/lib/firestore-actions';
+import { db } from '@/lib/firebase';
+
+function ChurnRiskAlerts({ notifications, onDismiss }: { notifications: AppNotification[]; onDismiss: (id: string) => void; }) {
+    const { people } = useStudio();
+    
+    const churnRiskNotifications = useMemo(() => {
+        return notifications
+            .filter(n => n.type === 'churnRisk' && n.personId && people.find(p => p.id === n.personId))
+            .map(n => ({...n, person: people.find(p => p.id === n.personId)! }))
+            .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+    }, [notifications, people]);
+
+    if (churnRiskNotifications.length === 0) return null;
+
+    return (
+        <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-red-500/20">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                    <UserX className="h-5 w-5 text-red-500" />
+                    Riesgo de Abandono
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                {churnRiskNotifications.map(notif => (
+                    <div key={notif.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 text-sm">
+                        <p className="flex-grow text-red-800 dark:text-red-200">
+                           <span className="font-semibold">{notif.person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
+                        </p>
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                             <Button asChild size="sm" variant="ghost" className="text-green-600 hover:text-green-700 h-8 px-2">
+                                <a href={`https://wa.me/${notif.person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                    <WhatsAppIcon className="mr-2"/> Contactar
+                                </a>
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => onDismiss(notif.id)}>Descartar</Button>
+                        </div>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
+    );
+}
 
 function MassReminderDialog({ reminders, onOpenChange }: { reminders: PaymentReminderInfo[]; onOpenChange: (open: boolean) => void; }) {
     const { institute } = useAuth();
@@ -392,10 +435,10 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
     updateOverdueStatuses, addPerson,
   } = useStudio();
-  const { isPinVerified, setPinVerified } = useAuth();
+  const { institute, isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
     actividadId: 'all',
     spaceId: 'all',
@@ -548,6 +591,18 @@ function DashboardPageContent() {
     topDebtors,
     paymentReminders,
   } = clientSideData;
+  
+   const handleDismissNotification = async (notificationId: string) => {
+    if (!institute) return;
+    try {
+        const notifRef = doc(db, 'institutes', institute.id, 'notifications', notificationId);
+        await deleteEntity(notifRef);
+        toast({ title: 'Notificación descartada' });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo descartar la notificación.' });
+    }
+  };
+
 
   useEffect(() => {
     if (!isMounted) return;
@@ -777,6 +832,7 @@ function DashboardPageContent() {
                         onSendReminder={setPaymentReminderInfo}
                         onSendAll={() => setIsMassReminderOpen(true)}
                     />
+                    <ChurnRiskAlerts notifications={notifications} onDismiss={handleDismissNotification} />
                 </div>
                 
                 <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
