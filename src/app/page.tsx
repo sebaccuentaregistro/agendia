@@ -1045,16 +1045,16 @@ function DashboardPageContent() {
                         <ul className="space-y-3">
                             {topDebtors.map(person => (
                                 <li key={person.id} className="flex items-center justify-between text-sm">
-                                    <div>
-                                        <span className="font-medium text-foreground">{person.name}</span>
+                                    <Link href={`/students?search=${encodeURIComponent(person.name)}`} className="group">
+                                        <div className="font-medium text-foreground group-hover:text-primary group-hover:underline">{person.name}</div>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                             <span>{person.phone}</span>
-                                            <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                            <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
                                                 <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
                                                 <span className="sr-only">Enviar WhatsApp a {person.name}</span>
                                             </a>
                                         </div>
-                                    </div>
+                                    </Link>
                                     <div className="text-right">
                                         <span className="font-semibold text-red-600 dark:text-red-400">{formatPrice(person.debt)}</span>
                                         <p className="text-xs text-muted-foreground">hace {person.daysOverdue} {person.daysOverdue === 1 ? 'día' : 'días'}</p>

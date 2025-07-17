@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -1120,7 +1120,11 @@ function StudentsPageContent() {
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    const searchQuery = searchParams.get('search');
+    if (searchQuery) {
+        setSearchTerm(searchQuery);
+    }
+  }, [searchParams]);
 
   const { recoveryDetails, filteredPeople } = useMemo(() => {
     if (!isMounted) return { recoveryDetails: {}, filteredPeople: [] };
