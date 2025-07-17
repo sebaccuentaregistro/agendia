@@ -111,7 +111,8 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
         onPersonCreated({
           id: newPersonId,
           ...finalValues,
-          joinDate: finalValues.joinDate || null, // Ensure joinDate is Date | null
+          joinDate: finalValues.joinDate || null,
+          lastPaymentDate: finalValues.lastPaymentDate || null,
           avatar: '',
           vacationPeriods: [],
         });
