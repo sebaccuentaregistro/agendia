@@ -20,7 +20,6 @@ interface StudioContextType {
     tariffs: Tariff[];
     payments: Payment[];
     attendance: SessionAttendance[];
-    notifications: AppNotification[];
     audit_logs: AuditLog[];
     operators: Operator[];
     loading: boolean;
@@ -43,8 +42,6 @@ interface StudioContextType {
     addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
     addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
     addToWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
-    enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => void;
-    dismissNotification: (notificationId: string) => void;
     addActividad: (actividad: Omit<Actividad, 'id'>) => void;
     updateActividad: (actividad: Actividad) => void;
     deleteActividad: (actividadId: string) => void;
@@ -368,34 +365,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const addToWaitlist = (sessionId: string, entry: WaitlistEntry) => {
         if (!collectionRefs) return;
         handleAction(
-            addToWaitlistAction(doc(collectionRefs.sessions, sessionId), entry, collectionRefs.spaces, collectionRefs.notifications),
+            addToWaitlistAction(doc(collectionRefs.sessions, sessionId), entry),
             'Añadido a la lista de espera.',
             'Error al añadir a la lista de espera.'
         );
     };
 
-
-    const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
-        if (!collectionRefs) return;
-        const session = data.sessions.find((s: Session) => s.id === sessionId);
-        if (!session) return;
-        handleAction(
-            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, notificationId, sessionId, personId, collectionRefs.spaces),
-            'Inscripto desde lista de espera.',
-            'Error al inscribir.'
-        );
-    };
-    
-    const dismissNotification = (notificationId: string) => handleAction(
-        deleteEntity(doc(collectionRefs!.notifications, notificationId)),
-        'Notificación descartada.',
-        'Error al descartar notificación.'
-    );
-
     const enrollPersonInSessions = async (personId: string, sessionIds: string[]) => {
         if (!collectionRefs) return;
         return handleAction(
-            enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds, collectionRefs.spaces, collectionRefs.notifications),
+            enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds),
             "Horarios de la persona actualizados.",
             "Error al actualizar los horarios."
         );
@@ -404,7 +383,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const triggerWaitlistCheck = (sessionId: string) => {
         if (!collectionRefs) return;
         handleAction(
-            checkAndNotifyWaitlist(sessionId, collectionRefs.sessions, collectionRefs.spaces, collectionRefs.notifications),
+            checkAndNotifyWaitlist(sessionId),
             'Comprobación de lista de espera realizada.', // This message probably won't be seen by user, but good for debugging
             'Error al comprobar la lista de espera.'
         );
@@ -449,8 +428,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             addJustifiedAbsence,
             addOneTimeAttendee,
             addToWaitlist,
-            enrollFromWaitlist,
-            dismissNotification,
             addActividad,
             updateActividad,
             deleteActividad,

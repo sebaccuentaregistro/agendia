@@ -252,85 +252,36 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
 };
 
 
-export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, desiredSessionIds: string[], spacesRef: CollectionReference, notificationsRef: CollectionReference) => {
-    // Read all necessary data BEFORE the transaction
+export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, desiredSessionIds: string[]) => {
+    // This is a simplified version. For a more robust solution, you would
+    // run this inside a transaction to prevent race conditions.
+    const batch = writeBatch(db);
+
+    // First, find all sessions the person is currently enrolled in
     const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
     const currentEnrollmentsSnap = await getDocs(currentEnrollmentsQuery);
     const currentSessionIds = new Set(currentEnrollmentsSnap.docs.map(d => d.id));
 
+    // Determine which sessions to remove the person from
     const sessionsToRemoveFrom = Array.from(currentSessionIds).filter(id => !desiredSessionIds.includes(id));
-    const sessionsToAddTo = desiredSessionIds.filter(id => !currentSessionIds.has(id));
-
-    // Fetch details for all relevant sessions to check capacity and waitlists
-    const allRelevantSessionIds = Array.from(new Set([...sessionsToRemoveFrom, ...sessionsToAddTo]));
-    const sessionDocs = await Promise.all(allRelevantSessionIds.map(id => getDoc(doc(sessionsRef, id))));
-    const sessionDataMap = new Map<string, Session>();
-    sessionDocs.forEach(doc => {
-        if (doc.exists()) {
-            sessionDataMap.set(doc.id, { id: doc.id, ...doc.data() } as Session);
-        }
-    });
-
-    // Fetch necessary space data
-    const spaceIds = new Set<string>();
-    sessionDataMap.forEach(session => spaceIds.add(session.spaceId));
-    const spaceDocs = await Promise.all(Array.from(spaceIds).map(id => getDoc(doc(spacesRef, id))));
-    const spaceDataMap = new Map<string, Space>();
-    spaceDocs.forEach(doc => {
-        if (doc.exists()) {
-            spaceDataMap.set(doc.id, { id: doc.id, ...doc.data() } as Space);
-        }
-    });
-
-    const batch = writeBatch(db);
-
-    // Batch update removals
     for (const sessionId of sessionsToRemoveFrom) {
         const sessionRef = doc(sessionsRef, sessionId);
-        const currentSession = sessionDataMap.get(sessionId);
-        if (currentSession) {
-            const updatedPersonIds = currentSession.personIds.filter(id => id !== personId);
+        const sessionData = currentEnrollmentsSnap.docs.find(d => d.id === sessionId)?.data() as Session;
+        if (sessionData) {
+            const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
             batch.update(sessionRef, { personIds: updatedPersonIds });
-
-            // Notification Logic: Check if a spot was freed up
-            const space = spaceDataMap.get(currentSession.spaceId);
-            const wasFull = currentSession.personIds.length >= (space?.capacity ?? 0);
-            const isNowOpen = updatedPersonIds.length < (space?.capacity ?? 0);
-            const hasWaitlist = currentSession.waitlist && currentSession.waitlist.length > 0;
-
-            if ((wasFull && isNowOpen && hasWaitlist) || (isNowOpen && hasWaitlist)) {
-                // A spot is available. Create a notification for the first person on the waitlist.
-                const firstOnWaitlist = currentSession.waitlist[0];
-                const notifData: Partial<AppNotification> = {
-                    type: 'waitlist',
-                    sessionId: sessionId,
-                    createdAt: new Date(),
-                };
-
-                if (typeof firstOnWaitlist === 'string') {
-                    notifData.personId = firstOnWaitlist;
-                } else {
-                    notifData.prospectDetails = firstOnWaitlist;
-                }
-
-                batch.set(doc(notificationsRef), notifData as Omit<AppNotification, 'id'>);
-            }
         }
     }
 
-    // Batch update additions
+    // Determine which sessions to add the person to
+    const sessionsToAddTo = desiredSessionIds.filter(id => !currentSessionIds.has(id));
     for (const sessionId of sessionsToAddTo) {
         const sessionRef = doc(sessionsRef, sessionId);
-        const currentSession = sessionDataMap.get(sessionId);
-        if (currentSession) {
-            const updatedPersonIds = Array.from(new Set([...currentSession.personIds, personId]));
-            batch.update(sessionRef, { personIds: updatedPersonIds });
-        }
+        batch.update(sessionRef, { personIds: arrayUnion(personId) });
     }
     
     await batch.commit();
-
-    return sessionsToRemoveFrom;
+    return sessionsToRemoveFrom; // Return IDs of sessions the person was removed from
 };
 
 
@@ -363,11 +314,6 @@ export const saveAttendanceAction = async (
         const existingData = snap.docs[0].data() as SessionAttendance;
         const updatedData = { ...existingData, presentIds, absentIds, justifiedAbsenceIds };
         await updateEntity(docRef, updatedData);
-    }
-    
-    // Check for churn risk for all absent people
-    for (const personId of absentIds) {
-        await checkForChurnRisk(personId, allPersonSessions, allAttendance, notificationsRef);
     }
 };
 
@@ -414,8 +360,6 @@ export const removeVacationPeriodAction = async (personDocRef: any, person: Pers
 export const addToWaitlistAction = async (
     sessionDocRef: DocumentReference,
     entry: WaitlistEntry,
-    spacesRef: CollectionReference,
-    notificationsRef: CollectionReference
 ) => {
     return runTransaction(db, async (transaction) => {
         const freshSessionSnap = await transaction.get(sessionDocRef);
@@ -427,32 +371,6 @@ export const addToWaitlistAction = async (
         // Add the new entry to the waitlist
         const newWaitlist = [...(session.waitlist || []), entry];
         transaction.update(sessionDocRef, { waitlist: newWaitlist });
-        
-        // Now, check if a notification should be created
-        const spaceSnap = await getDoc(doc(spacesRef, session.spaceId));
-        if (!spaceSnap.exists()) {
-            console.error("addToWaitlistAction: Space not found");
-            return;
-        }
-        const space = spaceSnap.data() as Space;
-
-        // If the class is not full, and we just added someone to the waitlist, we should notify them.
-        if (session.personIds.length < space.capacity) {
-            const notifData: Partial<AppNotification> = {
-                type: 'waitlist',
-                sessionId: session.id,
-                createdAt: new Date(),
-            };
-
-            if (typeof entry === 'string') {
-                notifData.personId = entry;
-            } else {
-                notifData.prospectDetails = entry;
-            }
-
-            // Write the new notification document within the same transaction
-            transaction.set(doc(notificationsRef), notifData as Omit<AppNotification, 'id'>);
-        }
     });
 };
 
@@ -601,7 +519,7 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
 
 // This function is now deprecated and its logic is merged into `enrollPersonInSessionsAction`.
 // It is kept here to avoid breaking changes if it's referenced elsewhere, but it does nothing.
-export const checkAndNotifyWaitlist = async (sessionId: string, sessionsRef: CollectionReference, spacesRef: CollectionReference, notificationsRef: CollectionReference) => {
-    // Deprecated. The logic is now inside enrollPersonInSessionsAction and addToWaitlistAction.
-    console.log("checkAndNotifyWaitlist is deprecated.");
+export const checkAndNotifyWaitlist = async (sessionId: string) => {
+    // Deprecated. 
+    console.log("checkAndNotifyWaitlist is deprecated and will be removed.");
 };

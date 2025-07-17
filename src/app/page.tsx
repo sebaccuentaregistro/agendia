@@ -165,220 +165,6 @@ function PaymentReminders({ reminders, onSendReminder, onSendAll }: { reminders:
     );
 }
 
-
-function WaitlistNotificationDialog({
-    notification,
-    onClose,
-    onConfirm,
-}: {
-    notification: any;
-    onClose: () => void;
-    onConfirm: (notification: any) => void;
-}) {
-    const { institute } = useAuth();
-    if (!notification) return null;
-
-    const { person, session, actividad } = notification.details;
-    const message = `¡Hola, ${person.name}! Se liberó un cupo para la clase de ${actividad.name} (${session.dayOfWeek} ${session.time}). ¿Quieres que te inscribamos?`;
-    const encodedMessage = encodeURIComponent(message);
-    const whatsappLink = `https://wa.me/${person.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
-
-    return (
-        <Dialog open={true} onOpenChange={onClose}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Confirmar Cupo con {person.name}</DialogTitle>
-                    <DialogDescription>
-                        Contacta a la persona para confirmar si desea el cupo. Una vez confirmado, presiona "Inscribir".
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="my-4 space-y-4">
-                    <Label htmlFor="wa-message">Mensaje Sugerido para WhatsApp</Label>
-                    <Textarea id="wa-message" readOnly value={message} rows={4} />
-                    <Button asChild className="w-full">
-                        <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
-                            <WhatsAppIcon className="mr-2 h-4 w-4" /> Abrir WhatsApp
-                        </a>
-                    </Button>
-                </div>
-                <DialogFooter>
-                    <Button variant="ghost" onClick={onClose}>
-                        Cerrar
-                    </Button>
-                    <Button
-                        onClick={() => {
-                            onConfirm(notification);
-                            onClose();
-                        }}
-                    >
-                        Confirmar e Inscribir
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function AppNotifications({ onOpenPersonDialog }: { onOpenPersonDialog: (personData?: Partial<NewPersonData>, enrollmentInfo?: { sessionId: string; notificationId: string }) => void }) {
-    const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
-    const [selectedNotification, setSelectedNotification] = useState<any | null>(null);
-
-    const waitlistNotifications = useMemo(() => {
-        return notifications
-            .filter((n) => n.type === 'waitlist')
-            .map((n) => {
-                const session = sessions.find((s) => s.id === n.sessionId);
-                if (!session) return null;
-                const actividad = actividades.find((a) => a.id === session.actividadId);
-                if (!actividad) return null;
-
-                let personDetails;
-                if (n.personId) {
-                    personDetails = people.find((p) => p.id === n.personId);
-                } else if (n.prospectDetails) {
-                    personDetails = n.prospectDetails;
-                }
-
-                if (!personDetails) return null;
-                
-                return { ...n, details: { session, person: personDetails, actividad } };
-            })
-            .filter((a): a is NonNullable<typeof a> => a !== null)
-            .sort((a, b) => {
-                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-                return dateB - dateA;
-            });
-    }, [notifications, sessions, people, actividades]);
-
-    const handleConfirm = (notification: any) => {
-        if (notification.personId) { // It's an existing student
-           enrollFromWaitlist(notification.id, notification.sessionId, notification.personId);
-        } else if (notification.prospectDetails) { // It's a new prospect
-            onOpenPersonDialog(
-                {
-                    name: notification.prospectDetails.name,
-                    phone: notification.prospectDetails.phone,
-                },
-                {
-                    sessionId: notification.sessionId,
-                    notificationId: notification.id
-                }
-            );
-        }
-    };
-
-    return (
-        <>
-            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-foreground">
-                        <Info className="h-5 w-5 text-blue-500" />
-                        Notificaciones
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    {waitlistNotifications.length > 0 ? (
-                        waitlistNotifications.map((notification) => (
-                            <div
-                                key={notification.id}
-                                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm"
-                            >
-                                <p className="flex-grow text-blue-800 dark:text-blue-200">
-                                    ¡Cupo liberado en{' '}
-                                    <span className="font-semibold">{notification.details.actividad.name}</span> (
-                                    {notification.details.session.dayOfWeek} {notification.details.session.time}) para{' '}
-                                    <span className="font-semibold">{notification.details.person.name}</span>!
-                                </p>
-                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                    <Button size="sm" onClick={() => setSelectedNotification(notification)}>
-                                        Gestionar
-                                    </Button>
-                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>
-                                        Descartar
-                                    </Button>
-                                </div>
-                            </div>
-                        ))
-                    ) : (
-                        <p className="text-sm text-center text-muted-foreground py-4">No hay notificaciones pendientes.</p>
-                    )}
-                </CardContent>
-            </Card>
-            {selectedNotification && (
-                <WaitlistNotificationDialog
-                    notification={selectedNotification}
-                    onClose={() => setSelectedNotification(null)}
-                    onConfirm={handleConfirm}
-                />
-            )}
-        </>
-    );
-}
-
-function ChurnRiskNotifications() {
-    const { notifications, people, dismissNotification } = useStudio();
-    
-    const churnRiskNotifications = useMemo(() => {
-        return notifications.filter(n => n.type === 'churnRisk').sort((a, b) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return dateB - dateA;
-        });
-    }, [notifications]);
-
-    if (churnRiskNotifications.length === 0) {
-        return (
-            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-foreground">
-                        <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                        Riesgo de Abandono
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-sm text-center text-muted-foreground py-4">¡Excelente! Todos los alumnos asisten regularmente.</p>
-                </CardContent>
-            </Card>
-        );
-    }
-
-    return (
-        <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                    Riesgo de Abandono
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                {churnRiskNotifications.map(notification => {
-                    const person = people.find(p => p.id === notification.personId);
-                    if (!person) return null;
-
-                    return (
-                        <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
-                            <div className="flex items-start gap-3">
-                                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                                <div className="flex-grow text-yellow-800 dark:text-yellow-200">
-                                    <Link href={`/students?search=${encodeURIComponent(person.name)}`} className="group">
-                                        <span className="font-semibold group-hover:text-primary group-hover:underline">{person.name}</span>
-                                    </Link>
-                                    <span> ha faltado a 3 clases seguidas. Considera contactarle.</span>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
-                            </div>
-                        </div>
-                    );
-                })}
-            </CardContent>
-        </Card>
-    );
-}
-
-
 // Helper function to render student cards inside the sheet
 function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, actividades, specialists, spaces, attendance, isPersonOnVacation } = useStudio();
@@ -607,7 +393,7 @@ function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses, addPerson, enrollFromWaitlist,
+    updateOverdueStatuses, addPerson,
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
@@ -632,9 +418,7 @@ function DashboardPageContent() {
 
   // State for PersonDialog (for converting prospects)
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
-  const [initialPersonData, setInitialPersonData] = useState<Partial<NewPersonData> | undefined>(undefined);
-  const [enrollmentInfo, setEnrollmentInfo] = useState<{ sessionId: string; notificationId: string } | undefined>(undefined);
-
+  
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -835,19 +619,6 @@ function DashboardPageContent() {
     return time;
   };
 
-  const handleOpenPersonDialog = (personData?: Partial<NewPersonData>, newEnrollmentInfo?: { sessionId: string; notificationId: string }) => {
-    setInitialPersonData(personData);
-    setEnrollmentInfo(newEnrollmentInfo);
-    setIsPersonDialogOpen(true);
-  };
-
-  const handlePersonCreated = (newPerson: Person) => {
-      // After the person is created, enroll them if enrollmentInfo is available
-      if (enrollmentInfo?.sessionId && newPerson.id) {
-          enrollFromWaitlist(enrollmentInfo.notificationId, enrollmentInfo.sessionId, newPerson.id);
-      }
-      setEnrollmentInfo(undefined);
-  };
   
   if (!isMounted) {
     return (
@@ -1231,8 +1002,6 @@ function DashboardPageContent() {
           )}
         </div>
         <div className="space-y-8">
-            <AppNotifications onOpenPersonDialog={handleOpenPersonDialog} />
-            <ChurnRiskNotifications />
             <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-foreground">
@@ -1293,8 +1062,7 @@ function DashboardPageContent() {
       <PersonDialog
         open={isPersonDialogOpen}
         onOpenChange={setIsPersonDialogOpen}
-        onPersonCreated={handlePersonCreated}
-        initialData={initialPersonData}
+        onPersonCreated={(person) => addPerson(person)}
       />
     </div>
   );
