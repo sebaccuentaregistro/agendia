@@ -167,16 +167,16 @@ function PaymentReminders({ reminders, onSendReminder, onSendAll }: { reminders:
 
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
-    const sortedNotifications = useMemo(() => {
-        return [...notifications].sort((a, b) => {
+    
+    const waitlistNotifications = useMemo(() => {
+        return notifications.filter(n => n.type === 'waitlist').sort((a, b) => {
             const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
             const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
             return dateB - dateA;
         });
     }, [notifications]);
 
-
-    if (sortedNotifications.length === 0) return null;
+    if (waitlistNotifications.length === 0) return null;
 
     return (
         <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
@@ -187,47 +187,83 @@ function AppNotifications() {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                {sortedNotifications.map(notification => {
-                    if (notification.type === 'waitlist' && notification.sessionId) {
-                        const session = sessions.find(s => s.id === notification.sessionId);
-                        const person = people.find(p => p.id === notification.personId);
-                        const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
+                {waitlistNotifications.map(notification => {
+                    const session = sessions.find(s => s.id === notification.sessionId);
+                    const person = people.find(p => p.id === notification.personId);
+                    const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
 
-                        if (!session || !person || !actividad) {
-                            return null;
-                        }
+                    if (!session || !person || !actividad) return null;
 
-                        return (
-                            <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm">
-                                <p className="flex-grow text-blue-800 dark:text-blue-200">
-                                    ¡Cupo liberado en <span className="font-semibold">{actividad.name}</span> ({session.dayOfWeek} {session.time})! ¿Deseas inscribir a <span className="font-semibold">{person.name}</span>?
+                    return (
+                        <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm">
+                            <p className="flex-grow text-blue-800 dark:text-blue-200">
+                                ¡Cupo liberado en <span className="font-semibold">{actividad.name}</span> ({session.dayOfWeek} {session.time})! ¿Deseas inscribir a <span className="font-semibold">{person.name}</span>?
+                            </p>
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                <Button size="sm" onClick={() => enrollFromWaitlist(notification.id, session.id, person.id)}>Inscribir</Button>
+                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </CardContent>
+        </Card>
+    );
+}
+
+function ChurnRiskNotifications() {
+    const { notifications, people, dismissNotification } = useStudio();
+    
+    const churnRiskNotifications = useMemo(() => {
+        return notifications.filter(n => n.type === 'churnRisk').sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
+    }, [notifications]);
+
+    if (churnRiskNotifications.length === 0) {
+        return (
+            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                        <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                        Riesgo de Abandono
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-center text-muted-foreground py-4">¡Excelente! Todos los alumnos asisten regularmente.</p>
+                </CardContent>
+            </Card>
+        );
+    }
+
+    return (
+        <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-foreground">
+                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    Riesgo de Abandono
+                </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+                {churnRiskNotifications.map(notification => {
+                    const person = people.find(p => p.id === notification.personId);
+                    if (!person) return null;
+
+                    return (
+                        <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
+                            <div className="flex items-start gap-3">
+                                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
+                                <p className="flex-grow text-yellow-800 dark:text-yellow-200">
+                                    <span className="font-semibold">{person.name}</span> ha faltado a 3 clases seguidas. Considera contactarle.
                                 </p>
-                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                    <Button size="sm" onClick={() => enrollFromWaitlist(notification.id, session.id, person.id)}>Inscribir</Button>
-                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
-                                </div>
                             </div>
-                        );
-                    }
-                    if (notification.type === 'churnRisk') {
-                        const person = people.find(p => p.id === notification.personId);
-                        if (!person) return null;
-
-                        return (
-                            <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
-                                <div className="flex items-start gap-3">
-                                    <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                                    <p className="flex-grow text-yellow-800 dark:text-yellow-200">
-                                        Riesgo de abandono: <span className="font-semibold">{person.name}</span> ha faltado a 3 clases seguidas. Considera contactarle.
-                                    </p>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
-                                </div>
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
                             </div>
-                        );
-                    }
-                    return null;
+                        </div>
+                    );
                 })}
             </CardContent>
         </Card>
@@ -1106,6 +1142,7 @@ function DashboardPageContent() {
                     )}
                 </CardContent>
             </Card>
+            <ChurnRiskNotifications />
         </div>
       </div>
     
