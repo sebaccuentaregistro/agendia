@@ -395,7 +395,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const enrollPersonInSessions = async (personId: string, sessionIds: string[]) => {
         if (!collectionRefs) return;
         return handleAction(
-            enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds),
+            enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds, collectionRefs.spaces, collectionRefs.notifications),
             "Horarios de la persona actualizados.",
             "Error al actualizar los horarios."
         );
