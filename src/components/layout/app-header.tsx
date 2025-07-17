@@ -3,7 +3,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Info, LogOut, DollarSign, User, Shield, Landmark } from 'lucide-react';
+import { Heart, Info, LogOut, DollarSign, User, Shield, Landmark, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,7 @@ const navItems = [
 
 export function AppHeader() {
   const pathname = usePathname();
-  const { openTutorial } = useStudio();
+  const { openTutorial, people } = useStudio();
   const { logout, activeOperator, logoutOperator, userProfile, institute } = useAuth();
   const router = useRouter();
 
@@ -35,6 +35,11 @@ export function AppHeader() {
   };
   
   const isSuperAdmin = userProfile?.isSuperAdmin === true;
+  const studentLimit = institute?.studentLimit;
+  const studentCount = people.length;
+  
+  const usagePercentage = (studentLimit && studentLimit > 0) ? (studentCount / studentLimit) * 100 : 0;
+  const usageColorClass = usagePercentage > 90 ? (usagePercentage >= 100 ? 'text-destructive' : 'text-yellow-500') : 'text-muted-foreground';
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-background/90 px-4 backdrop-blur-xl sm:px-6">
@@ -47,9 +52,26 @@ export function AppHeader() {
             {institute && activeOperator && (
                 <>
                     <Separator orientation="vertical" className="h-6 hidden sm:block" />
-                    <div className="hidden sm:flex items-center gap-2 text-sm font-semibold text-primary">
-                        <Landmark className="h-4 w-4" />
-                        {institute.name}
+                    <div className="hidden sm:flex items-center gap-4">
+                        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                            <Landmark className="h-4 w-4" />
+                            {institute.name}
+                        </div>
+                        {studentLimit !== undefined && studentLimit > 0 && (
+                             <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className={cn("flex items-center gap-1.5 text-xs font-semibold", usageColorClass)}>
+                                            <Users className="h-4 w-4" />
+                                            <span>{studentCount}/{studentLimit}</span>
+                                        </div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{studentCount} de {studentLimit} alumnos permitidos en tu plan.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                     </div>
                 </>
             )}

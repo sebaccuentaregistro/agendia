@@ -8,7 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { PageHeader } from '@/components/page-header';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Loader2, Landmark, Users, Calendar, Star, MoreHorizontal, Edit } from 'lucide-react';
+import { Loader2, Landmark, Users, Calendar, Star, MoreHorizontal, Edit, UserRoundCheck } from 'lucide-react';
 import type { Institute } from '@/types';
 import { getAllInstitutes, getMonthlyNewPeopleCount } from '@/lib/superadmin-actions';
 import { format, differenceInDays, addMonths, startOfDay } from 'date-fns';
@@ -192,8 +192,7 @@ export default function SuperAdminPage() {
                 <TableHead>Estado de Uso</TableHead>
                 <TableHead>Nombre del Instituto</TableHead>
                 <TableHead>Estado de Pago</TableHead>
-                <TableHead>Próximo Vencimiento</TableHead>
-                <TableHead>Nº de Alumnos</TableHead>
+                <TableHead>Alumnos (Actual/Límite)</TableHead>
                 <TableHead>Última Actividad</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
@@ -219,10 +218,8 @@ export default function SuperAdminPage() {
                         </Badge>
                       </TableCell>
                        <TableCell>
-                        {institute.nextDueDate ? format(institute.nextDueDate, "dd 'de' MMMM, yyyy", { locale: es }) : 'N/A'}
-                      </TableCell>
-                      <TableCell>
                         <span className="font-semibold">{institute.peopleCount ?? <Loader2 className="h-4 w-4 animate-spin" />}</span>
+                        <span className="text-muted-foreground"> / {institute.studentLimit ?? '∞'}</span>
                       </TableCell>
                       <TableCell>
                         {institute.lastActivity ? format(institute.lastActivity, "dd/MM/yyyy, HH:mm", { locale: es }) : 'N/A'}
@@ -235,7 +232,7 @@ export default function SuperAdminPage() {
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onSelect={() => handleManagePayment(institute)}>
                                     <Edit className="mr-2 h-4 w-4" />
-                                    Gestionar Pago
+                                    Gestionar Instituto
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>

@@ -40,6 +40,8 @@ export async function getAllInstitutes(): Promise<Institute[]> {
         createdAt: instituteData.createdAt instanceof Timestamp ? instituteData.createdAt.toDate() : null,
         paymentStatus: instituteData.paymentStatus,
         nextDueDate: instituteData.nextDueDate instanceof Timestamp ? instituteData.nextDueDate.toDate() : null,
+        planType: instituteData.planType,
+        studentLimit: instituteData.studentLimit,
         peopleCount: peopleSnapshot.size,
         sessionsCount: sessionsSnapshot.size,
         actividadesCount: actividadesSnapshot.size,
@@ -155,14 +157,27 @@ export async function getMonthlyNewPeopleCount(): Promise<{ month: string, "Nuev
   }
 }
 
-export async function updateInstitutePaymentStatus(
+export async function updateInstituteDetails(
   instituteId: string,
-  status: Institute['paymentStatus'],
-  nextDueDate: Date | null
+  data: {
+    paymentStatus: Institute['paymentStatus'],
+    nextDueDate: Date | null,
+    studentLimit?: number | null,
+    planType?: Institute['planType'] | null,
+  }
 ) {
   const instituteRef = doc(db, 'institutes', instituteId);
-  return updateDoc(instituteRef, {
-    paymentStatus: status,
-    nextDueDate: nextDueDate
-  });
+  const updateData: any = {
+    paymentStatus: data.paymentStatus,
+    nextDueDate: data.nextDueDate,
+  };
+
+  if (data.studentLimit !== undefined && data.studentLimit !== null) {
+    updateData.studentLimit = data.studentLimit;
+  }
+  if (data.planType !== undefined && data.planType !== null) {
+    updateData.planType = data.planType;
+  }
+
+  return updateDoc(instituteRef, updateData);
 }

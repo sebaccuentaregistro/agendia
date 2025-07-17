@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -640,7 +641,7 @@ function VacationDialog({ person, onClose }: { person: Person | null; onClose: (
     )
 }
 
-function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreated }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setSearchTerm: (term: string) => void; onPersonCreated: (person: NewPersonData) => void; }) {
+function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreated, isLimitReached }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setSearchTerm: (term: string) => void; onPersonCreated: (person: NewPersonData) => void; isLimitReached: boolean; }) {
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
@@ -685,6 +686,10 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreat
   }, [person, open, form]);
 
   const onSubmit = (values: PersonFormData) => {
+    if (!person && isLimitReached) {
+        // This is an extra safeguard, the button should be disabled anyway
+        return;
+    }
     const finalValues: NewPersonData = {
         name: values.name,
         phone: values.phone,
@@ -1096,7 +1101,8 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, deletePerson, levels } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, deletePerson, levels, addPerson, updatePerson } = useStudio();
+  const { institute } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
   const [personForEnrollment, setPersonForEnrollment] = useState<Person | null>(null);
@@ -1126,8 +1132,11 @@ function StudentsPageContent() {
     }
   }, [searchParams]);
 
-  const { recoveryDetails, filteredPeople } = useMemo(() => {
-    if (!isMounted) return { recoveryDetails: {}, filteredPeople: [] };
+  const { recoveryDetails, filteredPeople, isLimitReached } = useMemo(() => {
+    if (!isMounted) return { recoveryDetails: {}, filteredPeople: [], isLimitReached: false };
+    
+    const limit = institute?.studentLimit;
+    const isLimitReached = (limit !== null && limit !== undefined) ? people.length >= limit : false;
 
     const now = new Date();
     const term = searchTerm.toLowerCase();
@@ -1139,12 +1148,10 @@ function StudentsPageContent() {
     people.forEach(p => (usedRecoveryCounts[p.id] = 0));
 
     attendance.forEach(record => {
-        // Count used recoveries
         record.oneTimeAttendees?.forEach(personId => {
             usedRecoveryCounts[personId] = (usedRecoveryCounts[personId] || 0) + 1;
         });
         
-        // Collect earned recoveries
         record.justifiedAbsenceIds?.forEach(personId => {
             if (allRecoveryCredits[personId]) {
                 const session = sessions.find(s => s.id === record.sessionId);
@@ -1157,7 +1164,6 @@ function StudentsPageContent() {
         });
     });
     
-    // Filter credits that have been used
     Object.keys(allRecoveryCredits).forEach(personId => {
         const usedCount = usedRecoveryCounts[personId] || 0;
         if (usedCount > 0) {
@@ -1167,7 +1173,6 @@ function StudentsPageContent() {
 
     let peopleToFilter = [...people];
 
-    // Pre-filter by status from URL param
     if (statusFilterFromUrl !== 'all') {
         peopleToFilter = peopleToFilter.filter(p => {
             if (statusFilterFromUrl === 'overdue') return getStudentPaymentStatus(p, now).status === 'Atrasado';
@@ -1177,7 +1182,6 @@ function StudentsPageContent() {
         });
     }
 
-    // Filter by selects if any is active
     if (actividadFilter !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') {
         const filteredSessions = sessions.filter(s => 
             (actividadFilter === 'all' || s.actividadId === actividadFilter) &&
@@ -1195,8 +1199,8 @@ function StudentsPageContent() {
         .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
         .sort((a,b) => a.name.localeCompare(b.name));
       
-    return { recoveryDetails: allRecoveryCredits, filteredPeople: finalFilteredPeople };
-  }, [people, searchTerm, statusFilterFromUrl, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, actividades, isMounted, isPersonOnVacation]);
+    return { recoveryDetails: allRecoveryCredits, filteredPeople: finalFilteredPeople, isLimitReached };
+  }, [people, searchTerm, statusFilterFromUrl, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, actividades, isMounted, isPersonOnVacation, institute]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -1314,10 +1318,22 @@ function StudentsPageContent() {
       <PageHeader title="Personas">
         <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Exportar</Button>
-            <Button onClick={handleAddClick}><PlusCircle className="mr-2 h-4 w-4" />Añadir Persona</Button>
+            <Button onClick={handleAddClick} disabled={isLimitReached}>
+                <PlusCircle className="mr-2 h-4 w-4" />Añadir Persona
+            </Button>
         </div>
       </PageHeader>
       
+      {isLimitReached && (
+        <Alert variant="destructive" className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 [&>svg]:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Límite de Alumnos Alcanzado</AlertTitle>
+            <AlertDescriptionComponent>
+                Has alcanzado el límite de {institute?.studentLimit} alumnos para tu plan actual. Para añadir más, por favor contacta a soporte para ampliar tu plan.
+            </AlertDescriptionComponent>
+        </Alert>
+      )}
+
       <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
         <div className="flex flex-col sm:flex-row gap-4">
            <div className="relative flex-grow">
@@ -1410,7 +1426,7 @@ function StudentsPageContent() {
                         </CardHeader>
                         <CardContent>
                         {!(searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') && (
-                            <Button onClick={handleAddClick}>
+                            <Button onClick={handleAddClick} disabled={isLimitReached}>
                                 <PlusCircle className="mr-2 h-4 w-4" />
                                 Añadir Persona
                             </Button>
@@ -1505,6 +1521,7 @@ function StudentsPageContent() {
         open={isPersonDialogOpen}
         setSearchTerm={setSearchTerm}
         onPersonCreated={(person) => setPersonForWelcome(person)}
+        isLimitReached={isLimitReached}
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
       <VacationDialog person={personForVacation} onClose={() => setPersonForVacation(null)} />

@@ -13,10 +13,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon, Loader2 } from 'lucide-react';
 import type { Institute } from '@/types';
-import { updateInstitutePaymentStatus } from '@/lib/superadmin-actions';
+import { updateInstituteDetails } from '@/lib/superadmin-actions';
 import { cn } from '@/lib/utils';
 import { format, addMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Input } from '@/components/ui/input';
 
 interface UpdatePaymentStatusDialogProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ interface UpdatePaymentStatusDialogProps {
 const formSchema = z.object({
   paymentStatus: z.enum(['pagado', 'pendiente', 'vencido']),
   nextDueDate: z.date().nullable(),
+  planType: z.enum(['esencial', 'plus', 'premium']).optional(),
+  studentLimit: z.coerce.number().int().min(0, "El límite no puede ser negativo.").optional(),
 });
 
 export function UpdatePaymentStatusDialog({ isOpen, onClose, institute }: UpdatePaymentStatusDialogProps) {
@@ -36,6 +39,8 @@ export function UpdatePaymentStatusDialog({ isOpen, onClose, institute }: Update
     defaultValues: {
       paymentStatus: institute.paymentStatus || 'pendiente',
       nextDueDate: institute.nextDueDate || null,
+      planType: institute.planType || 'esencial',
+      studentLimit: institute.studentLimit || 0
     },
   });
 
@@ -43,16 +48,23 @@ export function UpdatePaymentStatusDialog({ isOpen, onClose, institute }: Update
     form.reset({
       paymentStatus: institute.paymentStatus || 'pendiente',
       nextDueDate: institute.nextDueDate || null,
+      planType: institute.planType || 'esencial',
+      studentLimit: institute.studentLimit || 0
     });
   }, [institute, isOpen, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setLoading(true);
     try {
-      await updateInstitutePaymentStatus(institute.id, values.paymentStatus, values.nextDueDate);
+      await updateInstituteDetails(institute.id, {
+        paymentStatus: values.paymentStatus,
+        nextDueDate: values.nextDueDate,
+        planType: values.planType,
+        studentLimit: values.studentLimit
+      });
       onClose(true); // Signal that an update occurred
     } catch (error) {
-      console.error("Error updating payment status:", error);
+      console.error("Error updating institute details:", error);
       // You might want to show a toast message here
     } finally {
       setLoading(false);
@@ -63,9 +75,9 @@ export function UpdatePaymentStatusDialog({ isOpen, onClose, institute }: Update
     <Dialog open={isOpen} onOpenChange={() => onClose(false)}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Gestionar Pago de {institute.name}</DialogTitle>
+          <DialogTitle>Gestionar: {institute.name}</DialogTitle>
           <DialogDescription>
-            Actualiza el estado de pago y la fecha del próximo vencimiento para este instituto.
+            Actualiza los detalles de pago y plan para este instituto.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -138,6 +150,45 @@ export function UpdatePaymentStatusDialog({ isOpen, onClose, institute }: Update
             >
                 Establecer en 1 mes
             </Button>
+
+            <div className="grid grid-cols-2 gap-4 border-t pt-4">
+               <FormField
+                control={form.control}
+                name="planType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo de Plan</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seleccionar plan" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="esencial">Esencial</SelectItem>
+                        <SelectItem value="plus">Plus</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="studentLimit"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Límite de Alumnos</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="Ej: 50" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onClose(false)}>
                 Cancelar
@@ -153,4 +204,3 @@ export function UpdatePaymentStatusDialog({ isOpen, onClose, institute }: Update
     </Dialog>
   );
 }
-

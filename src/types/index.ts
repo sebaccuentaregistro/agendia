@@ -38,6 +38,8 @@ export type Institute = {
   lastActivity?: Date | null;
   paymentStatus?: 'pagado' | 'pendiente' | 'vencido';
   nextDueDate?: Date | null;
+  planType?: 'esencial' | 'plus' | 'premium'; // NUEVO
+  studentLimit?: number; // NUEVO
 };
 
 export type Operator = {
@@ -175,5 +177,5 @@ export type AuditLog = {
     entityId?: string; // ID of the person, payment, etc.
     entityName?: string; // Name of the person, class, etc. for quick display
     timestamp: Date;
-    details?: Record<string, any>; // e.g., { amount: 8000, tariff: 'Plan Mensual' }
+    details?: Record<string, any>; // e.g., { amount: 8000, tariffName: 'Plan Mensual' }
 };
