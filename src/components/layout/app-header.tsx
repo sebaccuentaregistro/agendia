@@ -1,4 +1,3 @@
-
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -48,11 +47,26 @@ export function AppHeader() {
           <Heart className="h-7 w-7 text-fuchsia-500" />
           <span className="hidden text-lg sm:inline">Agendia</span>
         </Link>
-        
-        {institute && activeOperator && (
+        <nav className="hidden items-center gap-1 md:flex">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                  pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
+        </nav>
+      </div>
+
+      <div className="flex items-center gap-2">
+         {institute && (
             <>
-                <Separator orientation="vertical" className="h-6 hidden sm:block" />
-                <div className="flex items-center gap-4">
+                <div className="hidden sm:flex items-center gap-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-primary">
                         <Landmark className="h-4 w-4" />
                         <span className="hidden sm:inline">{institute.name}</span>
@@ -73,10 +87,9 @@ export function AppHeader() {
                         </TooltipProvider>
                     )}
                 </div>
+                 <Separator orientation="vertical" className="h-6 hidden sm:block" />
             </>
         )}
-      </div>
-      <div className="flex items-center gap-2">
         {pathname === '/' && (
           <TooltipProvider>
             <Tooltip>
