@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft, Signal, Send } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft, Signal, Send, DollarSign } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
 import { useForm } from 'react-hook-form';
@@ -13,7 +13,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
-import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo, RecoveryCredit, Level } from '@/types';
+import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo, RecoveryCredit, Level, Tariff } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -641,7 +641,7 @@ function VacationDialog({ person, onClose }: { person: Person | null; onClose: (
     )
 }
 
-function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreated, isLimitReached }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setSearchTerm: (term: string) => void; onPersonCreated: (person: NewPersonData) => void; isLimitReached: boolean; }) {
+function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreated, isLimitReached }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setSearchTerm: (term: string) => setSearchTerm; onPersonCreated: (person: NewPersonData) => void; isLimitReached: boolean; }) {
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
@@ -816,8 +816,8 @@ function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreat
   );
 }
 
-function PersonCard({ person, sessions, actividades, specialists, spaces, levels, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], levels: Level[], recoveryCredits: RecoveryCredit[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void, onRecordPayment: (person: Person) => void }) {
-    const { tariffs, deletePerson, revertLastPayment } = useStudio();
+function PersonCard({ person, sessions, actividades, specialists, spaces, levels, tariffs, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], levels: Level[], tariffs: Tariff[], recoveryCredits: RecoveryCredit[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void, onRecordPayment: (person: Person) => void }) {
+    const { deletePerson, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
     
@@ -880,6 +880,8 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
       }
       return statusText;
     };
+
+    const totalDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
     
     return (
         <>
@@ -1022,7 +1024,14 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
                     <div className="mt-2">
                         <div className="flex justify-between items-baseline">
                             <p className="text-sm font-semibold opacity-90">{tariff?.name}</p>
-                            {tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>}
+                            {paymentStatusInfo.status === 'Atrasado' && totalDebt > 0 ? (
+                                <div className="text-right">
+                                    <p className="text-xs opacity-80">Deuda Total</p>
+                                    <p className="text-lg font-bold text-white">{formatPrice(totalDebt)}</p>
+                                </div>
+                            ) : (
+                                tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>
+                            )}
                         </div>
                         {person.lastPaymentDate ? (
                             <p className="text-xs opacity-80 mt-1">Vence: {format(person.lastPaymentDate, 'dd/MM/yyyy')}</p>
@@ -1078,6 +1087,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
                         Horarios
                     </Button>
                     <Button onClick={() => onRecordPayment(person)} className="w-full font-bold">
+                        <DollarSign className="mr-2 h-4 w-4" />
                         Registrar Pago
                     </Button>
                 </CardFooter>
@@ -1092,7 +1102,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
 
              <AlertDialog open={isRevertDialogOpen} onOpenChange={setIsRevertDialogOpen}>
                 <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitleAlert>¿Revertir último pago?</AlertDialogTitleAlert><AlertDialogDescriptionAlert>Esta acción eliminará el pago más reciente del historial, ajustará el saldo y la fecha de vencimiento de la persona. Esta acción no se puede deshacer.</AlertDialogDescriptionAlert></AlertDialogHeader>
+                    <AlertDialogHeader><AlertDialogTitleAlert>¿Revertir último pago?</AlertDialogTitleAlert><AlertDialogDescriptionAlert>Esta acción eliminará el pago más reciente del historial y sumará 1 al contador de pagos pendientes. Esta acción no se puede deshacer.</AlertDialogDescriptionAlert></AlertDialogHeader>
                     <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRevertPayment} className="bg-destructive hover:bg-destructive/90">Sí, revertir pago</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
@@ -1242,7 +1252,7 @@ function StudentsPageContent() {
 
   const handleRecordPaymentClick = (person: Person) => {
     const status = getStudentPaymentStatus(person, new Date()).status;
-    if (status === 'Al día') {
+    if (status === 'Al día' && (person.outstandingPayments || 0) === 0) {
         setPersonForPayment(person);
         setIsPaymentAlertOpen(true);
     } else {
@@ -1405,6 +1415,7 @@ function StudentsPageContent() {
                                 specialists={specialists}
                                 spaces={spaces}
                                 levels={levels}
+                                tariffs={tariffs}
                                 recoveryCredits={recoveryDetails[person.id] || []}
                                 onManageVacations={setPersonForVacation}
                                 onEdit={handleEditClick}

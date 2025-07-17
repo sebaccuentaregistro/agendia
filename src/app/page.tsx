@@ -1,21 +1,20 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader, CardDescription as CardDescriptionComponent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person, PaymentReminderInfo } from '@/types';
+import type { Session, Institute, Person, PaymentReminderInfo, Tariff } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -461,7 +460,8 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
+    updateOverdueStatuses
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
@@ -476,6 +476,8 @@ function DashboardPageContent() {
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
   const [isMassReminderOpen, setIsMassReminderOpen] = useState(false);
+  const [isUpdatingDebts, setIsUpdatingDebts] = useState(false);
+  const { toast } = useToast();
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -485,6 +487,16 @@ function DashboardPageContent() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  const handleUpdateDebts = async () => {
+    setIsUpdatingDebts(true);
+    const count = await updateOverdueStatuses();
+    toast({
+      title: "Actualización de Deudas Completa",
+      description: count > 0 ? `Se actualizaron los estados de ${count} persona(s).` : "No se encontraron nuevas deudas para actualizar."
+    });
+    setIsUpdatingDebts(false);
+  };
   
   const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
     if (!time) return 'Tarde';
@@ -531,7 +543,8 @@ function DashboardPageContent() {
 
     const totalDebt = overduePeople.reduce((acc, person) => {
         const tariff = tariffs.find(t => t.id === person.tariffId);
-        return acc + (tariff?.price || 0);
+        const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
+        return acc + debtAmount;
     }, 0);
 
     const onVacationCount = people.filter(p => isPersonOnVacation(p, now)).length;
@@ -1029,6 +1042,20 @@ function DashboardPageContent() {
                     </Link>
                   );
                 })}
+                <div className="transition-transform hover:-translate-y-1">
+                  <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
+                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
+                      <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                          <RefreshCw className="h-5 w-5" />
+                      </div>
+                      <CardTitle className="text-lg font-semibold text-foreground">Actualizar Deudas</CardTitle>
+                      <Button onClick={handleUpdateDebts} disabled={isUpdatingDebts} size="sm" className="mt-2">
+                        {isUpdatingDebts ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Ejecutar
+                      </Button>
+                  </Card>
+                </div>
             </div>
           )}
         </div>
@@ -1043,7 +1070,10 @@ function DashboardPageContent() {
                 <CardContent>
                     {topDebtors.length > 0 ? (
                         <ul className="space-y-3">
-                            {topDebtors.map(person => (
+                            {topDebtors.map(person => {
+                                const tariff = tariffs.find(t => t.id === person.tariffId)
+                                const totalDebtForPerson = (tariff?.price || 0) * (person.outstandingPayments || 1);
+                                return (
                                 <li key={person.id} className="flex items-center justify-between text-sm">
                                     <Link href={`/students?search=${encodeURIComponent(person.name)}`} className="group">
                                         <div className="font-medium text-foreground group-hover:text-primary group-hover:underline">{person.name}</div>
@@ -1056,11 +1086,11 @@ function DashboardPageContent() {
                                         </div>
                                     </Link>
                                     <div className="text-right">
-                                        <span className="font-semibold text-red-600 dark:text-red-400">{formatPrice(person.debt)}</span>
+                                        <span className="font-semibold text-red-600 dark:text-red-400">{formatPrice(totalDebtForPerson)}</span>
                                         <p className="text-xs text-muted-foreground">hace {person.daysOverdue} {person.daysOverdue === 1 ? 'día' : 'días'}</p>
                                     </div>
                                 </li>
-                            ))}
+                            )})}
                         </ul>
                     ) : (
                         <p className="text-sm text-center text-muted-foreground py-4">¡Excelente! No hay deudores por el momento.</p>

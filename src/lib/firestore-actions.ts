@@ -50,6 +50,7 @@ export const addPersonAction = async (peopleRef: CollectionReference, personData
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
         paymentBalance: 0,
+        outstandingPayments: personData.lastPaymentDate ? 0 : 1, // Start with 1 outstanding payment if no due date is set
     };
     
     const batch = writeBatch(db);
@@ -118,15 +119,24 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
     const now = new Date();
     // If it's the first payment, the cycle starts today. Otherwise, it extends from the previous due date.
-    const baseDateForNextPayment = person.lastPaymentDate || now;
-    const newExpiryDate = calculateNextPaymentDate(baseDateForNextPayment, person.joinDate, tariff);
+    let newExpiryDate = person.lastPaymentDate;
+    let newOutstandingPayments = person.outstandingPayments || 0;
 
+    if (newOutstandingPayments > 0) {
+        newOutstandingPayments -= 1;
+    }
+
+    if (newOutstandingPayments === 0 && person.lastPaymentDate && new Date() > person.lastPaymentDate) {
+        newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate, person.joinDate, tariff);
+    } else if (!person.lastPaymentDate) {
+        newExpiryDate = calculateNextPaymentDate(now, person.joinDate, tariff);
+    }
+    
     const paymentRecord = {
         personId: person.id,
-        date: now, // The actual transaction date
+        date: now,
         amount: tariff.price,
         tariffId: tariff.id,
-        months: 1, // This might need rethinking if we have different cycles
         timestamp: now,
     };
     const batch = writeBatch(db);
@@ -136,7 +146,7 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
     
     batch.update(personRef, { 
         lastPaymentDate: newExpiryDate,
-        paymentBalance: (person.paymentBalance || 0) + 1,
+        outstandingPayments: newOutstandingPayments,
      });
      
     // Create audit log
@@ -176,16 +186,8 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     const lastPayment = allPayments[0];
     
     // Determine the new state
-    let newLastPaymentDate: Date | null;
-    const newPaymentBalance = (currentPerson.paymentBalance || 0) - 1;
-
-    if (allPayments.length === 1) {
-        // If this was the only payment, revert to the initial state (null date)
-        newLastPaymentDate = null;
-    } else {
-        // If there are previous payments, calculate the previous due date
-        newLastPaymentDate = subMonths(currentPerson.lastPaymentDate || new Date(), 1); // This logic needs to be cycle-aware if we revert non-monthly payments. For now, it's a simplification.
-    }
+    let newLastPaymentDate: Date | null = currentPerson.lastPaymentDate;
+    const newOutstandingPayments = (currentPerson.outstandingPayments || 0) + 1;
     
     // 3. Delete the most recent payment document
     const lastPaymentRef = doc(paymentsRef, lastPayment.id);
@@ -194,7 +196,7 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     // 4. Update the person's document
     batch.update(personRef, { 
         lastPaymentDate: newLastPaymentDate,
-        paymentBalance: newPaymentBalance
+        outstandingPayments: newOutstandingPayments,
     });
     
     // 5. Create audit log for the reversion
@@ -397,6 +399,49 @@ export const deleteWithUsageCheckAction = async (
     }
 };
 
+export const updateOverdueStatusesAction = async (peopleRef: CollectionReference, people: Person[], tariffs: Tariff[], operator: Operator, auditLogRef: CollectionReference) => {
+    const batch = writeBatch(db);
+    const today = new Date();
+    let updatedCount = 0;
+
+    for (const person of people) {
+        if (!person.lastPaymentDate) continue;
+
+        let lastDueDate = person.lastPaymentDate;
+        let outstandingPayments = person.outstandingPayments || 0;
+        
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        if (!tariff) continue;
+
+        let hasChanged = false;
+        while (lastDueDate < today) {
+            outstandingPayments += 1;
+            lastDueDate = calculateNextPaymentDate(lastDueDate, person.joinDate, tariff);
+            hasChanged = true;
+        }
+
+        if (hasChanged) {
+            updatedCount++;
+            const personDocRef = doc(peopleRef, person.id);
+            batch.update(personDocRef, {
+                lastPaymentDate: lastDueDate,
+                outstandingPayments: outstandingPayments
+            });
+        }
+    }
+    
+    if (updatedCount > 0) {
+        batch.set(doc(auditLogRef), {
+            operatorId: operator.id,
+            operatorName: operator.name,
+            action: 'ACTUALIZAR_DEUDAS',
+            entityType: 'sistema',
+            entityName: `Se actualizaron ${updatedCount} deudores.`,
+            timestamp: new Date(),
+        } as Omit<AuditLog, 'id'>);
+    }
 
 
-
+    await batch.commit();
+    return updatedCount;
+};

@@ -1,11 +1,10 @@
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator } from '@/types';
-import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity } from '@/lib/firestore-actions';
+import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -62,6 +61,7 @@ interface StudioContextType {
     addOperator: (operator: Omit<Operator, 'id'>) => void;
     updateOperator: (operator: Operator) => void;
     deleteOperator: (operatorId: string) => void;
+    updateOverdueStatuses: () => Promise<number>;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -379,6 +379,19 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         "Error al actualizar los horarios."
     );
 
+    const updateOverdueStatuses = useCallback(async (): Promise<number> => {
+        if (!collectionRefs || !activeOperator) {
+            toast({ variant: "destructive", title: "Error", description: "No se puede realizar la operación sin un operador activo." });
+            return 0;
+        }
+        try {
+            return await updateOverdueStatusesAction(collectionRefs.people, data.people, data.tariffs, activeOperator, collectionRefs.audit_logs);
+        } catch (error: any) {
+            toast({ variant: "destructive", title: "Error al actualizar deudas", description: error.message });
+            return 0;
+        }
+    }, [collectionRefs, activeOperator, data.people, data.tariffs, toast]);
+
     return (
         <StudioContext.Provider value={{
             ...(data as any),
@@ -424,7 +437,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             enrollPersonInSessions,
             addOperator,
             updateOperator,
-            deleteOperator
+            deleteOperator,
+            updateOverdueStatuses
         }}>
             {children}
         </StudioContext.Provider>
@@ -438,5 +452,3 @@ export function useStudio() {
     }
     return context;
 }
-
-    
