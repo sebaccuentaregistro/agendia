@@ -364,8 +364,6 @@ export const removeVacationPeriodAction = async (personDocRef: any, person: Pers
 export const addToWaitlistAction = async (
     sessionDocRef: DocumentReference,
     entry: WaitlistEntry,
-    spacesRef: CollectionReference,
-    notificationsRef: CollectionReference
 ) => {
     return runTransaction(db, async (transaction) => {
         const freshSessionSnap = await transaction.get(sessionDocRef);
@@ -374,28 +372,8 @@ export const addToWaitlistAction = async (
         }
         const session = freshSessionSnap.data() as Session;
 
-        const spaceSnap = await getDoc(doc(spacesRef, session.spaceId));
-        if (!spaceSnap.exists()) {
-            throw new Error("El espacio para esta sesión no se encontró.");
-        }
-        const space = spaceSnap.data() as Space;
-        const capacity = space.capacity;
-
-        // Check for available spots right now
-        if (session.personIds.length < capacity) {
-             const newNotification: Omit<AppNotification, 'id'> = {
-                type: 'waitlist',
-                sessionId: session.id,
-                personId: typeof entry === 'string' ? entry : undefined,
-                prospectDetails: typeof entry !== 'string' ? entry : undefined,
-                createdAt: new Date(),
-            };
-            transaction.set(doc(notificationsRef), newNotification);
-        } else {
-            // Add the new entry to the waitlist if no spot is free
-            const newWaitlist = [...(session.waitlist || []), entry];
-            transaction.update(sessionDocRef, { waitlist: newWaitlist });
-        }
+        const newWaitlist = [...(session.waitlist || []), entry];
+        transaction.update(sessionDocRef, { waitlist: newWaitlist });
     });
 };
 
