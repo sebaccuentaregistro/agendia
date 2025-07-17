@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
@@ -385,7 +386,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     );
 
     const enrollPersonInSessions = (personId: string, sessionIds: string[]) => handleAction(
-        enrollPersonInSessionsAction(collectionRefs!.sessions, personId, sessionIds),
+        enrollPersonInSessionsAction(collectionRefs!.sessions, personId, sessionIds, collectionRefs!.notifications),
         "Horarios de la persona actualizados.",
         "Error al actualizar los horarios."
     );

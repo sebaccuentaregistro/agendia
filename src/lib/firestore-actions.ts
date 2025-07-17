@@ -250,7 +250,7 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
 };
 
 
-export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[]) => {
+export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[], notificationsRef: CollectionReference) => {
     const batch = writeBatch(db);
     
     // First, find all sessions the person is currently enrolled in
@@ -260,15 +260,27 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
 
     // Determine which sessions to remove the person from
     const sessionsToRemoveFrom = currentSessionIds.filter(id => !sessionIds.includes(id));
-    sessionsToRemoveFrom.forEach(sessionId => {
+    for (const sessionId of sessionsToRemoveFrom) {
         const sessionRef = doc(sessionsRef, sessionId);
         const sessionDoc = currentEnrollmentsSnap.docs.find(d => d.id === sessionId);
         if (sessionDoc) {
             const sessionData = sessionDoc.data() as Session;
             const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
             batch.update(sessionRef, { personIds: updatedPersonIds });
+
+            // Check if there is a waitlist and create a notification
+            if (sessionData.waitlistPersonIds && sessionData.waitlistPersonIds.length > 0) {
+                const firstOnWaitlistId = sessionData.waitlistPersonIds[0];
+                const notifRef = doc(notificationsRef);
+                batch.set(notifRef, {
+                    type: 'waitlist',
+                    sessionId: sessionId,
+                    personId: firstOnWaitlistId,
+                    createdAt: new Date(),
+                });
+            }
         }
-    });
+    }
 
     // Determine which sessions to add the person to
     const sessionsToAddTo = sessionIds.filter(id => !currentSessionIds.includes(id));
@@ -453,24 +465,19 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
         
         const dueDate = startOfDay(person.lastPaymentDate);
 
-        // Only process people who are overdue
         if (isBefore(dueDate, today)) {
             let cyclesMissed = 0;
             let dateCursor = dueDate;
             
-            // Calculate how many payment cycles have been missed.
-            // This loop ensures we correctly count missed cycles without advancing the due date itself.
             while (isBefore(dateCursor, today)) {
                 cyclesMissed++;
                 dateCursor = calculateNextPaymentDate(dateCursor, person.joinDate, tariff);
             }
             
-            // If the calculated number of missed cycles is greater than the currently stored debt, update it.
             const currentOutstanding = person.outstandingPayments || 0;
             if (cyclesMissed > currentOutstanding) {
                  updatedCount++;
                  const personDocRef = doc(peopleRef, person.id);
-                 // We ONLY update the debt counter. We do NOT change the lastPaymentDate.
                  batch.update(personDocRef, { outstandingPayments: cyclesMissed });
             }
         }
