@@ -466,7 +466,13 @@ function DashboardPageContent() {
 
   // State for PersonDialog (for converting prospects)
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
+  const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
   
+  const isLimitReached = useMemo(() => {
+    const limit = institute?.studentLimit;
+    return (limit !== null && limit !== undefined) ? people.length >= limit : false;
+  }, [people, institute]);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
