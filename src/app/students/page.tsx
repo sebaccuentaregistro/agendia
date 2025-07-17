@@ -1348,7 +1348,7 @@ function StudentsPageContent() {
         open={isPersonDialogOpen}
         onPersonCreated={(person) => {
           if (person.tariffId) {
-            setPersonForWelcome(person);
+            setPersonForWelcome(person as NewPersonData);
           }
         }}
         isLimitReached={isLimitReached}
@@ -1401,6 +1401,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 
