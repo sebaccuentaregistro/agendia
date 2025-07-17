@@ -1,14 +1,15 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
 
 import { Card, CardTitle, CardContent, CardHeader, CardDescription as CardDescriptionComponent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX, ListPlus } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX, ListPlus, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance } from '@/types';
+import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance, AppNotification } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus, calculateNextPaymentDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -462,7 +463,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
     updateOverdueStatuses, addPerson,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
@@ -490,16 +491,16 @@ function DashboardPageContent() {
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
   
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const { isLimitReached } = useMemo(() => {
     if (!institute) return { isLimitReached: false };
     const limit = institute?.studentLimit;
     const isLimitReached = (limit !== null && limit !== undefined) ? people.length >= limit : false;
     return { isLimitReached };
   }, [people, institute]);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const handleUpdateDebts = async () => {
     setIsUpdatingDebts(true);
@@ -521,7 +522,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0 };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0, waitlistNotifications: [] };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -598,6 +599,8 @@ function DashboardPageContent() {
       .sort((a, b) => a.time.localeCompare(b.time));
 
     const totalWaitlist = sessions.reduce((sum, session) => sum + (session.waitlist?.length || 0), 0);
+    
+    const waitlistNotifications = notifications.filter(n => n.type === 'waitlist');
 
     return {
       overdueCount,
@@ -613,9 +616,10 @@ function DashboardPageContent() {
       collectionPercentage,
       topDebtors,
       paymentReminders,
-      totalWaitlist
+      totalWaitlist,
+      waitlistNotifications,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, notifications]);
 
   const {
     overdueCount,
@@ -628,7 +632,8 @@ function DashboardPageContent() {
     collectionPercentage,
     topDebtors,
     paymentReminders,
-    totalWaitlist
+    totalWaitlist,
+    waitlistNotifications,
   } = clientSideData;
   
    const handleDismissNotification = async (notificationId: string) => {
@@ -1152,6 +1157,54 @@ function DashboardPageContent() {
                             No hay nadie en ninguna lista de espera.
                         </div>
                      )}
+                     {waitlistNotifications.length > 0 && (
+                        <div className="space-y-4 pt-4 border-t">
+                            {waitlistNotifications.map(notif => {
+                                const session = sessions.find(s => s.id === notif.sessionId);
+                                if (!session) return null;
+                                const { actividad, specialist } = getSessionDetails(session);
+                                
+                                return (
+                                    <div key={notif.id} className="p-3 rounded-lg bg-cyan-500/10">
+                                        <div className="flex justify-between items-start">
+                                            <h4 className="font-semibold text-sm text-cyan-800 dark:text-cyan-200">
+                                                ¡Cupo liberado en {actividad?.name || 'una clase'}!
+                                            </h4>
+                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-cyan-700 hover:bg-cyan-200/50" onClick={() => handleDismissNotification(notif.id)}>
+                                                <XCircle className="h-4 w-4"/>
+                                            </Button>
+                                        </div>
+                                        <p className="text-xs text-cyan-700 dark:text-cyan-300 mb-2">{session.dayOfWeek} {session.time} con {specialist?.name || 'N/A'}</p>
+                                        <div className="space-y-2">
+                                            {session.waitlist.map((entry, index) => {
+                                                const person = typeof entry === 'string' ? people.find(p => p.id === entry) : null;
+                                                const prospect = typeof entry !== 'string' ? entry : null;
+                                                
+                                                if (!person && !prospect) return null;
+
+                                                return (
+                                                    <div key={index} className="flex justify-between items-center bg-background/50 p-2 rounded-md text-sm">
+                                                        <div>
+                                                            <p className="font-medium">{person?.name || prospect?.name}</p>
+                                                            <p className="text-xs text-muted-foreground">{person ? 'Alumno/a' : 'Nuevo Contacto'}</p>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                             <Button asChild size="sm" variant="ghost" className="h-8 px-2">
+                                                                <a href={`https://wa.me/${(person?.phone || prospect?.phone)?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                                                    <WhatsAppIcon className="text-green-600"/>
+                                                                </a>
+                                                            </Button>
+                                                             <Button size="sm" variant="outline" className="h-8">Inscribir</Button>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                     )}
                 </CardContent>
             </Card>
         </div>
@@ -1196,5 +1249,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-    

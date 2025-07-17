@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot } from 'firebase/firestore';
+import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry } from '@/types';
 import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction } from '@/lib/firestore-actions';
@@ -22,6 +22,7 @@ interface StudioContextType {
     attendance: SessionAttendance[];
     audit_logs: AuditLog[];
     operators: Operator[];
+    notifications: AppNotification[];
     loading: boolean;
     isTutorialOpen: boolean;
     openTutorial: () => void;
@@ -121,7 +122,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
         Object.entries(collectionRefs).forEach(([key, ref]) => {
             let q = ref;
-            if (['audit_logs', 'payments'].includes(key)) {
+            if (['audit_logs', 'payments', 'notifications'].includes(key)) {
                 q = query(ref, orderBy('timestamp', 'desc'));
             }
 
@@ -383,10 +384,35 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const triggerWaitlistCheck = (sessionId: string) => {
-       // This function is currently a placeholder as the direct notification logic was removed.
-       // It can be re-implemented if a new notification strategy is decided.
-       console.log(`Verificación de lista de espera gatillada para la sesión: ${sessionId}`);
+    const triggerWaitlistCheck = async (sessionId: string) => {
+        if (!collectionRefs) return;
+        const sessionRef = doc(collectionRefs.sessions, sessionId);
+        const sessionSnap = await getDoc(sessionRef);
+        if (!sessionSnap.exists()) return;
+
+        const session = sessionSnap.data() as Session;
+        const spaceRef = doc(collectionRefs.spaces, session.spaceId);
+        const spaceSnap = await getDoc(spaceRef);
+        if (!spaceSnap.exists()) return;
+
+        const space = spaceSnap.data() as Space;
+        
+        const hasSpot = session.personIds.length < space.capacity;
+        const hasWaitlist = session.waitlist && session.waitlist.length > 0;
+
+        if (hasSpot && hasWaitlist) {
+            // Check if a notification for this session already exists
+            const q = query(collectionRefs.notifications, where('sessionId', '==', sessionId), where('type', '==', 'waitlist'));
+            const existingNotifs = await getDocs(q);
+            if (existingNotifs.empty) {
+                const newNotification: Omit<AppNotification, 'id'> = {
+                    type: 'waitlist',
+                    sessionId: sessionId,
+                    createdAt: new Date(),
+                };
+                await addEntity(collectionRefs.notifications, newNotification, 'Notificación de cupo creada', 'Error al crear notificación');
+            }
+        }
     };
 
     const updateOverdueStatuses = useCallback(async (): Promise<number> => {
