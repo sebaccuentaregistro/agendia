@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
@@ -311,11 +312,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         'Error al actualizar inscripciones.'
     );
 
-    const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => handleAction(
-        saveAttendanceAction(collectionRefs!.attendance, sessionId, presentIds, absentIds, justifiedAbsenceIds),
+    const saveAttendance = (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
+      const allPersonSessions = data.sessions.filter((s: Session) => s.personIds.some(pid => absentIds.includes(pid)));
+      handleAction(
+        saveAttendanceAction(collectionRefs!.attendance, sessionId, presentIds, absentIds, justifiedAbsenceIds, allPersonSessions, data.attendance, collectionRefs!.notifications),
         'Asistencia guardada.',
         'Error al guardar asistencia.'
-    );
+      );
+    }
     
     const isPersonOnVacation = useCallback((person: Person, date: Date) => {
         if (!person.vacationPeriods) return false;

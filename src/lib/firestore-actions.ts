@@ -3,9 +3,9 @@
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification } from '@/types';
 import { db } from './firebase';
-import { format as formatDate, addMonths, subMonths, startOfDay, isBefore } from 'date-fns';
+import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -35,6 +35,43 @@ export const updateEntity = async (docRef: any, data: any) => {
 export const deleteEntity = async (docRef: any) => {
     return await deleteDoc(docRef);
 };
+
+async function checkForChurnRisk(personId: string, allPersonSessions: Session[], allAttendance: SessionAttendance[], notificationsRef: CollectionReference) {
+    const personSessionIds = new Set(allPersonSessions.map(s => s.id));
+    
+    // Get all attendance records for this person's sessions, sorted by date descending
+    const relevantAttendance = allAttendance
+        .filter(a => personSessionIds.has(a.sessionId))
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+    let consecutiveAbsences = 0;
+    
+    // Check the last 3 attendance records for this person's sessions
+    for (let i = 0; i < Math.min(relevantAttendance.length, 5); i++) {
+        const record = relevantAttendance[i];
+        if (record.absentIds?.includes(personId)) {
+            consecutiveAbsences++;
+        } else if (record.presentIds?.includes(personId) || record.justifiedAbsenceIds?.includes(personId)) {
+            // Presence or justified absence breaks the streak
+            break;
+        }
+    }
+    
+    if (consecutiveAbsences >= 3) {
+        // Check if a churn risk notification already exists for this person
+        const q = query(notificationsRef, where('personId', '==', personId), where('type', '==', 'churnRisk'));
+        const existingNotifs = await getDocs(q);
+
+        if (existingNotifs.empty) {
+            const newNotification: Omit<AppNotification, 'id'> = {
+                type: 'churnRisk',
+                personId: personId,
+                createdAt: new Date(),
+            };
+            await addDoc(notificationsRef, newNotification);
+        }
+    }
+}
 
 
 // Specific Actions
@@ -183,7 +220,6 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     const lastPayment = allPayments[0];
     
     // Determine the new state
-    let newLastPaymentDate: Date | null = currentPerson.lastPaymentDate;
     const newOutstandingPayments = (currentPerson.outstandingPayments || 0) + 1;
     
     // 3. Delete the most recent payment document
@@ -191,8 +227,7 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     batch.delete(lastPaymentRef);
 
     // 4. Update the person's document
-    batch.update(personRef, { 
-        lastPaymentDate: newLastPaymentDate,
+    batch.update(personRef, {
         outstandingPayments: newOutstandingPayments,
     });
     
@@ -258,10 +293,18 @@ export const enrollPeopleInClassAction = async (sessionRef: any, personIds: stri
 };
 
 
-export const saveAttendanceAction = async (attendanceRef: CollectionReference, sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => {
+export const saveAttendanceAction = async (
+    attendanceRef: CollectionReference,
+    sessionId: string,
+    presentIds: string[],
+    absentIds: string[],
+    justifiedAbsenceIds: string[],
+    allPersonSessions: Session[],
+    allAttendance: SessionAttendance[],
+    notificationsRef: CollectionReference
+) => {
     const dateStr = formatDate(new Date(), 'yyyy-MM-dd');
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-    
     const snap = await getDocs(attendanceQuery);
     
     if (snap.empty) {
@@ -270,13 +313,13 @@ export const saveAttendanceAction = async (attendanceRef: CollectionReference, s
     } else {
         const docRef = snap.docs[0].ref;
         const existingData = snap.docs[0].data() as SessionAttendance;
-        const updatedData = { 
-            ...existingData, 
-            presentIds, 
-            absentIds, 
-            justifiedAbsenceIds 
-        };
+        const updatedData = { ...existingData, presentIds, absentIds, justifiedAbsenceIds };
         await updateEntity(docRef, updatedData);
+    }
+    
+    // Check for churn risk for all absent people
+    for (const personId of absentIds) {
+        await checkForChurnRisk(personId, allPersonSessions, allAttendance, notificationsRef);
     }
 };
 
@@ -409,7 +452,7 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
         
         const dueDate = startOfDay(person.lastPaymentDate);
 
-        // Check if the person is already overdue
+        // Check if the person is overdue
         if (isBefore(dueDate, today)) {
             let cyclesMissed = 0;
             let dateCursor = dueDate;
