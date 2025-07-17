@@ -392,27 +392,27 @@ export const addToWaitlistAction = async (
     notificationsRef: CollectionReference
 ) => {
     return runTransaction(db, async (transaction) => {
+        // --- READS FIRST ---
         const sessionSnap = await transaction.get(sessionDocRef);
         if (!sessionSnap.exists()) {
             throw new Error("La sesión no existe.");
         }
-        
         const session = sessionSnap.data() as Session;
-        
-        const newWaitlist = [...(session.waitlist || []), entry];
-        transaction.update(sessionDocRef, { waitlist: newWaitlist });
 
         const spaceDocRef = doc(spacesRef, session.spaceId);
         const spaceSnap = await transaction.get(spaceDocRef);
         if (!spaceSnap.exists()) {
             console.warn(`Space with id ${session.spaceId} not found for waitlist check.`);
-            return; 
+            return;
         }
-
         const space = spaceSnap.data() as Space;
         const capacity = space.capacity;
-        const enrolledCount = session.personIds.length;
 
+        // --- WRITES SECOND ---
+        const newWaitlist = [...(session.waitlist || []), entry];
+        transaction.update(sessionDocRef, { waitlist: newWaitlist });
+
+        const enrolledCount = session.personIds.length;
         if (enrolledCount < capacity) {
             const notifData: Partial<AppNotification> = {
                 type: 'waitlist',
