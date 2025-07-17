@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'reac
 
 import { Card, CardTitle, CardContent, CardHeader, CardDescription as CardDescriptionComponent } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX } from 'lucide-react';
+import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX, ListPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance } from '@/types';
@@ -490,9 +490,11 @@ function DashboardPageContent() {
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
   
-  const isLimitReached = useMemo(() => {
+  const { isLimitReached } = useMemo(() => {
+    if (!institute) return { isLimitReached: false };
     const limit = institute?.studentLimit;
-    return (limit !== null && limit !== undefined) ? people.length >= limit : false;
+    const isLimitReached = (limit !== null && limit !== undefined) ? people.length >= limit : false;
+    return { isLimitReached };
   }, [people, institute]);
 
   useEffect(() => {
@@ -519,7 +521,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [] };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -595,6 +597,8 @@ function DashboardPageContent() {
       })
       .sort((a, b) => a.time.localeCompare(b.time));
 
+    const totalWaitlist = sessions.reduce((sum, session) => sum + (session.waitlist?.length || 0), 0);
+
     return {
       overdueCount,
       onVacationCount,
@@ -609,6 +613,7 @@ function DashboardPageContent() {
       collectionPercentage,
       topDebtors,
       paymentReminders,
+      totalWaitlist
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
 
@@ -623,6 +628,7 @@ function DashboardPageContent() {
     collectionPercentage,
     topDebtors,
     paymentReminders,
+    totalWaitlist
   } = clientSideData;
   
    const handleDismissNotification = async (notificationId: string) => {
@@ -1128,6 +1134,26 @@ function DashboardPageContent() {
             </Card>
 
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
+            
+            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-cyan-500/20">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                        <ListPlus className="h-5 w-5 text-cyan-500" />
+                        Lista de Espera
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                     {totalWaitlist > 0 ? (
+                        <div className="flex items-center justify-center p-4 text-center text-base text-muted-foreground">
+                            <span className="font-bold text-lg text-foreground mr-2">{totalWaitlist}</span> {totalWaitlist === 1 ? 'persona está esperando' : 'personas están esperando'} un cupo.
+                        </div>
+                     ) : (
+                        <div className="flex items-center justify-center p-4 text-center text-sm text-muted-foreground">
+                            No hay nadie en ninguna lista de espera.
+                        </div>
+                     )}
+                </CardContent>
+            </Card>
         </div>
       </div>
     
@@ -1170,3 +1196,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
