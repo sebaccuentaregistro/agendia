@@ -1199,16 +1199,16 @@ function SchedulePageContent() {
                                   </TooltipProvider>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95">
+                                        <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95" disabled={isFull}>
                                             <UserPlus className="mr-2 h-4 w-4" />
                                             Inscribir
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => setSessionToManage(session)}>
+                                        <DropdownMenuItem onClick={() => setSessionToManage(session)} disabled={isFull}>
                                             <Users className="mr-2 h-4 w-4" /> Inscripción Fija
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setSessionForPuntual(session)}>
+                                        <DropdownMenuItem onClick={() => setSessionForPuntual(session)} disabled={isFull}>
                                             <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
                                         </DropdownMenuItem>
                                         {isFull && (
@@ -1279,6 +1279,7 @@ function SchedulePageContent() {
                                     const { specialist, actividad, space, level } = getSessionDetails(session);
                                     const capacity = space?.capacity || 0;
                                     const { enrolledCount } = session;
+                                    const isFull = enrolledCount >= capacity;
                                     const isAttendanceAllowed = isAttendanceAllowedForSession(session);
 
                                     return (
@@ -1307,10 +1308,10 @@ function SchedulePageContent() {
                                                         <DropdownMenuItem onSelect={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
                                                           <ClipboardCheck className="mr-2 h-4 w-4" />Asistencia
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)}>
+                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={isFull}>
                                                           <Users className="mr-2 h-4 w-4" />Inscripción Fija
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)}>
+                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={isFull}>
                                                           <CalendarDays className="mr-2 h-4 w-4" />Inscripción Recupero
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
@@ -1320,6 +1321,14 @@ function SchedulePageContent() {
                                                         <DropdownMenuItem onSelect={() => setSessionToNotify(session)}>
                                                             <Send className="mr-2 h-4 w-4" />Notificar
                                                         </DropdownMenuItem>
+                                                        {isFull && (
+                                                            <>
+                                                                <DropdownMenuSeparator />
+                                                                <DropdownMenuItem onSelect={() => setSessionForWaitlist(session)}>
+                                                                    <ListPlus className="mr-2 h-4 w-4" /> Anotar en Espera
+                                                                </DropdownMenuItem>
+                                                            </>
+                                                        )}
                                                         <DropdownMenuSeparator />
                                                         <DropdownMenuItem onSelect={() => openDeleteDialog(session)} className="text-destructive focus:text-destructive">
                                                             <Trash2 className="mr-2 h-4 w-4" />Eliminar
