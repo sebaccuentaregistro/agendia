@@ -3,7 +3,7 @@
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
@@ -138,12 +138,12 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
     });
 
     // Also remove from waitlists
-    const personWaitlistQuery = query(sessionsRef, where('waitlistPersonIds', 'array-contains', personId));
+    const personWaitlistQuery = query(sessionsRef, where('waitlist', 'array-contains', personId));
     const personWaitlistSnap = await getDocs(personWaitlistQuery);
     personWaitlistSnap.forEach(sessionDoc => {
         const sessionData = sessionDoc.data() as Session;
-        const updatedWaitlistIds = (sessionData.waitlistPersonIds || []).filter(id => id !== personId);
-        batch.update(sessionDoc.ref, { waitlistPersonIds: updatedWaitlistIds });
+        const updatedWaitlist = (sessionData.waitlist || []).filter(entry => typeof entry === 'string' && entry !== personId);
+        batch.update(sessionDoc.ref, { waitlist: updatedWaitlist });
     });
 
     // Delete the person document
@@ -269,13 +269,15 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
             batch.update(sessionRef, { personIds: updatedPersonIds });
 
             // Check if there is a waitlist and create a notification
-            if (sessionData.waitlistPersonIds && sessionData.waitlistPersonIds.length > 0) {
-                const firstOnWaitlistId = sessionData.waitlistPersonIds[0];
+            if (sessionData.waitlist && sessionData.waitlist.length > 0) {
+                const firstOnWaitlist = sessionData.waitlist[0];
+                const personIdToNotify = typeof firstOnWaitlist === 'string' ? firstOnWaitlist : firstOnWaitlist.name; // This will need enhancement
+
                 const notifRef = doc(notificationsRef);
                 batch.set(notifRef, {
                     type: 'waitlist',
                     sessionId: sessionId,
-                    personId: firstOnWaitlistId,
+                    personId: personIdToNotify,
                     createdAt: new Date(),
                 });
             }
@@ -375,9 +377,9 @@ export const removeVacationPeriodAction = async (personDocRef: any, person: Pers
     return updateEntity(personDocRef, { vacationPeriods: updatedVacations });
 };
 
-export const addToWaitlistAction = async (sessionDocRef: any, personId: string) => {
+export const addToWaitlistAction = async (sessionDocRef: any, entry: WaitlistEntry) => {
     return await updateDoc(sessionDocRef, {
-        waitlistPersonIds: arrayUnion(personId)
+        waitlist: arrayUnion(entry)
     });
 };
 
@@ -385,8 +387,14 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
     const batch = writeBatch(db);
     const sessionRef = doc(sessionsRef, sessionId);
     const newPersonIds = Array.from(new Set([...session.personIds, personId]));
-    const newWaitlist = session.waitlistPersonIds?.filter(id => id !== personId) || [];
-    batch.update(sessionRef, { personIds: newPersonIds, waitlistPersonIds: newWaitlist });
+    const newWaitlist = (session.waitlist || []).filter(entry => {
+        if (typeof entry === 'string') {
+            return entry !== personId;
+        }
+        // This part needs to be smarter if we have prospect objects
+        return true;
+    });
+    batch.update(sessionRef, { personIds: newPersonIds, waitlist: newWaitlist });
     
     const notifRef = doc(notificationsRef, notificationId);
     batch.delete(notifRef);

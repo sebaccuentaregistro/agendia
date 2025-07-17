@@ -99,6 +99,13 @@ export type NewPersonData = {
     lastPaymentDate?: Date | null;
 };
 
+export type WaitlistProspect = {
+    name: string;
+    phone: string;
+    isProspect: true;
+};
+
+export type WaitlistEntry = string | WaitlistProspect;
 
 export type Session = {
   id: string;
@@ -108,7 +115,7 @@ export type Session = {
   dayOfWeek: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado' | 'Domingo';
   time: string; // Format "HH:mm"
   personIds: string[];
-  waitlistPersonIds?: string[];
+  waitlist: WaitlistEntry[];
   levelId?: string;
 };
 

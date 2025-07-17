@@ -8,7 +8,7 @@ import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserP
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import type { Person, Session } from '@/types';
+import type { Person, Session, WaitlistEntry } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -144,22 +144,39 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
   );
 }
 
+const prospectSchema = z.object({
+  name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
+  phone: z.string().regex(/^\d+$/, { message: 'El teléfono solo debe contener números.' }).min(8, { message: 'El teléfono parece muy corto.' }),
+});
+
 function WaitlistDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
   const { people, addToWaitlist } = useStudio();
+  const [activeTab, setActiveTab] = useState('existing');
   const [selectedPersonId, setSelectedPersonId] = useState('');
+
+  const prospectForm = useForm<z.infer<typeof prospectSchema>>({
+    resolver: zodResolver(prospectSchema),
+    defaultValues: { name: '', phone: '' },
+  });
 
   const eligiblePeople = useMemo(() => {
     const enrolledIds = new Set(session.personIds);
-    const waitlistIds = new Set(session.waitlistPersonIds || []);
-    return people.filter(p => !enrolledIds.has(p.id) && !waitlistIds.has(p.id))
+    const waitlistPersonIds = new Set(session.waitlist.filter(e => typeof e === 'string'));
+    return people.filter(p => !enrolledIds.has(p.id) && !waitlistPersonIds.has(p.id))
       .sort((a,b) => a.name.localeCompare(b.name));
   }, [people, session]);
 
-  const handleSubmit = () => {
+  const handleExistingSubmit = () => {
     if (selectedPersonId) {
       addToWaitlist(session.id, selectedPersonId);
       onClose();
     }
+  };
+
+  const handleProspectSubmit = (values: z.infer<typeof prospectSchema>) => {
+    const prospect: WaitlistEntry = { ...values, isProspect: true };
+    addToWaitlist(session.id, prospect);
+    onClose();
   };
 
   return (
@@ -168,31 +185,65 @@ function WaitlistDialog({ session, onClose }: { session: Session; onClose: () =>
         <DialogHeader>
           <DialogTitle>Anotar en Lista de Espera</DialogTitle>
           <DialogDescription>
-            Selecciona una persona para añadir a la lista de espera de esta clase.
+            Añade un alumno existente o un nuevo contacto a la lista de espera de esta clase.
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
-            <Select onValueChange={setSelectedPersonId} value={selectedPersonId}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Selecciona una persona..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <ScrollArea className="h-60">
-                        {eligiblePeople.length > 0 ? (
-                            eligiblePeople.map(p => (
-                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                            ))
-                        ) : (
-                            <div className="p-4 text-center text-sm text-muted-foreground">No hay personas elegibles.</div>
-                        )}
-                    </ScrollArea>
-                </SelectContent>
-            </Select>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSubmit} disabled={!selectedPersonId}>Añadir a la Lista</Button>
-        </DialogFooter>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="existing">Alumno Existente</TabsTrigger>
+                <TabsTrigger value="prospect">Nuevo Contacto</TabsTrigger>
+            </TabsList>
+            <TabsContent value="existing" className="py-4">
+                 <div className="space-y-4">
+                    <Select onValueChange={setSelectedPersonId} value={selectedPersonId}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Selecciona una persona..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <ScrollArea className="h-60">
+                                {eligiblePeople.length > 0 ? (
+                                    eligiblePeople.map(p => (
+                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                    ))
+                                ) : (
+                                    <div className="p-4 text-center text-sm text-muted-foreground">No hay personas elegibles.</div>
+                                )}
+                            </ScrollArea>
+                        </SelectContent>
+                    </Select>
+                     <Button onClick={handleExistingSubmit} disabled={!selectedPersonId} className="w-full">Añadir Alumno a la Lista</Button>
+                </div>
+            </TabsContent>
+            <TabsContent value="prospect" className="py-4">
+                <Form {...prospectForm}>
+                    <form onSubmit={prospectForm.handleSubmit(handleProspectSubmit)} className="space-y-4">
+                         <FormField
+                            control={prospectForm.control}
+                            name="name"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Nombre del Contacto</FormLabel>
+                                    <FormControl><Input {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                         <FormField
+                            control={prospectForm.control}
+                            name="phone"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Teléfono</FormLabel>
+                                    <FormControl><Input type="tel" {...field} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit" className="w-full">Añadir Nuevo Contacto a la Lista</Button>
+                    </form>
+                </Form>
+            </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -700,7 +751,7 @@ function SchedulePageContent() {
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     if (selectedSession) {
-      updateSession({ ...selectedSession, ...values });
+      updateSession({ ...selectedSession, ...values, waitlist: selectedSession.waitlist || [] });
     } else {
       addSession(values);
     }
@@ -1062,7 +1113,7 @@ function SchedulePageContent() {
                       const availableSpots = capacity - enrolledCount;
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
                       const isFull = availableSpots <= 0;
-                      const waitlistCount = session.waitlistPersonIds?.length || 0;
+                      const waitlistCount = session.waitlist?.length || 0;
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";

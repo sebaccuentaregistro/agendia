@@ -5,7 +5,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry } from '@/types';
 import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
@@ -30,7 +30,7 @@ interface StudioContextType {
     addPerson: (person: NewPersonData) => void;
     updatePerson: (person: Person) => void;
     deletePerson: (personId: string) => void;
-    addSession: (session: Omit<Session, 'id' | 'personIds' | 'waitlistPersonIds'>) => void;
+    addSession: (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => void;
     updateSession: (session: Session) => void;
     deleteSession: (sessionId: string) => void;
     enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
@@ -42,7 +42,7 @@ interface StudioContextType {
     removeVacationPeriod: (personId: string, vacationId: string) => void;
     addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
     addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
-    addToWaitlist: (sessionId: string, personId: string) => void;
+    addToWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
     enrollFromWaitlist: (notificationId: string, sessionId: string, personId: string) => void;
     dismissNotification: (notificationId: string) => void;
     addActividad: (actividad: Omit<Actividad, 'id'>) => void;
@@ -275,7 +275,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
     };
     
-    const addSession = (session: Omit<Session, 'id' | 'personIds' | 'waitlistPersonIds'>) => addGenericEntity('sessions', { ...session, personIds: [], waitlistPersonIds: [] }, "Sesión creada.", "Error al crear la sesión.");
+    const addSession = (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => addGenericEntity('sessions', { ...session, personIds: [], waitlist: [] }, "Sesión creada.", "Error al crear la sesión.");
     const updateSession = (session: Session) => updateGenericEntity('sessions', session, "Sesión actualizada.", "Error al actualizar la sesión.");
     const deleteSession = (id: string) => deleteGenericEntityWithUsageCheck('sessions', id, "Sesión eliminada.", "Error al eliminar la sesión.", [{collection: 'attendance', field: 'sessionId', label: 'asistencias'}]);
 
@@ -363,8 +363,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         'Error al añadir asistente puntual.'
     );
     
-    const addToWaitlist = (sessionId: string, personId: string) => handleAction(
-        addToWaitlistAction(doc(collectionRefs!.sessions, sessionId), personId),
+    const addToWaitlist = (sessionId: string, entry: WaitlistEntry) => handleAction(
+        addToWaitlistAction(doc(collectionRefs!.sessions, sessionId), entry),
         'Añadido a la lista de espera.',
         'Error al añadir a la lista de espera.'
     );
