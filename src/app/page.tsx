@@ -8,15 +8,15 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, AppNotification } from '@/types';
+import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getStudentPaymentStatus } from '@/lib/utils';
+import { getStudentPaymentStatus, calculateNextPaymentDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, parse, isAfter, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -33,18 +33,40 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { PersonDialog } from '@/app/students/person-dialog';
-import { deleteEntity } from '@/lib/firestore-actions';
+import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { deleteEntity } from '@/lib/firestore-actions';
 
-function ChurnRiskAlerts({ notifications, onDismiss }: { notifications: AppNotification[]; onDismiss: (id: string) => void; }) {
-    const { people } = useStudio();
+function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; attendance: SessionAttendance[]; sessions: Session[] }) {
     
-    const churnRiskNotifications = useMemo(() => {
-        return notifications
-            .filter(n => n.type === 'churnRisk' && n.personId && people.find(p => p.id === n.personId))
-            .map(n => ({...n, person: people.find(p => p.id === n.personId)! }))
-            .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
-    }, [notifications, people]);
+    const churnRiskPeople = useMemo(() => {
+        const atRisk: Person[] = [];
+        
+        for (const person of people) {
+            const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
+            if (personSessionIds.size === 0) continue;
+
+            const relevantAttendance = attendance
+                .filter(a => personSessionIds.has(a.sessionId))
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+            let consecutiveAbsences = 0;
+            
+            for (let i = 0; i < Math.min(relevantAttendance.length, 5); i++) {
+                const record = relevantAttendance[i];
+                if (record.absentIds?.includes(person.id)) {
+                    consecutiveAbsences++;
+                } else if (record.presentIds?.includes(person.id) || record.justifiedAbsenceIds?.includes(person.id)) {
+                    break;
+                }
+            }
+            
+            if (consecutiveAbsences >= 3) {
+                atRisk.push(person);
+            }
+        }
+        return atRisk;
+    }, [people, attendance, sessions]);
 
     return (
         <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
@@ -55,19 +77,18 @@ function ChurnRiskAlerts({ notifications, onDismiss }: { notifications: AppNotif
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                {churnRiskNotifications.length > 0 ? (
-                    churnRiskNotifications.map(notif => (
-                        <div key={notif.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 text-sm">
+                {churnRiskPeople.length > 0 ? (
+                    churnRiskPeople.map(person => (
+                        <div key={person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 text-sm">
                             <p className="flex-grow text-red-800 dark:text-red-200">
-                               <span className="font-semibold">{notif.person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
+                               <span className="font-semibold">{person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
                             </p>
                             <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                                  <Button asChild size="sm" variant="ghost" className="text-green-600 hover:text-green-700 h-8 px-2">
-                                    <a href={`https://wa.me/${notif.person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                    <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
                                         <WhatsAppIcon className="mr-2"/> Contactar
                                     </a>
                                 </Button>
-                                <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => onDismiss(notif.id)}>Descartar</Button>
                             </div>
                         </div>
                     ))
@@ -80,6 +101,7 @@ function ChurnRiskAlerts({ notifications, onDismiss }: { notifications: AppNotif
         </Card>
     );
 }
+
 
 function MassReminderDialog({ reminders, onOpenChange }: { reminders: PaymentReminderInfo[]; onOpenChange: (open: boolean) => void; }) {
     const { institute } = useAuth();
@@ -440,7 +462,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
     updateOverdueStatuses, addPerson,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
@@ -1105,8 +1127,7 @@ function DashboardPageContent() {
                 </CardContent>
             </Card>
 
-            <ChurnRiskAlerts notifications={notifications} onDismiss={handleDismissNotification} />
-
+            <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
         </div>
       </div>
     
