@@ -182,7 +182,9 @@ function PaymentReminderDialog({ reminderInfo, onOpenChange }: { reminderInfo: P
 }
 
 function PaymentReminders({ reminders, onSendReminder, onSendAll }: { reminders: PaymentReminderInfo[]; onSendReminder: (reminder: PaymentReminderInfo) => void; onSendAll: () => void; }) {
-    if (reminders.length === 0) return null;
+    if (reminders.length === 0) {
+      return null;
+    }
 
     return (
         <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
@@ -524,6 +526,7 @@ function DashboardPageContent() {
     }).sort((a, b) => b.debt - a.debt).slice(0, 5);
 
     const totalDebt = overduePeople.reduce((acc, person) => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
         const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
         return acc + debtAmount;
     }, 0);
