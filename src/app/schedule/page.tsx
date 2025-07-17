@@ -4,11 +4,11 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import type { Session, Person } from '@/types';
+import type { Person, Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -138,6 +138,60 @@ function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function WaitlistDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
+  const { people, addToWaitlist } = useStudio();
+  const [selectedPersonId, setSelectedPersonId] = useState('');
+
+  const eligiblePeople = useMemo(() => {
+    const enrolledIds = new Set(session.personIds);
+    const waitlistIds = new Set(session.waitlistPersonIds || []);
+    return people.filter(p => !enrolledIds.has(p.id) && !waitlistIds.has(p.id))
+      .sort((a,b) => a.name.localeCompare(b.name));
+  }, [people, session]);
+
+  const handleSubmit = () => {
+    if (selectedPersonId) {
+      addToWaitlist(session.id, selectedPersonId);
+      onClose();
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Anotar en Lista de Espera</DialogTitle>
+          <DialogDescription>
+            Selecciona una persona para añadir a la lista de espera de esta clase.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="py-4">
+            <Select onValueChange={setSelectedPersonId} value={selectedPersonId}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Selecciona una persona..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <ScrollArea className="h-60">
+                        {eligiblePeople.length > 0 ? (
+                            eligiblePeople.map(p => (
+                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))
+                        ) : (
+                            <div className="p-4 text-center text-sm text-muted-foreground">No hay personas elegibles.</div>
+                        )}
+                    </ScrollArea>
+                </SelectContent>
+            </Select>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSubmit} disabled={!selectedPersonId}>Añadir a la Lista</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -486,6 +540,7 @@ function SchedulePageContent() {
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [sessionForPuntual, setSessionForPuntual] = useState<Session | null>(null);
   const [sessionToNotify, setSessionToNotify] = useState<Session | null>(null);
+  const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [filters, setFilters] = useState({
     specialistId: 'all',
     actividadId: 'all',
@@ -1156,6 +1211,14 @@ function SchedulePageContent() {
                                         <DropdownMenuItem onClick={() => setSessionForPuntual(session)}>
                                             <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
                                         </DropdownMenuItem>
+                                        {isFull && (
+                                            <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem onClick={() => setSessionForWaitlist(session)}>
+                                                    <ListPlus className="mr-2 h-4 w-4" /> Anotar en Espera
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                                </div>
@@ -1313,6 +1376,7 @@ function SchedulePageContent() {
       {sessionForRoster && <EnrolledPeopleSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
       {sessionForAttendance && <AttendanceSheet session={sessionForAttendance} onClose={() => setSessionForAttendance(null)} />}
       {sessionToNotify && <NotifyAttendeesDialog session={sessionToNotify} onClose={() => setSessionToNotify(null)} />}
+      {sessionForWaitlist && <WaitlistDialog session={sessionForWaitlist} onClose={() => setSessionForWaitlist(null)} />}
     </div>
   );
 }
@@ -1324,5 +1388,3 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
-
-

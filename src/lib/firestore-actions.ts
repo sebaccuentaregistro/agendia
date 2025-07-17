@@ -2,7 +2,7 @@
 
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
-import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse } from 'date-fns';
@@ -363,9 +363,10 @@ export const removeVacationPeriodAction = async (personDocRef: any, person: Pers
     return updateEntity(personDocRef, { vacationPeriods: updatedVacations });
 };
 
-export const addToWaitlistAction = async (sessionDocRef: any, session: Session, personId: string) => {
-    const updatedWaitlist = Array.from(new Set([...(session.waitlistPersonIds || []), personId]));
-    return updateEntity(sessionDocRef, { waitlistPersonIds: updatedWaitlist });
+export const addToWaitlistAction = async (sessionDocRef: any, personId: string) => {
+    return await updateDoc(sessionDocRef, {
+        waitlistPersonIds: arrayUnion(personId)
+    });
 };
 
 export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference, notificationsRef: CollectionReference, notificationId: string, sessionId: string, personId: string, session: Session) => {
@@ -452,26 +453,25 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
         
         const dueDate = startOfDay(person.lastPaymentDate);
 
-        // Check if the person is overdue
+        // Only process people who are overdue
         if (isBefore(dueDate, today)) {
             let cyclesMissed = 0;
             let dateCursor = dueDate;
             
-            // Calculate how many payment cycles have been missed since the due date
+            // Calculate how many payment cycles have been missed.
+            // This loop ensures we correctly count missed cycles without advancing the due date itself.
             while (isBefore(dateCursor, today)) {
                 cyclesMissed++;
                 dateCursor = calculateNextPaymentDate(dateCursor, person.joinDate, tariff);
             }
             
-            if (cyclesMissed > 0) {
-                 const currentOutstanding = person.outstandingPayments || 0;
-                 const newOutstandingPayments = currentOutstanding + cyclesMissed;
-                 
+            // If the calculated number of missed cycles is greater than the currently stored debt, update it.
+            const currentOutstanding = person.outstandingPayments || 0;
+            if (cyclesMissed > currentOutstanding) {
                  updatedCount++;
                  const personDocRef = doc(peopleRef, person.id);
-                 // We DO NOT update lastPaymentDate here. That only happens on payment.
-                 // We only update the debt counter.
-                 batch.update(personDocRef, { outstandingPayments: newOutstandingPayments });
+                 // We ONLY update the debt counter. We do NOT change the lastPaymentDate.
+                 batch.update(personDocRef, { outstandingPayments: cyclesMissed });
             }
         }
     }
@@ -485,9 +485,6 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
             entityName: `Se actualizaron ${updatedCount} deudores.`,
             timestamp: new Date(),
         } as Omit<AuditLog, 'id'>);
-    }
-
-    if (updatedCount > 0) {
         await batch.commit();
     }
     
