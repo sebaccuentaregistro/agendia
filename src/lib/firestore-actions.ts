@@ -252,77 +252,87 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
 };
 
 
-export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, desiredSessionIds: string[], notificationsRef: CollectionReference, spacesRef: CollectionReference) => {
+export const enrollPersonInSessionsAction = async (
+    sessionsRef: CollectionReference,
+    personId: string,
+    desiredSessionIds: string[],
+    notificationsRef: CollectionReference,
+    spacesRef: CollectionReference
+) => {
     // Phase 1: Read all necessary data BEFORE the transaction.
     const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
     const currentEnrollmentsSnap = await getDocs(currentEnrollmentsQuery);
     const currentSessionIds = new Set(currentEnrollmentsSnap.docs.map(d => d.id));
 
-    const sessionsToRemoveIds = Array.from(currentSessionIds).filter(id => !desiredSessionIds.includes(id));
+    const sessionsToRemoveFromIds = Array.from(currentSessionIds).filter(id => !desiredSessionIds.includes(id));
     const sessionsToAddToIds = desiredSessionIds.filter(id => !currentSessionIds.has(id));
+    
+    const allRelevantSessionIds = new Set([...sessionsToRemoveFromIds, ...sessionsToAddToIds]);
+    if (allRelevantSessionIds.size === 0) return; // No changes needed
 
-    const sessionsToRemoveDataPromises = sessionsToRemoveIds.map(async id => {
-        const sessionDoc = await getDoc(doc(sessionsRef, id));
-        if (!sessionDoc.exists()) return null;
-        const sessionData = sessionDoc.data() as Session;
-
-        const spaceDoc = await getDoc(doc(spacesRef, sessionData.spaceId));
-        const spaceData = spaceDoc.exists() ? spaceDoc.data() as Space : null;
-
-        return {
-            id: sessionDoc.id,
-            ref: sessionDoc.ref,
-            data: sessionData,
-            capacity: spaceData?.capacity ?? 0
-        };
+    const sessionPromises = Array.from(allRelevantSessionIds).map(id => getDoc(doc(sessionsRef, id)));
+    const sessionDocs = await Promise.all(sessionPromises);
+    const sessionDataMap = new Map<string, Session>();
+    sessionDocs.forEach(doc => {
+        if (doc.exists()) {
+            sessionDataMap.set(doc.id, { id: doc.id, ...doc.data() } as Session);
+        }
     });
 
-    const sessionsToRemoveWithDetails = (await Promise.all(sessionsToRemoveDataPromises)).filter(Boolean) as { id: string; ref: any; data: Session; capacity: number }[];
+    const spaceIds = new Set(Array.from(sessionDataMap.values()).map(s => s.spaceId));
+    const spacePromises = Array.from(spaceIds).map(id => getDoc(doc(spacesRef, id)));
+    const spaceDocs = await Promise.all(spacePromises);
+    const spaceDataMap = new Map<string, Space>();
+    spaceDocs.forEach(doc => {
+        if (doc.exists()) {
+            spaceDataMap.set(doc.id, doc.data() as Space);
+        }
+    });
 
-
-    // Phase 2: Run the transaction with all data pre-fetched.
+    // Phase 2: Execute the transaction with all data pre-fetched.
     return runTransaction(db, async (transaction) => {
-        // Handle removals and potential waitlist notifications.
-        for (const sessionInfo of sessionsToRemoveWithDetails) {
-            const { ref, data, capacity } = sessionInfo;
+        // Handle Removals
+        for (const sessionId of sessionsToRemoveFromIds) {
+            const sessionData = sessionDataMap.get(sessionId);
+            const spaceData = sessionData ? spaceDataMap.get(sessionData.spaceId) : undefined;
+            if (!sessionData || !spaceData) continue;
 
-            const wasFull = data.personIds.length >= capacity;
-            const updatedPersonIds = data.personIds.filter(id => id !== personId);
-            const isNowOpen = updatedPersonIds.length < capacity;
+            const sessionRef = doc(sessionsRef, sessionId);
+            const wasFull = sessionData.personIds.length >= spaceData.capacity;
+            const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
+            const isNowOpen = updatedPersonIds.length < spaceData.capacity;
+            
+            transaction.update(sessionRef, { personIds: updatedPersonIds });
 
-            transaction.update(ref, { personIds: updatedPersonIds });
-
-            // If a spot was opened in a previously full class with a waitlist, create a notification.
-            if (wasFull && isNowOpen && data.waitlist && data.waitlist.length > 0) {
+            // If a spot was freed up and there's a waitlist, create a notification
+            if (wasFull && isNowOpen && sessionData.waitlist && sessionData.waitlist.length > 0) {
                 const notifRef = doc(notificationsRef);
+                const firstOnWaitlist = sessionData.waitlist[0];
                 const notifData: Partial<AppNotification> = {
                     type: 'waitlist',
-                    sessionId: data.id,
+                    sessionId: sessionData.id,
                     createdAt: new Date(),
+                    ...(typeof firstOnWaitlist === 'string'
+                        ? { personId: firstOnWaitlist }
+                        : { prospectDetails: firstOnWaitlist }
+                    ),
                 };
-                const firstOnWaitlist = data.waitlist[0];
-                if (typeof firstOnWaitlist === 'string') {
-                    notifData.personId = firstOnWaitlist;
-                } else if (firstOnWaitlist) {
-                    notifData.prospectDetails = firstOnWaitlist;
-                }
                 transaction.set(notifRef, notifData);
             }
         }
-
-        // Handle additions.
+        
+        // Handle Additions
         for (const sessionId of sessionsToAddToIds) {
+            const sessionData = sessionDataMap.get(sessionId);
+            if (!sessionData) continue;
+
             const sessionRef = doc(sessionsRef, sessionId);
-            // We still need to get the latest session data inside the transaction to avoid race conditions.
-            const sessionDoc = await transaction.get(sessionRef);
-            if (sessionDoc.exists()) {
-                const sessionData = sessionDoc.data() as Session;
-                const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));
-                transaction.update(sessionRef, { personIds: updatedPersonIds });
-            }
+            const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));
+            transaction.update(sessionRef, { personIds: updatedPersonIds });
         }
     });
 };
+
 
 
 
