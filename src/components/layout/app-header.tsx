@@ -43,57 +43,38 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-background/90 px-4 backdrop-blur-xl sm:px-6">
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-4">
-            <Link href="/" className="flex flex-shrink-0 items-center gap-2.5 font-semibold text-slate-800 dark:text-white">
-              <Heart className="h-7 w-7 text-fuchsia-500" />
-              <span className="hidden text-lg sm:inline">Agendia</span>
-            </Link>
-            {institute && activeOperator && (
-                <>
-                    <Separator orientation="vertical" className="h-6 hidden sm:block" />
-                    <div className="hidden sm:flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                            <Landmark className="h-4 w-4" />
-                            {institute.name}
-                        </div>
-                        {studentLimit !== undefined && studentLimit > 0 && (
-                             <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className={cn("flex items-center gap-1.5 text-xs font-semibold", usageColorClass)}>
-                                            <Users className="h-4 w-4" />
-                                            <span>{studentCount}/{studentLimit}</span>
-                                        </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{studentCount} de {studentLimit} alumnos permitidos en tu plan.</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
-                </>
-            )}
-        </div>
+      <div className="flex items-center gap-4">
+        <Link href="/" className="flex flex-shrink-0 items-center gap-2.5 font-semibold text-slate-800 dark:text-white">
+          <Heart className="h-7 w-7 text-fuchsia-500" />
+          <span className="hidden text-lg sm:inline">Agendia</span>
+        </Link>
         
-        <nav className="hidden items-center gap-5 md:flex">
-          {navItems.map((item) => {
-             const isActive = (item.href === '/' && pathname === '/') || (item.href !== '/' && pathname.startsWith(item.href));
-             return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={cn(
-                    "text-sm font-medium transition-colors hover:text-primary",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )}
-                >
-                  {item.label}
-                </Link>
-             )
-          })}
-        </nav>
+        {institute && activeOperator && (
+            <>
+                <Separator orientation="vertical" className="h-6 hidden sm:block" />
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+                        <Landmark className="h-4 w-4" />
+                        <span className="hidden sm:inline">{institute.name}</span>
+                    </div>
+                    {studentLimit !== undefined && studentLimit > 0 && (
+                         <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className={cn("flex items-center gap-1.5 text-xs font-semibold", usageColorClass)}>
+                                        <Users className="h-4 w-4" />
+                                        <span>{studentCount}/{studentLimit}</span>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{studentCount} de {studentLimit} alumnos permitidos en tu plan.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+                </div>
+            </>
+        )}
       </div>
       <div className="flex items-center gap-2">
         {pathname === '/' && (
