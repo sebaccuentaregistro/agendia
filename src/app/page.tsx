@@ -243,7 +243,7 @@ function AppNotifications({ onOpenPersonDialog }: { onOpenPersonDialog: (personD
                 
                 return { ...n, details: { session, person: personDetails, actividad } };
             })
-            .filter(Boolean)
+            .filter((a): a is NonNullable<typeof a> => a !== null)
             .sort((a, b) => {
                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
                 const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
@@ -1232,6 +1232,7 @@ function DashboardPageContent() {
         </div>
         <div className="space-y-8">
             <AppNotifications onOpenPersonDialog={handleOpenPersonDialog} />
+            <ChurnRiskNotifications />
             <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-foreground">
@@ -1269,7 +1270,6 @@ function DashboardPageContent() {
                     )}
                 </CardContent>
             </Card>
-            <ChurnRiskNotifications />
         </div>
       </div>
     
