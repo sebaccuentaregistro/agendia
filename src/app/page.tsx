@@ -165,49 +165,126 @@ function PaymentReminders({ reminders, onSendReminder, onSendAll }: { reminders:
 }
 
 
+function WaitlistNotificationDialog({
+    notification,
+    onClose,
+    onConfirm,
+}: {
+    notification: any;
+    onClose: () => void;
+    onConfirm: () => void;
+}) {
+    const { institute } = useAuth();
+    if (!notification) return null;
+
+    const { person, session, actividad } = notification.details;
+    const message = `¡Hola, ${person.name}! Se liberó un cupo para la clase de ${actividad.name} (${session.dayOfWeek} ${session.time}). ¿Quieres que te inscribamos?`;
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappLink = `https://wa.me/${person.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
+
+    return (
+        <Dialog open={true} onOpenChange={onClose}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Confirmar Cupo con {person.name}</DialogTitle>
+                    <DialogDescription>
+                        Contacta a la persona para confirmar si desea el cupo. Una vez confirmado, presiona "Inscribir".
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="my-4 space-y-4">
+                    <Label htmlFor="wa-message">Mensaje Sugerido para WhatsApp</Label>
+                    <Textarea id="wa-message" readOnly value={message} rows={4} />
+                    <Button asChild className="w-full">
+                        <a href={whatsappLink} target="_blank" rel="noopener noreferrer">
+                            <WhatsAppIcon className="mr-2 h-4 w-4" /> Abrir WhatsApp
+                        </a>
+                    </Button>
+                </div>
+                <DialogFooter>
+                    <Button variant="ghost" onClick={onClose}>
+                        Cerrar
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            onConfirm();
+                            onClose();
+                        }}
+                    >
+                        Confirmar e Inscribir
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function AppNotifications() {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
-    
+    const [selectedNotification, setSelectedNotification] = useState<any | null>(null);
+
     const waitlistNotifications = useMemo(() => {
-        return notifications.filter(n => n.type === 'waitlist').sort((a, b) => {
-            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-            return dateB - dateA;
-        });
-    }, [notifications]);
+        return notifications
+            .filter((n) => n.type === 'waitlist')
+            .map((n) => {
+                const session = sessions.find((s) => s.id === n.sessionId);
+                const person = people.find((p) => p.id === n.personId);
+                const actividad = session ? actividades.find((a) => a.id === session.actividadId) : null;
+                if (!session || !person || !actividad) return null;
+                return { ...n, details: { session, person, actividad } };
+            })
+            .filter(Boolean)
+            .sort((a, b) => {
+                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                return dateB - dateA;
+            });
+    }, [notifications, sessions, people, actividades]);
 
     if (waitlistNotifications.length === 0) return null;
 
     return (
-        <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-foreground">
-                    <Info className="h-5 w-5 text-blue-500" />
-                    Notificaciones Importantes
-                </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-                {waitlistNotifications.map(notification => {
-                    const session = sessions.find(s => s.id === notification.sessionId);
-                    const person = people.find(p => p.id === notification.personId);
-                    const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
-
-                    if (!session || !person || !actividad) return null;
-
-                    return (
-                        <div key={notification.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm">
+        <>
+            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                        <Info className="h-5 w-5 text-blue-500" />
+                        Notificaciones Importantes
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {waitlistNotifications.map((notification) => (
+                        <div
+                            key={notification.id}
+                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm"
+                        >
                             <p className="flex-grow text-blue-800 dark:text-blue-200">
-                                ¡Cupo liberado en <span className="font-semibold">{actividad.name}</span> ({session.dayOfWeek} {session.time})! ¿Deseas inscribir a <span className="font-semibold">{person.name}</span>?
+                                ¡Cupo liberado en{' '}
+                                <span className="font-semibold">{notification.details.actividad.name}</span> (
+                                {notification.details.session.dayOfWeek} {notification.details.session.time}) para{' '}
+                                <span className="font-semibold">{notification.details.person.name}</span>!
                             </p>
                             <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                <Button size="sm" onClick={() => enrollFromWaitlist(notification.id, session.id, person.id)}>Inscribir</Button>
-                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>Descartar</Button>
+                                <Button size="sm" onClick={() => setSelectedNotification(notification)}>
+                                    Gestionar
+                                </Button>
+                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>
+                                    Descartar
+                                </Button>
                             </div>
                         </div>
-                    );
-                })}
-            </CardContent>
-        </Card>
+                    ))}
+                </CardContent>
+            </Card>
+            {selectedNotification && (
+                <WaitlistNotificationDialog
+                    notification={selectedNotification}
+                    onClose={() => setSelectedNotification(null)}
+                    onConfirm={() =>
+                        enrollFromWaitlist(selectedNotification.id, selectedNotification.sessionId, selectedNotification.personId)
+                    }
+                />
+            )}
+        </>
     );
 }
 
