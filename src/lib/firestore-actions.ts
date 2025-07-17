@@ -271,15 +271,21 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
             // Check if there is a waitlist and create a notification
             if (sessionData.waitlist && sessionData.waitlist.length > 0) {
                 const firstOnWaitlist = sessionData.waitlist[0];
-                const personIdToNotify = typeof firstOnWaitlist === 'string' ? firstOnWaitlist : firstOnWaitlist.name; // This will need enhancement
-
-                const notifRef = doc(notificationsRef);
-                batch.set(notifRef, {
+                
+                const notifData: Partial<AppNotification> = {
                     type: 'waitlist',
                     sessionId: sessionId,
-                    personId: personIdToNotify,
                     createdAt: new Date(),
-                });
+                };
+
+                if (typeof firstOnWaitlist === 'string') {
+                    notifData.personId = firstOnWaitlist;
+                } else {
+                    notifData.prospectDetails = firstOnWaitlist;
+                }
+
+                const notifRef = doc(notificationsRef);
+                batch.set(notifRef, notifData);
             }
         }
     }

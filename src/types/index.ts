@@ -162,7 +162,8 @@ export type AppNotification = {
   id: string;
   type: 'waitlist' | 'churnRisk';
   sessionId?: string;
-  personId: string; // The person from the waitlist or at risk
+  personId?: string; // The person from the waitlist or at risk
+  prospectDetails?: WaitlistProspect;
   createdAt: Date | null; // ISO string
 };
 

@@ -227,10 +227,20 @@ function AppNotifications() {
             .filter((n) => n.type === 'waitlist')
             .map((n) => {
                 const session = sessions.find((s) => s.id === n.sessionId);
-                const person = people.find((p) => p.id === n.personId);
-                const actividad = session ? actividades.find((a) => a.id === session.actividadId) : null;
-                if (!session || !person || !actividad) return null;
-                return { ...n, details: { session, person, actividad } };
+                if (!session) return null;
+                const actividad = actividades.find((a) => a.id === session.actividadId);
+                if (!actividad) return null;
+
+                let personDetails;
+                if (n.personId) {
+                    personDetails = people.find((p) => p.id === n.personId);
+                } else if (n.prospectDetails) {
+                    personDetails = n.prospectDetails;
+                }
+
+                if (!personDetails) return null;
+                
+                return { ...n, details: { session, person: personDetails, actividad } };
             })
             .filter(Boolean)
             .sort((a, b) => {
@@ -279,9 +289,14 @@ function AppNotifications() {
                 <WaitlistNotificationDialog
                     notification={selectedNotification}
                     onClose={() => setSelectedNotification(null)}
-                    onConfirm={() =>
-                        enrollFromWaitlist(selectedNotification.id, selectedNotification.sessionId, selectedNotification.personId)
-                    }
+                    onConfirm={() => {
+                        if (selectedNotification.personId) {
+                           enrollFromWaitlist(selectedNotification.id, selectedNotification.sessionId, selectedNotification.personId)
+                        } else {
+                            // Logic to convert prospect to person will go here
+                            console.log("Need to convert prospect to person");
+                        }
+                    }}
                 />
             )}
         </>
