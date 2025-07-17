@@ -161,7 +161,7 @@ function WaitlistDialog({ session, onClose }: { session: Session; onClose: () =>
 
   const eligiblePeople = useMemo(() => {
     const enrolledIds = new Set(session.personIds);
-    const waitlistPersonIds = new Set(session.waitlist.filter(e => typeof e === 'string'));
+    const waitlistPersonIds = new Set((session.waitlist || []).filter(e => typeof e === 'string'));
     return people.filter(p => !enrolledIds.has(p.id) && !waitlistPersonIds.has(p.id))
       .sort((a,b) => a.name.localeCompare(b.name));
   }, [people, session]);
@@ -1258,9 +1258,9 @@ function SchedulePageContent() {
                                   </TooltipProvider>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95" disabled={isFull}>
+                                        <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95" disabled={isFull && !session.waitlist?.length}>
                                             <UserPlus className="mr-2 h-4 w-4" />
-                                            Inscribir
+                                            {isFull ? 'Lista Espera' : 'Inscribir'}
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent>
@@ -1269,6 +1269,10 @@ function SchedulePageContent() {
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={() => setSessionForPuntual(session)} disabled={isFull}>
                                             <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator/>
+                                        <DropdownMenuItem onClick={() => setSessionForWaitlist(session)}>
+                                            <ListPlus className="mr-2 h-4 w-4" /> Anotar en Espera
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
