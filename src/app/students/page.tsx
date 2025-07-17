@@ -641,7 +641,7 @@ function VacationDialog({ person, onClose }: { person: Person | null; onClose: (
     )
 }
 
-function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreated, isLimitReached }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean, setSearchTerm: (term: string) => setSearchTerm; onPersonCreated: (person: NewPersonData) => void; isLimitReached: boolean; }) {
+function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreated, isLimitReached }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean; setSearchTerm: (term: string) => void; onPersonCreated: (person: NewPersonData) => void; isLimitReached: boolean; }) {
   const { addPerson, updatePerson, levels, tariffs } = useStudio();
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
@@ -1582,3 +1582,4 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+

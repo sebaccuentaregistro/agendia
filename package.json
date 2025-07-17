@@ -1,6 +1,6 @@
 {
   "name": "agendia",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "private": true,
   "description": "Final build fix attempt by clearing webpack config and forcing a clean reinstall.",
   "scripts": {
