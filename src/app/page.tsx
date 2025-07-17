@@ -47,10 +47,10 @@ function ChurnRiskAlerts({ notifications, onDismiss }: { notifications: AppNotif
     }, [notifications, people]);
 
     return (
-        <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-red-500/20">
+        <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
             <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-foreground">
-                    <UserX className="h-5 w-5 text-red-500" />
+                    <UserX className="h-5 w-5 text-yellow-500" />
                     Riesgo de Abandono
                 </CardTitle>
             </CardHeader>
@@ -1064,7 +1064,7 @@ function DashboardPageContent() {
             <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-foreground">
-                        <DollarSign className="h-5 w-5 text-red-500" />
+                        <DollarSign className="h-5 w-5 text-yellow-500" />
                         Top Deudores
                     </CardTitle>
                 </CardHeader>
@@ -1124,7 +1124,12 @@ function DashboardPageContent() {
       <PersonDialog
         open={isPersonDialogOpen}
         onOpenChange={setIsPersonDialogOpen}
-        onPersonCreated={(person) => addPerson(person)}
+        onPersonCreated={(person) => {
+          if (person.tariffId) {
+            setPersonForWelcome(person as NewPersonData);
+          }
+        }}
+        isLimitReached={isLimitReached}
       />
     </div>
   );
