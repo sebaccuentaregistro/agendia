@@ -279,16 +279,14 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
 }
 
 function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose: () => void }) {
-    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces, levels } = useStudio();
+    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces, levels, triggerWaitlistCheck } = useStudio();
     
     const [filters, setFilters] = useState({ day: 'all', actividadId: 'all', specialistId: 'all' });
     const [searchTerm, setSearchTerm] = useState('');
     
-    // This hook must be called unconditionally at the top level.
     const form = useForm<{ sessionIds: string[] }>();
     const watchedSessionIds = form.watch('sessionIds');
 
-    // All other hooks must also be called unconditionally.
     const { enrolledSessionIds, filteredAndSortedSessions } = useMemo(() => {
         const enrolledIds = person ? sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id) : [];
         const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -333,12 +331,10 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
 
     }, [filteredAndSortedSessions, searchTerm, actividades, specialists]);
     
-    // useEffect is a hook and must be called unconditionally.
     useEffect(() => {
         form.reset({ sessionIds: enrolledSessionIds });
     }, [person, enrolledSessionIds, form]);
     
-    // Now that all hooks have been called, we can return early if needed.
     if (!person) {
         return null;
     }
@@ -346,9 +342,17 @@ function EnrollmentsDialog({ person, onClose }: { person: Person | null, onClose
     const tariffFrequency = personTariff?.frequency;
     const isOverLimit = tariffFrequency !== undefined && watchedSessionIds.length > tariffFrequency;
     
-    const onSubmit = (data: { sessionIds: string[] }) => {
+    const onSubmit = async (data: { sessionIds: string[] }) => {
         if (!person) return;
-        enrollPersonInSessions(person.id, data.sessionIds);
+        const removedFromSessionIds = await enrollPersonInSessions(person.id, data.sessionIds);
+
+        // After enrollment, trigger waitlist check for sessions where a spot might have opened up.
+        if (removedFromSessionIds && Array.isArray(removedFromSessionIds)) {
+            removedFromSessionIds.forEach(sessionId => {
+                triggerWaitlistCheck(sessionId);
+            });
+        }
+        
         onClose();
     };
 
@@ -923,7 +927,7 @@ function PersonCard({ person, sessions, actividades, specialists, spaces, levels
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, deletePerson, levels, addPerson, updatePerson } = useStudio();
+  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, enrollPersonInSessions } = useStudio();
   const { institute } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -1344,7 +1348,7 @@ function StudentsPageContent() {
         open={isPersonDialogOpen}
         onPersonCreated={(person) => {
           if (person.tariffId) {
-            setPersonForWelcome(person as NewPersonData);
+            setPersonForWelcome(person);
           }
         }}
         isLimitReached={isLimitReached}
@@ -1397,6 +1401,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 

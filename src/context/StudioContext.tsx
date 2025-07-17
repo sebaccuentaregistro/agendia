@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry } from '@/types';
-import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction } from '@/lib/firestore-actions';
+import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, enrollFromWaitlistAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, checkAndNotifyWaitlist } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -60,11 +60,12 @@ interface StudioContextType {
     addTariff: (tariff: Omit<Tariff, 'id'>) => void;
     updateTariff: (tariff: Tariff) => void;
     deleteTariff: (tariffId: string) => void;
-    enrollPersonInSessions: (personId: string, sessionIds: string[]) => void;
+    enrollPersonInSessions: (personId: string, sessionIds: string[]) => Promise<string[] | void>;
     addOperator: (operator: Omit<Operator, 'id'>) => void;
     updateOperator: (operator: Operator) => void;
     deleteOperator: (operatorId: string) => void;
     updateOverdueStatuses: () => Promise<number>;
+    triggerWaitlistCheck: (sessionId: string) => void;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -364,11 +365,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         'Error al añadir asistente puntual.'
     );
     
-    const addToWaitlist = (sessionId: string, entry: WaitlistEntry) => handleAction(
-        addToWaitlistAction(doc(collectionRefs!.sessions, sessionId), entry, collectionRefs!.spaces, collectionRefs!.notifications),
-        'Añadido a la lista de espera.',
-        'Error al añadir a la lista de espera.'
-    );
+    const addToWaitlist = (sessionId: string, entry: WaitlistEntry) => {
+        if (!collectionRefs) return;
+        handleAction(
+            addToWaitlistAction(doc(collectionRefs.sessions, sessionId), entry, collectionRefs.spaces, collectionRefs.notifications),
+            'Añadido a la lista de espera.',
+            'Error al añadir a la lista de espera.'
+        );
+    };
+
 
     const enrollFromWaitlist = (notificationId: string, sessionId: string, personId: string) => {
         if (!collectionRefs) return;
@@ -387,11 +392,23 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         'Error al descartar notificación.'
     );
 
-    const enrollPersonInSessions = (personId: string, sessionIds: string[]) => handleAction(
-        enrollPersonInSessionsAction(collectionRefs!.sessions, personId, sessionIds, collectionRefs!.notifications, collectionRefs!.spaces),
-        "Horarios de la persona actualizados.",
-        "Error al actualizar los horarios."
-    );
+    const enrollPersonInSessions = async (personId: string, sessionIds: string[]) => {
+        if (!collectionRefs) return;
+        return handleAction(
+            enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds),
+            "Horarios de la persona actualizados.",
+            "Error al actualizar los horarios."
+        );
+    };
+
+    const triggerWaitlistCheck = (sessionId: string) => {
+        if (!collectionRefs) return;
+        handleAction(
+            checkAndNotifyWaitlist(sessionId, collectionRefs.sessions, collectionRefs.spaces, collectionRefs.notifications),
+            'Comprobación de lista de espera realizada.', // This message probably won't be seen by user, but good for debugging
+            'Error al comprobar la lista de espera.'
+        );
+    };
 
     const updateOverdueStatuses = useCallback(async (): Promise<number> => {
         if (!collectionRefs || !activeOperator) {
@@ -453,7 +470,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             addOperator,
             updateOperator,
             deleteOperator,
-            updateOverdueStatuses
+            updateOverdueStatuses,
+            triggerWaitlistCheck
         }}>
             {children}
         </StudioContext.Provider>
