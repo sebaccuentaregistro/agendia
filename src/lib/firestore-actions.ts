@@ -252,72 +252,81 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
 };
 
 
-export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, sessionIds: string[], notificationsRef: CollectionReference, spacesRef: CollectionReference) => {
-    // Perform all reads first
+export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, desiredSessionIds: string[], notificationsRef: CollectionReference, spacesRef: CollectionReference) => {
+    // READ PHASE: Perform all reads before starting the transaction.
     const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
     const currentEnrollmentsSnap = await getDocs(currentEnrollmentsQuery);
     const currentSessionIds = new Set(currentEnrollmentsSnap.docs.map(d => d.id));
 
-    const sessionsToAddToRefs = sessionIds
-        .filter(id => !currentSessionIds.has(id))
-        .map(id => doc(sessionsRef, id));
-    
-    const sessionsToAddToSnaps = await Promise.all(sessionsToAddToRefs.map(ref => getDoc(ref)));
+    // Determine which sessions to add/remove the person from.
+    const sessionsToRemoveFromIds = Array.from(currentSessionIds).filter(id => !desiredSessionIds.includes(id));
+    const sessionsToAddToIds = desiredSessionIds.filter(id => !currentSessionIds.has(id));
 
+    // Fetch data for sessions being removed to check waitlists.
+    const sessionsToRemoveDataPromises = sessionsToRemoveFromIds.map(id => getDoc(doc(sessionsRef, id)));
+    const sessionsToRemoveSnaps = await Promise.all(sessionsToRemoveDataPromises);
+
+    const spaceDataCache = new Map<string, Space>();
+
+    // RUN TRANSACTION: Perform all writes.
     return runTransaction(db, async (transaction) => {
-        // Determine which sessions to remove the person from
-        const sessionsToRemoveFromIds = Array.from(currentSessionIds).filter(id => !sessionIds.includes(id));
-        
-        for (const sessionId of sessionsToRemoveFromIds) {
-            const sessionRef = doc(sessionsRef, sessionId);
-            const sessionDoc = currentEnrollmentsSnap.docs.find(d => d.id === sessionId);
-            if (sessionDoc) {
-                const sessionData = sessionDoc.data() as Session;
-                const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
-                transaction.update(sessionRef, { personIds: updatedPersonIds });
+        // Handle removals and potential waitlist notifications.
+        for (const sessionSnap of sessionsToRemoveSnaps) {
+            if (!sessionSnap.exists()) continue;
 
-                // Check for waitlist and create a notification if a spot opens up
-                if (sessionData.waitlist && sessionData.waitlist.length > 0) {
-                    const spaceDocSnap = await getDoc(doc(spacesRef, sessionData.spaceId));
-                    if (spaceDocSnap.exists()) {
-                        const space = spaceDocSnap.data() as Space;
-                        const capacity = space.capacity;
-                        
-                        if (updatedPersonIds.length < capacity) {
-                            const firstOnWaitlist = sessionData.waitlist[0];
-                            const notifData: Partial<AppNotification> = {
-                                type: 'waitlist',
-                                sessionId: sessionId,
-                                createdAt: new Date(),
-                            };
+            const sessionRef = sessionSnap.ref;
+            const sessionData = sessionSnap.data() as Session;
+            
+            const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
+            
+            transaction.update(sessionRef, { personIds: updatedPersonIds });
 
-                            if (typeof firstOnWaitlist === 'string') {
-                                notifData.personId = firstOnWaitlist;
-                            } else if (firstOnWaitlist) {
-                                notifData.prospectDetails = firstOnWaitlist;
-                            }
-                            
-                            if (notifData.personId || notifData.prospectDetails) {
-                                const notifRef = doc(notificationsRef);
-                                transaction.set(notifRef, notifData);
-                            }
-                        }
+            if (sessionData.waitlist && sessionData.waitlist.length > 0) {
+                // Fetch space capacity if not already cached.
+                let space = spaceDataCache.get(sessionData.spaceId);
+                if (!space) {
+                    const spaceDoc = await getDoc(doc(spacesRef, sessionData.spaceId));
+                    if (spaceDoc.exists()) {
+                        space = spaceDoc.data() as Space;
+                        spaceDataCache.set(sessionData.spaceId, space);
                     }
+                }
+
+                const capacity = space?.capacity ?? 0;
+
+                // If removing the person opens up a spot.
+                if (updatedPersonIds.length < capacity) {
+                    const notifRef = doc(notificationsRef);
+                    const notifData: Partial<AppNotification> = {
+                        type: 'waitlist',
+                        sessionId: sessionData.id,
+                        createdAt: new Date(),
+                    };
+                    const firstOnWaitlist = sessionData.waitlist[0];
+                    if (typeof firstOnWaitlist === 'string') {
+                        notifData.personId = firstOnWaitlist;
+                    } else if (firstOnWaitlist) {
+                        notifData.prospectDetails = firstOnWaitlist;
+                    }
+                    transaction.set(notifRef, notifData);
                 }
             }
         }
 
-        // Determine which sessions to add the person to
-        for (const sessionDoc of sessionsToAddToSnaps) {
-             if (sessionDoc.exists()) {
-                 const sessionRef = sessionDoc.ref;
-                 const sessionData = sessionDoc.data() as Session;
-                 const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));
-                 transaction.update(sessionRef, { personIds: updatedPersonIds });
+        // Handle additions.
+        for (const sessionId of sessionsToAddToIds) {
+            const sessionRef = doc(sessionsRef, sessionId);
+            // We read the session data inside the transaction to ensure we have the latest version.
+            const sessionDoc = await transaction.get(sessionRef);
+            if (sessionDoc.exists()) {
+                const sessionData = sessionDoc.data() as Session;
+                const updatedPersonIds = Array.from(new Set([...sessionData.personIds, personId]));
+                transaction.update(sessionRef, { personIds: updatedPersonIds });
             }
         }
     });
 };
+
 
 
 export const enrollPeopleInClassAction = async (sessionRef: any, personIds: string[]) => {
@@ -401,26 +410,36 @@ export const addToWaitlistAction = async (
     spacesRef: CollectionReference,
     notificationsRef: CollectionReference
 ) => {
+    // Perform all reads first
+    const sessionSnap = await getDoc(sessionDocRef);
+    if (!sessionSnap.exists()) {
+        throw new Error("La sesión no existe.");
+    }
+    const session = { id: sessionSnap.id, ...sessionSnap.data() } as Session;
+
+    const spaceDocRef = doc(spacesRef, session.spaceId);
+    const spaceSnap = await getDoc(spaceDocRef);
+    if (!spaceSnap.exists()) {
+        throw new Error(`El espacio con id ${session.spaceId} no fue encontrado.`);
+    }
+    const space = spaceSnap.data() as Space;
+    const capacity = space.capacity;
+
+    // Use a transaction for the write operations
     return runTransaction(db, async (transaction) => {
-        const sessionSnap = await transaction.get(sessionDocRef);
-        if (!sessionSnap.exists()) {
-            throw new Error("La sesión no existe.");
+        // Re-read the session inside the transaction to get the most up-to-date data
+        const freshSessionSnap = await transaction.get(sessionDocRef);
+        if (!freshSessionSnap.exists()) {
+             throw new Error("La sesión no existe.");
         }
-        const session = { id: sessionSnap.id, ...sessionSnap.data() } as Session;
+        const freshSession = freshSessionSnap.data() as Session;
+        
+        const enrolledCount = freshSession.personIds.length;
 
-        const spaceDocRef = doc(spacesRef, session.spaceId);
-        const spaceSnap = await transaction.get(spaceDocRef);
-        if (!spaceSnap.exists()) {
-            throw new Error(`El espacio con id ${session.spaceId} no fue encontrado.`);
-        }
-        const space = spaceSnap.data() as Space;
-        const capacity = space.capacity;
-        const enrolledCount = session.personIds.length;
-
-        // WRITE SECOND
-        const newWaitlist = [...(session.waitlist || []), entry];
+        const newWaitlist = [...(freshSession.waitlist || []), entry];
         transaction.update(sessionDocRef, { waitlist: newWaitlist });
 
+        // Check for available spots and create notification if necessary
         if (enrolledCount < capacity) {
             const notifData: Partial<AppNotification> = {
                 type: 'waitlist',
@@ -439,6 +458,7 @@ export const addToWaitlistAction = async (
         }
     });
 };
+
 
 export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference, notificationsRef: CollectionReference, notificationId: string, sessionId: string, personId: string, spacesRef: CollectionReference) => {
     const sessionRef = doc(sessionsRef, sessionId);
