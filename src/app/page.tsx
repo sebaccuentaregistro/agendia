@@ -837,8 +837,6 @@ function DashboardPageContent() {
                     onSendAll={() => setIsMassReminderOpen(true)}
                 />
                 
-                <ChurnRiskAlerts notifications={notifications} onDismiss={handleDismissNotification} />
-                
                 <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
                     <CardHeader>
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -1100,6 +1098,9 @@ function DashboardPageContent() {
                     )}
                 </CardContent>
             </Card>
+
+            <ChurnRiskAlerts notifications={notifications} onDismiss={handleDismissNotification} />
+
         </div>
       </div>
     
@@ -1137,5 +1138,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-    
