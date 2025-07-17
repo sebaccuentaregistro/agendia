@@ -47,8 +47,6 @@ function ChurnRiskAlerts({ notifications, onDismiss }: { notifications: AppNotif
             .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
     }, [notifications, people]);
 
-    if (churnRiskNotifications.length === 0) return null;
-
     return (
         <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-red-500/20">
             <CardHeader>
@@ -58,21 +56,27 @@ function ChurnRiskAlerts({ notifications, onDismiss }: { notifications: AppNotif
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                {churnRiskNotifications.map(notif => (
-                    <div key={notif.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 text-sm">
-                        <p className="flex-grow text-red-800 dark:text-red-200">
-                           <span className="font-semibold">{notif.person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
-                        </p>
-                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                             <Button asChild size="sm" variant="ghost" className="text-green-600 hover:text-green-700 h-8 px-2">
-                                <a href={`https://wa.me/${notif.person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                                    <WhatsAppIcon className="mr-2"/> Contactar
-                                </a>
-                            </Button>
-                            <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => onDismiss(notif.id)}>Descartar</Button>
+                {churnRiskNotifications.length > 0 ? (
+                    churnRiskNotifications.map(notif => (
+                        <div key={notif.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 text-sm">
+                            <p className="flex-grow text-red-800 dark:text-red-200">
+                               <span className="font-semibold">{notif.person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
+                            </p>
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                 <Button asChild size="sm" variant="ghost" className="text-green-600 hover:text-green-700 h-8 px-2">
+                                    <a href={`https://wa.me/${notif.person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                        <WhatsAppIcon className="mr-2"/> Contactar
+                                    </a>
+                                </Button>
+                                <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => onDismiss(notif.id)}>Descartar</Button>
+                            </div>
                         </div>
+                    ))
+                ) : (
+                    <div className="flex items-center justify-center p-4 text-center text-sm text-muted-foreground">
+                        No hay alertas de abandono por el momento. ¡Buen trabajo!
                     </div>
-                ))}
+                )}
             </CardContent>
         </Card>
     );
@@ -520,7 +524,6 @@ function DashboardPageContent() {
     }).sort((a, b) => b.debt - a.debt).slice(0, 5);
 
     const totalDebt = overduePeople.reduce((acc, person) => {
-        const tariff = tariffs.find(t => t.id === person.tariffId);
         const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
         return acc + debtAmount;
     }, 0);
