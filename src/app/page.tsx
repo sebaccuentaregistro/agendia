@@ -268,39 +268,41 @@ function AppNotifications({ onOpenPersonDialog }: { onOpenPersonDialog: (personD
         }
     };
 
-    if (waitlistNotifications.length === 0) return null;
-
     return (
         <>
             <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-foreground">
                         <Info className="h-5 w-5 text-blue-500" />
-                        Notificaciones Importantes
+                        Notificaciones
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                    {waitlistNotifications.map((notification) => (
-                        <div
-                            key={notification.id}
-                            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm"
-                        >
-                            <p className="flex-grow text-blue-800 dark:text-blue-200">
-                                ¡Cupo liberado en{' '}
-                                <span className="font-semibold">{notification.details.actividad.name}</span> (
-                                {notification.details.session.dayOfWeek} {notification.details.session.time}) para{' '}
-                                <span className="font-semibold">{notification.details.person.name}</span>!
-                            </p>
-                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                <Button size="sm" onClick={() => setSelectedNotification(notification)}>
-                                    Gestionar
-                                </Button>
-                                <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>
-                                    Descartar
-                                </Button>
+                    {waitlistNotifications.length > 0 ? (
+                        waitlistNotifications.map((notification) => (
+                            <div
+                                key={notification.id}
+                                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm"
+                            >
+                                <p className="flex-grow text-blue-800 dark:text-blue-200">
+                                    ¡Cupo liberado en{' '}
+                                    <span className="font-semibold">{notification.details.actividad.name}</span> (
+                                    {notification.details.session.dayOfWeek} {notification.details.session.time}) para{' '}
+                                    <span className="font-semibold">{notification.details.person.name}</span>!
+                                </p>
+                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                    <Button size="sm" onClick={() => setSelectedNotification(notification)}>
+                                        Gestionar
+                                    </Button>
+                                    <Button size="sm" variant="ghost" onClick={() => dismissNotification(notification.id)}>
+                                        Descartar
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    ) : (
+                        <p className="text-sm text-center text-muted-foreground py-4">No hay notificaciones pendientes.</p>
+                    )}
                 </CardContent>
             </Card>
             {selectedNotification && (
