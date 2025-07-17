@@ -108,7 +108,13 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
     } else {
       const newPersonId = await addPerson(finalValues);
       if (onPersonCreated && newPersonId) {
-        onPersonCreated({ id: newPersonId, ...finalValues, avatar: '', vacationPeriods: [] });
+        onPersonCreated({
+          id: newPersonId,
+          ...finalValues,
+          joinDate: finalValues.joinDate || null, // Ensure joinDate is Date | null
+          avatar: '',
+          vacationPeriods: [],
+        });
       }
     }
     onOpenChange(false);
