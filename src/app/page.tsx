@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person, PaymentReminderInfo, Tariff } from '@/types';
+import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { PersonDialog } from '@/app/students/person-dialog';
 
 function MassReminderDialog({ reminders, onOpenChange }: { reminders: PaymentReminderInfo[]; onOpenChange: (open: boolean) => void; }) {
     const { institute } = useAuth();
@@ -172,7 +173,7 @@ function WaitlistNotificationDialog({
 }: {
     notification: any;
     onClose: () => void;
-    onConfirm: () => void;
+    onConfirm: (notification: any) => void;
 }) {
     const { institute } = useAuth();
     if (!notification) return null;
@@ -206,7 +207,7 @@ function WaitlistNotificationDialog({
                     </Button>
                     <Button
                         onClick={() => {
-                            onConfirm();
+                            onConfirm(notification);
                             onClose();
                         }}
                     >
@@ -218,7 +219,7 @@ function WaitlistNotificationDialog({
     );
 }
 
-function AppNotifications() {
+function AppNotifications({ onOpenPersonDialog }: { onOpenPersonDialog: (personData?: Partial<NewPersonData>, enrollmentInfo?: { sessionId: string; notificationId: string }) => void }) {
     const { notifications, sessions, people, actividades, enrollFromWaitlist, dismissNotification } = useStudio();
     const [selectedNotification, setSelectedNotification] = useState<any | null>(null);
 
@@ -249,6 +250,23 @@ function AppNotifications() {
                 return dateB - dateA;
             });
     }, [notifications, sessions, people, actividades]);
+
+    const handleConfirm = (notification: any) => {
+        if (notification.personId) { // It's an existing student
+           enrollFromWaitlist(notification.id, notification.sessionId, notification.personId);
+        } else if (notification.prospectDetails) { // It's a new prospect
+            onOpenPersonDialog(
+                {
+                    name: notification.prospectDetails.name,
+                    phone: notification.prospectDetails.phone,
+                },
+                {
+                    sessionId: notification.sessionId,
+                    notificationId: notification.id
+                }
+            );
+        }
+    };
 
     if (waitlistNotifications.length === 0) return null;
 
@@ -289,14 +307,7 @@ function AppNotifications() {
                 <WaitlistNotificationDialog
                     notification={selectedNotification}
                     onClose={() => setSelectedNotification(null)}
-                    onConfirm={() => {
-                        if (selectedNotification.personId) {
-                           enrollFromWaitlist(selectedNotification.id, selectedNotification.sessionId, selectedNotification.personId)
-                        } else {
-                            // Logic to convert prospect to person will go here
-                            console.log("Need to convert prospect to person");
-                        }
-                    }}
+                    onConfirm={handleConfirm}
                 />
             )}
         </>
@@ -594,7 +605,7 @@ function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses
+    updateOverdueStatuses, addPerson, enrollFromWaitlist,
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
@@ -616,6 +627,11 @@ function DashboardPageContent() {
   const router = useRouter();
   
   const dashboardView = searchParams.get('view') || 'main';
+
+  // State for PersonDialog (for converting prospects)
+  const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
+  const [initialPersonData, setInitialPersonData] = useState<Partial<NewPersonData> | undefined>(undefined);
+  const [enrollmentInfo, setEnrollmentInfo] = useState<{ sessionId: string; notificationId: string } | undefined>(undefined);
 
   useEffect(() => {
     setIsMounted(true);
@@ -816,6 +832,20 @@ function DashboardPageContent() {
     if (!time || !time.includes(':')) return 'N/A';
     return time;
   };
+
+  const handleOpenPersonDialog = (personData?: Partial<NewPersonData>, newEnrollmentInfo?: { sessionId: string; notificationId: string }) => {
+    setInitialPersonData(personData);
+    setEnrollmentInfo(newEnrollmentInfo);
+    setIsPersonDialogOpen(true);
+  };
+
+  const handlePersonCreated = (newPerson: Person) => {
+      // After the person is created, enroll them if enrollmentInfo is available
+      if (enrollmentInfo?.sessionId && newPerson.id) {
+          enrollFromWaitlist(enrollmentInfo.notificationId, enrollmentInfo.sessionId, newPerson.id);
+      }
+      setEnrollmentInfo(undefined);
+  };
   
   if (!isMounted) {
     return (
@@ -974,7 +1004,7 @@ function DashboardPageContent() {
                         onSendReminder={setPaymentReminderInfo}
                         onSendAll={() => setIsMassReminderOpen(true)}
                     />
-                    <AppNotifications />
+                    <AppNotifications onOpenPersonDialog={handleOpenPersonDialog} />
                 </div>
                 
                 <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
@@ -1258,6 +1288,12 @@ function DashboardPageContent() {
           onClose={() => setSessionForAttendance(null)}
         />
       )}
+      <PersonDialog
+        open={isPersonDialogOpen}
+        onOpenChange={setIsPersonDialogOpen}
+        onPersonCreated={handlePersonCreated}
+        initialData={initialPersonData}
+      />
     </div>
   );
 }

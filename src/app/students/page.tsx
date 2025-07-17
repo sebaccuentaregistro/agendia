@@ -37,31 +37,7 @@ import { Alert, AlertTitle, AlertDescription as AlertDescriptionComponent } from
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-
-
-const personFormSchema = z.object({
-  name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
-  phone: z.string().min(7, { message: 'Por favor, introduce un número de teléfono válido.' }),
-  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
-  tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
-  healthInfo: z.string().optional(),
-  notes: z.string().optional(),
-  joinDate: z.date().optional(),
-  lastPaymentDate: z.date().nullable().optional(),
-});
-
-type PersonFormData = z.infer<typeof personFormSchema>;
-
-const vacationFormSchema = z.object({
-    startDate: z.date({ required_error: 'La fecha de inicio es obligatoria.' }),
-    endDate: z.date({ required_error: 'La fecha de fin es obligatoria.' }),
-}).refine(data => {
-    if (!data.startDate || !data.endDate) return true;
-    return isAfter(data.endDate, data.startDate) || data.endDate.toDateString() === data.startDate.toDateString();
-}, {
-    message: "La fecha de fin debe ser igual o posterior a la de inicio.",
-    path: ['endDate'],
-});
+import { PersonDialog } from './person-dialog';
 
 
 function WelcomeDialog({ person, onOpenChange }: { person: NewPersonData | null; onOpenChange: (open: boolean) => void; }) {
@@ -641,180 +617,16 @@ function VacationDialog({ person, onClose }: { person: Person | null; onClose: (
     )
 }
 
-function PersonDialog({ person, onOpenChange, open, setSearchTerm, onPersonCreated, isLimitReached }: { person?: Person; onOpenChange: (open: boolean) => void; open: boolean; setSearchTerm: (term: string) => void; onPersonCreated: (person: NewPersonData) => void; isLimitReached: boolean; }) {
-  const { addPerson, updatePerson, levels, tariffs } = useStudio();
-  const form = useForm<PersonFormData>({
-    resolver: zodResolver(personFormSchema),
-    defaultValues: {
-        name: '',
-        phone: '',
-        levelId: 'none',
-        tariffId: '',
-        healthInfo: '',
-        notes: '',
-        joinDate: new Date(),
-        lastPaymentDate: null,
-    }
-  });
-  
-  useEffect(() => {
-    if (open) {
-        if (person) {
-          form.reset({
-            name: person.name,
-            phone: person.phone,
-            levelId: person.levelId || 'none',
-            tariffId: person.tariffId,
-            healthInfo: person.healthInfo,
-            notes: person.notes,
-            joinDate: person.joinDate || new Date(),
-            lastPaymentDate: person.lastPaymentDate,
-          });
-        } else {
-          form.reset({
-            name: '',
-            phone: '',
-            levelId: 'none',
-            tariffId: '',
-            healthInfo: '',
-            notes: '',
-            joinDate: new Date(),
-            lastPaymentDate: null,
-          });
-        }
-    }
-  }, [person, open, form]);
-
-  const onSubmit = (values: PersonFormData) => {
-    if (!person && isLimitReached) {
-        // This is an extra safeguard, the button should be disabled anyway
-        return;
-    }
-    const finalValues: NewPersonData = {
-        name: values.name,
-        phone: values.phone,
-        tariffId: values.tariffId,
-        levelId: values.levelId === 'none' ? undefined : values.levelId,
-        healthInfo: values.healthInfo,
-        notes: values.notes,
-        joinDate: values.joinDate,
-        lastPaymentDate: values.lastPaymentDate,
-    };
-    
-    if (person) {
-      updatePerson({ ...person, ...finalValues });
-    } else {
-      addPerson(finalValues);
-      onPersonCreated(finalValues);
-      setSearchTerm('');
-    }
-    onOpenChange(false);
-  };
-  
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{person ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle>
-           <DialogDescription>
-            {person ? 'Actualiza los datos de la persona.' : 'Añade un nuevo alumno a tu estudio.'}
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField control={form.control} name="name" render={({ field }) => (
-              <FormItem><FormLabel>Nombre completo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-            )}/>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField control={form.control} name="phone" render={({ field }) => (
-                <FormItem><FormLabel>Teléfono</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
-              )}/>
-               <FormField control={form.control} name="tariffId" render={({ field }) => (
-                <FormItem><FormLabel>Arancel</FormLabel><Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                    <SelectContent>{tariffs.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
-                </Select><FormMessage /></FormItem>
-              )}/>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField control={form.control} name="levelId" render={({ field }) => (
-                    <FormItem><FormLabel>Nivel (Opcional)</FormLabel><Select onValueChange={field.onChange} value={field.value || 'none'}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">Sin nivel</SelectItem>
-                          {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select><FormMessage /></FormItem>
-                )}/>
-                <FormField
-                  control={form.control}
-                  name="joinDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fecha de Ingreso</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                              {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Sin fecha</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
-                        </PopoverContent>
-                      </Popover>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            </div>
-             <FormField
-                  control={form.control}
-                  name="lastPaymentDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Próximo Vencimiento</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                              {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Sin fecha</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
-                        </PopoverContent>
-                      </Popover>
-                       <FormDescription className="text-xs">
-                        Si se deja en blanco, el estado será "Pendiente de Pago".
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            <FormField control={form.control} name="healthInfo" render={({ field }) => (
-              <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
-            )}/>
-            <FormField control={form.control} name="notes" render={({ field }) => (
-              <FormItem><FormLabel>Notas Adicionales (Opcional)</FormLabel><FormControl><Textarea placeholder="Preferencias, objetivos, etc." {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>
-            )}/>
-            <DialogFooter><Button type="submit">Guardar</Button></DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
+const vacationFormSchema = z.object({
+    startDate: z.date({ required_error: 'La fecha de inicio es obligatoria.' }),
+    endDate: z.date({ required_error: 'La fecha de fin es obligatoria.' }),
+}).refine(data => {
+    if (!data.startDate || !data.endDate) return true;
+    return isAfter(data.endDate, data.startDate) || data.endDate.toDateString() === data.startDate.toDateString();
+}, {
+    message: "La fecha de fin debe ser igual o posterior a la de inicio.",
+    path: ['endDate'],
+});
 
 function PersonCard({ person, sessions, actividades, specialists, spaces, levels, tariffs, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: { person: Person, sessions: Session[], actividades: Actividad[], specialists: Specialist[], spaces: Space[], levels: Level[], tariffs: Tariff[], recoveryCredits: RecoveryCredit[], onManageVacations: (person: Person) => void, onEdit: (person: Person) => void, onViewHistory: (person: Person) => void, onViewAttendanceHistory: (person: Person) => void, onManageEnrollments: (person: Person) => void, onJustifyAbsence: (person: Person) => void, onRecordPayment: (person: Person) => void }) {
     const { deletePerson, revertLastPayment } = useStudio();
@@ -1530,7 +1342,6 @@ function StudentsPageContent() {
         person={selectedPerson} 
         onOpenChange={setIsPersonDialogOpen} 
         open={isPersonDialogOpen}
-        setSearchTerm={setSearchTerm}
         onPersonCreated={(person) => setPersonForWelcome(person)}
         isLimitReached={isLimitReached}
       />
@@ -1582,4 +1393,5 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
