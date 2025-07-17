@@ -1,10 +1,11 @@
 
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator } from '@/types';
 import { db } from './firebase';
-import { format as formatDate, addMonths, subMonths } from 'date-fns';
+import { format as formatDate, addMonths, subMonths, startOfDay } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -397,43 +398,39 @@ export const deleteWithUsageCheckAction = async (
 
 export const updateOverdueStatusesAction = async (peopleRef: CollectionReference, people: Person[], tariffs: Tariff[], operator: Operator, auditLogRef: CollectionReference) => {
     const batch = writeBatch(db);
-    const today = new Date();
+    const today = startOfDay(new Date());
     let updatedCount = 0;
 
     for (const person of people) {
-        // Skip people who have never had a payment cycle started
         if (!person.lastPaymentDate) continue;
 
-        let lastDueDate = person.lastPaymentDate;
-        let outstandingPayments = person.outstandingPayments || 0;
-        
         const tariff = tariffs.find(t => t.id === person.tariffId);
         if (!tariff) continue;
 
+        let newDueDate = person.lastPaymentDate;
+        let newOutstandingPayments = person.outstandingPayments || 0;
         let hasChanged = false;
-        // While the person's due date is in the past, add to their debt and advance the due date.
-        while (lastDueDate < today) {
-            outstandingPayments += 1;
-            // Calculate the *next* due date based on the *current* one to avoid infinite loops.
-            const nextDueDate = calculateNextPaymentDate(lastDueDate, person.joinDate, tariff);
+
+        // Loop as long as the due date is in the past
+        while (startOfDay(newDueDate) < today) {
+            newOutstandingPayments += 1;
+            // CRITICAL FIX: Calculate the next due date based on the CURRENT newDueDate, not today's date.
+            const nextDate = calculateNextPaymentDate(newDueDate, person.joinDate, tariff);
             
-            // Safety break: if the date doesn't advance, something is wrong.
-            if (nextDueDate <= lastDueDate) {
-                console.error(`Next due date calculation failed for person ${person.id}. Aborting to prevent infinite loop.`);
+            if (nextDate <= newDueDate) {
+                console.error(`Date calculation did not advance for person ${person.id}. Breaking loop.`);
                 break;
             }
-            
-            lastDueDate = nextDueDate;
+            newDueDate = nextDate;
             hasChanged = true;
         }
 
         if (hasChanged) {
             updatedCount++;
             const personDocRef = doc(peopleRef, person.id);
-            // Update the person with the new future due date and the accumulated debt.
             batch.update(personDocRef, {
-                lastPaymentDate: lastDueDate,
-                outstandingPayments: outstandingPayments
+                lastPaymentDate: newDueDate,
+                outstandingPayments: newOutstandingPayments,
             });
         }
     }
