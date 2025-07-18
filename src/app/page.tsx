@@ -40,6 +40,7 @@ import { deleteEntity } from '@/lib/firestore-actions';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle as AlertTitleComponent } from '@/components/ui/alert';
 import { WelcomeDialog } from '@/components/welcome-dialog';
+import { WaitlistSheet } from '@/components/waitlist-sheet';
 
 function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; attendance: SessionAttendance[]; sessions: Session[] }) {
     
@@ -483,6 +484,7 @@ function DashboardPageContent() {
   const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
   const [isMassReminderOpen, setIsMassReminderOpen] = useState(false);
   const [isUpdatingDebts, setIsUpdatingDebts] = useState(false);
+  const [isWaitlistSheetOpen, setIsWaitlistSheetOpen] = useState(false);
   const { toast } = useToast();
   
   const searchParams = useSearchParams();
@@ -1128,18 +1130,20 @@ function DashboardPageContent() {
 
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
 
-            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-cyan-500/20">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-foreground">
-                        <ListPlus className="h-5 w-5 text-cyan-500" />
-                        Lista de Espera
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                    <p className="text-4xl font-bold">{totalWaitlistCount}</p>
-                    <p className="text-xs text-muted-foreground">personas en espera en total</p>
-                </CardContent>
-            </Card>
+            <div onClick={() => setIsWaitlistSheetOpen(true)} className="cursor-pointer">
+              <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-cyan-500/20 transition-all hover:shadow-xl hover:border-cyan-500/40">
+                  <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-foreground">
+                          <ListPlus className="h-5 w-5 text-cyan-500" />
+                          Lista de Espera
+                      </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center">
+                      <p className="text-4xl font-bold">{totalWaitlistCount}</p>
+                      <p className="text-xs text-muted-foreground">personas en espera en total</p>
+                  </CardContent>
+              </Card>
+            </div>
             
         </div>
       </div>
@@ -1172,6 +1176,7 @@ function DashboardPageContent() {
         isLimitReached={isLimitReached}
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
+      <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
     </div>
   );
 }
