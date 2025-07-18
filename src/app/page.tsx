@@ -33,7 +33,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { PersonDialog } from '@/app/students/person-dialog';
+import { PersonDialog } from './students/person-dialog';
 import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { deleteEntity } from '@/lib/firestore-actions';
@@ -517,7 +517,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0 };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0, waitlistSummary: [] };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -595,6 +595,18 @@ function DashboardPageContent() {
 
     const totalWaitlist = sessions.reduce((sum, session) => sum + (session.waitlist?.length || 0), 0);
     
+    const waitlistSummary = sessions
+      .filter(s => s.waitlist && s.waitlist.length > 0)
+      .map(s => {
+          const actividad = actividades.find(a => a.id === s.actividadId);
+          return {
+              sessionId: s.id,
+              className: `${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`,
+              count: s.waitlist.length,
+          };
+      })
+      .sort((a,b) => b.count - a.count);
+
     return {
       overdueCount,
       onVacationCount,
@@ -610,8 +622,9 @@ function DashboardPageContent() {
       topDebtors,
       paymentReminders,
       totalWaitlist,
+      waitlistSummary,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades]);
 
   const {
     overdueCount,
@@ -625,6 +638,7 @@ function DashboardPageContent() {
     topDebtors,
     paymentReminders,
     totalWaitlist,
+    waitlistSummary,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -1146,11 +1160,23 @@ function DashboardPageContent() {
 
                     <div>
                         <h4 className="font-medium text-sm mb-2 text-muted-foreground">Resumen de Todas las Listas</h4>
-                        <div className="p-4 rounded-lg bg-muted/50 text-center text-sm">
+                        <div className="p-4 rounded-lg bg-muted/50 text-sm space-y-2">
                              {totalWaitlist > 0 ? (
-                                <p><span className="font-bold">{totalWaitlist}</span> {totalWaitlist === 1 ? 'persona está esperando' : 'personas están esperando'} un cupo en total.</p>
+                                <>
+                                    <p className="text-center pb-2 border-b">
+                                        <span className="font-bold">{totalWaitlist}</span> {totalWaitlist === 1 ? 'persona está esperando' : 'personas están esperando'} un cupo en total.
+                                    </p>
+                                    <div className="space-y-1 text-xs">
+                                        {waitlistSummary.map(item => (
+                                            <div key={item.sessionId} className="flex justify-between">
+                                                <span>{item.className}</span>
+                                                <span className="font-semibold">{item.count} en espera</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
                              ) : (
-                                <p>No hay nadie en ninguna lista de espera.</p>
+                                <p className="text-center">No hay nadie en ninguna lista de espera.</p>
                              )}
                         </div>
                     </div>
@@ -1181,7 +1207,7 @@ function DashboardPageContent() {
         onOpenChange={setIsPersonDialogOpen}
         onPersonCreated={(person) => {
           if (person.tariffId) {
-            setPersonForWelcome(person as NewPersonData);
+            setPersonForWelcome(person);
           }
         }}
         isLimitReached={isLimitReached}
@@ -1200,4 +1226,3 @@ export default function RootPage() {
   );
 }
 
-    
