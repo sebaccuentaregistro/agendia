@@ -36,11 +36,13 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
   const [personToCreate, setPersonToCreate] = useState<WaitlistProspect | null>(null);
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
-  const handleEnroll = async (notificationId: string, sessionId: string, personToEnroll: Person) => {
+  const handleEnroll = async (e: React.MouseEvent, notificationId: string, sessionId: string, personToEnroll: Person) => {
+    e.stopPropagation();
     await enrollFromWaitlist(notificationId, sessionId, personToEnroll);
   };
   
-  const handleCreateAndEnroll = (prospect: WaitlistProspect) => {
+  const handleCreateAndEnroll = (e: React.MouseEvent, prospect: WaitlistProspect) => {
+    e.stopPropagation();
     setPersonToCreate(prospect);
   };
 
@@ -89,11 +91,11 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
                                     <Button 
                                         size="sm" 
                                         variant="secondary" 
-                                        onClick={() => {
+                                        onClick={(e) => {
                                             if (isProspect) {
-                                                handleCreateAndEnroll(person as WaitlistProspect);
+                                                handleCreateAndEnroll(e, person as WaitlistProspect);
                                             } else {
-                                                handleEnroll(notification.id!, session.id, person as Person);
+                                                handleEnroll(e, notification.id!, session.id, person as Person);
                                             }
                                         }}
                                     >
