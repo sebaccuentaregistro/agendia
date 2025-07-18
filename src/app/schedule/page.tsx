@@ -1258,7 +1258,7 @@ function SchedulePageContent() {
                                   </TooltipProvider>
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                        <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95" disabled={isFull && !session.waitlist?.length}>
+                                        <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95">
                                             <UserPlus className="mr-2 h-4 w-4" />
                                             {isFull ? 'Lista Espera' : 'Inscribir'}
                                         </Button>
