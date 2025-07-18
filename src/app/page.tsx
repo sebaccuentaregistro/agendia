@@ -623,7 +623,7 @@ function DashboardPageContent() {
                     return people.find(p => p.id === entry);
                 }
                 return entry;
-            }).filter((p): p is Person | WaitlistEntry => !!p);
+            }).filter((p): p is Person | WaitlistProspect => !!p);
 
             return {
                 notification,
@@ -1200,7 +1200,7 @@ function DashboardPageContent() {
         onOpenChange={setIsPersonDialogOpen}
         onPersonCreated={(person) => {
           if (person.tariffId) {
-            addPerson(person as NewPersonData);
+            setPersonForWelcome(person as NewPersonData);
           }
         }}
         isLimitReached={isLimitReached}
@@ -1218,4 +1218,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
