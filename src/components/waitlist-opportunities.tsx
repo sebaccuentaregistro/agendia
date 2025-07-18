@@ -33,8 +33,8 @@ interface WaitlistOpportunitiesProps {
 }
 
 export function WaitlistOpportunities({ opportunities, summary, totalCount, onHeaderClick }: WaitlistOpportunitiesProps) {
-  const { enrollFromWaitlist } = useStudio();
-  const [personToCreate, setPersonToCreate] = useState<WaitlistProspect | null>(null);
+  const { enrollFromWaitlist, enrollProspectFromWaitlist } = useStudio();
+  const [personToCreate, setPersonToCreate] = useState<{ prospect: WaitlistProspect; sessionId: string; } | null>(null);
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
   const handleEnroll = async (e: React.MouseEvent, notificationId: string, sessionId: string, personToEnroll: Person) => {
@@ -42,14 +42,15 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
     await enrollFromWaitlist(notificationId, sessionId, personToEnroll);
   };
   
-  const handleCreateAndEnroll = (e: React.MouseEvent, prospect: WaitlistProspect) => {
+  const handleCreateAndEnroll = (e: React.MouseEvent, prospect: WaitlistProspect, sessionId: string) => {
     e.stopPropagation();
-    setPersonToCreate(prospect);
+    setPersonToCreate({ prospect, sessionId });
   };
 
   const handlePersonCreated = async (newPerson: Person) => {
-      // For now, this just shows the welcome dialog.
-      // In a future step, we'll connect this to auto-enrollment.
+      if (personToCreate) {
+        await enrollProspectFromWaitlist(personToCreate.sessionId, personToCreate.prospect, newPerson.id);
+      }
       setPersonForWelcome(newPerson);
       setPersonToCreate(null);
   };
@@ -97,11 +98,12 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
                                         variant="secondary" 
                                         onClick={(e) => {
                                             if (isProspect) {
-                                                handleCreateAndEnroll(e, person as WaitlistProspect);
+                                                handleCreateAndEnroll(e, person as WaitlistProspect, session.id);
                                             } else {
                                                 handleEnroll(e, notification.id!, session.id, person as Person);
                                             }
                                         }}
+                                        disabled={!isProspect && !people.some(p => p.id === (person as Person).id)}
                                     >
                                         Inscribir
                                     </Button>
@@ -141,7 +143,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
      <PersonDialog
         open={!!personToCreate}
         onOpenChange={(isOpen) => !isOpen && setPersonToCreate(null)}
-        initialData={personToCreate || undefined}
+        initialData={personToCreate?.prospect}
         onPersonCreated={handlePersonCreated}
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />

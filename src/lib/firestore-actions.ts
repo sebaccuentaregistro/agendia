@@ -421,16 +421,12 @@ export const removeFromWaitlistAction = async (
 
 
 export const enrollFromWaitlistAction = async (
-    sessionsRef: CollectionReference,
-    notificationsRef: CollectionReference,
+    sessionDocRef: DocumentReference,
     personIdToEnroll: string,
-    sessionId: string,
     spacesRef: CollectionReference
 ) => {
-    const sessionRef = doc(sessionsRef, sessionId);
-    
     return runTransaction(db, async (transaction) => {
-        const sessionSnap = await transaction.get(sessionRef);
+        const sessionSnap = await transaction.get(sessionDocRef);
         if (!sessionSnap.exists()) throw new Error("La sesión no existe.");
         const session = sessionSnap.data() as Session;
         
@@ -448,21 +444,46 @@ export const enrollFromWaitlistAction = async (
 
         // Remove the person from the waitlist
         const newWaitlist = (session.waitlist || []).filter(entry => {
-            if (typeof entry === 'string' && entry === personIdToEnroll) {
-                return false; // Remove existing person
+            return entry !== personIdToEnroll;
+        });
+        
+        transaction.update(sessionDocRef, { personIds: newPersonIds, waitlist: newWaitlist });
+    });
+};
+
+
+export const enrollProspectFromWaitlistAction = async (
+    sessionDocRef: DocumentReference,
+    prospect: WaitlistProspect,
+    newPersonId: string,
+    spacesRef: CollectionReference
+) => {
+    return runTransaction(db, async (transaction) => {
+        const sessionSnap = await transaction.get(sessionDocRef);
+        if (!sessionSnap.exists()) throw new Error("La sesión no existe.");
+        const session = sessionSnap.data() as Session;
+        
+        const spaceRef = doc(spacesRef, session.spaceId);
+        const spaceSnap = await transaction.get(spaceRef);
+        if (!spaceSnap.exists()) throw new Error("El espacio de la sesión no existe.");
+        const space = spaceSnap.data() as Space;
+
+        if (session.personIds.length >= space.capacity) {
+            throw new Error("No hay cupos disponibles en esta clase.");
+        }
+        
+        // Add the new person to the session's main roster
+        const newPersonIds = Array.from(new Set([...session.personIds, newPersonId]));
+
+        // Remove the prospect from the waitlist
+        const newWaitlist = (session.waitlist || []).filter(entry => {
+            if (typeof entry !== 'string') {
+                return entry.name !== prospect.name || entry.phone !== prospect.phone;
             }
             return true;
         });
         
-        transaction.update(sessionRef, { personIds: newPersonIds, waitlist: newWaitlist });
-        
-        // Delete the opportunity notification
-        const q = query(notificationsRef, where('sessionId', '==', sessionId), where('type', '==', 'waitlist'));
-        const existingNotifs = await getDocs(q);
-        existingNotifs.forEach(notifDoc => {
-            transaction.delete(notifDoc.ref);
-        });
-
+        transaction.update(sessionDocRef, { personIds: newPersonIds, waitlist: newWaitlist });
     });
 };
 

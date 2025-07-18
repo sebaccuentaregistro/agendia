@@ -5,7 +5,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction } from '@/lib/firestore-actions';
+import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -65,6 +65,7 @@ interface StudioContextType {
     updateOverdueStatuses: () => Promise<number>;
     triggerWaitlistCheck: (sessionId: string) => void;
     enrollFromWaitlist: (notificationId: string, sessionId: string, personToEnroll: Person) => Promise<void>;
+    enrollProspectFromWaitlist: (sessionId: string, prospect: WaitlistProspect, personId: string) => Promise<void>;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -404,11 +405,20 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         const personIdToEnroll = personToEnroll.id;
 
         return handleAction(
-            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, personIdToEnroll, sessionId, collectionRefs.spaces),
+            enrollFromWaitlistAction(doc(collectionRefs.sessions, sessionId), personIdToEnroll, collectionRefs.spaces),
             `${personToEnroll.name} ha sido inscrita desde la lista de espera.`,
             'Error al inscribir desde la lista de espera.'
         );
     };
+
+    const enrollProspectFromWaitlist = (sessionId: string, prospect: WaitlistProspect, newPersonId: string) => {
+        if (!collectionRefs) return Promise.resolve();
+        return handleAction(
+            enrollProspectFromWaitlistAction(doc(collectionRefs.sessions, sessionId), prospect, newPersonId, collectionRefs.spaces),
+            `${prospect.name} ha sido creada e inscrita desde la lista de espera.`,
+            'Error al inscribir al nuevo contacto.'
+        );
+    }
 
     const triggerWaitlistCheck = useCallback(async (sessionId: string) => {
         if (!collectionRefs) return;
@@ -503,6 +513,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             updateOverdueStatuses,
             triggerWaitlistCheck,
             enrollFromWaitlist,
+            enrollProspectFromWaitlist,
         }}>
             {children}
         </StudioContext.Provider>
