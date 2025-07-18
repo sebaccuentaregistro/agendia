@@ -1153,14 +1153,9 @@ function SchedulePageContent() {
                                           <Send className="mr-2 h-4 w-4" />
                                           Notificar Asistentes
                                       </DropdownMenuItem>
-                                      {isFull && (
-                                        <>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => setSessionForWaitlist(session)}>
-                                                <ListPlus className="mr-2 h-4 w-4" /> Anotar en Espera
-                                            </DropdownMenuItem>
-                                        </>
-                                      )}
+                                      <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={isFull}>
+                                        <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
+                                      </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem onSelect={() => openDeleteDialog(session)} className="text-destructive focus:text-destructive">
                                           <Trash2 className="mr-2 h-4 w-4" />
@@ -1240,7 +1235,7 @@ function SchedulePageContent() {
                                     Recuperar Aquí
                                 </Button>
                             ) : (
-                               <div className="grid grid-cols-2 gap-4">
+                               <div className="grid grid-cols-3 gap-2">
                                  <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger asChild>
@@ -1256,26 +1251,14 @@ function SchedulePageContent() {
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button className="w-full font-bold bg-gradient-to-r from-violet-500 to-primary text-white shadow-md hover:opacity-95">
-                                            <UserPlus className="mr-2 h-4 w-4" />
-                                            {isFull ? 'Lista Espera' : 'Inscribir'}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuItem onClick={() => setSessionToManage(session)} disabled={isFull}>
-                                            <Users className="mr-2 h-4 w-4" /> Inscripción Fija
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setSessionForPuntual(session)} disabled={isFull}>
-                                            <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator/>
-                                        <DropdownMenuItem onClick={() => setSessionForWaitlist(session)}>
-                                            <ListPlus className="mr-2 h-4 w-4" /> Anotar en Espera
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                  <Button className="w-full font-bold col-span-2" onClick={() => setSessionToManage(session)} disabled={isFull}>
+                                    <Users className="mr-2 h-4 w-4" />
+                                    Inscripción Fija
+                                  </Button>
+                                  <Button variant="secondary" className="w-full font-bold col-span-3" onClick={() => setSessionForWaitlist(session)}>
+                                    <ListPlus className="mr-2 h-4 w-4" />
+                                    Anotar en Espera
+                                  </Button>
                                </div>
                             )}
                           </CardFooter>
