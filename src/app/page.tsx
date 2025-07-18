@@ -600,20 +600,31 @@ function DashboardPageContent() {
         return acc + (session.waitlist?.length || 0);
     }, 0);
     
-    const waitlistOpportunities = notifications
-        .filter(n => n.type === 'waitlist' && n.sessionId)
-        .map(notification => {
-            const session = sessions.find(s => s.id === notification.sessionId);
-            if (!session || !session.waitlist || session.waitlist.length === 0) return null;
-            
-            const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
-            const waitlistDetails = session.waitlist.map(entry => {
-                if (typeof entry === 'string') return people.find(p => p.id === entry);
-                return entry;
-            }).filter((p): p is Person | WaitlistProspect => !!p);
-            
-            return { notification, session, actividadName, waitlist: waitlistDetails };
-        }).filter((o): o is NonNullable<typeof o> => !!o);
+    const waitlistOpportunities = sessions
+      .map(session => {
+        const space = spaces.find(s => s.id === session.spaceId);
+        const capacity = space?.capacity || 0;
+        const hasSpot = session.personIds.length < capacity;
+        const hasWaitlist = session.waitlist && session.waitlist.length > 0;
+
+        if (hasSpot && hasWaitlist) {
+          const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
+          const waitlistDetails = session.waitlist.map(entry => {
+            if (typeof entry === 'string') return people.find(p => p.id === entry);
+            return entry;
+          }).filter((p): p is Person | WaitlistProspect => !!p);
+          
+          const virtualNotification: AppNotification = {
+            id: `virtual-${session.id}`,
+            type: 'waitlist',
+            sessionId: session.id,
+            createdAt: now
+          };
+
+          return { notification: virtualNotification, session, actividadName, waitlist: waitlistDetails };
+        }
+        return null;
+      }).filter((o): o is NonNullable<typeof o> => !!o);
 
     const waitlistSummary = sessions
         .filter(s => s.waitlist && s.waitlist.length > 0)
@@ -1197,7 +1208,7 @@ function DashboardPageContent() {
         isLimitReached={isLimitReached}
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
-      <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
+      <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={() => setWaitlistSheetOpen(false)} />
     </div>
   );
 }
@@ -1210,3 +1221,4 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
