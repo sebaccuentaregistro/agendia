@@ -67,7 +67,6 @@ async function checkForChurnRisk(personId: string, allPersonSessions: Session[],
                 type: 'churnRisk',
                 personId: personId,
                 createdAt: new Date(),
-                timestamp: new Date(),
             };
             await addDoc(notificationsRef, newNotification);
         }
