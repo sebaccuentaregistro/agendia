@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX, ListPlus, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance, AppNotification, WaitlistEntry } from '@/types';
+import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus, calculateNextPaymentDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -466,7 +466,7 @@ function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
-    updateOverdueStatuses,
+    updateOverdueStatuses, addPerson,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
@@ -617,7 +617,6 @@ function DashboardPageContent() {
             if (!session) return null;
 
             const actividad = actividades.find(a => a.id === session.actividadId);
-            const space = spaces.find(sp => sp.id === session.spaceId);
             
             const waitlistWithDetails = (session.waitlist || []).map(entry => {
                 if (typeof entry === 'string') {
@@ -1130,7 +1129,7 @@ function DashboardPageContent() {
         </div>
         <div className="space-y-8">
             
-            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-primary/10">
+            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-foreground">
                         <DollarSign className="h-5 w-5 text-yellow-500" />
@@ -1201,7 +1200,7 @@ function DashboardPageContent() {
         onOpenChange={setIsPersonDialogOpen}
         onPersonCreated={(person) => {
           if (person.tariffId) {
-            setPersonForWelcome(person as NewPersonData);
+            addPerson(person as NewPersonData);
           }
         }}
         isLimitReached={isLimitReached}
@@ -1219,3 +1218,4 @@ export default function RootPage() {
     </Suspense>
   );
 }
+

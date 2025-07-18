@@ -5,7 +5,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
 import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
@@ -64,7 +64,7 @@ interface StudioContextType {
     deleteOperator: (operatorId: string) => void;
     updateOverdueStatuses: () => Promise<number>;
     triggerWaitlistCheck: (sessionId: string) => void;
-    enrollFromWaitlist: (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistEntry) => Promise<string | undefined>;
+    enrollFromWaitlist: (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistProspect) => Promise<void>;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -385,35 +385,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const enrollFromWaitlist = async (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistEntry) => {
-        if (!collectionRefs) return;
-
-        if (typeof personOrProspect !== 'string' && 'isProspect' in personOrProspect) {
-            // It's a prospect, so we need to add them as a person first
-            const newPersonId = await addGenericEntity('people', {
-                name: personOrProspect.name,
-                phone: personOrProspect.phone,
-                joinDate: new Date(),
-                avatar: `https://placehold.co/100x100.png`,
-                vacationPeriods: [],
-                outstandingPayments: 1,
-            }, `Prospecto ${personOrProspect.name} convertido a persona.`, 'Error al convertir prospecto.');
-            
-            if (newPersonId) {
-                const newPerson = (await getDoc(doc(collectionRefs.people, newPersonId))).data() as Person;
-                return handleAction(
-                    enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, collectionRefs.people, notificationId, sessionId, { ...newPerson, id: newPersonId }),
-                    `${newPerson.name} ha sido inscrito desde la lista de espera.`,
-                    'Error al inscribir a la nueva persona.'
-                );
-            }
-            return;
-        }
-
-        // It's an existing person
+    const enrollFromWaitlist = (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistProspect) => {
+        if (!collectionRefs) return Promise.resolve();
         return handleAction(
-            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, collectionRefs.people, notificationId, sessionId, personOrProspect as Person),
-            `${(personOrProspect as Person).name} ha sido inscrito desde la lista de espera.`,
+            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, collectionRefs.people, notificationId, sessionId, personOrProspect),
+            `${'name' in personOrProspect ? personOrProspect.name : 'La persona'} ha sido inscrita desde la lista de espera.`,
             'Error al inscribir desde la lista de espera.'
         );
     };

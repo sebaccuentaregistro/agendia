@@ -67,6 +67,7 @@ async function checkForChurnRisk(personId: string, allPersonSessions: Session[],
                 type: 'churnRisk',
                 personId: personId,
                 createdAt: new Date(),
+                timestamp: new Date(),
             };
             await addDoc(notificationsRef, newNotification);
         }
@@ -381,8 +382,14 @@ export const addToWaitlistAction = async (
     });
 };
 
-
-export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference, notificationsRef: CollectionReference, peopleRef: CollectionReference, notificationId: string, sessionId: string, personOrProspect: Person | WaitlistProspect) => {
+export const enrollFromWaitlistAction = async (
+    sessionsRef: CollectionReference,
+    notificationsRef: CollectionReference,
+    peopleRef: CollectionReference, // Add this
+    notificationId: string,
+    sessionId: string,
+    personOrProspect: Person | WaitlistProspect
+) => {
     const sessionRef = doc(sessionsRef, sessionId);
     
     return runTransaction(db, async (transaction) => {
@@ -393,7 +400,8 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
         
         const session = sessionSnap.data() as Session;
         
-        let personId = '';
+        let personId: string;
+
         if ('isProspect' in personOrProspect && personOrProspect.isProspect) {
              throw new Error("Cannot directly enroll a prospect. They must be added as a person first.");
         } else {
