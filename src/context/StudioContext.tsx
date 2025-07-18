@@ -398,13 +398,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const enrollFromWaitlist = (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistProspect) => {
         if (!collectionRefs) return Promise.resolve();
         return handleAction(
-            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, collectionRefs.people, notificationId, sessionId, personOrProspect),
+            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, collectionRefs.people, notificationId, sessionId, personOrProspect, collectionRefs.spaces),
             `${'name' in personOrProspect ? personOrProspect.name : 'La persona'} ha sido inscrita desde la lista de espera.`,
             'Error al inscribir desde la lista de espera.'
         );
     };
 
-    const triggerWaitlistCheck = async (sessionId: string) => {
+    const triggerWaitlistCheck = useCallback(async (sessionId: string) => {
         if (!collectionRefs) return;
         const sessionRef = doc(collectionRefs.sessions, sessionId);
         const sessionSnap = await getDoc(sessionRef);
@@ -433,7 +433,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                 await addEntity(collectionRefs.notifications, newNotification);
             }
         }
-    };
+    }, [collectionRefs]);
 
     const updateOverdueStatuses = useCallback(async (): Promise<number> => {
         if (!collectionRefs || !activeOperator) {
