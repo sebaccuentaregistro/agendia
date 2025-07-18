@@ -17,7 +17,7 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, parse, isAfter, subDays } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, parse, isAfter, subDays, startOfWeek, endOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -495,6 +495,7 @@ function DashboardPageContent() {
 
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
+  const [revenuePeriod, setRevenuePeriod] = useState<'today' | 'week' | 'month'>('month');
   
   useEffect(() => {
     setIsMounted(true);
@@ -520,15 +521,29 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlistCount: 0, waitlistOpportunities: [], waitlistSummary: [] };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlistCount: 0, waitlistOpportunities: [], waitlistSummary: [], revenueToday: 0, revenueWeek: 0, revenueMonth: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const currentTodayName = dayMap[now.getDay()];
     const todayStr = format(now, 'yyyy-MM-dd');
+    
     const startOfCurrentMonth = startOfMonth(now);
     const endOfCurrentMonth = endOfMonth(now);
+    const startOfCurrentWeek = startOfWeek(now, { weekStartsOn: 1 });
+    const endOfCurrentWeek = endOfWeek(now, { weekStartsOn: 1 });
+
+    const getRevenueForPeriod = (start: Date, end: Date) => {
+        return payments
+            .filter(p => p.date && isWithinInterval(p.date, { start, end }))
+            .reduce((acc, p) => acc + (tariffs.find(t => t.id === p.tariffId)?.price || 0), 0);
+    }
+
+    const revenueMonth = getRevenueForPeriod(startOfCurrentMonth, endOfCurrentMonth);
+    const revenueWeek = getRevenueForPeriod(startOfCurrentWeek, endOfCurrentWeek);
+    const revenueToday = getRevenueForPeriod(today, endOfDay(today));
+
 
     const paymentReminders = people
       .map(person => {
@@ -574,11 +589,7 @@ function DashboardPageContent() {
         return acc + (tariff?.price || 0);
     }, 0);
     
-    const currentMonthIncome = payments
-        .filter(p => p.date && isWithinInterval(p.date, { start: startOfCurrentMonth, end: endOfMonth(now) }))
-        .reduce((acc, p) => acc + (tariffs.find(t => t.id === p.tariffId)?.price || 0), 0);
-        
-    const collectionPercentage = potentialIncome > 0 ? (currentMonthIncome / potentialIncome) * 100 : 0;
+    const collectionPercentage = potentialIncome > 0 ? (revenueMonth / potentialIncome) * 100 : 0;
 
     const todaysSessions = sessions
       .filter(session => session.dayOfWeek === currentTodayName)
@@ -651,6 +662,9 @@ function DashboardPageContent() {
       totalWaitlistCount,
       waitlistOpportunities,
       waitlistSummary,
+      revenueToday,
+      revenueWeek,
+      revenueMonth,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces, notifications]);
 
@@ -668,6 +682,9 @@ function DashboardPageContent() {
     totalWaitlistCount,
     waitlistOpportunities,
     waitlistSummary,
+    revenueToday,
+    revenueWeek,
+    revenueMonth,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -1071,6 +1088,28 @@ function DashboardPageContent() {
 
           {dashboardView === 'advanced' && isPinVerified && (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+                <Card className="col-span-2 sm:col-span-3 md:col-span-2 bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-purple-500/50">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-lg font-semibold text-foreground">Ingresos del Período</CardTitle>
+                        <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+                             <Button size="sm" variant={revenuePeriod === 'today' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('today')}>Hoy</Button>
+                             <Button size="sm" variant={revenuePeriod === 'week' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('week')}>Semana</Button>
+                             <Button size="sm" variant={revenuePeriod === 'month' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('month')}>Mes</Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-4xl font-bold text-foreground">
+                            {revenuePeriod === 'today' && formatPrice(revenueToday)}
+                            {revenuePeriod === 'week' && formatPrice(revenueWeek)}
+                            {revenuePeriod === 'month' && formatPrice(revenueMonth)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            {revenuePeriod === 'today' && `Ingresos registrados hoy, ${format(new Date(), 'dd MMMM', {locale: es})}.`}
+                            {revenuePeriod === 'week' && `Ingresos registrados en la semana actual.`}
+                            {revenuePeriod === 'month' && `Ingresos acumulados en ${format(new Date(), 'MMMM', {locale: es})}.`}
+                        </p>
+                    </CardContent>
+                </Card>
                 {advancedCards.map((item) => {
                   const colorClass = item.colorClass || 'purple';
                   return (
@@ -1222,3 +1261,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+      
