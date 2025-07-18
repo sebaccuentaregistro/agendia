@@ -420,7 +420,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     sessionId: sessionId,
                     createdAt: new Date(),
                 };
-                await addEntity(collectionRefs.notifications, newNotification, 'Notificación de cupo creada', 'Error al crear notificación');
+                await addEntity(collectionRefs.notifications, newNotification);
             }
         }
     };
