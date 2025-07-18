@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ListPlus, Star, User, UserPlus } from 'lucide-react';
 import { WhatsAppIcon } from './whatsapp-icon';
-import type { Session, Person, WaitlistProspect, AppNotification, WaitlistEntry } from '@/types';
+import type { Session, Person, WaitlistProspect, AppNotification, WaitlistEntry, NewPersonData } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useState } from 'react';
 import { PersonDialog } from '@/app/students/person-dialog';
@@ -47,13 +47,8 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
   };
 
   const handlePersonCreated = async (newPerson: Person) => {
-      // This is a simplified handler. Ideally, the enrollment would happen
-      // *after* the new person is successfully created and we have their ID.
-      // For now, we show the welcome dialog. The user will then have to
-      // go back and click "enroll" again on the now-existing user.
       setPersonForWelcome(newPerson);
       setPersonToCreate(null);
-      // In a more advanced implementation, you'd trigger the enrollment here.
   };
   
   const getWhatsAppLink = (phone: string, text: string) => `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;

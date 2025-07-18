@@ -4,19 +4,22 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
-import type { NewPersonData } from '@/types';
+import type { Person, NewPersonData } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useStudio } from '@/context/StudioContext';
 
-export function WelcomeDialog({ person, onOpenChange }: { person: NewPersonData | null; onOpenChange: (open: boolean) => void; }) {
+// Accept a more generic type that covers both Person and NewPersonData
+type WelcomePerson = Partial<Person> & Pick<NewPersonData, 'name' | 'phone'>;
+
+export function WelcomeDialog({ person, onOpenChange }: { person: WelcomePerson | null; onOpenChange: (open: boolean) => void; }) {
     const { institute } = useAuth();
     const { tariffs } = useStudio();
     
     if (!person) return null;
 
-    const tariff = tariffs.find(t => t.id === person.tariffId);
+    const tariff = person.tariffId ? tariffs.find(t => t.id === person.tariffId) : null;
 
-    const welcomeMessage = `¡Hola, ${person.name}! 👋 Te damos la bienvenida a ${institute?.name || 'nuestro estudio'}. ¡Estamos muy contentos de tenerte con nosotros! Tu plan es "${tariff?.name || 'No especificado'}". ¡Nos vemos pronto en clase!`;
+    const welcomeMessage = `¡Hola, ${person.name}! 👋 Te damos la bienvenida a ${institute?.name || 'nuestro estudio'}. ¡Estamos muy contentos de tenerte con nosotros!${tariff ? ` Tu plan es "${tariff.name}".` : ''} ¡Nos vemos pronto en clase!`;
 
     const encodedMessage = encodeURIComponent(welcomeMessage);
     const whatsappLink = `https://wa.me/${person.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
