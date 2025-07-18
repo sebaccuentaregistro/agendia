@@ -1208,7 +1208,7 @@ function DashboardPageContent() {
         isLimitReached={isLimitReached}
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
-      <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={() => setWaitlistSheetOpen(false)} />
+      <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
     </div>
   );
 }
@@ -1221,4 +1221,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
