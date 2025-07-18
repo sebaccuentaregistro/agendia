@@ -164,7 +164,7 @@ export type AppNotification = {
   sessionId?: string;
   personId?: string; // The person from the waitlist or at risk
   prospectDetails?: WaitlistProspect;
-  createdAt: Date | null; // ISO string
+  createdAt: Date | null;
 };
 
 export type Tariff = {

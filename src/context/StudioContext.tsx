@@ -124,7 +124,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         Object.entries(collectionRefs).forEach(([key, ref]) => {
             let q = ref;
             if (['audit_logs', 'payments', 'notifications'].includes(key)) {
-                q = query(ref, orderBy('timestamp', 'desc'));
+                q = query(ref, orderBy('createdAt', 'desc'));
             }
 
             const unsub = onSnapshot(q, (snapshot: QuerySnapshot) => {
@@ -419,7 +419,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     type: 'waitlist',
                     sessionId: sessionId,
                     createdAt: new Date(),
-                    timestamp: new Date()
                 };
                 await addEntity(collectionRefs.notifications, newNotification, 'Notificación de cupo creada', 'Error al crear notificación');
             }
