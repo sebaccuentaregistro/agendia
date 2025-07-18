@@ -1255,7 +1255,7 @@ function SchedulePageContent() {
                                     <Users className="mr-2 h-4 w-4" />
                                     Inscripción Fija
                                   </Button>
-                                  <Button variant="secondary" className="w-full font-bold col-span-3" onClick={() => setSessionForWaitlist(session)}>
+                                  <Button variant="secondary" className="w-full font-bold col-span-3" onClick={() => setSessionForWaitlist(session)} disabled={!isFull}>
                                     <ListPlus className="mr-2 h-4 w-4" />
                                     Anotar en Espera
                                   </Button>
