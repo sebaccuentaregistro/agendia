@@ -414,35 +414,43 @@ export const enrollFromWaitlistAction = async (
     peopleRef: CollectionReference, // Add this
     notificationId: string,
     sessionId: string,
-    personOrProspect: Person | WaitlistProspect
+    personOrProspect: Person | WaitlistProspect,
+    spacesRef: CollectionReference
 ) => {
     const sessionRef = doc(sessionsRef, sessionId);
     
     return runTransaction(db, async (transaction) => {
         const sessionSnap = await transaction.get(sessionRef);
-        if (!sessionSnap.exists()) {
-            throw new Error("La sesión no existe.");
-        }
-        
+        if (!sessionSnap.exists()) throw new Error("La sesión no existe.");
         const session = sessionSnap.data() as Session;
         
-        let personId: string;
+        const spaceRef = doc(spacesRef, session.spaceId);
+        const spaceSnap = await transaction.get(spaceRef);
+        if (!spaceSnap.exists()) throw new Error("El espacio de la sesión no existe.");
+        const space = spaceSnap.data() as Space;
 
+        if (session.personIds.length >= space.capacity) {
+            throw new Error("No hay cupos disponibles en esta clase.");
+        }
+        
+        let personId: string;
+        let isNewPerson = false;
+        
         if ('isProspect' in personOrProspect && personOrProspect.isProspect) {
              throw new Error("Cannot directly enroll a prospect. They must be added as a person first.");
-        } else if ('id' in personOrProspect) {
-            personId = personOrProspect.id;
         } else {
-            throw new Error("Invalid person or prospect object provided.");
+            personId = personOrProspect.id;
         }
 
         const newPersonIds = Array.from(new Set([...session.personIds, personId]));
 
+        // Remove the correct entry from the waitlist
         const newWaitlist = (session.waitlist || []).filter(entry => {
-            if (typeof entry === 'string') {
-                return entry !== personId;
-            } else if (entry.isProspect && 'name' in personOrProspect && entry.name === personOrProspect.name && entry.phone === personOrProspect.phone) {
-                 return false;
+            if (typeof entry === 'string' && typeof personId === 'string' && entry === personId) {
+                return false; // Remove existing person
+            }
+            if (typeof entry !== 'string' && entry.isProspect && 'name' in personOrProspect && entry.name === personOrProspect.name && entry.phone === personOrProspect.phone) {
+                 return false; // Remove prospect
             }
             return true;
         });
@@ -451,6 +459,8 @@ export const enrollFromWaitlistAction = async (
         
         const notifRef = doc(notificationsRef, notificationId);
         transaction.delete(notifRef);
+
+        return { isNew: isNewPerson, personId: personId };
     });
 };
 
@@ -557,4 +567,3 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     
     return updatedCount;
 };
-
