@@ -104,6 +104,10 @@ export function WaitlistSheet({ isOpen, onOpenChange }: WaitlistSheetProps) {
                                      <a href={`https://wa.me/${item.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700 transition-colors">
                                         <WhatsAppIcon />
                                      </a>
+                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => {}}>
+                                        <Trash2 className="h-4 w-4" />
+                                        <span className="sr-only">Eliminar de la lista</span>
+                                     </Button>
                                 </div>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">{item.phone}</p>
