@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction } from '@/lib/firestore-actions';
+import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -43,6 +43,7 @@ interface StudioContextType {
     addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
     addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
     addToWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
+    removeFromWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
     addActividad: (actividad: Omit<Actividad, 'id'>) => void;
     updateActividad: (actividad: Actividad) => void;
     deleteActividad: (actividadId: string) => void;
@@ -373,6 +374,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
+    const removeFromWaitlist = (sessionId: string, entry: WaitlistEntry) => {
+        if (!collectionRefs) return;
+        handleAction(
+            removeFromWaitlistAction(doc(collectionRefs.sessions, sessionId), entry),
+            'Eliminado de la lista de espera.',
+            'Error al eliminar de la lista de espera.'
+        );
+    };
+
     const enrollPersonInSessions = async (personId: string, sessionIds: string[]) => {
         if (!collectionRefs) return;
         const removedFromSessionIds = await handleAction(
@@ -464,6 +474,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             addJustifiedAbsence,
             addOneTimeAttendee,
             addToWaitlist,
+            removeFromWaitlist,
             addActividad,
             updateActividad,
             deleteActividad,

@@ -13,11 +13,13 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStudio } from '@/context/StudioContext';
-import type { Person, WaitlistProspect } from '@/types';
+import type { Person, WaitlistProspect, WaitlistEntry } from '@/types';
 import { WhatsAppIcon } from './whatsapp-icon';
 import { Trash2 } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Badge } from './ui/badge';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 interface WaitlistSheetProps {
   isOpen: boolean;
@@ -28,13 +30,13 @@ type UnifiedWaitlistItem = {
   sessionId: string;
   className: string;
   isProspect: boolean;
-  entry: string | WaitlistProspect;
+  entry: WaitlistEntry;
   name: string;
   phone: string;
 };
 
 export function WaitlistSheet({ isOpen, onOpenChange }: WaitlistSheetProps) {
-  const { sessions, people, actividades } = useStudio();
+  const { sessions, people, actividades, removeFromWaitlist } = useStudio();
   
   const unifiedWaitlist = useMemo((): UnifiedWaitlistItem[] => {
     const list: UnifiedWaitlistItem[] = [];
@@ -74,6 +76,10 @@ export function WaitlistSheet({ isOpen, onOpenChange }: WaitlistSheetProps) {
 
     return list.sort((a,b) => a.name.localeCompare(b.name));
   }, [sessions, people, actividades]);
+  
+  const handleDelete = (sessionId: string, entry: WaitlistEntry) => {
+    removeFromWaitlist(sessionId, entry);
+  };
 
 
   return (
@@ -104,10 +110,28 @@ export function WaitlistSheet({ isOpen, onOpenChange }: WaitlistSheetProps) {
                                      <a href={`https://wa.me/${item.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700 transition-colors">
                                         <WhatsAppIcon />
                                      </a>
-                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => {}}>
-                                        <Trash2 className="h-4 w-4" />
-                                        <span className="sr-only">Eliminar de la lista</span>
-                                     </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                                                <Trash2 className="h-4 w-4" />
+                                                <span className="sr-only">Eliminar de la lista</span>
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Esta acción eliminará a {item.name} de la lista de espera para {item.className}. No se puede deshacer.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDelete(item.sessionId, item.entry)}>
+                                                    Sí, eliminar
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                 </div>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">{item.phone}</p>
