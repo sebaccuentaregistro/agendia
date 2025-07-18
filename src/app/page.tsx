@@ -1121,6 +1121,19 @@ function DashboardPageContent() {
             </Card>
 
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
+
+            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-cyan-500/20">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                        <ListPlus className="h-5 w-5 text-cyan-500" />
+                        Lista de Espera
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="text-center">
+                    <p className="text-4xl font-bold">0</p>
+                    <p className="text-xs text-muted-foreground">personas en espera en total</p>
+                </CardContent>
+            </Card>
             
         </div>
       </div>
