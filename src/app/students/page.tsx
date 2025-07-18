@@ -38,50 +38,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { PersonDialog } from './person-dialog';
-
-
-function WelcomeDialog({ person, onOpenChange }: { person: NewPersonData | null; onOpenChange: (open: boolean) => void; }) {
-    const { institute } = useAuth();
-    const { tariffs } = useStudio();
-    
-    if (!person) return null;
-
-    const tariff = tariffs.find(t => t.id === person.tariffId);
-
-    const welcomeMessage = `¡Hola, ${person.name}! 👋 Te damos la bienvenida a ${institute?.name || 'nuestro estudio'}. ¡Estamos muy contentos de tenerte con nosotros! Tu plan es "${tariff?.name || 'No especificado'}". ¡Nos vemos pronto en clase!`;
-
-    const encodedMessage = encodeURIComponent(welcomeMessage);
-    const whatsappLink = `https://wa.me/${person.phone.replace(/\D/g, '')}?text=${encodedMessage}`;
-
-    return (
-        <Dialog open={!!person} onOpenChange={onOpenChange}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>¡Nueva Persona Añadida!</DialogTitle>
-                    <DialogDescription>
-                        ¿Quieres enviarle un mensaje de bienvenida a {person.name} por WhatsApp?
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="my-4 space-y-4">
-                    <div className="rounded-md border bg-muted/50 p-4 text-sm">
-                        <p>{welcomeMessage}</p>
-                    </div>
-                    <Button asChild className="w-full">
-                        <a href={whatsappLink} target="_blank" rel="noopener noreferrer" onClick={() => onOpenChange(false)}>
-                            <Send className="mr-2 h-4 w-4" />
-                            Enviar Bienvenida por WhatsApp
-                        </a>
-                    </Button>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={() => onOpenChange(false)}>
-                        No, gracias
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
+import { WelcomeDialog } from '@/components/welcome-dialog';
 
 function AttendanceHistoryDialog({ person, sessions, actividades, attendance, onClose }: { person: Person | null; sessions: Session[]; actividades: Actividad[]; attendance: SessionAttendance[]; onClose: () => void; }) {
     if (!person) return null;
@@ -1401,6 +1358,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 

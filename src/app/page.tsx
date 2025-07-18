@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
@@ -38,6 +39,7 @@ import { db } from '@/lib/firebase';
 import { deleteEntity } from '@/lib/firestore-actions';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle as AlertTitleComponent } from '@/components/ui/alert';
+import { WelcomeDialog } from '@/components/welcome-dialog';
 
 function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; attendance: SessionAttendance[]; sessions: Session[] }) {
     
@@ -81,8 +83,8 @@ function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; a
             <CardContent className="space-y-3">
                 {churnRiskPeople.length > 0 ? (
                     churnRiskPeople.map(person => (
-                        <div key={person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-red-500/10 text-sm">
-                            <p className="flex-grow text-red-800 dark:text-red-200">
+                        <div key={person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
+                            <p className="flex-grow text-yellow-800 dark:text-yellow-200">
                                <span className="font-semibold">{person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
                             </p>
                             <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
