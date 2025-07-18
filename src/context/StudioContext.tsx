@@ -64,7 +64,7 @@ interface StudioContextType {
     deleteOperator: (operatorId: string) => void;
     updateOverdueStatuses: () => Promise<number>;
     triggerWaitlistCheck: (sessionId: string) => void;
-    enrollFromWaitlist: (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistProspect) => Promise<void>;
+    enrollFromWaitlist: (notificationId: string, sessionId: string, personToEnroll: Person) => Promise<void>;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -213,16 +213,20 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const deletePerson = (personId: string) => {
+    const deletePerson = async (personId: string) => {
         if (!collectionRefs) return;
         const personToDelete = data.people.find((p: Person) => p.id === personId);
         if (!personToDelete) return;
 
-        withOperator(
+        const affectedSessionIds = await withOperator(
             (operator) => deletePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, operator),
             `${personToDelete.name} ha sido eliminado.`,
             `Error al eliminar a ${personToDelete.name}.`
         );
+        
+        if (affectedSessionIds && Array.isArray(affectedSessionIds)) {
+            affectedSessionIds.forEach(sessionId => triggerWaitlistCheck(sessionId));
+        }
     };
     
     const recordPayment = async (personId: string) => {
@@ -395,11 +399,13 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const enrollFromWaitlist = (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistProspect) => {
+    const enrollFromWaitlist = (notificationId: string, sessionId: string, personToEnroll: Person) => {
         if (!collectionRefs) return Promise.resolve();
+        const personIdToEnroll = personToEnroll.id;
+
         return handleAction(
-            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, collectionRefs.people, notificationId, sessionId, personOrProspect, collectionRefs.spaces),
-            `${'name' in personOrProspect ? personOrProspect.name : 'La persona'} ha sido inscrita desde la lista de espera.`,
+            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, personIdToEnroll, sessionId, collectionRefs.spaces),
+            `${personToEnroll.name} ha sido inscrita desde la lista de espera.`,
             'Error al inscribir desde la lista de espera.'
         );
     };
@@ -510,5 +516,3 @@ export function useStudio() {
     }
     return context;
 }
-
-    

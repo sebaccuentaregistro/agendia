@@ -138,7 +138,9 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
         const sessionData = sessionDoc.data() as Session;
         const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
         batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
-        affectedSessionIds.push(sessionDoc.id);
+        if (!affectedSessionIds.includes(sessionDoc.id)) {
+            affectedSessionIds.push(sessionDoc.id);
+        }
     });
 
     // Also remove from waitlists
@@ -151,6 +153,9 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
             return true;
         });
         batch.update(sessionDoc.ref, { waitlist: updatedWaitlist });
+        if (!affectedSessionIds.includes(sessionDoc.id)) {
+            affectedSessionIds.push(sessionDoc.id);
+        }
     });
 
     // Delete the person document
@@ -262,6 +267,7 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
     // This is a simplified version. For a more robust solution, you would
     // run this inside a transaction to prevent race conditions.
     const batch = writeBatch(db);
+    const affectedSessionIds: string[] = [];
 
     // First, find all sessions the person is currently enrolled in
     const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
@@ -276,6 +282,9 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
         if (sessionData) {
             const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
             batch.update(sessionRef, { personIds: updatedPersonIds });
+            if (!affectedSessionIds.includes(sessionId)) {
+              affectedSessionIds.push(sessionId);
+            }
         }
     }
 
@@ -287,7 +296,7 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
     }
     
     await batch.commit();
-    return sessionsToRemoveFrom; // Return IDs of sessions the person was removed from
+    return affectedSessionIds; // Return IDs of sessions the person was removed from
 };
 
 
@@ -414,10 +423,8 @@ export const removeFromWaitlistAction = async (
 export const enrollFromWaitlistAction = async (
     sessionsRef: CollectionReference,
     notificationsRef: CollectionReference,
-    peopleRef: CollectionReference, // Add this
-    notificationId: string,
+    personIdToEnroll: string,
     sessionId: string,
-    personOrProspect: Person | WaitlistProspect,
     spacesRef: CollectionReference
 ) => {
     const sessionRef = doc(sessionsRef, sessionId);
@@ -436,34 +443,26 @@ export const enrollFromWaitlistAction = async (
             throw new Error("No hay cupos disponibles en esta clase.");
         }
         
-        let personId: string;
-        let isNewPerson = false;
-        
-        if ('isProspect' in personOrProspect && personOrProspect.isProspect) {
-             throw new Error("Cannot directly enroll a prospect. They must be added as a person first.");
-        } else {
-            personId = personOrProspect.id;
-        }
+        // Add the person to the session's main roster
+        const newPersonIds = Array.from(new Set([...session.personIds, personIdToEnroll]));
 
-        const newPersonIds = Array.from(new Set([...session.personIds, personId]));
-
-        // Remove the correct entry from the waitlist
+        // Remove the person from the waitlist
         const newWaitlist = (session.waitlist || []).filter(entry => {
-            if (typeof entry === 'string' && typeof personId === 'string' && entry === personId) {
+            if (typeof entry === 'string' && entry === personIdToEnroll) {
                 return false; // Remove existing person
-            }
-            if (typeof entry !== 'string' && entry.isProspect && 'name' in personOrProspect && entry.name === personOrProspect.name && entry.phone === personOrProspect.phone) {
-                 return false; // Remove prospect
             }
             return true;
         });
         
         transaction.update(sessionRef, { personIds: newPersonIds, waitlist: newWaitlist });
         
-        const notifRef = doc(notificationsRef, notificationId);
-        transaction.delete(notifRef);
+        // Delete the opportunity notification
+        const q = query(notificationsRef, where('sessionId', '==', sessionId), where('type', '==', 'waitlist'));
+        const existingNotifs = await getDocs(q);
+        existingNotifs.forEach(notifDoc => {
+            transaction.delete(notifDoc.ref);
+        });
 
-        return { isNew: isNewPerson, personId: personId };
     });
 };
 

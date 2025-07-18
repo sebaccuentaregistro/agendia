@@ -37,9 +37,10 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
   const handleEnroll = async (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistEntry) => {
-      if (typeof personOrProspect !== 'string' && 'isProspect' in personOrProspect) {
-          // If it's a prospect, open the dialog to create them as a full person.
-          setPersonToCreate(personOrProspect);
+      const isProspect = typeof personOrProspect !== 'string' && 'isProspect' in personOrProspect;
+      if (isProspect) {
+          // This case will be handled in a future step
+          console.log("Enroll prospect: ", personOrProspect);
       } else {
           // If it's an existing person, enroll them directly.
           await enrollFromWaitlist(notificationId, sessionId, personOrProspect as Person);
@@ -79,13 +80,21 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
                     <h4 className="font-bold text-primary mb-2">Cupo en {actividadName} ({session.dayOfWeek} {session.time})</h4>
                     <div className="space-y-2">
                         {waitlist.map((person, index) => {
+                             const isProspect = 'isProspect' in person && person.isProspect;
                              return (
                                 <div key={index} className="flex justify-between items-center text-sm bg-background/50 p-2 rounded-md">
                                     <div className="flex items-center gap-2">
                                         <User className="h-4 w-4 text-muted-foreground"/>
                                         <p className="font-semibold">{person.name}</p>
                                     </div>
-                                    <Button size="sm" variant="secondary" disabled>Inscribir</Button>
+                                    <Button 
+                                        size="sm" 
+                                        variant="secondary" 
+                                        onClick={() => handleEnroll(notification.id!, session.id, person)}
+                                        disabled={isProspect}
+                                    >
+                                        Inscribir
+                                    </Button>
                                 </div>
                              )
                         })}
