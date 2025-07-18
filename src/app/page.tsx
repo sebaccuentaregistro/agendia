@@ -537,8 +537,8 @@ function DashboardPageContent() {
     const getRevenueForPeriod = (start: Date, end: Date) => {
         return payments
             .filter(p => p.date && isWithinInterval(p.date, { start, end }))
-            .reduce((acc, p) => acc + (tariffs.find(t => t.id === p.tariffId)?.price || 0), 0);
-    }
+            .reduce((acc, p) => acc + p.amount, 0);
+    };
 
     const revenueMonth = getRevenueForPeriod(startOfCurrentMonth, endOfCurrentMonth);
     const revenueWeek = getRevenueForPeriod(startOfCurrentWeek, endOfCurrentWeek);

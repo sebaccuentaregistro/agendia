@@ -184,7 +184,7 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
         date: now,
         amount: tariff.price,
         tariffId: tariff.id,
-        timestamp: now,
+        createdAt: now,
     };
     const batch = writeBatch(db);
 
