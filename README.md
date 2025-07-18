@@ -45,4 +45,4 @@ firebase deploy
 
 Al finalizar, la terminal te mostrará la URL pública de tu aplicación (normalmente `https://[tu-id-de-proyecto].web.app`).
 
-¡Felicitaciones! Tu aplicación estará     producción.
+¡Felicitaciones! Tu aplicación estará producción.
