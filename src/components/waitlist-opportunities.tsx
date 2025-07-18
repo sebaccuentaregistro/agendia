@@ -39,8 +39,14 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
   const handleEnroll = async (notificationId: string, sessionId: string, personToEnroll: Person) => {
     await enrollFromWaitlist(notificationId, sessionId, personToEnroll);
   };
+  
+  const handleCreateAndEnroll = (prospect: WaitlistProspect) => {
+    setPersonToCreate(prospect);
+  };
 
   const handlePersonCreated = async (newPerson: Person) => {
+      // For now, this just shows the welcome dialog.
+      // In a future step, we'll connect this to auto-enrollment.
       setPersonForWelcome(newPerson);
       setPersonToCreate(null);
   };
@@ -83,8 +89,13 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
                                     <Button 
                                         size="sm" 
                                         variant="secondary" 
-                                        onClick={() => handleEnroll(notification.id!, session.id, person as Person)}
-                                        disabled={isProspect}
+                                        onClick={() => {
+                                            if (isProspect) {
+                                                handleCreateAndEnroll(person as WaitlistProspect);
+                                            } else {
+                                                handleEnroll(notification.id!, session.id, person as Person);
+                                            }
+                                        }}
                                     >
                                         Inscribir
                                     </Button>
