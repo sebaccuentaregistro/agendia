@@ -381,6 +381,33 @@ export const addToWaitlistAction = async (
     });
 };
 
+export const removeFromWaitlistAction = async (
+    sessionDocRef: DocumentReference,
+    entryToRemove: WaitlistEntry,
+) => {
+    return runTransaction(db, async (transaction) => {
+        const freshSessionSnap = await transaction.get(sessionDocRef);
+        if (!freshSessionSnap.exists()) {
+             throw new Error("La sesión no existe.");
+        }
+        const session = freshSessionSnap.data() as Session;
+
+        const updatedWaitlist = (session.waitlist || []).filter(entry => {
+            if (typeof entry === 'string' && typeof entryToRemove === 'string') {
+                return entry !== entryToRemove;
+            }
+            if (typeof entry !== 'string' && typeof entryToRemove !== 'string') {
+                // Compare prospect objects by name and phone
+                return entry.name !== entryToRemove.name || entry.phone !== entryToRemove.phone;
+            }
+            return true; // Should not happen with consistent data
+        });
+
+        transaction.update(sessionDocRef, { waitlist: updatedWaitlist });
+    });
+};
+
+
 export const enrollFromWaitlistAction = async (
     sessionsRef: CollectionReference,
     notificationsRef: CollectionReference,
@@ -530,3 +557,4 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     
     return updatedCount;
 };
+
