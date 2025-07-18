@@ -33,7 +33,7 @@ interface WaitlistOpportunitiesProps {
 }
 
 export function WaitlistOpportunities({ opportunities, summary, totalCount, onHeaderClick }: WaitlistOpportunitiesProps) {
-  const { enrollFromWaitlist, enrollProspectFromWaitlist } = useStudio();
+  const { enrollFromWaitlist, enrollProspectFromWaitlist, people } = useStudio();
   const [personToCreate, setPersonToCreate] = useState<{ prospect: WaitlistProspect; sessionId: string; } | null>(null);
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
