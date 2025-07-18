@@ -40,7 +40,6 @@ import { deleteEntity } from '@/lib/firestore-actions';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle as AlertTitleComponent } from '@/components/ui/alert';
 import { WelcomeDialog } from '@/components/welcome-dialog';
-import { WaitlistOpportunities } from '@/components/waitlist-opportunities';
 
 function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; attendance: SessionAttendance[]; sessions: Session[] }) {
     
@@ -465,7 +464,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
     updateOverdueStatuses, addPerson,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
@@ -516,7 +515,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0, waitlistSummary: [], waitlistOpportunities: [] };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [] };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -592,48 +591,6 @@ function DashboardPageContent() {
       })
       .sort((a, b) => a.time.localeCompare(b.time));
 
-    let totalWaitlist = 0;
-    const waitlistSummary: { sessionId: string; className: string; count: number; }[] = [];
-    
-    sessions.forEach(s => {
-        const waitlistCount = s.waitlist?.length || 0;
-        if (waitlistCount > 0) {
-            totalWaitlist += waitlistCount;
-            const actividad = actividades.find(a => a.id === s.actividadId);
-            waitlistSummary.push({
-                sessionId: s.id,
-                className: `${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`,
-                count: waitlistCount,
-            });
-        }
-    });
-
-    waitlistSummary.sort((a, b) => b.count - a.count);
-    
-    const waitlistOpportunities = notifications
-        .filter(n => n.type === 'waitlist')
-        .map(notification => {
-            const session = sessions.find(s => s.id === notification.sessionId);
-            if (!session) return null;
-
-            const actividad = actividades.find(a => a.id === session.actividadId);
-            
-            const waitlistWithDetails = (session.waitlist || []).map(entry => {
-                if (typeof entry === 'string') {
-                    return people.find(p => p.id === entry);
-                }
-                return entry;
-            }).filter((p): p is Person | WaitlistProspect => !!p);
-
-            return {
-                notification,
-                session: session,
-                actividadName: actividad?.name || 'Clase',
-                waitlist: waitlistWithDetails,
-            };
-        })
-        .filter((o): o is NonNullable<typeof o> => !!o);
-
     return {
       overdueCount,
       onVacationCount,
@@ -648,11 +605,8 @@ function DashboardPageContent() {
       collectionPercentage,
       topDebtors,
       paymentReminders,
-      totalWaitlist,
-      waitlistSummary,
-      waitlistOpportunities,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces, notifications]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces]);
 
   const {
     overdueCount,
@@ -665,9 +619,6 @@ function DashboardPageContent() {
     collectionPercentage,
     topDebtors,
     paymentReminders,
-    totalWaitlist,
-    waitlistSummary,
-    waitlistOpportunities,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -1169,12 +1120,6 @@ function DashboardPageContent() {
 
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
             
-            <WaitlistOpportunities
-                opportunities={waitlistOpportunities}
-                summary={waitlistSummary}
-                totalCount={totalWaitlist}
-            />
-
         </div>
       </div>
     
