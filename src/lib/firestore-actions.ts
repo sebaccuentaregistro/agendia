@@ -403,8 +403,10 @@ export const enrollFromWaitlistAction = async (
 
         if ('isProspect' in personOrProspect && personOrProspect.isProspect) {
              throw new Error("Cannot directly enroll a prospect. They must be added as a person first.");
-        } else {
+        } else if ('id' in personOrProspect) {
             personId = personOrProspect.id;
+        } else {
+            throw new Error("Invalid person or prospect object provided.");
         }
 
         const newPersonIds = Array.from(new Set([...session.personIds, personId]));
