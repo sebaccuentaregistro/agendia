@@ -85,6 +85,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
                                         <User className="h-4 w-4 text-muted-foreground"/>
                                         <p className="font-semibold">{person.name}</p>
                                     </div>
+                                    <Button size="sm" variant="secondary" disabled>Inscribir</Button>
                                 </div>
                              )
                         })}
