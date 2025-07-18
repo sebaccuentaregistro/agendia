@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '
 import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX, ListPlus, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance, AppNotification } from '@/types';
+import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance, AppNotification, WaitlistEntry } from '@/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getStudentPaymentStatus, calculateNextPaymentDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
@@ -40,6 +40,7 @@ import { deleteEntity } from '@/lib/firestore-actions';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle as AlertTitleComponent } from '@/components/ui/alert';
 import { WelcomeDialog } from '@/components/welcome-dialog';
+import { WaitlistOpportunities } from '@/components/waitlist-opportunities';
 
 function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; attendance: SessionAttendance[]; sessions: Session[] }) {
     
@@ -467,7 +468,7 @@ function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses, addPerson,
+    updateOverdueStatuses,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
   const [filters, setFilters] = useState({
@@ -517,7 +518,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0, waitlistSummary: [] };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0, waitlistSummary: [], waitlistOpportunities: [] };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -593,19 +594,44 @@ function DashboardPageContent() {
       })
       .sort((a, b) => a.time.localeCompare(b.time));
 
-    const totalWaitlist = sessions.reduce((sum, session) => sum + (session.waitlist?.length || 0), 0);
+    let totalWaitlist = 0;
+    const waitlistSummary: { sessionId: string; className: string; count: number; }[] = [];
+    const waitlistOpportunities: any[] = [];
     
-    const waitlistSummary = sessions
-      .filter(s => s.waitlist && s.waitlist.length > 0)
-      .map(s => {
-          const actividad = actividades.find(a => a.id === s.actividadId);
-          return {
-              sessionId: s.id,
-              className: `${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`,
-              count: s.waitlist.length,
-          };
-      })
-      .sort((a,b) => b.count - a.count);
+    sessions.forEach(s => {
+        const waitlistCount = s.waitlist?.length || 0;
+        if (waitlistCount > 0) {
+            totalWaitlist += waitlistCount;
+            const actividad = actividades.find(a => a.id === s.actividadId);
+            const space = spaces.find(sp => sp.id === s.spaceId);
+            
+            // Add to summary
+            waitlistSummary.push({
+                sessionId: s.id,
+                className: `${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`,
+                count: waitlistCount,
+            });
+            
+            // Check for opportunities
+            const capacity = space?.capacity || 0;
+            if (s.personIds.length < capacity) {
+                 const waitlistWithDetails = s.waitlist.map(entry => {
+                    if (typeof entry === 'string') {
+                        return people.find(p => p.id === entry);
+                    }
+                    return entry;
+                }).filter(Boolean);
+
+                waitlistOpportunities.push({
+                    session: s,
+                    actividadName: actividad?.name || 'Clase',
+                    waitlist: waitlistWithDetails,
+                });
+            }
+        }
+    });
+
+    waitlistSummary.sort((a, b) => b.count - a.count);
 
     return {
       overdueCount,
@@ -623,8 +649,9 @@ function DashboardPageContent() {
       paymentReminders,
       totalWaitlist,
       waitlistSummary,
+      waitlistOpportunities,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces]);
 
   const {
     overdueCount,
@@ -639,6 +666,7 @@ function DashboardPageContent() {
     paymentReminders,
     totalWaitlist,
     waitlistSummary,
+    waitlistOpportunities,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -1140,48 +1168,12 @@ function DashboardPageContent() {
 
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
             
-            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-cyan-500/20">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-foreground">
-                        <ListPlus className="h-5 w-5 text-cyan-500" />
-                        Lista de Espera
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                    <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200">
-                        <AlertTitleComponent className="font-semibold flex items-center gap-2">
-                            <Star className="h-4 w-4"/>
-                            Oportunidades
-                        </AlertTitleComponent>
-                        <AlertDescription>
-                            Aquí aparecerán las clases con cupos liberados y gente en espera.
-                        </AlertDescription>
-                    </Alert>
+            <WaitlistOpportunities
+                opportunities={waitlistOpportunities}
+                summary={waitlistSummary}
+                totalCount={totalWaitlist}
+            />
 
-                    <div>
-                        <h4 className="font-medium text-sm mb-2 text-muted-foreground">Resumen de Todas las Listas</h4>
-                        <div className="p-4 rounded-lg bg-muted/50 text-sm space-y-2">
-                             {totalWaitlist > 0 ? (
-                                <>
-                                    <p className="text-center pb-2 border-b">
-                                        <span className="font-bold">{totalWaitlist}</span> {totalWaitlist === 1 ? 'persona está esperando' : 'personas están esperando'} un cupo en total.
-                                    </p>
-                                    <div className="space-y-1 text-xs">
-                                        {waitlistSummary.map(item => (
-                                            <div key={item.sessionId} className="flex justify-between">
-                                                <span>{item.className}</span>
-                                                <span className="font-semibold">{item.count} en espera</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </>
-                             ) : (
-                                <p className="text-center">No hay nadie en ninguna lista de espera.</p>
-                             )}
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
         </div>
       </div>
     
@@ -1225,4 +1217,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
