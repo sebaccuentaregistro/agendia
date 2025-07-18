@@ -17,6 +17,7 @@ import type { Person, WaitlistProspect } from '@/types';
 import { WhatsAppIcon } from './whatsapp-icon';
 import { Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
+import { Badge } from './ui/badge';
 
 interface WaitlistSheetProps {
   isOpen: boolean;
@@ -89,8 +90,23 @@ export function WaitlistSheet({ isOpen, onOpenChange }: WaitlistSheetProps) {
                 {unifiedWaitlist.length > 0 ? (
                     unifiedWaitlist.map((item, index) => (
                         <div key={index} className="p-3 rounded-md bg-muted/50">
-                            <p className="font-semibold text-foreground">{item.name}</p>
-                            <p className="text-sm text-muted-foreground">Esperando en: {item.className}</p>
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-semibold text-foreground">{item.name}</p>
+                                        <Badge variant={item.isProspect ? 'outline' : 'secondary'}>
+                                            {item.isProspect ? 'Nuevo' : 'Alumno'}
+                                        </Badge>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground">Esperando en: {item.className}</p>
+                                </div>
+                                <div className="flex items-center gap-2 flex-shrink-0">
+                                     <a href={`https://wa.me/${item.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-700 transition-colors">
+                                        <WhatsAppIcon />
+                                     </a>
+                                </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">{item.phone}</p>
                         </div>
                     ))
                 ) : (
