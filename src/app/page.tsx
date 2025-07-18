@@ -517,7 +517,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [] };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlistCount: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -593,6 +593,10 @@ function DashboardPageContent() {
       })
       .sort((a, b) => a.time.localeCompare(b.time));
 
+    const totalWaitlistCount = sessions.reduce((acc, session) => {
+        return acc + (session.waitlist?.length || 0);
+    }, 0);
+
     return {
       overdueCount,
       onVacationCount,
@@ -607,6 +611,7 @@ function DashboardPageContent() {
       collectionPercentage,
       topDebtors,
       paymentReminders,
+      totalWaitlistCount,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces]);
 
@@ -621,6 +626,7 @@ function DashboardPageContent() {
     collectionPercentage,
     topDebtors,
     paymentReminders,
+    totalWaitlistCount,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -1130,7 +1136,7 @@ function DashboardPageContent() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="text-center">
-                    <p className="text-4xl font-bold">0</p>
+                    <p className="text-4xl font-bold">{totalWaitlistCount}</p>
                     <p className="text-xs text-muted-foreground">personas en espera en total</p>
                 </CardContent>
             </Card>
