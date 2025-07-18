@@ -3,7 +3,7 @@
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
@@ -22,7 +22,8 @@ const cleanDataForFirestore = (data: any) => {
 // Generic Actions
 export const addEntity = async (collectionRef: CollectionReference, data: any) => {
     const cleanData = cleanDataForFirestore(data);
-    return await addDoc(collectionRef, cleanData);
+    const docRef = await addDoc(collectionRef, cleanData);
+    return docRef.id;
 };
 
 export const updateEntity = async (docRef: any, data: any) => {
@@ -143,7 +144,10 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
     const personWaitlistSnap = await getDocs(personWaitlistQuery);
     personWaitlistSnap.forEach(sessionDoc => {
         const sessionData = sessionDoc.data() as Session;
-        const updatedWaitlist = (sessionData.waitlist || []).filter(entry => typeof entry === 'string' && entry !== personId);
+        const updatedWaitlist = (sessionData.waitlist || []).filter(entry => {
+            if (typeof entry === 'string') return entry !== personId;
+            return true;
+        });
         batch.update(sessionDoc.ref, { waitlist: updatedWaitlist });
     });
 
@@ -335,7 +339,7 @@ export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReferen
     }
 };
 
-export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReference, sessionId: string, personId: string, date: Date) => {
+export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
 
@@ -378,7 +382,7 @@ export const addToWaitlistAction = async (
 };
 
 
-export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference, notificationsRef: CollectionReference, notificationId: string, sessionId: string, personId: string, spacesRef: CollectionReference) => {
+export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference, notificationsRef: CollectionReference, peopleRef: CollectionReference, notificationId: string, sessionId: string, personOrProspect: Person | WaitlistProspect) => {
     const sessionRef = doc(sessionsRef, sessionId);
     
     return runTransaction(db, async (transaction) => {
@@ -388,15 +392,12 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
         }
         
         const session = sessionSnap.data() as Session;
-        // The space data is only needed for the capacity check
-        const spaceSnap = await getDoc(doc(spacesRef, session.spaceId));
         
-        const space = spaceSnap.exists() ? spaceSnap.data() as Space : null;
-        const capacity = space?.capacity || 0;
-
-        // Double check there's still a spot
-        if (session.personIds.length >= capacity) {
-            throw new Error("Lo sentimos, el cupo para esta clase ya fue ocupado.");
+        let personId = '';
+        if ('isProspect' in personOrProspect && personOrProspect.isProspect) {
+             throw new Error("Cannot directly enroll a prospect. They must be added as a person first.");
+        } else {
+            personId = personOrProspect.id;
         }
 
         const newPersonIds = Array.from(new Set([...session.personIds, personId]));
@@ -404,9 +405,10 @@ export const enrollFromWaitlistAction = async (sessionsRef: CollectionReference,
         const newWaitlist = (session.waitlist || []).filter(entry => {
             if (typeof entry === 'string') {
                 return entry !== personId;
-            } else {
-                return true;
+            } else if (entry.isProspect && 'name' in personOrProspect && entry.name === personOrProspect.name && entry.phone === personOrProspect.phone) {
+                 return false;
             }
+            return true;
         });
         
         transaction.update(sessionRef, { personIds: newPersonIds, waitlist: newWaitlist });

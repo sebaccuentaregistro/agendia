@@ -73,6 +73,10 @@ function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; a
         return atRisk;
     }, [people, attendance, sessions]);
 
+    if (churnRiskPeople.length === 0) {
+        return null;
+    }
+
     return (
         <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
             <CardHeader>
@@ -82,26 +86,20 @@ function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; a
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                {churnRiskPeople.length > 0 ? (
-                    churnRiskPeople.map(person => (
-                        <div key={person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
-                            <p className="flex-grow text-yellow-800 dark:text-yellow-200">
-                               <span className="font-semibold">{person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
-                            </p>
-                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                                 <Button asChild size="sm" variant="ghost" className="text-green-600 hover:text-green-700 h-8 px-2">
-                                    <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                                        <WhatsAppIcon className="mr-2"/> Contactar
-                                    </a>
-                                </Button>
-                            </div>
+                {churnRiskPeople.map(person => (
+                    <div key={person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
+                        <p className="flex-grow text-yellow-800 dark:text-yellow-200">
+                           <span className="font-semibold">{person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
+                        </p>
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                             <Button asChild size="sm" variant="ghost" className="text-green-600 hover:text-green-700 h-8 px-2">
+                                <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                    <WhatsAppIcon className="mr-2"/> Contactar
+                                </a>
+                            </Button>
                         </div>
-                    ))
-                ) : (
-                    <div className="flex items-center justify-center p-4 text-center text-sm text-muted-foreground">
-                        No hay alertas de abandono por el momento. ¡Buen trabajo!
                     </div>
-                )}
+                ))}
             </CardContent>
         </Card>
     );
@@ -467,7 +465,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
     updateOverdueStatuses,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
@@ -596,42 +594,46 @@ function DashboardPageContent() {
 
     let totalWaitlist = 0;
     const waitlistSummary: { sessionId: string; className: string; count: number; }[] = [];
-    const waitlistOpportunities: any[] = [];
     
     sessions.forEach(s => {
         const waitlistCount = s.waitlist?.length || 0;
         if (waitlistCount > 0) {
             totalWaitlist += waitlistCount;
             const actividad = actividades.find(a => a.id === s.actividadId);
-            const space = spaces.find(sp => sp.id === s.spaceId);
-            
-            // Add to summary
             waitlistSummary.push({
                 sessionId: s.id,
                 className: `${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`,
                 count: waitlistCount,
             });
-            
-            // Check for opportunities
-            const capacity = space?.capacity || 0;
-            if (s.personIds.length < capacity) {
-                 const waitlistWithDetails = s.waitlist.map(entry => {
-                    if (typeof entry === 'string') {
-                        return people.find(p => p.id === entry);
-                    }
-                    return entry;
-                }).filter(Boolean);
-
-                waitlistOpportunities.push({
-                    session: s,
-                    actividadName: actividad?.name || 'Clase',
-                    waitlist: waitlistWithDetails,
-                });
-            }
         }
     });
 
     waitlistSummary.sort((a, b) => b.count - a.count);
+    
+    const waitlistOpportunities = notifications
+        .filter(n => n.type === 'waitlist')
+        .map(notification => {
+            const session = sessions.find(s => s.id === notification.sessionId);
+            if (!session) return null;
+
+            const actividad = actividades.find(a => a.id === session.actividadId);
+            const space = spaces.find(sp => sp.id === session.spaceId);
+            
+            const waitlistWithDetails = (session.waitlist || []).map(entry => {
+                if (typeof entry === 'string') {
+                    return people.find(p => p.id === entry);
+                }
+                return entry;
+            }).filter((p): p is Person | WaitlistEntry => !!p);
+
+            return {
+                notification,
+                session: session,
+                actividadName: actividad?.name || 'Clase',
+                waitlist: waitlistWithDetails,
+            };
+        })
+        .filter((o): o is NonNullable<typeof o> => !!o);
 
     return {
       overdueCount,
@@ -651,7 +653,7 @@ function DashboardPageContent() {
       waitlistSummary,
       waitlistOpportunities,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces, notifications]);
 
   const {
     overdueCount,
@@ -1199,7 +1201,7 @@ function DashboardPageContent() {
         onOpenChange={setIsPersonDialogOpen}
         onPersonCreated={(person) => {
           if (person.tariffId) {
-            setPersonForWelcome(person);
+            setPersonForWelcome(person as NewPersonData);
           }
         }}
         isLimitReached={isLimitReached}
@@ -1217,5 +1219,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-

@@ -3,10 +3,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc } from 'firebase/firestore';
+import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry } from '@/types';
-import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction } from '@/lib/firestore-actions';
+import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -64,6 +64,7 @@ interface StudioContextType {
     deleteOperator: (operatorId: string) => void;
     updateOverdueStatuses: () => Promise<number>;
     triggerWaitlistCheck: (sessionId: string) => void;
+    enrollFromWaitlist: (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistEntry) => Promise<string | undefined>;
 }
 
 const StudioContext = createContext<StudioContextType | undefined>(undefined);
@@ -214,7 +215,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     const deletePerson = (personId: string) => {
         if (!collectionRefs) return;
-        const personToDelete = data.people.find(p => p.id === personId);
+        const personToDelete = data.people.find((p: Person) => p.id === personId);
         if (!personToDelete) return;
 
         withOperator(
@@ -252,8 +253,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
 
     const addGenericEntity = (collectionKey: keyof typeof collections, entityData: any, successMessage: string, errorMessage: string) => {
-        if (!collectionRefs) return;
-        handleAction(addEntity(collectionRefs[collectionKey], entityData), successMessage, errorMessage);
+        if (!collectionRefs) return Promise.resolve(undefined);
+        return handleAction(addEntity(collectionRefs[collectionKey], entityData), successMessage, errorMessage);
     };
 
     const updateGenericEntity = (collectionKey: keyof typeof collections, entity: { id: string }, successMessage: string, errorMessage: string) => {
@@ -332,7 +333,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }, []);
     
     const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
-        const person = data.people.find(p => p.id === personId);
+        const person = data.people.find((p: Person) => p.id === personId);
         if (!person) return;
         handleAction(
             addVacationPeriodAction(doc(collectionRefs!.people, personId), person, startDate, endDate),
@@ -342,7 +343,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
 
     const removeVacationPeriod = (personId: string, vacationId: string) => {
-        const person = data.people.find(p => p.id === personId);
+        const person = data.people.find((p: Person) => p.id === personId);
         if (!person) return;
         handleAction(
             removeVacationPeriodAction(doc(collectionRefs!.people, personId), person, vacationId),
@@ -358,7 +359,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     );
     
     const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => handleAction(
-        addOneTimeAttendeeAction(collectionRefs!.attendance, sessionId, personId, date),
+        addOneTimeAttendeeAction(collectionRefs!.attendance, personId, sessionId, date),
         'Asistente puntual añadido.',
         'Error al añadir asistente puntual.'
     );
@@ -382,6 +383,39 @@ export function StudioProvider({ children }: { children: ReactNode }) {
          if (removedFromSessionIds && Array.isArray(removedFromSessionIds)) {
             removedFromSessionIds.forEach(sessionId => triggerWaitlistCheck(sessionId));
         }
+    };
+
+    const enrollFromWaitlist = async (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistEntry) => {
+        if (!collectionRefs) return;
+
+        if (typeof personOrProspect !== 'string' && 'isProspect' in personOrProspect) {
+            // It's a prospect, so we need to add them as a person first
+            const newPersonId = await addGenericEntity('people', {
+                name: personOrProspect.name,
+                phone: personOrProspect.phone,
+                joinDate: new Date(),
+                avatar: `https://placehold.co/100x100.png`,
+                vacationPeriods: [],
+                outstandingPayments: 1,
+            }, `Prospecto ${personOrProspect.name} convertido a persona.`, 'Error al convertir prospecto.');
+            
+            if (newPersonId) {
+                const newPerson = (await getDoc(doc(collectionRefs.people, newPersonId))).data() as Person;
+                return handleAction(
+                    enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, collectionRefs.people, notificationId, sessionId, { ...newPerson, id: newPersonId }),
+                    `${newPerson.name} ha sido inscrito desde la lista de espera.`,
+                    'Error al inscribir a la nueva persona.'
+                );
+            }
+            return;
+        }
+
+        // It's an existing person
+        return handleAction(
+            enrollFromWaitlistAction(collectionRefs.sessions, collectionRefs.notifications, collectionRefs.people, notificationId, sessionId, personOrProspect as Person),
+            `${(personOrProspect as Person).name} ha sido inscrito desde la lista de espera.`,
+            'Error al inscribir desde la lista de espera.'
+        );
     };
 
     const triggerWaitlistCheck = async (sessionId: string) => {
@@ -409,6 +443,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     type: 'waitlist',
                     sessionId: sessionId,
                     createdAt: new Date(),
+                    timestamp: new Date()
                 };
                 await addEntity(collectionRefs.notifications, newNotification, 'Notificación de cupo creada', 'Error al crear notificación');
             }
@@ -474,7 +509,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             updateOperator,
             deleteOperator,
             updateOverdueStatuses,
-            triggerWaitlistCheck
+            triggerWaitlistCheck,
+            enrollFromWaitlist,
         }}>
             {children}
         </StudioContext.Provider>

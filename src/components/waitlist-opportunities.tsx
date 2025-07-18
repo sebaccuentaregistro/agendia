@@ -6,9 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ListPlus, Star, User, UserPlus } from 'lucide-react';
 import { WhatsAppIcon } from './whatsapp-icon';
-import type { Session, Person, WaitlistProspect } from '@/types';
+import type { Session, Person, WaitlistProspect, AppNotification, WaitlistEntry } from '@/types';
+import { useStudio } from '@/context/StudioContext';
+import { useState } from 'react';
+import { PersonDialog } from '@/app/students/person-dialog';
+import { WelcomeDialog } from './welcome-dialog';
 
 type Opportunity = {
+  notification: AppNotification;
   session: Session;
   actividadName: string;
   waitlist: (Person | WaitlistProspect)[];
@@ -27,15 +32,34 @@ interface WaitlistOpportunitiesProps {
 }
 
 export function WaitlistOpportunities({ opportunities, summary, totalCount }: WaitlistOpportunitiesProps) {
+  const { enrollFromWaitlist, addPerson } = useStudio();
+  const [personToCreate, setPersonToCreate] = useState<WaitlistProspect | null>(null);
+  const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
-  const handleEnroll = (sessionId: string, personOrProspect: Person | WaitlistProspect) => {
-    // TODO: Implement enrollment logic in Step 4
-    console.log("Enrolling", personOrProspect, "in session", sessionId);
+  const handleEnroll = async (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistEntry) => {
+      if (typeof personOrProspect !== 'string' && 'isProspect' in personOrProspect) {
+          // If it's a prospect, open the dialog to create them as a full person.
+          setPersonToCreate(personOrProspect);
+      } else {
+          // If it's an existing person, enroll them directly.
+          await enrollFromWaitlist(notificationId, sessionId, personOrProspect as Person);
+      }
+  };
+
+  const handlePersonCreated = async (newPerson: Person) => {
+      // This is a simplified handler. Ideally, the enrollment would happen
+      // *after* the new person is successfully created and we have their ID.
+      // For now, we show the welcome dialog. The user will then have to
+      // go back and click "enroll" again on the now-existing user.
+      setPersonForWelcome(newPerson);
+      setPersonToCreate(null);
+      // In a more advanced implementation, you'd trigger the enrollment here.
   };
   
   const getWhatsAppLink = (phone: string, text: string) => `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
 
   return (
+    <>
     <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-cyan-500/20">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-foreground">
@@ -55,7 +79,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
                     Se han liberado cupos en estas clases. Contacta a las personas en espera para inscribirlas.
                 </AlertDescription>
             </Alert>
-            {opportunities.map(({ session, actividadName, waitlist }) => (
+            {opportunities.map(({ notification, session, actividadName, waitlist }) => (
                 <div key={session.id} className="p-3 rounded-lg bg-primary/10">
                     <h4 className="font-bold text-primary mb-2">Cupo en {actividadName} ({session.dayOfWeek} {session.time})</h4>
                     <div className="space-y-2">
@@ -77,7 +101,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
                                                 <WhatsAppIcon />
                                             </a>
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => handleEnroll(session.id, person)}>
+                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => handleEnroll(notification.id, session.id, person)}>
                                             <UserPlus className="h-4 w-4" />
                                         </Button>
                                     </div>
@@ -114,5 +138,13 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
         </div>
       </CardContent>
     </Card>
+     <PersonDialog
+        open={!!personToCreate}
+        onOpenChange={(isOpen) => !isOpen && setPersonToCreate(null)}
+        initialData={personToCreate || undefined}
+        onPersonCreated={handlePersonCreated}
+      />
+      <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
+    </>
   );
 }
