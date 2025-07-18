@@ -13,9 +13,9 @@ import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
+import { useToast } from '@/hooks/use-toast';
 
 // Definimos la estructura de la información que necesitará el diálogo.
-// Por ahora es opcional para que podamos crearlo sin datos.
 export type ReceiptInfo = {
   personName: string;
   personPhone: string;
@@ -31,20 +31,26 @@ interface PaymentReceiptDialogProps {
 }
 
 export function PaymentReceiptDialog({ receiptInfo, onOpenChange }: PaymentReceiptDialogProps) {
+  const { toast } = useToast();
   // Si no hay información de recibo, no mostramos nada.
   if (!receiptInfo) {
     return null;
   }
   
-  // Mensaje de ejemplo. Haremos que sea dinámico en el siguiente paso.
-  const exampleMessage = `¡Hola, ${receiptInfo.personName}! 👋 Confirmamos tu pago de $${receiptInfo.tariffPrice} por tu plan '${receiptInfo.tariffName}' en ${receiptInfo.instituteName}.\n\n${receiptInfo.nextDueDate ? `Tu próxima fecha de vencimiento es el ${receiptInfo.nextDueDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}.` : ''}\n\n¡Muchas gracias!`;
+  const formattedPrice = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 0,
+  }).format(receiptInfo.tariffPrice);
   
-  const encodedMessage = encodeURIComponent(exampleMessage);
+  const receiptMessage = `¡Hola, ${receiptInfo.personName}! 👋 Confirmamos tu pago de ${formattedPrice} por tu plan '${receiptInfo.tariffName}' en ${receiptInfo.instituteName}.\n\n${receiptInfo.nextDueDate ? `Tu próxima fecha de vencimiento es el ${receiptInfo.nextDueDate.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}.` : ''}\n\n¡Muchas gracias!`;
+  
+  const encodedMessage = encodeURIComponent(receiptMessage);
   const whatsappLink = `https://wa.me/${receiptInfo.personPhone.replace(/\D/g, '')}?text=${encodedMessage}`;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(exampleMessage);
-    // Aquí podríamos añadir un toast de confirmación en el futuro.
+    navigator.clipboard.writeText(receiptMessage);
+    toast({ title: 'Mensaje copiado', description: 'El comprobante está listo para ser pegado.' });
   };
 
   return (
@@ -59,7 +65,7 @@ export function PaymentReceiptDialog({ receiptInfo, onOpenChange }: PaymentRecei
         <div className="my-4 space-y-4">
             <div>
                 <Label htmlFor="receipt-message" className="text-sm font-medium">Mensaje de Confirmación</Label>
-                <Textarea id="receipt-message" readOnly value={exampleMessage} rows={5} className="mt-2" />
+                <Textarea id="receipt-message" readOnly value={receiptMessage} rows={5} className="mt-2" />
             </div>
             <div className="grid grid-cols-2 gap-2">
                 <Button onClick={handleCopy} variant="outline">Copiar Mensaje</Button>
