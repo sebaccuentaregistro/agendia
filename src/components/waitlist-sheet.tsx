@@ -81,12 +81,25 @@ export function WaitlistSheet({ isOpen, onOpenChange }: WaitlistSheetProps) {
         <SheetHeader>
           <SheetTitle>Lista de Espera General</SheetTitle>
           <SheetDescription>
-            Aquí se mostrarán todas las personas en listas de espera de todas las clases.
+            Aquí se muestran todas las personas en listas de espera de todas las clases.
           </SheetDescription>
         </SheetHeader>
-        <div className="flex-grow my-4 flex items-center justify-center rounded-lg border border-dashed border-border/30">
-            <p className="text-sm text-muted-foreground">El contenido se añadirá en el próximo paso.</p>
-        </div>
+        <ScrollArea className="flex-grow my-4">
+            <div className="pr-4 space-y-3">
+                {unifiedWaitlist.length > 0 ? (
+                    unifiedWaitlist.map((item, index) => (
+                        <div key={index} className="p-3 rounded-md bg-muted/50">
+                            <p className="font-semibold text-foreground">{item.name}</p>
+                            <p className="text-sm text-muted-foreground">Esperando en: {item.className}</p>
+                        </div>
+                    ))
+                ) : (
+                    <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border/30 py-10">
+                        <p className="text-sm text-muted-foreground text-center">No hay nadie en ninguna lista de espera.</p>
+                    </div>
+                )}
+            </div>
+        </ScrollArea>
         <SheetFooter>
           <SheetClose asChild>
             <Button variant="outline">Cerrar</Button>
