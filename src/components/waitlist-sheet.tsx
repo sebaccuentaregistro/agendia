@@ -12,19 +12,68 @@ import {
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-// import { useStudio } from '@/context/StudioContext';
-// import type { Person, WaitlistProspect } from '@/types';
-// import { WhatsAppIcon } from './whatsapp-icon';
-// import { Trash2 } from 'lucide-react';
+import { useStudio } from '@/context/StudioContext';
+import type { Person, WaitlistProspect } from '@/types';
+import { WhatsAppIcon } from './whatsapp-icon';
+import { Trash2 } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface WaitlistSheetProps {
   isOpen: boolean;
   onOpenChange: (isOpen: boolean) => void;
 }
 
+type UnifiedWaitlistItem = {
+  sessionId: string;
+  className: string;
+  isProspect: boolean;
+  entry: string | WaitlistProspect;
+  name: string;
+  phone: string;
+};
+
 export function WaitlistSheet({ isOpen, onOpenChange }: WaitlistSheetProps) {
-  // Logic for fetching and displaying waitlist will go here in future steps.
-  // For now, it's just a placeholder.
+  const { sessions, people, actividades } = useStudio();
+  
+  const unifiedWaitlist = useMemo((): UnifiedWaitlistItem[] => {
+    const list: UnifiedWaitlistItem[] = [];
+
+    sessions.forEach(session => {
+        if (session.waitlist && session.waitlist.length > 0) {
+            const className = actividades.find(a => a.id === session.actividadId)?.name || 'Clase desconocida';
+
+            session.waitlist.forEach(entry => {
+                if (typeof entry === 'string') {
+                    // It's an existing person (ID)
+                    const person = people.find(p => p.id === entry);
+                    if (person) {
+                        list.push({
+                            sessionId: session.id,
+                            className: className,
+                            isProspect: false,
+                            entry: entry,
+                            name: person.name,
+                            phone: person.phone,
+                        });
+                    }
+                } else {
+                    // It's a prospect
+                    list.push({
+                        sessionId: session.id,
+                        className: className,
+                        isProspect: true,
+                        entry: entry,
+                        name: entry.name,
+                        phone: entry.phone,
+                    });
+                }
+            });
+        }
+    });
+
+    return list.sort((a,b) => a.name.localeCompare(b.name));
+  }, [sessions, people, actividades]);
+
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
