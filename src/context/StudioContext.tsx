@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
@@ -59,7 +58,7 @@ interface StudioContextType {
     addTariff: (tariff: Omit<Tariff, 'id'>) => void;
     updateTariff: (tariff: Tariff) => void;
     deleteTariff: (tariffId: string) => void;
-    enrollPersonInSessions: (personId: string, sessionIds: string[]) => Promise<string[] | void>;
+    enrollPersonInSessions: (personId: string, sessionIds: string[]) => Promise<void>;
     addOperator: (operator: Omit<Operator, 'id'>) => void;
     updateOperator: (operator: Operator) => void;
     deleteOperator: (operatorId: string) => void;
@@ -385,13 +384,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     const enrollPersonInSessions = async (personId: string, sessionIds: string[]) => {
         if (!collectionRefs) return;
-        const removedFromSessionIds = await handleAction(
+        const result = await handleAction(
             enrollPersonInSessionsAction(collectionRefs.sessions, personId, sessionIds),
             "Horarios de la persona actualizados.",
             "Error al actualizar los horarios."
         );
-         if (removedFromSessionIds && Array.isArray(removedFromSessionIds)) {
-            removedFromSessionIds.forEach(sessionId => triggerWaitlistCheck(sessionId));
+        // The result of the action is the array of session IDs the person was removed from.
+        if (result && Array.isArray(result)) {
+            result.forEach((sessionId: string) => triggerWaitlistCheck(sessionId));
         }
     };
 
@@ -510,3 +510,5 @@ export function useStudio() {
     }
     return context;
 }
+
+    
