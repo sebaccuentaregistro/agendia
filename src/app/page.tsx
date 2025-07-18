@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
@@ -37,6 +36,8 @@ import { PersonDialog } from '@/app/students/person-dialog';
 import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { deleteEntity } from '@/lib/firestore-actions';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle as AlertTitleComponent } from '@/components/ui/alert';
 
 function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; attendance: SessionAttendance[]; sessions: Session[] }) {
     
@@ -463,7 +464,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
     updateOverdueStatuses, addPerson,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
@@ -487,20 +488,12 @@ function DashboardPageContent() {
   
   const dashboardView = searchParams.get('view') || 'main';
 
-  // State for PersonDialog (for converting prospects)
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
   
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  const { isLimitReached } = useMemo(() => {
-    if (!institute) return { isLimitReached: false };
-    const limit = institute?.studentLimit;
-    const isLimitReached = (limit !== null && limit !== undefined) ? people.length >= limit : false;
-    return { isLimitReached };
-  }, [people, institute]);
 
   const handleUpdateDebts = async () => {
     setIsUpdatingDebts(true);
@@ -522,7 +515,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0, waitlistNotifications: [] };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlist: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -600,8 +593,6 @@ function DashboardPageContent() {
 
     const totalWaitlist = sessions.reduce((sum, session) => sum + (session.waitlist?.length || 0), 0);
     
-    const waitlistNotifications = notifications.filter(n => n.type === 'waitlist');
-
     return {
       overdueCount,
       onVacationCount,
@@ -617,9 +608,8 @@ function DashboardPageContent() {
       topDebtors,
       paymentReminders,
       totalWaitlist,
-      waitlistNotifications,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, notifications]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
 
   const {
     overdueCount,
@@ -633,19 +623,13 @@ function DashboardPageContent() {
     topDebtors,
     paymentReminders,
     totalWaitlist,
-    waitlistNotifications,
   } = clientSideData;
   
-   const handleDismissNotification = async (notificationId: string) => {
-    if (!institute) return;
-    try {
-        const notifRef = doc(db, 'institutes', institute.id, 'notifications', notificationId);
-        await deleteEntity(notifRef);
-        toast({ title: 'Notificación descartada' });
-    } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo descartar la notificación.' });
-    }
-  };
+  const isLimitReached = useMemo(() => {
+    if (!institute) return false;
+    const limit = institute?.studentLimit;
+    return (limit !== null && limit !== undefined) ? people.length >= limit : false;
+  }, [people.length, institute]);
 
 
   useEffect(() => {
@@ -1148,63 +1132,26 @@ function DashboardPageContent() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                     {totalWaitlist > 0 ? (
-                        <div className="flex items-center justify-center p-4 text-center text-base text-muted-foreground">
-                            <span className="font-bold text-lg text-foreground mr-2">{totalWaitlist}</span> {totalWaitlist === 1 ? 'persona está esperando' : 'personas están esperando'} un cupo.
-                        </div>
-                     ) : (
-                        <div className="flex items-center justify-center p-4 text-center text-sm text-muted-foreground">
-                            No hay nadie en ninguna lista de espera.
-                        </div>
-                     )}
-                     {waitlistNotifications.length > 0 && (
-                        <div className="space-y-4 pt-4 border-t">
-                            {waitlistNotifications.map(notif => {
-                                const session = sessions.find(s => s.id === notif.sessionId);
-                                if (!session) return null;
-                                const { actividad, specialist } = getSessionDetails(session);
-                                
-                                return (
-                                    <div key={notif.id} className="p-3 rounded-lg bg-cyan-500/10">
-                                        <div className="flex justify-between items-start">
-                                            <h4 className="font-semibold text-sm text-cyan-800 dark:text-cyan-200">
-                                                ¡Cupo liberado en {actividad?.name || 'una clase'}!
-                                            </h4>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-cyan-700 hover:bg-cyan-200/50" onClick={() => handleDismissNotification(notif.id)}>
-                                                <XCircle className="h-4 w-4"/>
-                                            </Button>
-                                        </div>
-                                        <p className="text-xs text-cyan-700 dark:text-cyan-300 mb-2">{session.dayOfWeek} {session.time} con {specialist?.name || 'N/A'}</p>
-                                        <div className="space-y-2">
-                                            {session.waitlist.map((entry, index) => {
-                                                const person = typeof entry === 'string' ? people.find(p => p.id === entry) : null;
-                                                const prospect = typeof entry !== 'string' ? entry : null;
-                                                
-                                                if (!person && !prospect) return null;
+                    <Alert className="border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200">
+                        <AlertTitleComponent className="font-semibold flex items-center gap-2">
+                            <Star className="h-4 w-4"/>
+                            Oportunidades
+                        </AlertTitleComponent>
+                        <AlertDescription>
+                            Aquí aparecerán las clases con cupos liberados y gente en espera.
+                        </AlertDescription>
+                    </Alert>
 
-                                                return (
-                                                    <div key={index} className="flex justify-between items-center bg-background/50 p-2 rounded-md text-sm">
-                                                        <div>
-                                                            <p className="font-medium">{person?.name || prospect?.name}</p>
-                                                            <p className="text-xs text-muted-foreground">{person ? 'Alumno/a' : 'Nuevo Contacto'}</p>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                             <Button asChild size="sm" variant="ghost" className="h-8 px-2">
-                                                                <a href={`https://wa.me/${(person?.phone || prospect?.phone)?.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                                                                    <WhatsAppIcon className="text-green-600"/>
-                                                                </a>
-                                                            </Button>
-                                                             <Button size="sm" variant="outline" className="h-8">Inscribir</Button>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                );
-                            })}
+                    <div>
+                        <h4 className="font-medium text-sm mb-2 text-muted-foreground">Resumen de Todas las Listas</h4>
+                        <div className="p-4 rounded-lg bg-muted/50 text-center text-sm">
+                             {totalWaitlist > 0 ? (
+                                <p><span className="font-bold">{totalWaitlist}</span> {totalWaitlist === 1 ? 'persona está esperando' : 'personas están esperando'} un cupo en total.</p>
+                             ) : (
+                                <p>No hay nadie en ninguna lista de espera.</p>
+                             )}
                         </div>
-                     )}
+                    </div>
                 </CardContent>
             </Card>
         </div>
@@ -1237,6 +1184,7 @@ function DashboardPageContent() {
         }}
         isLimitReached={isLimitReached}
       />
+      <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
     </div>
   );
 }
@@ -1249,3 +1197,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
