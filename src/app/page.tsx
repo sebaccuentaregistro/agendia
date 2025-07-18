@@ -72,10 +72,6 @@ function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; a
         return atRisk;
     }, [people, attendance, sessions]);
 
-    if (churnRiskPeople.length === 0) {
-        return null;
-    }
-
     return (
         <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
             <CardHeader>
@@ -85,20 +81,26 @@ function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; a
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                {churnRiskPeople.map(person => (
-                    <div key={person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
-                        <p className="flex-grow text-yellow-800 dark:text-yellow-200">
-                           <span className="font-semibold">{person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
-                        </p>
-                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                             <Button asChild size="sm" variant="ghost" className="text-green-600 hover:text-green-700 h-8 px-2">
-                                <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
-                                    <WhatsAppIcon className="mr-2"/> Contactar
-                                </a>
-                            </Button>
+                {churnRiskPeople.length > 0 ? (
+                    churnRiskPeople.map(person => (
+                        <div key={person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-yellow-500/10 text-sm">
+                            <p className="flex-grow text-yellow-800 dark:text-yellow-200">
+                               <span className="font-semibold">{person.name}</span> ha estado ausente en sus últimas clases. Considera contactarlo.
+                            </p>
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                 <Button asChild size="sm" variant="ghost" className="text-green-600 hover:text-green-700 h-8 px-2">
+                                    <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer">
+                                        <WhatsAppIcon className="mr-2"/> Contactar
+                                    </a>
+                                </Button>
+                            </div>
                         </div>
+                    ))
+                ) : (
+                    <div className="text-center py-4">
+                        <p className="text-sm text-muted-foreground">¡Muy bien! No hay alumnos en riesgo de abandono por ausencias consecutivas.</p>
                     </div>
-                ))}
+                )}
             </CardContent>
         </Card>
     );
