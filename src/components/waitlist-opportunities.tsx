@@ -29,10 +29,11 @@ interface WaitlistOpportunitiesProps {
   opportunities: Opportunity[];
   summary: SummaryItem[];
   totalCount: number;
+  onHeaderClick?: () => void;
 }
 
-export function WaitlistOpportunities({ opportunities, summary, totalCount }: WaitlistOpportunitiesProps) {
-  const { enrollFromWaitlist, addPerson } = useStudio();
+export function WaitlistOpportunities({ opportunities, summary, totalCount, onHeaderClick }: WaitlistOpportunitiesProps) {
+  const { enrollFromWaitlist } = useStudio();
   const [personToCreate, setPersonToCreate] = useState<WaitlistProspect | null>(null);
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
@@ -58,7 +59,10 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
   return (
     <>
     <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-cyan-500/20">
-      <CardHeader>
+      <CardHeader 
+        onClick={onHeaderClick}
+        className={onHeaderClick ? "cursor-pointer hover:bg-muted/50 transition-colors" : ""}
+      >
         <CardTitle className="flex items-center gap-2 text-foreground">
           <ListPlus className="h-5 w-5 text-cyan-500" />
           Lista de Espera

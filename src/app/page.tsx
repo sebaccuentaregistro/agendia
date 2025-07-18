@@ -1169,11 +1169,12 @@ function DashboardPageContent() {
 
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
 
-            <div onClick={() => setIsWaitlistSheetOpen(true)} className="cursor-pointer">
+            <div>
               <WaitlistOpportunities
                 opportunities={waitlistOpportunities}
                 summary={waitlistSummary}
                 totalCount={totalWaitlistCount}
+                onHeaderClick={() => setIsWaitlistSheetOpen(true)}
               />
             </div>
             
