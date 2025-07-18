@@ -17,7 +17,7 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, parse, isAfter, subDays, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, parse, isAfter, subDays, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
