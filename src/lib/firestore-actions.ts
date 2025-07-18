@@ -264,17 +264,13 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
 
 
 export const enrollPersonInSessionsAction = async (sessionsRef: CollectionReference, personId: string, desiredSessionIds: string[]) => {
-    // This is a simplified version. For a more robust solution, you would
-    // run this inside a transaction to prevent race conditions.
     const batch = writeBatch(db);
     const affectedSessionIds: string[] = [];
 
-    // First, find all sessions the person is currently enrolled in
     const currentEnrollmentsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
     const currentEnrollmentsSnap = await getDocs(currentEnrollmentsQuery);
     const currentSessionIds = new Set(currentEnrollmentsSnap.docs.map(d => d.id));
 
-    // Determine which sessions to remove the person from
     const sessionsToRemoveFrom = Array.from(currentSessionIds).filter(id => !desiredSessionIds.includes(id));
     for (const sessionId of sessionsToRemoveFrom) {
         const sessionRef = doc(sessionsRef, sessionId);
@@ -288,7 +284,6 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
         }
     }
 
-    // Determine which sessions to add the person to
     const sessionsToAddTo = desiredSessionIds.filter(id => !currentSessionIds.has(id));
     for (const sessionId of sessionsToAddTo) {
         const sessionRef = doc(sessionsRef, sessionId);
@@ -296,7 +291,7 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
     }
     
     await batch.commit();
-    return affectedSessionIds; // Return IDs of sessions the person was removed from
+    return affectedSessionIds;
 };
 
 

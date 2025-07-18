@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
@@ -58,7 +59,7 @@ interface StudioContextType {
     addTariff: (tariff: Omit<Tariff, 'id'>) => void;
     updateTariff: (tariff: Tariff) => void;
     deleteTariff: (tariffId: string) => void;
-    enrollPersonInSessions: (personId: string, sessionIds: string[]) => Promise<void>;
+    enrollPersonInSessions: (personId: string, sessionIds: string[]) => Promise<string[] | undefined>;
     addOperator: (operator: Omit<Operator, 'id'>) => void;
     updateOperator: (operator: Operator) => void;
     deleteOperator: (operatorId: string) => void;
@@ -398,7 +399,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (result && Array.isArray(result)) {
             result.forEach((sessionId: string) => triggerWaitlistCheck(sessionId));
         }
+        return result;
     };
+
+
+
 
     const enrollFromWaitlist = (notificationId: string, sessionId: string, personToEnroll: Person) => {
         if (!collectionRefs) return Promise.resolve();
