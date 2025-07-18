@@ -36,15 +36,8 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
   const [personToCreate, setPersonToCreate] = useState<WaitlistProspect | null>(null);
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
-  const handleEnroll = async (notificationId: string, sessionId: string, personOrProspect: Person | WaitlistEntry) => {
-      const isProspect = typeof personOrProspect !== 'string' && 'isProspect' in personOrProspect;
-      if (isProspect) {
-          // This case will be handled in a future step
-          console.log("Enroll prospect: ", personOrProspect);
-      } else {
-          // If it's an existing person, enroll them directly.
-          await enrollFromWaitlist(notificationId, sessionId, personOrProspect as Person);
-      }
+  const handleEnroll = async (notificationId: string, sessionId: string, personToEnroll: Person) => {
+    await enrollFromWaitlist(notificationId, sessionId, personToEnroll);
   };
 
   const handlePersonCreated = async (newPerson: Person) => {
@@ -90,7 +83,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
                                     <Button 
                                         size="sm" 
                                         variant="secondary" 
-                                        onClick={() => handleEnroll(notification.id!, session.id, person)}
+                                        onClick={() => handleEnroll(notification.id!, session.id, person as Person)}
                                         disabled={isProspect}
                                     >
                                         Inscribir
