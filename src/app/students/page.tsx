@@ -18,7 +18,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
+import { getStudentPaymentStatus, exportToCsv, calculateNextPaymentDate } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -1025,19 +1025,42 @@ function StudentsPageContent() {
     setPersonForAbsence(person);
   };
 
-  const handleRecordPaymentClick = (person: Person) => {
+  const handleSuccessfulPayment = (person: Person) => {
+    const tariff = tariffs.find(t => t.id === person.tariffId);
+    if (!tariff || !institute) return;
+
+    // Calculate the new due date to show in the receipt
+    const newDueDate = calculateNextPaymentDate(
+      person.lastPaymentDate || new Date(), 
+      person.joinDate,
+      tariff
+    );
+
+    setReceiptInfo({
+      personName: person.name,
+      personPhone: person.phone,
+      tariffName: tariff.name,
+      tariffPrice: tariff.price,
+      nextDueDate: newDueDate,
+      instituteName: institute.name,
+    });
+  };
+
+  const handleRecordPaymentClick = async (person: Person) => {
     const status = getStudentPaymentStatus(person, new Date()).status;
     if (status === 'Al día' && (person.outstandingPayments || 0) === 0) {
         setPersonForPayment(person);
         setIsPaymentAlertOpen(true);
     } else {
-        recordPayment(person.id);
+        await recordPayment(person.id);
+        handleSuccessfulPayment(person);
     }
   };
 
-  const confirmRecordPayment = () => {
+  const confirmRecordPayment = async () => {
     if (personForPayment) {
-        recordPayment(personForPayment.id);
+        await recordPayment(personForPayment.id);
+        handleSuccessfulPayment(personForPayment);
     }
     setIsPaymentAlertOpen(false);
     setPersonForPayment(null);
@@ -1364,10 +1387,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
-
-
-
-
-
-
