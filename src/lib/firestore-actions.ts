@@ -117,6 +117,7 @@ export const addPersonAction = async (peopleRef: CollectionReference, personData
 export const deletePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string, personName: string, auditLogRef: CollectionReference, operator: Operator) => {
     const batch = writeBatch(db);
     const now = new Date();
+    const affectedSessionIds: string[] = [];
 
     // Add to audit log
     batch.set(doc(auditLogRef), {
@@ -137,6 +138,7 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
         const sessionData = sessionDoc.data() as Session;
         const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
         batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
+        affectedSessionIds.push(sessionDoc.id);
     });
 
     // Also remove from waitlists
@@ -155,7 +157,8 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
     const personRef = doc(peopleRef, personId);
     batch.delete(personRef);
 
-    return await batch.commit();
+    await batch.commit();
+    return affectedSessionIds;
 };
 
 
