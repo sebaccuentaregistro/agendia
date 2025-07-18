@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -78,26 +79,11 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount }: Wa
                     <h4 className="font-bold text-primary mb-2">Cupo en {actividadName} ({session.dayOfWeek} {session.time})</h4>
                     <div className="space-y-2">
                         {waitlist.map((person, index) => {
-                             const isProspect = 'isProspect' in person;
-                             const contactText = `¡Hola ${person.name}! Se liberó un cupo para la clase de ${actividadName} a la que te anotaste en lista de espera. ¿Te gustaría tomarlo?`;
                              return (
                                 <div key={index} className="flex justify-between items-center text-sm bg-background/50 p-2 rounded-md">
                                     <div className="flex items-center gap-2">
                                         <User className="h-4 w-4 text-muted-foreground"/>
-                                        <div>
-                                            <p className="font-semibold">{person.name}</p>
-                                            {isProspect && <p className="text-xs text-muted-foreground">{person.phone}</p>}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button asChild variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:text-green-700">
-                                            <a href={getWhatsAppLink(person.phone, contactText)} target="_blank" rel="noopener noreferrer">
-                                                <WhatsAppIcon />
-                                            </a>
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-primary" onClick={() => handleEnroll(notification.id, session.id, person)}>
-                                            <UserPlus className="h-4 w-4" />
-                                        </Button>
+                                        <p className="font-semibold">{person.name}</p>
                                     </div>
                                 </div>
                              )
