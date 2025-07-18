@@ -126,7 +126,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         Object.entries(collectionRefs).forEach(([key, ref]) => {
             let q = ref;
             if (['audit_logs', 'payments', 'notifications'].includes(key)) {
-                q = query(ref, orderBy('createdAt', 'desc'));
+                q = query(ref, orderBy('timestamp', 'desc'));
             }
 
             const unsub = onSnapshot(q, (snapshot: QuerySnapshot) => {
@@ -198,7 +198,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
 
     const addPerson = async (personData: NewPersonData) => {
-        if (!collectionRefs) return;
+        if (!collectionRefs || !activeOperator) return;
         return withOperator(
             (operator) => addPersonAction(collectionRefs.people, personData, collectionRefs.audit_logs, operator),
             `${personData.name} ha sido añadido con éxito.`,
@@ -216,7 +216,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
 
     const deletePerson = async (personId: string) => {
-        if (!collectionRefs) return;
+        if (!collectionRefs || !activeOperator) return;
         const personToDelete = data.people.find((p: Person) => p.id === personId);
         if (!personToDelete) return;
 
@@ -248,7 +248,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
 
      const revertLastPayment = async (personId: string) => {
-        if (!collectionRefs) return;
+        if (!collectionRefs || !activeOperator) return;
         const person = data.people.find((p: Person) => p.id === personId);
         if (!person) return;
         await withOperator(
@@ -461,13 +461,12 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             toast({ variant: "destructive", title: "Error", description: "No se puede realizar la operación sin un operador activo." });
             return 0;
         }
-        try {
-            return await updateOverdueStatusesAction(collectionRefs.people, data.people, data.tariffs, activeOperator, collectionRefs.audit_logs);
-        } catch (error: any) {
-            toast({ variant: "destructive", title: "Error al actualizar deudas", description: error.message });
-            return 0;
-        }
-    }, [collectionRefs, activeOperator, data.people, data.tariffs, toast]);
+        return await withOperator(
+            (operator) => updateOverdueStatusesAction(collectionRefs.people, data.people, data.tariffs, operator, collectionRefs.audit_logs),
+            "Actualización de Deudas Completa.",
+            "Error al actualizar deudas."
+        ) || 0;
+    }, [collectionRefs, activeOperator, data.people, data.tariffs, toast, withOperator]);
 
     return (
         <StudioContext.Provider value={{
@@ -532,3 +531,5 @@ export function useStudio() {
     }
     return context;
 }
+
+    

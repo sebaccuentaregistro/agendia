@@ -125,7 +125,7 @@ export type Payment = {
   date: Date | null; // The actual date the payment was recorded
   amount: number;
   tariffId: string;
-  months: number;
+  createdAt: Date | null;
 };
 
 export type PaymentStatusInfo = {
