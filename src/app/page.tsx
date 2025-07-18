@@ -41,6 +41,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle as AlertTitleComponent } from '@/components/ui/alert';
 import { WelcomeDialog } from '@/components/welcome-dialog';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
+import { WaitlistOpportunities } from '@/components/waitlist-opportunities';
 
 function ChurnRiskAlerts({ people, attendance, sessions }: { people: Person[]; attendance: SessionAttendance[]; sessions: Session[] }) {
     
@@ -467,7 +468,7 @@ function PinDialog({ open, onOpenChange, onPinVerified }: { open: boolean; onOpe
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
     updateOverdueStatuses, addPerson,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
@@ -519,7 +520,7 @@ function DashboardPageContent() {
 
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlistCount: 0 };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlistCount: 0, waitlistOpportunities: [], waitlistSummary: [] };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -598,6 +599,29 @@ function DashboardPageContent() {
     const totalWaitlistCount = sessions.reduce((acc, session) => {
         return acc + (session.waitlist?.length || 0);
     }, 0);
+    
+    const waitlistOpportunities = notifications
+        .filter(n => n.type === 'waitlist' && n.sessionId)
+        .map(notification => {
+            const session = sessions.find(s => s.id === notification.sessionId);
+            if (!session || !session.waitlist || session.waitlist.length === 0) return null;
+            
+            const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
+            const waitlistDetails = session.waitlist.map(entry => {
+                if (typeof entry === 'string') return people.find(p => p.id === entry);
+                return entry;
+            }).filter((p): p is Person | WaitlistProspect => !!p);
+            
+            return { notification, session, actividadName, waitlist: waitlistDetails };
+        }).filter((o): o is NonNullable<typeof o> => !!o);
+
+    const waitlistSummary = sessions
+        .filter(s => s.waitlist && s.waitlist.length > 0)
+        .map(s => ({
+            sessionId: s.id,
+            className: actividades.find(a => a.id === s.actividadId)?.name || 'Clase',
+            count: s.waitlist.length
+        }));
 
     return {
       overdueCount,
@@ -614,8 +638,10 @@ function DashboardPageContent() {
       topDebtors,
       paymentReminders,
       totalWaitlistCount,
+      waitlistOpportunities,
+      waitlistSummary,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces, notifications]);
 
   const {
     overdueCount,
@@ -629,6 +655,8 @@ function DashboardPageContent() {
     topDebtors,
     paymentReminders,
     totalWaitlistCount,
+    waitlistOpportunities,
+    waitlistSummary,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -1131,18 +1159,11 @@ function DashboardPageContent() {
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
 
             <div onClick={() => setIsWaitlistSheetOpen(true)} className="cursor-pointer">
-              <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-cyan-500/20 transition-all hover:shadow-xl hover:border-cyan-500/40">
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-foreground">
-                          <ListPlus className="h-5 w-5 text-cyan-500" />
-                          Lista de Espera
-                      </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center">
-                      <p className="text-4xl font-bold">{totalWaitlistCount}</p>
-                      <p className="text-xs text-muted-foreground">personas en espera en total</p>
-                  </CardContent>
-              </Card>
+              <WaitlistOpportunities
+                opportunities={waitlistOpportunities}
+                summary={waitlistSummary}
+                totalCount={totalWaitlistCount}
+              />
             </div>
             
         </div>
