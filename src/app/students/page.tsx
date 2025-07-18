@@ -39,6 +39,7 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { PersonDialog } from './person-dialog';
 import { WelcomeDialog } from '@/components/welcome-dialog';
+import { PaymentReceiptDialog, type ReceiptInfo } from '@/components/payment-receipt-dialog';
 
 function AttendanceHistoryDialog({ person, sessions, actividades, attendance, onClose }: { person: Person | null; sessions: Session[]; actividades: Actividad[]; attendance: SessionAttendance[]; onClose: () => void; }) {
     if (!person) return null;
@@ -904,6 +905,7 @@ function StudentsPageContent() {
   const [personForAttendanceHistory, setPersonForAttendanceHistory] = useState<Person | null>(null);
   const [personForPayment, setPersonForPayment] = useState<Person | null>(null);
   const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
+  const [receiptInfo, setReceiptInfo] = useState<ReceiptInfo | null>(null);
   const [isPaymentAlertOpen, setIsPaymentAlertOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -1327,6 +1329,10 @@ function StudentsPageContent() {
         attendance={attendance}
         onClose={() => setPersonForAttendanceHistory(null)}
       />
+       <PaymentReceiptDialog
+        receiptInfo={receiptInfo}
+        onOpenChange={() => setReceiptInfo(null)}
+      />
 
        <AlertDialog open={isPaymentAlertOpen} onOpenChange={setIsPaymentAlertOpen}>
           <AlertDialogContent>
@@ -1358,6 +1364,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 
 
