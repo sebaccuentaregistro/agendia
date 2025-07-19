@@ -22,8 +22,10 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         if (!person || !payments) {
             return [];
         }
-        return payments.filter(payment => payment.personId === person.id)
-                       .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+        // Corrected filtering logic to be more robust
+        return payments
+            .filter(payment => String(payment.personId).trim() === String(person.id).trim())
+            .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
     }, [person, payments]);
 
     const formatPrice = (price: number) => {
@@ -61,13 +63,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                         </div>
                     ) : (
                         <div className="flex items-center justify-center h-full text-center">
-                            <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-lg">
-                                <p className="font-bold mb-2">Información de Depuración:</p>
-                                <p>Total de pagos recibidos: {payments?.length || 0}</p>
-                                <p>Pagos encontrados para {person?.name || 'nadie'}: {personPayments.length}</p>
-                                <p className="mt-4 font-bold">Mensaje Original:</p>
-                                <p>No hay pagos registrados para esta persona.</p>
-                            </div>
+                           <p className="text-sm text-muted-foreground">No hay pagos registrados para esta persona.</p>
                         </div>
                     )}
                 </ScrollArea>
