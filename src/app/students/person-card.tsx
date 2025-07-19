@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -28,7 +29,7 @@ interface PersonCardProps {
     spaces: Space[];
     levels: Level[];
     tariffs: Tariff[];
-    payments: Payment[];
+    allPayments: Payment[];
     recoveryCredits: RecoveryCredit[];
     onManageVacations: (person: Person) => void;
     onEdit: (person: Person) => void;
@@ -39,7 +40,7 @@ interface PersonCardProps {
     onRecordPayment: (person: Person) => void;
 }
 
-export function PersonCard({ person, sessions, actividades, specialists, spaces, levels, tariffs, payments, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: PersonCardProps) {
+export function PersonCard({ person, sessions, actividades, specialists, spaces, levels, tariffs, allPayments, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: PersonCardProps) {
     const { deletePerson, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
