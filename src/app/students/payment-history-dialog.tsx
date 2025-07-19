@@ -18,9 +18,13 @@ interface PaymentHistoryDialogProps {
 }
 
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
+    // Early return BEFORE any hooks are called if person is null. This fixes the "Rendered more hooks" error.
+    if (!person) {
+        return null;
+    }
 
     const personPayments = useMemo(() => {
-        if (!person || !payments) {
+        if (!payments) {
             return [];
         }
         return payments
@@ -28,10 +32,9 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
     }, [person, payments]);
 
-
-    if (!person) {
-        return null;
-    }
+    const paymentIdsForDebug = useMemo(() => {
+        return payments.map(p => p.personId);
+    }, [payments]);
     
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
@@ -40,10 +43,6 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         minimumFractionDigits: 0,
       }).format(price);
     };
-
-    const paymentIdsForDebug = useMemo(() => {
-      return payments.map(p => p.personId);
-    }, [payments]);
 
     return (
         <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
