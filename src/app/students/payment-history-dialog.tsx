@@ -21,8 +21,9 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         if (!person || !payments || !Array.isArray(payments)) {
             return [];
         }
+        // Corrected filtering logic
         return payments
-            .filter(p => p.personId === person.id)
+            .filter(payment => payment.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
     }, [person, payments]);
 
