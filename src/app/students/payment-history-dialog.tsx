@@ -1,13 +1,13 @@
 
 'use client';
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { useMemo } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Person, Payment, Tariff } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { useMemo } from 'react';
 
 interface PaymentHistoryDialogProps {
   person: Person | null;
@@ -17,11 +17,11 @@ interface PaymentHistoryDialogProps {
 }
 
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
+
     const personPayments = useMemo(() => {
-        if (!person || !payments || !Array.isArray(payments)) {
+        if (!person || !payments) {
             return [];
         }
-        // Corrected filtering logic
         return payments
             .filter(payment => payment.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
