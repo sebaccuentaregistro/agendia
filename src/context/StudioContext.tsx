@@ -242,23 +242,35 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
     
     const recordPayment = async (personId: string) => {
-        if (!collectionRefs || !activeOperator) return;
+        if (!collectionRefs || !activeOperator) {
+            throw new Error("No se puede registrar el pago: faltan referencias de la base de datos o el operador no está activo.");
+        }
+    
         const person = data.people.find((p: Person) => p.id === personId);
         if (!person) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se encontró a la persona.' });
-            return;
+            throw new Error('No se encontró a la persona para registrar el pago.');
         }
+    
         const tariff = data.tariffs.find((t: Tariff) => t.id === person.tariffId);
         if (!tariff) {
-            toast({ variant: 'destructive', title: 'Error', description: 'La persona no tiene un arancel asignado.' });
-            return;
+            throw new Error('La persona no tiene un arancel asignado. Asigna un arancel antes de registrar un pago.');
         }
+    
+        // Using withOperator will automatically show success/error toasts.
         await withOperator(
-            (operator) => recordPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), person, tariff, collectionRefs.audit_logs, operator),
+            (operator) => recordPaymentAction(
+                collectionRefs.payments,
+                doc(collectionRefs.people, personId),
+                person,
+                tariff,
+                collectionRefs.audit_logs,
+                operator
+            ),
             `Pago registrado para ${person.name}.`,
             `Error al registrar el pago.`
         );
     };
+
 
      const revertLastPayment = async (personId: string) => {
         if (!collectionRefs || !activeOperator) return;

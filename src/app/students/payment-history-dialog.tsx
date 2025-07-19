@@ -22,9 +22,8 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         if (!person || !payments) {
             return [];
         }
-        // Filter payments for the selected person and sort them by date descending
         return payments
-          .filter(payment => String(payment.personId).trim() === String(person.id).trim())
+          .filter(payment => String(payment.personId) === String(person.id))
           .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
     }, [person, payments]);
 

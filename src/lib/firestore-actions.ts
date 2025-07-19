@@ -167,19 +167,24 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 };
 
 
-export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
-    const now = new Date();
+export const recordPaymentAction = async (
+    paymentsRef: CollectionReference, 
+    personRef: DocumentReference, 
+    person: Person, 
+    tariff: Tariff, 
+    auditLogRef: CollectionReference, 
+    operator: Operator
+) => {
     const batch = writeBatch(db);
-
-    const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
-
-    let newExpiryDate = person.lastPaymentDate;
-    // Only calculate a new expiry date if the person is catching up on the last outstanding payment, or is already up to date.
-    if (newOutstandingPayments === 0) {
-        newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff);
-    }
+    const now = new Date();
     
-    // Create the new payment record
+    // 1. Calculate new state
+    const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
+    const newExpiryDate = (newOutstandingPayments === 0) 
+        ? calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff)
+        : person.lastPaymentDate;
+
+    // 2. Create the payment record
     const paymentRecord: Omit<Payment, 'id'> = {
         personId: person.id,
         date: now,
@@ -189,14 +194,15 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
     };
     const paymentDocRef = doc(paymentsRef);
     batch.set(paymentDocRef, paymentRecord);
-    
-    // Update the person's payment status
-    batch.update(personRef, { 
+
+    // 3. Update the person's document
+    const personUpdate = {
         lastPaymentDate: newExpiryDate,
         outstandingPayments: newOutstandingPayments,
-     });
-     
-    // Create an audit log for the payment
+    };
+    batch.update(personRef, personUpdate);
+
+    // 4. Create an audit log record
     const auditLogRecord: Omit<AuditLog, 'id'> = {
         operatorId: operator.id,
         operatorName: operator.name,
@@ -213,9 +219,10 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
     const auditLogDocRef = doc(auditLogRef);
     batch.set(auditLogDocRef, auditLogRecord);
 
-    // Commit all batched writes
-    return await batch.commit();
+    // 5. Commit the batch
+    await batch.commit();
 };
+
 
 export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, currentPerson: Person, auditLogRef: CollectionReference, operator: Operator) => {
     const batch = writeBatch(db);
