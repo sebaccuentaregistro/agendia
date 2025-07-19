@@ -17,8 +17,6 @@ interface PaymentHistoryDialogProps {
 }
 
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
-    if (!person) return null;
-
     const personPayments = useMemo(() => {
         if (!person || !payments) {
             return [];
@@ -26,7 +24,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         return payments
             .filter(p => p.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-    }, [payments, person]); // CORRECCIÓN: Se añade `payments` a la lista de dependencias.
+    }, [person, payments]); // CORRECCIÓN: Se añade `payments` a la lista de dependencias.
 
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
@@ -40,7 +38,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Historial de Pagos: {person.name}</DialogTitle>
+                    <DialogTitle>Historial de Pagos: {person?.name}</DialogTitle>
                     <DialogDescription>
                         Registro de todos los pagos realizados por esta persona.
                     </DialogDescription>
