@@ -5,8 +5,8 @@
   "description": "Final build fix attempt by clearing webpack config and forcing a clean reinstall.",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "build": "next build ./src",
+    "start": "next start ./src",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
