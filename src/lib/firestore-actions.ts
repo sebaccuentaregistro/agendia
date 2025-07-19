@@ -175,6 +175,7 @@ export const recordPaymentAction = async (
     paymentsRef: CollectionReference,
     auditLogRef: CollectionReference
 ) => {
+    console.log(`[DEBUG] Iniciando recordPaymentAction para la persona: ${person.id}`);
     const now = new Date();
     const batch = writeBatch(db);
 
@@ -191,6 +192,7 @@ export const recordPaymentAction = async (
         amount: tariff.price,
         tariffId: tariff.id,
         createdAt: now,
+        timestamp: now,
     };
     const paymentDocRef = doc(paymentsRef);
     batch.set(paymentDocRef, cleanDataForFirestore(paymentRecord));
@@ -220,7 +222,14 @@ export const recordPaymentAction = async (
     batch.set(auditLogDocRef, cleanDataForFirestore(auditLogRecord));
 
     // 5. Commit all batched writes
-    await batch.commit();
+    try {
+        console.log(`[DEBUG] A punto de confirmar el guardado del pago para ${person.id}.`);
+        await batch.commit();
+        console.log(`[DEBUG] Éxito: El pago fue confirmado en la base de datos para ${person.id}.`);
+    } catch (error) {
+        console.error(`[DEBUG] Error al confirmar el guardado del pago:`, error);
+        throw error;
+    }
 };
 
 

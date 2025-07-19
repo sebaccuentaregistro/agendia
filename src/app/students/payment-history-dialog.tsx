@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Person, Payment, Tariff } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface PaymentHistoryDialogProps {
   person: Person | null;
@@ -22,7 +23,6 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         if (!person || !payments) {
             return [];
         }
-        // Direct, simple filtering.
         return payments
             .filter(payment => String(payment.personId).trim() === String(person.id).trim())
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
@@ -41,6 +41,10 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
       }).format(price);
     };
 
+    const paymentIdsForDebug = useMemo(() => {
+      return payments.map(p => p.personId);
+    }, [payments]);
+
     return (
         <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
             <DialogContent>
@@ -50,6 +54,21 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                         Registro de todos los pagos realizados por esta persona.
                     </DialogDescription>
                 </DialogHeader>
+
+                <Card className="bg-destructive/10 border-destructive">
+                    <CardHeader>
+                        <CardTitle className="text-sm">Información de Depuración</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-xs space-y-2">
+                        <p><strong>ID de la persona que se está revisando:</strong> {person.id}</p>
+                        <p><strong>Total de pagos recibidos por el diálogo:</strong> {payments.length}</p>
+                        <p><strong>Pagos encontrados para esta persona:</strong> {personPayments.length}</p>
+                        <p><strong>IDs de persona en los registros de pago:</strong></p>
+                        <pre className="p-2 bg-background/50 rounded-md text-[10px] max-h-28 overflow-auto">
+                          {JSON.stringify(paymentIdsForDebug, null, 2)}
+                        </pre>
+                    </CardContent>
+                </Card>
                 
                 <ScrollArea className="h-60 my-4">
                     {personPayments.length > 0 ? (
