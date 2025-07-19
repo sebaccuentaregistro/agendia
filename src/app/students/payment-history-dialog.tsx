@@ -17,14 +17,21 @@ interface PaymentHistoryDialogProps {
 }
 
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
+    
+    // DEBUGGING: Log received props
+    console.log("--- PaymentHistoryDialog ---");
+    console.log("Person:", person);
+    console.log("Payments received:", payments);
+    console.log("Tariffs received:", tariffs);
+
     const personPayments = useMemo(() => {
-        if (!person || !payments) {
+        if (!person || !payments || !Array.isArray(payments)) {
             return [];
         }
         return payments
             .filter(p => p.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-    }, [person, payments.length, tariffs]);
+    }, [person, payments]);
 
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
