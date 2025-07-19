@@ -17,13 +17,6 @@ interface PaymentHistoryDialogProps {
 }
 
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
-    
-    // DEBUGGING: Log received props
-    console.log("--- PaymentHistoryDialog ---");
-    console.log("Person:", person);
-    console.log("Payments received:", payments);
-    console.log("Tariffs received:", tariffs);
-
     const personPayments = useMemo(() => {
         if (!person || !payments || !Array.isArray(payments)) {
             return [];
