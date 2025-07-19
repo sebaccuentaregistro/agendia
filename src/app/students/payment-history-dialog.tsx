@@ -19,12 +19,11 @@ interface PaymentHistoryDialogProps {
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
 
     const personPayments = useMemo(() => {
-        if (!person || !payments || !Array.isArray(payments)) {
+        if (!person || !payments) {
             return [];
         }
-        return payments
-            .filter(payment => payment.personId === person.id)
-            .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+        return payments.filter(payment => payment.personId === person.id)
+                       .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
     }, [person, payments]);
 
     const formatPrice = (price: number) => {
@@ -61,8 +60,14 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                             })}
                         </div>
                     ) : (
-                        <div className="flex items-center justify-center h-full">
-                            <p className="text-muted-foreground">No hay pagos registrados para esta persona.</p>
+                        <div className="flex items-center justify-center h-full text-center">
+                            <div className="text-sm text-muted-foreground p-4 border border-dashed rounded-lg">
+                                <p className="font-bold mb-2">Información de Depuración:</p>
+                                <p>Total de pagos recibidos: {payments?.length || 0}</p>
+                                <p>Pagos encontrados para {person?.name || 'nadie'}: {personPayments.length}</p>
+                                <p className="mt-4 font-bold">Mensaje Original:</p>
+                                <p>No hay pagos registrados para esta persona.</p>
+                            </div>
                         </div>
                     )}
                 </ScrollArea>
