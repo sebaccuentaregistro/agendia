@@ -24,7 +24,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         return payments
             .filter(p => p.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-    }, [payments, person.id]);
+    }, [payments, person.id]); // The dependency array was correct here, but my analysis was flawed. The real issue was in the component not using the props correctly before. Let's ensure this version is perfect.
 
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
@@ -44,7 +44,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                     {personPayments.length > 0 ? (
                         <div className="space-y-3 pr-4">
                             {personPayments.map(payment => {
-                                // Use the 'tariffs' prop directly instead of context
+                                // This is the critical part: ensure 'tariffs' prop is used.
                                 const tariff = tariffs.find(t => t.id === payment.tariffId);
                                 return (
                                     <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
