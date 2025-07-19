@@ -20,6 +20,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
     if (!person) return null;
 
     const personPayments = useMemo(() => {
+        // Use the 'payments' prop directly instead of context
         return payments
             .filter(p => p.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
@@ -43,6 +44,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                     {personPayments.length > 0 ? (
                         <div className="space-y-3 pr-4">
                             {personPayments.map(payment => {
+                                // Use the 'tariffs' prop directly instead of context
                                 const tariff = tariffs.find(t => t.id === payment.tariffId);
                                 return (
                                     <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
