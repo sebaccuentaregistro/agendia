@@ -177,32 +177,32 @@ export const recordPaymentAction = async (
 ) => {
     const batch = writeBatch(db);
     const now = new Date();
-    
-    // 1. Calculate new state
+
+    // 1. Calculate new state for the person
     const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
     const newExpiryDate = (newOutstandingPayments === 0) 
         ? calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff)
         : person.lastPaymentDate;
 
-    // 2. Create the payment record
+    // 2. Create the new payment record
     const paymentRecord: Omit<Payment, 'id'> = {
-        personId: person.id,
+        personId: person.id, // Ensure we are using the correct person ID
         date: now,
         amount: tariff.price,
         tariffId: tariff.id,
         createdAt: now,
     };
-    const paymentDocRef = doc(paymentsRef);
-    batch.set(paymentDocRef, paymentRecord);
+    const paymentDocRef = doc(paymentsRef); // Create a new document reference in the payments collection
+    batch.set(paymentDocRef, cleanDataForFirestore(paymentRecord));
 
-    // 3. Update the person's document
+    // 3. Update the person's document with the new payment status
     const personUpdate = {
         lastPaymentDate: newExpiryDate,
         outstandingPayments: newOutstandingPayments,
     };
     batch.update(personRef, personUpdate);
 
-    // 4. Create an audit log record
+    // 4. Create an audit log record for this action
     const auditLogRecord: Omit<AuditLog, 'id'> = {
         operatorId: operator.id,
         operatorName: operator.name,
@@ -217,9 +217,9 @@ export const recordPaymentAction = async (
         }
     };
     const auditLogDocRef = doc(auditLogRef);
-    batch.set(auditLogDocRef, auditLogRecord);
+    batch.set(auditLogDocRef, cleanDataForFirestore(auditLogRecord));
 
-    // 5. Commit the batch
+    // 5. Commit all batched writes to Firestore atomically
     await batch.commit();
 };
 
