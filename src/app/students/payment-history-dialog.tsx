@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Person, Payment, Tariff } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useMemo } from 'react';
 
 interface PaymentHistoryDialogProps {
   person: Person | null;
@@ -18,9 +19,11 @@ interface PaymentHistoryDialogProps {
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
     if (!person) return null;
 
-    const personPayments = payments
-        .filter(p => p.personId === person.id)
-        .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+    const personPayments = useMemo(() => {
+        return payments
+            .filter(p => p.personId === person.id)
+            .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+    }, [payments, person.id]);
 
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
