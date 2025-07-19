@@ -24,7 +24,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         return payments
             .filter(p => p.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-    }, [person, payments]); // CORRECCIÓN: Se añade `payments` a la lista de dependencias.
+    }, [person, payments.length, tariffs]);
 
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
