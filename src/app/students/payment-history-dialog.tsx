@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Person, Payment, Tariff } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface PaymentHistoryDialogProps {
   person: Person | null;
@@ -18,7 +18,6 @@ interface PaymentHistoryDialogProps {
 }
 
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
-    // Early return BEFORE any hooks are called if person is null. This fixes the "Rendered more hooks" error.
     if (!person) {
         return null;
     }
