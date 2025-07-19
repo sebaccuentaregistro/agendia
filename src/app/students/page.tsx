@@ -43,6 +43,7 @@ import { PaymentReceiptDialog, type ReceiptInfo } from '@/components/payment-rec
 import { PersonCard } from './person-card';
 import { EnrollmentsDialog } from './enrollment-dialog';
 import { VacationDialog } from './vacation-dialog';
+import { PaymentHistoryDialog } from './payment-history-dialog';
 
 function AttendanceHistoryDialog({ person, sessions, actividades, attendance, onClose }: { person: Person | null; sessions: Session[]; actividades: Actividad[]; attendance: SessionAttendance[]; onClose: () => void; }) {
     if (!person) return null;
@@ -233,57 +234,6 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
                 <DialogFooter>
                     <Button variant="outline" onClick={onClose}>Cancelar</Button>
                     <Button onClick={handleSubmit} disabled={!selectedDate || !sessionOnSelectedDate || isSubmitting || isDateAlreadyJustified}>Confirmar Ausencia</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function PaymentHistoryDialog({ person, payments, tariffs, onClose }: { person: Person | null; payments: Payment[]; tariffs: any[]; onClose: () => void; }) {
-    if (!person) return null;
-
-    const personPayments = payments
-        .filter(p => p.personId === person.id)
-        .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-
-    const formatPrice = (price: number) => {
-      return new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency: 'ARS',
-        minimumFractionDigits: 0,
-      }).format(price);
-    };
-
-    return (
-        <Dialog open={!!person} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Historial de Pagos: {person.name}</DialogTitle>
-                </DialogHeader>
-                <ScrollArea className="h-72 my-4">
-                    {personPayments.length > 0 ? (
-                        <div className="space-y-3 pr-4">
-                            {personPayments.map(payment => {
-                                const tariff = tariffs.find(t => t.id === payment.tariffId);
-                                return (
-                                    <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
-                                        <div>
-                                            <p className="font-semibold">{tariff ? tariff.name : 'Pago registrado'}</p>
-                                            <p className="text-sm text-muted-foreground">{payment.date ? format(payment.date, 'dd MMMM, yyyy', { locale: es }) : 'Fecha no disponible'}</p>
-                                        </div>
-                                        <p className="font-bold text-lg">{tariff ? formatPrice(tariff.price) : ''}</p>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-full">
-                            <p className="text-muted-foreground">No hay pagos registrados para esta persona.</p>
-                        </div>
-                    )}
-                </ScrollArea>
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Cerrar</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
