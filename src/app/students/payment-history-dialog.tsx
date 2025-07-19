@@ -19,7 +19,7 @@ interface PaymentHistoryDialogProps {
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
 
     const personPayments = useMemo(() => {
-        if (!person || !payments) {
+        if (!person || !payments || !Array.isArray(payments)) {
             return [];
         }
         return payments
