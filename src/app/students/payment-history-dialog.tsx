@@ -47,7 +47,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                                             <p className="font-semibold">{tariff ? tariff.name : 'Pago registrado'}</p>
                                             <p className="text-sm text-muted-foreground">{payment.date ? format(payment.date, 'dd MMMM, yyyy', { locale: es }) : 'Fecha no disponible'}</p>
                                         </div>
-                                        <p className="font-bold text-lg">{tariff ? formatPrice(tariff.price) : ''}</p>
+                                        <p className="font-bold text-lg">{tariff ? formatPrice(tariff.price) : (payment.amount ? formatPrice(payment.amount) : '')}</p>
                                     </div>
                                 );
                             })}
