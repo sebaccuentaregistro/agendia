@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Person, Payment, Tariff } from '@/types';
@@ -19,12 +19,15 @@ interface PaymentHistoryDialogProps {
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
     if (!person) return null;
 
+    // Lógica de filtrado corregida: Usar las props `payments` y `person` directamente.
     const personPayments = useMemo(() => {
-        // Use the 'payments' prop directly instead of context
+        if (!person || !payments) {
+            return [];
+        }
         return payments
             .filter(p => p.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-    }, [payments, person.id]); // The dependency array was correct here, but my analysis was flawed. The real issue was in the component not using the props correctly before. Let's ensure this version is perfect.
+    }, [payments, person]); // Depender de las props que entran al componente.
 
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
@@ -39,12 +42,14 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
             <DialogContent>
                 <DialogHeader>
                     <DialogTitle>Historial de Pagos: {person.name}</DialogTitle>
+                    <DialogDescription>
+                        Registro de todos los pagos realizados por esta persona.
+                    </DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="h-72 my-4">
                     {personPayments.length > 0 ? (
                         <div className="space-y-3 pr-4">
                             {personPayments.map(payment => {
-                                // This is the critical part: ensure 'tariffs' prop is used.
                                 const tariff = tariffs.find(t => t.id === payment.tariffId);
                                 return (
                                     <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
