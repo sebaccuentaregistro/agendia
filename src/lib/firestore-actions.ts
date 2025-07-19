@@ -169,14 +169,17 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 
 export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
     const now = new Date();
-    
+    const batch = writeBatch(db);
+
     const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
 
     let newExpiryDate = person.lastPaymentDate;
+    // Only calculate a new expiry date if the person is catching up on the last outstanding payment, or is already up to date.
     if (newOutstandingPayments === 0) {
         newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff);
     }
     
+    // Create the new payment record
     const paymentRecord: Omit<Payment, 'id'> = {
         personId: person.id,
         date: now,
@@ -184,18 +187,17 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
         tariffId: tariff.id,
         createdAt: now,
     };
-    
-    const batch = writeBatch(db);
-
     const paymentDocRef = doc(paymentsRef);
     batch.set(paymentDocRef, paymentRecord);
     
+    // Update the person's payment status
     batch.update(personRef, { 
         lastPaymentDate: newExpiryDate,
         outstandingPayments: newOutstandingPayments,
      });
      
-    batch.set(doc(auditLogRef), {
+    // Create an audit log for the payment
+    const auditLogRecord: Omit<AuditLog, 'id'> = {
         operatorId: operator.id,
         operatorName: operator.name,
         action: 'REGISTRO_PAGO',
@@ -207,8 +209,11 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
             amount: tariff.price,
             tariffName: tariff.name
         }
-    } as Omit<AuditLog, 'id'>);
+    };
+    const auditLogDocRef = doc(auditLogRef);
+    batch.set(auditLogDocRef, auditLogRecord);
 
+    // Commit all batched writes
     return await batch.commit();
 };
 

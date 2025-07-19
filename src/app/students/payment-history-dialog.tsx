@@ -8,8 +8,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Person, Payment, Tariff } from '@/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
 
 interface PaymentHistoryDialogProps {
   person: Person | null;
@@ -21,9 +19,10 @@ interface PaymentHistoryDialogProps {
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
 
     const personPayments = useMemo(() => {
-        if (!person) {
+        if (!person || !payments) {
             return [];
         }
+        // Filter payments for the selected person and sort them by date descending
         return payments
           .filter(payment => String(payment.personId).trim() === String(person.id).trim())
           .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
@@ -51,18 +50,6 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                         Registro de todos los pagos realizados por esta persona.
                     </DialogDescription>
                 </DialogHeader>
-
-                <Alert variant="default" className="border-blue-500/50 text-blue-700 dark:text-blue-400 [&>svg]:text-blue-600 bg-blue-50 dark:bg-blue-900/20">
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>Información de Depuración</AlertTitle>
-                    <AlertDescription>
-                        <ul className="list-disc pl-5">
-                            <li>Total de pagos recibidos: {payments.length}</li>
-                            <li>Pagos encontrados para {person.name}: {personPayments.length}</li>
-                        </ul>
-                    </AlertDescription>
-                </Alert>
-
                 <ScrollArea className="h-72 my-4">
                     {personPayments.length > 0 ? (
                         <div className="space-y-3 pr-4">

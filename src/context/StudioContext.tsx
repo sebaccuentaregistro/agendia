@@ -34,7 +34,7 @@ interface StudioContextType {
     updateSession: (session: Session) => void;
     deleteSession: (sessionId: string) => void;
     enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
-    recordPayment: (personId: string) => void;
+    recordPayment: (personId: string) => Promise<void>;
     revertLastPayment: (personId: string) => void;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
@@ -194,13 +194,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         } catch (error: any) {
             console.error(errorMessage, error);
             toast({ variant: 'destructive', title: "Error", description: error.message || errorMessage });
+            throw error; // Re-throw the error so the calling function knows it failed
         }
     };
     
     const withOperator = (action: (op: Operator) => Promise<any>, successMessage: string, errorMessage: string) => {
         if (!activeOperator) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo identificar al operador. Por favor, reinicia sesión.' });
-            return Promise.reject(new Error("No active operator"));
+            const error = new Error("No se pudo identificar al operador. Por favor, reinicia sesión.");
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+            return Promise.reject(error);
         }
         return handleAction(action(activeOperator), successMessage, errorMessage);
     };
@@ -242,7 +244,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const recordPayment = async (personId: string) => {
         if (!collectionRefs || !activeOperator) return;
         const person = data.people.find((p: Person) => p.id === personId);
-        if (!person) return;
+        if (!person) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se encontró a la persona.' });
+            return;
+        }
         const tariff = data.tariffs.find((t: Tariff) => t.id === person.tariffId);
         if (!tariff) {
             toast({ variant: 'destructive', title: 'Error', description: 'La persona no tiene un arancel asignado.' });
@@ -539,5 +544,3 @@ export function useStudio() {
     }
     return context;
 }
-
-    
