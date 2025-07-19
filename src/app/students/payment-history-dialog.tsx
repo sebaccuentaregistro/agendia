@@ -19,7 +19,6 @@ interface PaymentHistoryDialogProps {
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
     if (!person) return null;
 
-    // Lógica de filtrado corregida: Usar las props `payments` y `person` directamente.
     const personPayments = useMemo(() => {
         if (!person || !payments) {
             return [];
@@ -27,7 +26,7 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
         return payments
             .filter(p => p.personId === person.id)
             .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-    }, [payments, person]); // Depender de las props que entran al componente.
+    }, [payments, person]); // CORRECCIÓN: Se añade `payments` a la lista de dependencias.
 
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
