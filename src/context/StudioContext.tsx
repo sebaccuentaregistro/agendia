@@ -250,6 +250,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (!person) {
             throw new Error('No se encontró a la persona para registrar el pago.');
         }
+
+        console.log(`[DEBUG] Intentando registrar pago para la persona con ID: ${person.id}`);
     
         const tariff = data.tariffs.find((t: Tariff) => t.id === person.tariffId);
         if (!tariff) {

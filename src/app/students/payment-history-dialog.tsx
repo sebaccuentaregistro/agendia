@@ -18,13 +18,30 @@ interface PaymentHistoryDialogProps {
 
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
 
-    const personPayments = useMemo(() => {
+    const { personPayments, debugInfo } = useMemo(() => {
         if (!person || !payments) {
-            return [];
+            return { personPayments: [], debugInfo: { totalPayments: 0, foundPayments: 0, paymentPersonIds: [] } };
         }
-        return payments
-          .filter(payment => String(payment.personId) === String(person.id))
-          .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+
+        const filteredPayments = payments.filter(payment => {
+            // Robust comparison
+            return String(payment.personId).trim() === String(person.id).trim();
+        });
+
+        const sortedPayments = filteredPayments.sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+        
+        const allPaymentPersonIds = payments.map(p => p.personId);
+
+        return { 
+            personPayments: sortedPayments,
+            debugInfo: {
+                totalPayments: payments.length,
+                foundPayments: sortedPayments.length,
+                paymentPersonIds: allPaymentPersonIds,
+                personIdBeingChecked: person.id
+            }
+        };
+
     }, [person, payments]);
 
 
@@ -49,13 +66,29 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                         Registro de todos los pagos realizados por esta persona.
                     </DialogDescription>
                 </DialogHeader>
-                <ScrollArea className="h-72 my-4">
+                
+                <div className="border bg-muted/50 p-4 rounded-lg my-4 space-y-2">
+                    <h4 className="font-bold text-center">Información de Depuración</h4>
+                    <p className="text-sm"><strong>ID de la persona que se está revisando:</strong> {debugInfo.personIdBeingChecked}</p>
+                    <p className="text-sm"><strong>Total de pagos recibidos por el diálogo:</strong> {debugInfo.totalPayments}</p>
+                    <p className="text-sm"><strong>Pagos encontrados para esta persona:</strong> {debugInfo.foundPayments}</p>
+                    <div className="text-sm">
+                      <p><strong>IDs de persona en los registros de pago:</strong></p>
+                      <ScrollArea className="h-24 mt-1 border bg-background p-2 rounded-md">
+                        <pre className="text-xs whitespace-pre-wrap">
+                          {JSON.stringify(debugInfo.paymentPersonIds, null, 2)}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                </div>
+
+                <ScrollArea className="h-60">
                     {personPayments.length > 0 ? (
                         <div className="space-y-3 pr-4">
                             {personPayments.map(payment => {
                                 const tariff = tariffs.find(t => t.id === payment.tariffId);
                                 return (
-                                    <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-muted/50">
+                                    <div key={payment.id} className="flex justify-between items-center p-3 rounded-lg bg-background border">
                                         <div>
                                             <p className="font-semibold">{tariff ? tariff.name : 'Pago registrado'}</p>
                                             <p className="text-sm text-muted-foreground">{payment.date ? format(payment.date, 'dd MMMM, yyyy', { locale: es }) : 'Fecha no disponible'}</p>
