@@ -88,9 +88,14 @@ const collections = {
 
 const safelyParseDate = (data: any, field: string) => {
     if (data && data[field] && typeof data[field].toDate === 'function') {
-        return data[field].toDate();
+        try {
+            return data[field].toDate();
+        } catch (e) {
+            console.error(`Error parsing date for field ${field}:`, e);
+            return null;
+        }
     }
-    return null;
+    return data[field] || null; // Return existing value or null
 };
 
 export function StudioProvider({ children }: { children: ReactNode }) {
@@ -132,23 +137,26 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             const unsub = onSnapshot(q, (snapshot: QuerySnapshot) => {
                 const items = snapshot.docs.map(doc => {
                     const docData = doc.data();
+                    const id = doc.id;
                     
-                    if (['payments', 'people', 'notifications', 'audit_logs'].includes(key)) {
-                         docData.joinDate = safelyParseDate(docData, 'joinDate');
-                         docData.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
-                         docData.date = safelyParseDate(docData, 'date');
-                         docData.createdAt = safelyParseDate(docData, 'createdAt');
-                         docData.timestamp = safelyParseDate(docData, 'timestamp');
-
-                        if (docData.vacationPeriods) {
-                            docData.vacationPeriods = docData.vacationPeriods.map((v: any) => ({
-                                ...v,
-                                startDate: safelyParseDate(v, 'startDate'),
-                                endDate: safelyParseDate(v, 'endDate'),
-                            }));
-                        }
+                    const itemWithId = { ...docData, id };
+                    
+                    // Universal date parsing for all collections
+                    itemWithId.date = safelyParseDate(docData, 'date');
+                    itemWithId.createdAt = safelyParseDate(docData, 'createdAt');
+                    itemWithId.timestamp = safelyParseDate(docData, 'timestamp');
+                    itemWithId.joinDate = safelyParseDate(docData, 'joinDate');
+                    itemWithId.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
+                    
+                    if (itemWithId.vacationPeriods && Array.isArray(itemWithId.vacationPeriods)) {
+                        itemWithId.vacationPeriods = itemWithId.vacationPeriods.map((v: any) => ({
+                            ...v,
+                            startDate: safelyParseDate(v, 'startDate'),
+                            endDate: safelyParseDate(v, 'endDate'),
+                        }));
                     }
-                    return { id: doc.id, ...docData };
+                    
+                    return itemWithId;
                 });
                 
                 setData(prevData => ({ ...prevData, [key]: items }));
@@ -475,8 +483,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             isTutorialOpen,
             openTutorial: () => setIsTutorialOpen(true),
             closeTutorial: () => {
-                setIsTutorialOpen(false);
                 try { localStorage.setItem('agendia-tutorial-completed', 'true'); } catch (e) {}
+                setIsTutorialOpen(false);
             },
             addPerson,
             updatePerson,
