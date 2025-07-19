@@ -570,6 +570,7 @@ function StudentsPageContent() {
                                 spaces={spaces}
                                 levels={levels}
                                 tariffs={tariffs}
+                                payments={payments}
                                 recoveryCredits={recoveryDetails[person.id] || []}
                                 onManageVacations={setPersonForVacation}
                                 onEdit={handleEditClick}
