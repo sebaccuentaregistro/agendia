@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useMemo } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -19,15 +20,20 @@ interface PaymentHistoryDialogProps {
 
 export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: PaymentHistoryDialogProps) {
 
+    const personPayments = useMemo(() => {
+        if (!person) {
+            return [];
+        }
+        return payments
+          .filter(payment => String(payment.personId).trim() === String(person.id).trim())
+          .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
+    }, [person, payments]);
+
+
     if (!person) {
         return null;
     }
-
-    // Direct filtering logic, no complex hooks
-    const personPayments = payments
-      .filter(payment => String(payment.personId).trim() === String(person.id).trim())
-      .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
-
+    
     const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
         style: 'currency',
@@ -46,7 +52,6 @@ export function PaymentHistoryDialog({ person, payments, tariffs, onClose }: Pay
                     </DialogDescription>
                 </DialogHeader>
 
-                {/* Bloque de depuración temporal */}
                 <Alert variant="default" className="border-blue-500/50 text-blue-700 dark:text-blue-400 [&>svg]:text-blue-600 bg-blue-50 dark:bg-blue-900/20">
                     <Info className="h-4 w-4" />
                     <AlertTitle>Información de Depuración</AlertTitle>

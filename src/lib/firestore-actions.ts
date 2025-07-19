@@ -170,33 +170,31 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
     const now = new Date();
     
-    // Decrease the number of outstanding payments by one.
     const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
 
-    // The due date only advances if the person is fully paid up.
     let newExpiryDate = person.lastPaymentDate;
     if (newOutstandingPayments === 0) {
         newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff);
     }
     
-    const paymentRecord = {
+    const paymentRecord: Omit<Payment, 'id'> = {
         personId: person.id,
         date: now,
         amount: tariff.price,
         tariffId: tariff.id,
         createdAt: now,
     };
+    
     const batch = writeBatch(db);
 
-    const paymentRef = doc(paymentsRef);
-    batch.set(paymentRef, paymentRecord);
+    const paymentDocRef = doc(paymentsRef);
+    batch.set(paymentDocRef, paymentRecord);
     
     batch.update(personRef, { 
         lastPaymentDate: newExpiryDate,
         outstandingPayments: newOutstandingPayments,
      });
      
-    // Create audit log
     batch.set(doc(auditLogRef), {
         operatorId: operator.id,
         operatorName: operator.name,
