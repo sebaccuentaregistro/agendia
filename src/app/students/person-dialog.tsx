@@ -20,6 +20,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import type { Person, NewPersonData } from '@/types';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -30,6 +31,7 @@ const personFormSchema = z.object({
   notes: z.string().optional(),
   joinDate: z.date().optional(),
   lastPaymentDate: z.date().nullable().optional(),
+  recordFirstPayment: z.boolean().default(true),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -57,6 +59,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
         notes: '',
         joinDate: new Date(),
         lastPaymentDate: null,
+        recordFirstPayment: true,
     }
   });
   
@@ -72,6 +75,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
             notes: person.notes,
             joinDate: person.joinDate || new Date(),
             lastPaymentDate: person.lastPaymentDate,
+            recordFirstPayment: true, // Always default to true for simplicity, not editable for existing users.
           });
         } else {
           form.reset({
@@ -83,10 +87,14 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
             notes: '',
             joinDate: new Date(),
             lastPaymentDate: null,
+            recordFirstPayment: true,
           });
         }
     }
   }, [person, initialData, open, form]);
+  
+  const watchedRecordPayment = form.watch('recordFirstPayment');
+
 
   const onSubmit = async (values: PersonFormData) => {
     if (!person && isLimitReached) {
@@ -100,7 +108,8 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
         healthInfo: values.healthInfo,
         notes: values.notes,
         joinDate: values.joinDate,
-        lastPaymentDate: values.lastPaymentDate,
+        lastPaymentDate: values.recordFirstPayment ? null : values.lastPaymentDate, // If recording payment, ignore custom due date.
+        recordFirstPayment: values.recordFirstPayment,
     };
     
     if (person) {
@@ -183,35 +192,64 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
                   )}
                 />
             </div>
-             <FormField
+            {!person && (
+                <>
+                <FormField
                   control={form.control}
-                  name="lastPaymentDate"
+                  name="recordFirstPayment"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Próximo Vencimiento</FormLabel>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button
-                              variant="outline"
-                              className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                              {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Sin fecha</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                          <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
-                        </PopoverContent>
-                      </Popover>
-                       <FormDescription className="text-xs">
-                        Si se deja en blanco, el estado será "Pendiente de Pago".
-                      </FormDescription>
-                      <FormMessage />
+                    <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 shadow-sm">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel>
+                          Registrar el primer pago ahora
+                        </FormLabel>
+                         <FormDescription className="text-xs">
+                            Marca esto si el alumno abona al inscribirse.
+                         </FormDescription>
+                      </div>
                     </FormItem>
                   )}
                 />
+
+                {!watchedRecordPayment && (
+                    <FormField
+                      control={form.control}
+                      name="lastPaymentDate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Establecer Próximo Vencimiento Manualmente</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                >
+                                  {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Sin fecha</span>}
+                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0">
+                              <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
+                            </PopoverContent>
+                          </Popover>
+                           <FormDescription className="text-xs">
+                            Útil si el alumno pagará más adelante. La persona aparecerá como "Pendiente de Pago".
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                )}
+                </>
+            )}
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
             )}/>
