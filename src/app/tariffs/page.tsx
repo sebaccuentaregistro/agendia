@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, DollarSign, Calendar, RefreshCw } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, DollarSign, Calendar, RefreshCw, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo } from 'react';
@@ -19,6 +19,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/context/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -113,7 +114,15 @@ export default function TariffsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-8">
+      <div className="flex justify-start">
+          <Button variant="outline" asChild>
+              <Link href="/?view=management">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Volver a Gestión
+              </Link>
+          </Button>
+      </div>
       <PageHeader title="Aranceles">
         {isPinVerified && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

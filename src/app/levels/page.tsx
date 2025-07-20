@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, Signal, Users, Calendar } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, Signal, Users, Calendar, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo } from 'react';
@@ -16,6 +16,7 @@ import type { Level } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -85,7 +86,15 @@ export default function LevelsPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-8">
+      <div className="flex justify-start">
+          <Button variant="outline" asChild>
+              <Link href="/?view=management">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Volver a Gestión
+              </Link>
+          </Button>
+      </div>
       <PageHeader title="Niveles de Práctica" description="Crea y gestiona los niveles de tus clases y alumnos.">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
