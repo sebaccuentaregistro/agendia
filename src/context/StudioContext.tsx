@@ -30,7 +30,7 @@ interface StudioContextType {
     closeTutorial: () => void;
     addPerson: (person: NewPersonData) => Promise<string | undefined>;
     updatePerson: (person: Person) => void;
-    deactivatePerson: (personId: string) => void;
+    deactivatePerson: (personId: string) => Promise<void>;
     reactivatePerson: (personId: string, personName: string) => void;
     addSession: (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => void;
     updateSession: (session: Session) => void;
@@ -235,10 +235,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const deactivatePerson = async (personId: string) => {
-        if (!collectionRefs || !activeOperator) return;
+    const deactivatePerson = async (personId: string): Promise<void> => {
+        if (!collectionRefs || !activeOperator) return Promise.resolve();
         const personToDelete = (data.people as Person[]).find((p: Person) => p.id === personId);
-        if (!personToDelete) return;
+        if (!personToDelete) return Promise.resolve();
 
         const affectedSessionIds = await withOperator(
             (operator) => deactivatePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, operator),

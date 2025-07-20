@@ -71,11 +71,10 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
       }).format(price);
     };
 
-    const handleDeactivate = () => {
-        deactivatePerson(person.id).then(() => {
-            onDeactivated();
-            setIsDeleteDialogOpen(false);
-        });
+    const handleDeactivate = async () => {
+        await deactivatePerson(person.id);
+        onDeactivated();
+        setIsDeleteDialogOpen(false);
     };
 
     const handleRevertPayment = () => {
