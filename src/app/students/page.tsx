@@ -41,7 +41,7 @@ import { PersonDialog } from './person-dialog';
 import { WelcomeDialog } from '@/components/welcome-dialog';
 import { PaymentReceiptDialog, type ReceiptInfo } from '@/components/payment-receipt-dialog';
 import { PersonCard } from './person-card';
-import { EnrollmentsDialog } from './enrollment-dialog';
+import { EnrollmentsDialog } from '@/components/enrollments-dialog';
 import { VacationDialog } from './vacation-dialog';
 import { PaymentHistoryDialog } from './payment-history-dialog';
 
@@ -744,4 +744,5 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
