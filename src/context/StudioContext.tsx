@@ -34,7 +34,7 @@ interface StudioContextType {
     updateSession: (session: Session) => void;
     deleteSession: (sessionId: string) => void;
     enrollPeopleInClass: (sessionId: string, personIds: string[]) => void;
-    recordPayment: (personId: string) => void;
+    recordPayment: (personId: string) => Promise<void>;
     revertLastPayment: (personId: string) => void;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
@@ -88,9 +88,14 @@ const collections = {
 
 const safelyParseDate = (data: any, field: string) => {
     if (data && data[field] && typeof data[field].toDate === 'function') {
-        return data[field].toDate();
+        try {
+            return data[field].toDate();
+        } catch (e) {
+            console.error(`Error parsing date for field ${field}:`, e);
+            return null;
+        }
     }
-    return null;
+    return data[field] || null; // Return existing value or null
 };
 
 export function StudioProvider({ children }: { children: ReactNode }) {
@@ -132,23 +137,26 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             const unsub = onSnapshot(q, (snapshot: QuerySnapshot) => {
                 const items = snapshot.docs.map(doc => {
                     const docData = doc.data();
+                    const id = doc.id;
                     
-                    if (['payments', 'people', 'notifications', 'audit_logs'].includes(key)) {
-                         docData.joinDate = safelyParseDate(docData, 'joinDate');
-                         docData.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
-                         docData.date = safelyParseDate(docData, 'date');
-                         docData.createdAt = safelyParseDate(docData, 'createdAt');
-                         docData.timestamp = safelyParseDate(docData, 'timestamp');
-
-                        if (docData.vacationPeriods) {
-                            docData.vacationPeriods = docData.vacationPeriods.map((v: any) => ({
-                                ...v,
-                                startDate: safelyParseDate(v, 'startDate'),
-                                endDate: safelyParseDate(v, 'endDate'),
-                            }));
-                        }
+                    const itemWithId: {[key: string]: any} = { ...docData, id };
+                    
+                    // Universal date parsing for all collections
+                    if (docData.date) itemWithId.date = safelyParseDate(docData, 'date');
+                    if (docData.createdAt) itemWithId.createdAt = safelyParseDate(docData, 'createdAt');
+                    if (docData.timestamp) itemWithId.timestamp = safelyParseDate(docData, 'timestamp');
+                    if (docData.joinDate) itemWithId.joinDate = safelyParseDate(docData, 'joinDate');
+                    if (docData.lastPaymentDate) itemWithId.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
+                    
+                    if (itemWithId.vacationPeriods && Array.isArray(itemWithId.vacationPeriods)) {
+                        itemWithId.vacationPeriods = itemWithId.vacationPeriods.map((v: any) => ({
+                            ...v,
+                            startDate: safelyParseDate(v, 'startDate'),
+                            endDate: safelyParseDate(v, 'endDate'),
+                        }));
                     }
-                    return { id: doc.id, ...docData };
+                    
+                    return itemWithId;
                 });
                 
                 setData(prevData => ({ ...prevData, [key]: items }));
@@ -186,13 +194,15 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         } catch (error: any) {
             console.error(errorMessage, error);
             toast({ variant: 'destructive', title: "Error", description: error.message || errorMessage });
+            throw error; // Re-throw the error so the calling function knows it failed
         }
     };
     
     const withOperator = (action: (op: Operator) => Promise<any>, successMessage: string, errorMessage: string) => {
         if (!activeOperator) {
-            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo identificar al operador. Por favor, reinicia sesión.' });
-            return Promise.reject(new Error("No active operator"));
+            const error = new Error("No se pudo identificar al operador. Por favor, reinicia sesión.");
+            toast({ variant: 'destructive', title: 'Error', description: error.message });
+            return Promise.reject(error);
         }
         return handleAction(action(activeOperator), successMessage, errorMessage);
     };
@@ -232,20 +242,40 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
     
     const recordPayment = async (personId: string) => {
-        if (!collectionRefs || !activeOperator) return;
+        if (!collectionRefs || !activeOperator) {
+            throw new Error("No se puede registrar el pago: faltan referencias de la base de datos o el operador no está activo.");
+        }
+    
         const person = data.people.find((p: Person) => p.id === personId);
-        if (!person) return;
+        if (!person) {
+            throw new Error('No se encontró a la persona para registrar el pago.');
+        }
+    
         const tariff = data.tariffs.find((t: Tariff) => t.id === person.tariffId);
         if (!tariff) {
-            toast({ variant: 'destructive', title: 'Error', description: 'La persona no tiene un arancel asignado.' });
-            return;
+            throw new Error('La persona no tiene un arancel asignado. Asigna un arancel antes de registrar un pago.');
         }
-        await withOperator(
-            (operator) => recordPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), person, tariff, collectionRefs.audit_logs, operator),
-            `Pago registrado para ${person.name}.`,
-            `Error al registrar el pago.`
-        );
+    
+        try {
+            await withOperator(
+                (operator) => recordPaymentAction(
+                    doc(collectionRefs.people, personId),
+                    person,
+                    tariff,
+                    operator,
+                    collectionRefs.payments,
+                    collectionRefs.audit_logs
+                ),
+                `Pago registrado para ${person.name}.`,
+                `Error al registrar el pago.`
+            );
+        } catch (error) {
+            // The withOperator function already shows the toast
+            console.error("Payment recording failed, re-throwing for component to handle.");
+            throw error;
+        }
     };
+
 
      const revertLastPayment = async (personId: string) => {
         if (!collectionRefs || !activeOperator) return;
@@ -475,8 +505,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             isTutorialOpen,
             openTutorial: () => setIsTutorialOpen(true),
             closeTutorial: () => {
-                setIsTutorialOpen(false);
                 try { localStorage.setItem('agendia-tutorial-completed', 'true'); } catch (e) {}
+                setIsTutorialOpen(false);
             },
             addPerson,
             updatePerson,
@@ -531,5 +561,3 @@ export function useStudio() {
     }
     return context;
 }
-
-    

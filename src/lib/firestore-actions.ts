@@ -167,37 +167,45 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
 };
 
 
-export const recordPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, person: Person, tariff: Tariff, auditLogRef: CollectionReference, operator: Operator) => {
+export const recordPaymentAction = async (
+    personRef: DocumentReference,
+    person: Person,
+    tariff: Tariff,
+    operator: Operator,
+    paymentsRef: CollectionReference,
+    auditLogRef: CollectionReference
+) => {
+    console.log(`[DEBUG] Iniciando recordPaymentAction para la persona: ${person.id}`);
     const now = new Date();
-    
-    // Decrease the number of outstanding payments by one.
-    const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
+    const batch = writeBatch(db);
 
-    // The due date only advances if the person is fully paid up.
-    let newExpiryDate = person.lastPaymentDate;
-    if (newOutstandingPayments === 0) {
-        newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff);
-    }
-    
-    const paymentRecord = {
+    // 1. Calculate new state for the person
+    const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
+    const newExpiryDate = (newOutstandingPayments === 0) 
+        ? calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff)
+        : person.lastPaymentDate;
+
+    // 2. Create the new payment record
+    const paymentRecord: Omit<Payment, 'id'> = {
         personId: person.id,
         date: now,
         amount: tariff.price,
         tariffId: tariff.id,
         createdAt: now,
+        timestamp: now,
     };
-    const batch = writeBatch(db);
+    const paymentDocRef = doc(paymentsRef);
+    batch.set(paymentDocRef, cleanDataForFirestore(paymentRecord));
 
-    const paymentRef = doc(paymentsRef);
-    batch.set(paymentRef, paymentRecord);
-    
-    batch.update(personRef, { 
+    // 3. Update the person's document
+    const personUpdate = {
         lastPaymentDate: newExpiryDate,
         outstandingPayments: newOutstandingPayments,
-     });
-     
-    // Create audit log
-    batch.set(doc(auditLogRef), {
+    };
+    batch.update(personRef, personUpdate);
+
+    // 4. Create an audit log record
+    const auditLogRecord: Omit<AuditLog, 'id'> = {
         operatorId: operator.id,
         operatorName: operator.name,
         action: 'REGISTRO_PAGO',
@@ -209,10 +217,21 @@ export const recordPaymentAction = async (paymentsRef: CollectionReference, pers
             amount: tariff.price,
             tariffName: tariff.name
         }
-    } as Omit<AuditLog, 'id'>);
+    };
+    const auditLogDocRef = doc(auditLogRef);
+    batch.set(auditLogDocRef, cleanDataForFirestore(auditLogRecord));
 
-    return await batch.commit();
+    // 5. Commit all batched writes
+    try {
+        console.log(`[DEBUG] A punto de confirmar el guardado del pago para ${person.id}.`);
+        await batch.commit();
+        console.log(`[DEBUG] Éxito: El pago fue confirmado en la base de datos para ${person.id}.`);
+    } catch (error) {
+        console.error(`[DEBUG] Error al confirmar el guardado del pago:`, error);
+        throw error;
+    }
 };
+
 
 export const revertLastPaymentAction = async (paymentsRef: CollectionReference, personRef: DocumentReference, personId: string, currentPerson: Person, auditLogRef: CollectionReference, operator: Operator) => {
     const batch = writeBatch(db);
@@ -227,7 +246,15 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     }
 
     // 2. Sort payments by date locally to find the latest one
-    const allPayments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment))
+    const allPayments = paymentsSnap.docs.map(docSnap => {
+            const data = docSnap.data();
+            return { 
+                id: docSnap.id, 
+                ...data,
+                // Ensure `date` is a JS Date object
+                date: data.date instanceof Timestamp ? data.date.toDate() : null 
+            } as Payment;
+        })
         .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
 
     const lastPayment = allPayments[0];

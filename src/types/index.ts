@@ -126,6 +126,7 @@ export type Payment = {
   amount: number;
   tariffId: string;
   createdAt: Date | null;
+  timestamp?: Date;
 };
 
 export type PaymentStatusInfo = {
