@@ -21,8 +21,8 @@ import { PinDialog } from '@/components/pin-dialog';
 
 
 export default function StatisticsPageContent() {
-  const { sessions, people, inactivePeople, actividades, loading, payments, tariffs, attendance } = useStudio();
-  const { authLoading, isPinVerified, setPinVerified } = useAuth();
+  const { sessions, people, inactivePeople, actividades, loading: studioLoading, payments, tariffs, attendance } = useStudio();
+  const { loading: authLoading, isPinVerified, setPinVerified } = useAuth();
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -239,7 +239,7 @@ export default function StatisticsPageContent() {
     );
   };
   
-  if (!isMounted || loading || authLoading) {
+  if (!isMounted || studioLoading || authLoading) {
     return (
        <div className="space-y-8">
         <PageHeader title="Estadísticas del Estudio" />

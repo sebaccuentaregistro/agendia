@@ -20,8 +20,8 @@ import Link from 'next/link';
 import { PinDialog } from '@/components/pin-dialog';
 
 function PaymentsPageContent() {
-    const { payments, people, tariffs, loading } = useStudio();
-    const { authLoading, isPinVerified, setPinVerified } = useAuth();
+    const { payments, people, tariffs, loading: studioLoading } = useStudio();
+    const { loading: authLoading, isPinVerified, setPinVerified } = useAuth();
     const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
 
     const [filters, setFilters] = useState<{ personId: string; dateRange: { from?: Date; to?: Date } }>({
@@ -103,7 +103,7 @@ function PaymentsPageContent() {
         exportToCsv('historial_pagos.csv', dataToExport, headers);
     };
     
-    if (loading || authLoading || !isMounted) {
+    if (studioLoading || authLoading || !isMounted) {
         return (
             <div className="space-y-8">
                  <PageHeader title="Gestión de Pagos" />
