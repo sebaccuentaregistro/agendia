@@ -37,6 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -51,98 +52,6 @@ const oneTimeAttendeeSchema = z.object({
     personId: z.string().min(1, { message: 'Debes seleccionar una persona.' }),
     date: z.date({ required_error: 'Debes seleccionar una fecha.' }),
 });
-
-function NotifyAttendeesDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
-  const { people, isPersonOnVacation, actividades, attendance } = useStudio();
-  const [message, setMessage] = useState('');
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-      setIsMounted(true);
-  }, []);
-
-  const { todayStr, today, attendeesToNotify } = useMemo(() => {
-    if (!isMounted) {
-      return { todayStr: '', today: new Date(), attendeesToNotify: [] };
-    }
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    
-    // Regular attendees not on vacation today
-    const regularAttendees = session.personIds
-      .map(pid => people.find(p => p.id === pid))
-      .filter((p): p is Person => !!p && !isPersonOnVacation(p, today));
-
-    // One-time attendees for today
-    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-    const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
-    const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
-
-    // Combine and remove duplicates
-    const allAttendeesMap = new Map<string, Person>();
-    regularAttendees.forEach(p => allAttendeesMap.set(p.id, p));
-    oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, p));
-
-    const attendees = Array.from(allAttendeesMap.values()).sort((a,b) => a.name.localeCompare(b.name));
-    return { todayStr, today, attendeesToNotify: attendees };
-  }, [isMounted, session, people, isPersonOnVacation, attendance]);
-
-  const actividad = actividades.find(a => a.id === session.actividadId);
-
-  const handleCopyToClipboard = () => {
-    navigator.clipboard.writeText(message);
-    // You might want to show a toast notification here
-  };
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Notificar Asistentes</DialogTitle>
-          <DialogDescription>
-            Clase: {actividad?.name} - {session.dayOfWeek} {session.time}.
-            Se notificará a {attendeesToNotify.length} persona(s).
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <Textarea
-            placeholder="Escribe tu mensaje aquí... Ej: La clase de hoy se cancela."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            rows={4}
-          />
-          <Button variant="outline" size="sm" onClick={handleCopyToClipboard} className="w-full">
-            Copiar Mensaje al Portapapeles
-          </Button>
-          <ScrollArea className="h-48 rounded-md border p-2">
-            <div className="space-y-2">
-              {attendeesToNotify.map(person => (
-                <div key={person.id} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
-                  <span>{person.name}</span>
-                  <Button asChild variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:text-green-700">
-                    <a
-                      href={`https://wa.me/${person.phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <WhatsAppIcon />
-                    </a>
-                  </Button>
-                </div>
-              ))}
-              {attendeesToNotify.length === 0 && (
-                <div className="text-center p-4 text-sm text-muted-foreground">No hay asistentes para notificar.</div>
-              )}
-            </div>
-          </ScrollArea>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cerrar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 const prospectSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
