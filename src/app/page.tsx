@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
@@ -674,12 +675,6 @@ function DashboardPageContent() {
                     </Link>
                 </div>
                 
-                <PaymentReminders 
-                    reminders={paymentReminders} 
-                    onSendReminder={setPaymentReminderInfo}
-                    onSendAll={() => setIsMassReminderOpen(true)}
-                />
-                
                 <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
                     <CardHeader>
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -966,14 +961,18 @@ function DashboardPageContent() {
 
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
 
-            <div>
-              <WaitlistOpportunities
-                opportunities={waitlistOpportunities}
-                summary={waitlistSummary}
-                totalCount={totalWaitlistCount}
-                onHeaderClick={() => setIsWaitlistSheetOpen(true)}
-              />
-            </div>
+            <WaitlistOpportunities
+              opportunities={waitlistOpportunities}
+              summary={waitlistSummary}
+              totalCount={totalWaitlistCount}
+              onHeaderClick={() => setIsWaitlistSheetOpen(true)}
+            />
+
+            <PaymentReminders 
+                reminders={paymentReminders} 
+                onSendReminder={setPaymentReminderInfo}
+                onSendAll={() => setIsMassReminderOpen(true)}
+            />
             
         </div>
       </div>
