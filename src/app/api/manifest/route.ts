@@ -1,3 +1,4 @@
+
 // src/app/api/manifest/route.ts
 import { NextResponse } from 'next/server';
 import path from 'path';
