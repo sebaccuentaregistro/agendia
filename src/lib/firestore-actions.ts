@@ -246,7 +246,15 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
     }
 
     // 2. Sort payments by date locally to find the latest one
-    const allPayments = paymentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Payment))
+    const allPayments = paymentsSnap.docs.map(docSnap => {
+            const data = docSnap.data();
+            return { 
+                id: docSnap.id, 
+                ...data,
+                // Ensure `date` is a JS Date object
+                date: data.date instanceof Timestamp ? data.date.toDate() : null 
+            } as Payment;
+        })
         .sort((a, b) => (b.date?.getTime() || 0) - (a.date?.getTime() || 0));
 
     const lastPayment = allPayments[0];
