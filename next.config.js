@@ -12,11 +12,11 @@ const nextConfig = {
   },
   webpack: (config, { isServer, dev }) => {
     if (!isServer && !dev) {
-      const { InjectManifest } = require('workbox-webpack-plugin');
+      const InjectManifest = require('workbox-webpack-plugin').InjectManifest;
       config.plugins.push(
         new InjectManifest({
           swSrc: './src/lib/sw.js',
-          swDest: '../public/sw.js',
+          swDest: 'sw.js',
           // Do not cache images by default
           exclude: [/\.map$/, /_buildManifest\.js$/, /_ssgManifest\.js$/, /_middlewareManifest\.js$/, /manifest\.json$/, /.+?\.png$/i],
         })
