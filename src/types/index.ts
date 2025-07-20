@@ -99,6 +99,7 @@ export type NewPersonData = {
     notes?: string;
     joinDate?: Date;
     lastPaymentDate?: Date | null;
+    recordFirstPayment?: boolean;
 };
 
 export type WaitlistProspect = {
