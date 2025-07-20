@@ -12,9 +12,9 @@ const nextConfig = {
   },
   webpack: (config, { isServer, dev }) => {
     if (!isServer && !dev) {
-      const { WorkboxWebpackPlugin } = require('workbox-webpack-plugin');
+      const { InjectManifest } = require('workbox-webpack-plugin');
       config.plugins.push(
-        new WorkboxWebpackPlugin.InjectManifest({
+        new InjectManifest({
           swSrc: './src/lib/sw.js',
           swDest: '../public/sw.js',
           // Do not cache images by default
