@@ -86,6 +86,8 @@ export type Person = {
   levelId?: string;
   notes?: string;
   outstandingPayments?: number;
+  status?: 'active' | 'inactive';
+  inactiveDate?: Date | null;
 };
 
 export type NewPersonData = {

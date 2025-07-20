@@ -77,7 +77,7 @@ async function checkForChurnRisk(personId: string, allPersonSessions: Session[],
 // Specific Actions
 export const addPersonAction = async (peopleRef: CollectionReference, personData: NewPersonData, auditLogRef: CollectionReference, operator: Operator) => {
     
-    const newPerson = {
+    const newPerson: Omit<Person, 'id'> = {
         name: personData.name,
         phone: personData.phone,
         tariffId: personData.tariffId,
@@ -89,6 +89,8 @@ export const addPersonAction = async (peopleRef: CollectionReference, personData
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
         outstandingPayments: personData.lastPaymentDate ? 0 : 1, // Start with 1 outstanding payment if no due date is set
+        status: 'active',
+        inactiveDate: null,
     };
     
     const batch = writeBatch(db);
@@ -114,16 +116,16 @@ export const addPersonAction = async (peopleRef: CollectionReference, personData
     return personDocRef.id;
 };
 
-export const deletePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string, personName: string, auditLogRef: CollectionReference, operator: Operator) => {
+export const deactivatePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string, personName: string, auditLogRef: CollectionReference, operator: Operator) => {
     const batch = writeBatch(db);
     const now = new Date();
     const affectedSessionIds: string[] = [];
 
-    // Add to audit log
+    // Add to audit log for deactivation
     batch.set(doc(auditLogRef), {
         operatorId: operator.id,
         operatorName: operator.name,
-        action: 'ELIMINAR_PERSONA',
+        action: 'DESACTIVAR_PERSONA',
         entityType: 'persona',
         entityId: personId,
         entityName: personName,
@@ -158,13 +160,14 @@ export const deletePersonAction = async (sessionsRef: CollectionReference, peopl
         }
     });
 
-    // Delete the person document
+    // Update the person's status to inactive instead of deleting
     const personRef = doc(peopleRef, personId);
-    batch.delete(personRef);
+    batch.update(personRef, { status: 'inactive', inactiveDate: now });
 
     await batch.commit();
     return affectedSessionIds;
 };
+
 
 
 export const recordPaymentAction = async (

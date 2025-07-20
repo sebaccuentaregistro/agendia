@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deletePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction } from '@/lib/firestore-actions';
+import { addPersonAction, deactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -147,6 +147,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     if (docData.timestamp) itemWithId.timestamp = safelyParseDate(docData, 'timestamp');
                     if (docData.joinDate) itemWithId.joinDate = safelyParseDate(docData, 'joinDate');
                     if (docData.lastPaymentDate) itemWithId.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
+                    if (docData.inactiveDate) itemWithId.inactiveDate = safelyParseDate(docData, 'inactiveDate');
                     
                     if (itemWithId.vacationPeriods && Array.isArray(itemWithId.vacationPeriods)) {
                         itemWithId.vacationPeriods = itemWithId.vacationPeriods.map((v: any) => ({
@@ -185,6 +186,10 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             setLoading(false);
         }
     }, [data, collectionRefs]);
+
+    const activePeople = useMemo(() => {
+      return (data.people as Person[]).filter(p => p.status !== 'inactive');
+    }, [data.people]);
 
     const handleAction = async (action: Promise<any>, successMessage: string, errorMessage: string) => {
         try {
@@ -231,9 +236,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (!personToDelete) return;
 
         const affectedSessionIds = await withOperator(
-            (operator) => deletePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, operator),
-            `${personToDelete.name} ha sido eliminado.`,
-            `Error al eliminar a ${personToDelete.name}.`
+            (operator) => deactivatePersonAction(collectionRefs.sessions, collectionRefs.people, personId, personToDelete.name, collectionRefs.audit_logs, operator),
+            `${personToDelete.name} ha sido desactivado.`,
+            `Error al desactivar a ${personToDelete.name}.`
         );
         
         if (affectedSessionIds && Array.isArray(affectedSessionIds)) {
@@ -501,6 +506,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     return (
         <StudioContext.Provider value={{
             ...(data as any),
+            people: activePeople,
             loading,
             isTutorialOpen,
             openTutorial: () => setIsTutorialOpen(true),
