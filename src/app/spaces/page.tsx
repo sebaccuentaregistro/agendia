@@ -3,7 +3,7 @@
 
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, Warehouse, Users } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, Warehouse, Users, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useState, useMemo } from 'react';
@@ -100,7 +100,15 @@ export default function SpacesPage() {
   }
 
   return (
-    <div>
+    <div className="space-y-8">
+      <div className="flex justify-start">
+          <Button variant="outline" asChild>
+              <Link href="/?view=management">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Volver a Gestión
+              </Link>
+          </Button>
+      </div>
       <PageHeader title="Gestionar Salas">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>

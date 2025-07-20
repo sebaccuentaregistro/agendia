@@ -16,10 +16,7 @@ const navItems = [
   { href: "/", label: "Inicio" },
   { href: "/schedule", label: "Horarios" },
   { href: "/students", label: "Personas" },
-  { href: "/instructors", label: "Especialistas" },
-  { href: "/specializations", label: "Actividades" },
-  { href: "/spaces", label: "Espacios" },
-  { href: "/levels", label: "Niveles" },
+  { href: "/tariffs", label: "Aranceles" },
 ];
 
 export function AppHeader() {
@@ -43,9 +40,16 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/20 bg-background/90 px-4 backdrop-blur-xl sm:px-6">
       <div className="flex items-center gap-4">
-        <Link href="/" className="flex flex-shrink-0 items-center gap-2.5 font-semibold text-slate-800 dark:text-white">
-          <Heart className="h-7 w-7 text-fuchsia-500" />
-          <span className="hidden text-lg sm:inline">Agendia</span>
+        <Link href="/" className="flex flex-shrink-0 items-center gap-2.5">
+            <div>
+                <div className="flex items-center gap-2">
+                    <Heart className="h-7 w-7 text-fuchsia-500" />
+                    <span className="text-lg font-semibold text-slate-800 dark:text-white sm:inline">Agendia</span>
+                </div>
+                {institute && (
+                     <p className="text-sm font-semibold text-foreground">{institute.name}</p>
+                )}
+            </div>
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
             {navItems.map((item) => (
@@ -67,10 +71,6 @@ export function AppHeader() {
          {institute && (
             <>
                 <div className="hidden sm:flex items-center gap-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-                        <Landmark className="h-4 w-4" />
-                        <span className="hidden sm:inline">{institute.name}</span>
-                    </div>
                     {studentLimit !== undefined && studentLimit > 0 && (
                          <TooltipProvider>
                             <Tooltip>

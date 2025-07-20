@@ -4,7 +4,7 @@
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import type { Specialist } from '@/types';
-import { Pencil, PlusCircle, Trash2 } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -19,6 +19,7 @@ import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import Link from 'next/link';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -100,7 +101,15 @@ export default function SpecialistsPage() {
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
   return (
-    <div>
+    <div className="space-y-8">
+       <div className="flex justify-start">
+          <Button variant="outline" asChild>
+              <Link href="/?view=management">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Volver a Gestión
+              </Link>
+          </Button>
+      </div>
       <PageHeader title="Especialistas">
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -280,5 +289,3 @@ export default function SpecialistsPage() {
     </div>
   );
 }
-
-    
