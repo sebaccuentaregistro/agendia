@@ -75,7 +75,52 @@ async function checkForChurnRisk(personId: string, allPersonSessions: Session[],
 
 
 // Specific Actions
-export const addPersonAction = async (peopleRef: CollectionReference, personData: NewPersonData, auditLogRef: CollectionReference, operator: Operator) => {
+export const addPersonAction = async (
+    peopleRef: CollectionReference,
+    personData: NewPersonData,
+    tariffs: Tariff[],
+    paymentsRef: CollectionReference,
+    auditLogRef: CollectionReference,
+    operator: Operator
+) => {
+    const now = new Date();
+    const batch = writeBatch(db);
+
+    const personDocRef = doc(peopleRef);
+    let finalLastPaymentDate = personData.lastPaymentDate || null;
+    let finalOutstandingPayments = personData.lastPaymentDate ? 0 : 1;
+
+    // If recording the first payment, override the due date logic
+    if (personData.recordFirstPayment) {
+        const tariff = tariffs.find(t => t.id === personData.tariffId);
+        if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
+        
+        finalLastPaymentDate = calculateNextPaymentDate(now, now, tariff);
+        finalOutstandingPayments = 0;
+
+        // Create the payment record
+        const paymentRecord: Omit<Payment, 'id'> = {
+            personId: personDocRef.id,
+            date: now,
+            amount: tariff.price,
+            tariffId: tariff.id,
+            createdAt: now,
+            timestamp: now,
+        };
+        batch.set(doc(paymentsRef), cleanDataForFirestore(paymentRecord));
+
+        // Create audit log for the payment itself
+        batch.set(doc(auditLogRef), {
+            operatorId: operator.id,
+            operatorName: operator.name,
+            action: 'REGISTRO_PAGO',
+            entityType: 'pago',
+            entityId: personDocRef.id,
+            entityName: personData.name,
+            timestamp: now,
+            details: { amount: tariff.price, tariffName: tariff.name }
+        } as Omit<AuditLog, 'id'>);
+    }
     
     const newPerson: Omit<Person, 'id'> = {
         name: personData.name,
@@ -84,23 +129,19 @@ export const addPersonAction = async (peopleRef: CollectionReference, personData
         levelId: personData.levelId,
         healthInfo: personData.healthInfo,
         notes: personData.notes,
-        joinDate: personData.joinDate || new Date(),
-        lastPaymentDate: personData.lastPaymentDate || null, // Allow setting initial due date
+        joinDate: personData.joinDate || now,
+        lastPaymentDate: finalLastPaymentDate,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
-        outstandingPayments: personData.lastPaymentDate ? 0 : 1, // Start with 1 outstanding payment if no due date is set
+        outstandingPayments: finalOutstandingPayments,
         status: 'active',
         inactiveDate: null,
     };
     
-    const batch = writeBatch(db);
-    const now = new Date();
-
     // Create the person document
-    const personDocRef = doc(peopleRef);
     batch.set(personDocRef, cleanDataForFirestore(newPerson));
 
-    // Add to audit log
+    // Add audit log for person creation
     batch.set(doc(auditLogRef), {
         operatorId: operator.id,
         operatorName: operator.name,
