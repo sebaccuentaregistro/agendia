@@ -241,7 +241,7 @@ function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; on
 }
 
 function StudentsPageContent() {
-  const { people, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, enrollPersonInSessions } = useStudio();
+  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, enrollPersonInSessions, reactivatePerson } = useStudio();
   const { institute } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -250,7 +250,11 @@ function StudentsPageContent() {
   const [searchTerm, setSearchTerm] = useState('');
   
   const searchParams = useSearchParams();
+  const router = useRouter();
+  
   const statusFilterFromUrl = searchParams.get('filter') || 'all';
+  const initialTab = statusFilterFromUrl === 'inactive' ? 'inactive' : 'active';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const [actividadFilter, setActividadFilter] = useState('all');
   const [specialistFilter, setSpecialistFilter] = useState('all');
@@ -273,8 +277,15 @@ function StudentsPageContent() {
     }
   }, [searchParams]);
 
-  const { recoveryDetails, filteredPeople, isLimitReached } = useMemo(() => {
-    if (!isMounted) return { recoveryDetails: {}, filteredPeople: [], isLimitReached: false };
+  useEffect(() => {
+    // If URL filter changes, switch tab
+    if(searchParams.get('filter') === 'inactive') {
+        setActiveTab('inactive');
+    }
+  }, [searchParams]);
+
+  const { recoveryDetails, filteredPeople, filteredInactivePeople, isLimitReached } = useMemo(() => {
+    if (!isMounted) return { recoveryDetails: {}, filteredPeople: [], filteredInactivePeople: [], isLimitReached: false };
     
     const limit = institute?.studentLimit;
     const isLimitReached = (limit !== null && limit !== undefined) ? people.length >= limit : false;
@@ -314,7 +325,7 @@ function StudentsPageContent() {
 
     let peopleToFilter = [...people];
 
-    if (statusFilterFromUrl !== 'all') {
+    if (statusFilterFromUrl !== 'all' && statusFilterFromUrl !== 'inactive') {
         peopleToFilter = peopleToFilter.filter(p => {
             if (statusFilterFromUrl === 'overdue') return getStudentPaymentStatus(p, now).status === 'Atrasado';
             if (statusFilterFromUrl === 'on-vacation') return isPersonOnVacation(p, now);
@@ -339,9 +350,13 @@ function StudentsPageContent() {
     const finalFilteredPeople = peopleToFilter
         .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
         .sort((a,b) => a.name.localeCompare(b.name));
+
+    const finalFilteredInactivePeople = inactivePeople
+        .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
+        .sort((a,b) => (a.inactiveDate && b.inactiveDate) ? b.inactiveDate.getTime() - a.inactiveDate.getTime() : a.name.localeCompare(b.name));
       
-    return { recoveryDetails: allRecoveryCredits, filteredPeople: finalFilteredPeople, isLimitReached };
-  }, [people, searchTerm, statusFilterFromUrl, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, actividades, isMounted, isPersonOnVacation, institute]);
+    return { recoveryDetails: allRecoveryCredits, filteredPeople: finalFilteredPeople, filteredInactivePeople: finalFilteredInactivePeople, isLimitReached };
+  }, [people, inactivePeople, searchTerm, statusFilterFromUrl, actividadFilter, specialistFilter, spaceFilter, attendance, sessions, actividades, isMounted, isPersonOnVacation, institute]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -498,187 +513,159 @@ function StudentsPageContent() {
         </Alert>
       )}
 
-      <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-           <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
-                    placeholder="Buscar por nombre o teléfono..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
-                />
-            </div>
-            <div className="flex gap-2 flex-col sm:flex-row">
-                <Select value={actividadFilter} onValueChange={setActividadFilter}>
-                    <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                        <SelectValue placeholder="Actividad" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Actividad</SelectItem>
-                        {actividades.map(a => (
-                            <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                 <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
-                    <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                        <SelectValue placeholder="Especialista" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Especialista</SelectItem>
-                        {specialists.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-                 <Select value={spaceFilter} onValueChange={setSpaceFilter}>
-                    <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                        <SelectValue placeholder="Espacio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Espacio</SelectItem>
-                        {spaces.map(s => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        </div>
-      </Card>
-        
-        <Tabs defaultValue="cards" className="w-full">
-            <TabsList className="mb-4">
-                <TabsTrigger value="cards"><LayoutGrid className="mr-2 h-4 w-4"/>Tarjetas</TabsTrigger>
-                <TabsTrigger value="table"><List className="mr-2 h-4 w-4"/>Tabla</TabsTrigger>
+       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="active">Activos ({people.length})</TabsTrigger>
+                <TabsTrigger value="inactive">Inactivos ({inactivePeople.length})</TabsTrigger>
             </TabsList>
-
-            <TabsContent value="cards">
-                {loading ? (
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-                    {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[350px] w-full rounded-2xl" />)}
-                    </div>
-                ) : filteredPeople.length > 0 ? (
-                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-                        {filteredPeople.map((person) => (
-                            <PersonCard 
-                                key={person.id} 
-                                person={person}
-                                sessions={sessions}
-                                actividades={actividades}
-                                specialists={specialists}
-                                spaces={spaces}
-                                levels={levels}
-                                tariffs={tariffs}
-                                allPayments={payments}
-                                recoveryCredits={recoveryDetails[person.id] || []}
-                                onManageVacations={setPersonForVacation}
-                                onEdit={handleEditClick}
-                                onViewHistory={setPersonForHistory}
-                                onViewAttendanceHistory={setPersonForAttendanceHistory}
-                                onManageEnrollments={handleEnrollmentClick}
-                                onJustifyAbsence={handleJustifyAbsenceClick}
-                                onRecordPayment={handleRecordPaymentClick}
+            <TabsContent value="active" className="mt-6">
+                <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
+                    <div className="flex flex-col sm:flex-row gap-4">
+                    <div className="relative flex-grow">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input 
+                                placeholder="Buscar activos por nombre o teléfono..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-10 w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
                             />
-                        ))}
+                        </div>
+                        <div className="flex gap-2 flex-col sm:flex-row">
+                            <Select value={actividadFilter} onValueChange={setActividadFilter}>
+                                <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                                    <SelectValue placeholder="Actividad" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Actividad</SelectItem>
+                                    {actividades.map(a => (
+                                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
+                                <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                                    <SelectValue placeholder="Especialista" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Especialista</SelectItem>
+                                    {specialists.map(s => (
+                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <Select value={spaceFilter} onValueChange={setSpaceFilter}>
+                                <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
+                                    <SelectValue placeholder="Espacio" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Espacio</SelectItem>
+                                    {spaces.map(s => (
+                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
-                    ) : (
-                    <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
-                        <CardHeader>
-                        <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
-                        <CardDescription>
-                            {searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
-                        </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                        {!(searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') && (
-                            <Button onClick={handleAddClick} disabled={isLimitReached}>
-                                <PlusCircle className="mr-2 h-4 w-4" />
-                                Añadir Persona
-                            </Button>
-                        )}
-                        </CardContent>
-                    </Card>
-                    )}
-            </TabsContent>
-            <TabsContent value="table">
-                <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Nombre</TableHead>
-                                <TableHead>Contacto</TableHead>
-                                <TableHead>Nivel</TableHead>
-                                <TableHead>Arancel</TableHead>
-                                <TableHead>Estado</TableHead>
-                                <TableHead>Vencimiento</TableHead>
-                                <TableHead className="text-right">Acciones</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                [...Array(5)].map((_, i) => (
-                                    <TableRow key={i}>
-                                        <TableCell colSpan={7}><Skeleton className="h-8 w-full"/></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : filteredPeople.length > 0 ? (
-                                filteredPeople.map((person) => {
-                                    const tariff = tariffs.find(t => t.id === person.tariffId);
-                                    const level = levels.find(l => l.id === person.levelId);
-                                    const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
-                                    const paymentStatusText = paymentStatusInfo.status === 'Atrasado'
-                                        ? `${paymentStatusInfo.status} (${paymentStatusInfo.daysOverdue} d)`
-                                        : paymentStatusInfo.status;
-
-                                    return (
-                                        <TableRow key={person.id}>
-                                            <TableCell className="font-medium">{person.name}</TableCell>
-                                            <TableCell>{person.phone}</TableCell>
-                                            <TableCell>
-                                                {level ? <Badge variant="outline">{level.name}</Badge> : <span className="text-muted-foreground">-</span>}
-                                            </TableCell>
-                                            <TableCell>{tariff?.name || 'N/A'}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className={cn('font-semibold', getStatusBadgeClass(paymentStatusInfo.status))}>
-                                                    {paymentStatusText}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yyyy') : 'N/A'}
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8"><MoreVertical className="h-4 w-4" /></Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onSelect={() => handleRecordPaymentClick(person)}>Registrar Pago</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => handleEnrollmentClick(person)}>Gestionar Horarios</DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onSelect={() => handleEditClick(person)}>Editar Persona</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => handleJustifyAbsenceClick(person)}>Notificar Ausencia</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setPersonForVacation(person)}>Gestionar Vacaciones</DropdownMenuItem>
-                                                        <DropdownMenuSeparator />
-                                                        <DropdownMenuItem onSelect={() => setPersonForHistory(person)}>Historial de Pagos</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setPersonForAttendanceHistory(person)}>Historial de Asistencia</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="h-24 text-center">
-                                        No se encontraron personas con los filtros seleccionados.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
                 </Card>
+                <div className="mt-8">
+                    {loading ? (
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+                        {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-[350px] w-full rounded-2xl" />)}
+                        </div>
+                    ) : filteredPeople.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+                            {filteredPeople.map((person) => (
+                                <PersonCard 
+                                    key={person.id} 
+                                    person={person}
+                                    sessions={sessions}
+                                    actividades={actividades}
+                                    specialists={specialists}
+                                    spaces={spaces}
+                                    levels={levels}
+                                    tariffs={tariffs}
+                                    allPayments={payments}
+                                    recoveryCredits={recoveryDetails[person.id] || []}
+                                    onManageVacations={setPersonForVacation}
+                                    onEdit={handleEditClick}
+                                    onViewHistory={setPersonForHistory}
+                                    onViewAttendanceHistory={setPersonForAttendanceHistory}
+                                    onManageEnrollments={handleEnrollmentClick}
+                                    onJustifyAbsence={handleJustifyAbsenceClick}
+                                    onRecordPayment={handleRecordPaymentClick}
+                                />
+                            ))}
+                        </div>
+                        ) : (
+                        <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                            <CardHeader>
+                            <CardTitle>{searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+                            <CardDescription>
+                                {searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
+                            </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                            {!(searchTerm || actividadFilter !== 'all' || statusFilterFromUrl !== 'all' || specialistFilter !== 'all' || spaceFilter !== 'all') && (
+                                <Button onClick={handleAddClick} disabled={isLimitReached}>
+                                    <PlusCircle className="mr-2 h-4 w-4" />
+                                    Añadir Persona
+                                </Button>
+                            )}
+                            </CardContent>
+                        </Card>
+                        )}
+                </div>
             </TabsContent>
+             <TabsContent value="inactive" className="mt-6">
+                <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
+                    <div className="relative flex-grow">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                            placeholder="Buscar inactivos por nombre o teléfono..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+                        />
+                    </div>
+                </Card>
+                <div className="mt-8">
+                    {loading ? (
+                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+                         {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-[200px] w-full rounded-2xl" />)}
+                         </div>
+                    ) : filteredInactivePeople.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+                             {filteredInactivePeople.map(person => (
+                                <Card key={person.id} className="opacity-80 hover:opacity-100 transition-opacity">
+                                    <CardHeader>
+                                        <CardTitle>{person.name}</CardTitle>
+                                        <CardDescription>
+                                            {person.inactiveDate ? `Desactivado/a el ${format(person.inactiveDate, 'dd/MM/yyyy')}` : 'Desactivado/a'}
+                                        </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <p className="text-sm text-muted-foreground">{person.phone}</p>
+                                    </CardContent>
+                                    <CardFooter>
+                                        <Button className="w-full" onClick={() => reactivatePerson(person.id, person.name)}>
+                                            Reactivar Persona
+                                        </Button>
+                                    </CardFooter>
+                                </Card>
+                             ))}
+                        </div>
+                    ) : (
+                         <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                            <CardHeader>
+                                <CardTitle>No hay personas inactivas</CardTitle>
+                                <CardDescription>
+                                    {searchTerm ? "No se encontraron personas inactivas con ese término de búsqueda." : "Aquí aparecerán las personas que desactives."}
+                                </CardDescription>
+                            </CardHeader>
+                        </Card>
+                    )}
+                </div>
+             </TabsContent>
         </Tabs>
 
       <PersonDialog 
@@ -744,5 +731,6 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
 
 

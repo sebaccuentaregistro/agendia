@@ -168,6 +168,31 @@ export const deactivatePersonAction = async (sessionsRef: CollectionReference, p
     return affectedSessionIds;
 };
 
+export const reactivatePersonAction = async (
+    personRef: DocumentReference,
+    personName: string,
+    auditLogRef: CollectionReference,
+    operator: Operator
+) => {
+    const batch = writeBatch(db);
+    const now = new Date();
+
+    // Update person's status to active and clear inactive date
+    batch.update(personRef, { status: 'active', inactiveDate: null });
+
+    // Add to audit log for reactivation
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'REACTIVAR_PERSONA',
+        entityType: 'persona',
+        entityId: personRef.id,
+        entityName: personName,
+        timestamp: now,
+    } as Omit<AuditLog, 'id'>);
+
+    await batch.commit();
+};
 
 
 export const recordPaymentAction = async (

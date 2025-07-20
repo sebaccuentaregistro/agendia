@@ -6,13 +6,14 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction } from '@/lib/firestore-actions';
+import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
 interface StudioContextType {
     sessions: Session[];
     people: Person[];
+    inactivePeople: Person[];
     actividades: Actividad[];
     specialists: Specialist[];
     spaces: Space[];
@@ -30,6 +31,7 @@ interface StudioContextType {
     addPerson: (person: NewPersonData) => Promise<string | undefined>;
     updatePerson: (person: Person) => void;
     deletePerson: (personId: string) => void;
+    reactivatePerson: (personId: string, personName: string) => void;
     addSession: (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => void;
     updateSession: (session: Session) => void;
     deleteSession: (sessionId: string) => void;
@@ -187,8 +189,11 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
     }, [data, collectionRefs]);
 
-    const activePeople = useMemo(() => {
-      return (data.people as Person[]).filter(p => p.status !== 'inactive');
+    const { people, inactivePeople } = useMemo(() => {
+        const allPeople = data.people as Person[];
+        const active = allPeople.filter(p => p.status !== 'inactive');
+        const inactive = allPeople.filter(p => p.status === 'inactive');
+        return { people: active, inactivePeople: inactive };
     }, [data.people]);
 
     const handleAction = async (action: Promise<any>, successMessage: string, errorMessage: string) => {
@@ -232,7 +237,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
     const deletePerson = async (personId: string) => {
         if (!collectionRefs || !activeOperator) return;
-        const personToDelete = data.people.find((p: Person) => p.id === personId);
+        const personToDelete = (data.people as Person[]).find((p: Person) => p.id === personId);
         if (!personToDelete) return;
 
         const affectedSessionIds = await withOperator(
@@ -246,12 +251,22 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         }
     };
     
+    const reactivatePerson = async (personId: string, personName: string) => {
+        if (!collectionRefs || !activeOperator) return;
+        
+        await withOperator(
+            (operator) => reactivatePersonAction(doc(collectionRefs.people, personId), personName, collectionRefs.audit_logs, operator),
+            `${personName} ha sido reactivado.`,
+            `Error al reactivar a ${personName}.`
+        );
+    };
+
     const recordPayment = async (personId: string) => {
         if (!collectionRefs || !activeOperator) {
             throw new Error("No se puede registrar el pago: faltan referencias de la base de datos o el operador no está activo.");
         }
     
-        const person = data.people.find((p: Person) => p.id === personId);
+        const person = (data.people as Person[]).find((p: Person) => p.id === personId);
         if (!person) {
             throw new Error('No se encontró a la persona para registrar el pago.');
         }
@@ -284,7 +299,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
      const revertLastPayment = async (personId: string) => {
         if (!collectionRefs || !activeOperator) return;
-        const person = data.people.find((p: Person) => p.id === personId);
+        const person = (data.people as Person[]).find((p: Person) => p.id === personId);
         if (!person) return;
         await withOperator(
             (operator) => revertLastPaymentAction(collectionRefs.payments, doc(collectionRefs.people, personId), personId, person, collectionRefs.audit_logs, operator),
@@ -374,7 +389,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }, []);
     
     const addVacationPeriod = (personId: string, startDate: Date, endDate: Date) => {
-        const person = data.people.find((p: Person) => p.id === personId);
+        const person = (data.people as Person[]).find((p: Person) => p.id === personId);
         if (!person) return;
         handleAction(
             addVacationPeriodAction(doc(collectionRefs!.people, personId), person, startDate, endDate),
@@ -384,7 +399,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
 
     const removeVacationPeriod = (personId: string, vacationId: string) => {
-        const person = data.people.find((p: Person) => p.id === personId);
+        const person = (data.people as Person[]).find((p: Person) => p.id === personId);
         if (!person) return;
         handleAction(
             removeVacationPeriodAction(doc(collectionRefs!.people, personId), person, vacationId),
@@ -497,7 +512,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             return 0;
         }
         return await withOperator(
-            (operator) => updateOverdueStatusesAction(collectionRefs.people, data.people, data.tariffs, operator, collectionRefs.audit_logs),
+            (operator) => updateOverdueStatusesAction(collectionRefs.people, (data.people as Person[]), data.tariffs, operator, collectionRefs.audit_logs),
             "Actualización de Deudas Completa.",
             "Error al actualizar deudas."
         ) || 0;
@@ -506,7 +521,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     return (
         <StudioContext.Provider value={{
             ...(data as any),
-            people: activePeople,
+            people,
+            inactivePeople,
             loading,
             isTutorialOpen,
             openTutorial: () => setIsTutorialOpen(true),
@@ -517,6 +533,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             addPerson,
             updatePerson,
             deletePerson,
+            reactivatePerson,
             recordPayment,
             revertLastPayment,
             addSession,
