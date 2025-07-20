@@ -4,8 +4,8 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { FileDown, Calendar as CalendarIcon, Wallet, TrendingUp, ArrowDownUp, Banknote, ArrowLeft, Check, ChevronsUpDown } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FileDown, Calendar as CalendarIcon, Wallet, TrendingUp, ArrowDownUp, Banknote, ArrowLeft, Check, ChevronsUpDown, KeyRound } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Calendar } from '@/components/ui/calendar';
@@ -16,13 +16,13 @@ import { cn, exportToCsv } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PinDialog } from '@/components/pin-dialog';
 
 function PaymentsPageContent() {
-    const { payments, people, tariffs, loading } = useStudio();
-    const { institute, loading: authLoading } = useAuth();
-    const router = useRouter();
+    const { payments, people, tariffs, loading: studioLoading } = useStudio();
+    const { loading: authLoading, isPinVerified, setPinVerified } = useAuth();
+    const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
 
     const [filters, setFilters] = useState<{ personId: string; dateRange: { from?: Date; to?: Date } }>({
         personId: 'all',
@@ -33,10 +33,10 @@ function PaymentsPageContent() {
 
     useEffect(() => {
         setIsMounted(true);
-        if (!authLoading && !institute?.ownerPin) {
-             router.push('/');
+        if (!authLoading && !isPinVerified) {
+             setIsPinDialogOpen(true);
         }
-    }, [institute, authLoading, router]);
+    }, [isPinVerified, authLoading]);
 
     const financialData = useMemo(() => {
         if (!isMounted) return {
@@ -103,7 +103,7 @@ function PaymentsPageContent() {
         exportToCsv('historial_pagos.csv', dataToExport, headers);
     };
     
-    if (loading || authLoading || !isMounted || !institute) {
+    if (studioLoading || authLoading || !isMounted) {
         return (
             <div className="space-y-8">
                  <PageHeader title="Gestión de Pagos" />
@@ -116,6 +116,36 @@ function PaymentsPageContent() {
                  </Card>
             </div>
         )
+    }
+
+    if (!isPinVerified) {
+        return (
+            <>
+                <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
+                <div className="flex justify-start">
+                    <Button variant="outline" asChild>
+                        <Link href="/?view=advanced">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Volver a Gestión Avanzada
+                        </Link>
+                    </Button>
+                </div>
+                <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                    <CardHeader>
+                        <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>
+                        <CardDescription className="text-slate-600 dark:text-slate-400">
+                            Necesitas verificar tu PIN de propietario para gestionar esta sección.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={() => setIsPinDialogOpen(true)}>
+                            <KeyRound className="mr-2 h-4 w-4" />
+                            Verificar PIN
+                        </Button>
+                    </CardContent>
+                </Card>
+            </>
+        );
     }
 
     return (

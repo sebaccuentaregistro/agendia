@@ -12,23 +12,32 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, ClipboardCheck, Divide, ArrowLeft } from 'lucide-react';
+import { Users, ClipboardCheck, Divide, ArrowLeft, UserPlus, UserX as UserXIcon, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Person } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { PinDialog } from '@/components/pin-dialog';
 
 
 export default function StatisticsPageContent() {
-  const { sessions, people, actividades, loading, payments, tariffs, attendance } = useStudio();
+  const { sessions, people, inactivePeople, actividades, loading: studioLoading, payments, tariffs, attendance } = useStudio();
+  const { loading: authLoading, isPinVerified, setPinVerified } = useAuth();
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    if (!authLoading && !isPinVerified) {
+        setIsPinDialogOpen(true);
+    }
+  }, [isPinVerified, authLoading]);
 
   const chartData = useMemo(() => {
     if (!isMounted) return {
       sessionPopularityByTime: [],
       monthlyNewMembers: [],
+      monthlyDeactivations: [],
       monthlyRevenue: [],
       retentionData: { threeMonths: { rate: 0, total: 0, active: 0, label: '' }, sixMonths: { rate: 0, total: 0, active: 0, label: '' } },
       activityPopularity: [],
@@ -37,6 +46,7 @@ export default function StatisticsPageContent() {
     };
     
     const now = new Date();
+    const allPeople = [...people, ...inactivePeople];
 
     const sessionPopularityByTime = sessions.reduce<Record<string, number>>((acc, session) => {
       const time = session.time;
@@ -48,7 +58,7 @@ export default function StatisticsPageContent() {
     const monthLabels = Array.from({ length: 12 }).map((_, i) => format(startOfMonth(subMonths(now, i)), 'yyyy-MM')).reverse();
     
     const monthlyNewMembers = (() => {
-      const memberCounts = people.reduce<Record<string, number>>((acc, person) => {
+      const memberCounts = allPeople.reduce<Record<string, number>>((acc, person) => {
         if (!person.joinDate || !(person.joinDate instanceof Date) || isNaN(person.joinDate.getTime())) return acc;
         const monthKey = format(person.joinDate, 'yyyy-MM');
         if (monthLabels.includes(monthKey)) acc[monthKey] = (acc[monthKey] || 0) + 1;
@@ -60,6 +70,19 @@ export default function StatisticsPageContent() {
       }));
     })();
     
+    const monthlyDeactivations = (() => {
+      const deactivationCounts = inactivePeople.reduce<Record<string, number>>((acc, person) => {
+        if (!person.inactiveDate || !(person.inactiveDate instanceof Date) || isNaN(person.inactiveDate.getTime())) return acc;
+        const monthKey = format(person.inactiveDate, 'yyyy-MM');
+        if (monthLabels.includes(monthKey)) acc[monthKey] = (acc[monthKey] || 0) + 1;
+        return acc;
+      }, {});
+      return monthLabels.map(monthKey => ({
+        month: format(new Date(`${monthKey}-02`), 'MMM yy', { locale: es }),
+        bajas: deactivationCounts[monthKey] || 0,
+      }));
+    })();
+
     const monthlyRevenue = (() => {
         const revenueCounts = payments.reduce<Record<string, number>>((acc, payment) => {
             if (!payment.date || !(payment.date instanceof Date) || isNaN(payment.date.getTime())) return acc;
@@ -77,7 +100,7 @@ export default function StatisticsPageContent() {
     })();
 
     const retentionData = (() => {
-      const getCohort = (startDate: Date, endDate: Date) => people.filter(p => p.joinDate && p.joinDate >= startDate && p.joinDate <= endDate);
+      const getCohort = (startDate: Date, endDate: Date) => allPeople.filter((p:Person) => p.joinDate && p.joinDate >= startDate && p.joinDate <= endDate);
       
       const threeMonthsAgo = subMonths(now, 3);
       const startOfThreeMonthCohort = startOfMonth(threeMonthsAgo);
@@ -121,7 +144,7 @@ export default function StatisticsPageContent() {
         const revenueByActivity: Record<string, number> = {};
         
         payments.forEach(payment => {
-            const person = people.find(p => p.id === payment.personId);
+            const person = allPeople.find(p => p.id === payment.personId);
             if (!person) return;
 
             // Find all unique activities this person is enrolled in
@@ -175,13 +198,14 @@ export default function StatisticsPageContent() {
     return {
       sessionPopularityByTime: Object.entries(sessionPopularityByTime).map(([time, people]) => ({ time, personas: people })).sort((a, b) => a.time.localeCompare(b.time)),
       monthlyNewMembers,
+      monthlyDeactivations,
       monthlyRevenue,
       retentionData,
       activityPopularity,
       activityRevenue,
       attendanceMetrics,
     };
-  }, [sessions, people, actividades, isMounted, payments, tariffs, attendance]);
+  }, [sessions, people, inactivePeople, actividades, isMounted, payments, tariffs, attendance]);
   
   const formatPrice = (price: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(price);
 
@@ -189,6 +213,7 @@ export default function StatisticsPageContent() {
     const config: any = {
       personas: { label: "Personas", color: "hsl(var(--chart-1))" },
       nuevasPersonas: { label: "Nuevas Personas", color: "hsl(var(--chart-2))" },
+      bajas: { label: "Bajas", color: "hsl(var(--chart-5))" },
       ingresos: { label: "Ingresos", color: "hsl(var(--chart-3))" },
     };
     chartData.activityPopularity.forEach((activity, index) => {
@@ -214,7 +239,7 @@ export default function StatisticsPageContent() {
     );
   };
   
-  if (!isMounted || loading) {
+  if (!isMounted || studioLoading || authLoading) {
     return (
        <div className="space-y-8">
         <PageHeader title="Estadísticas del Estudio" />
@@ -227,6 +252,36 @@ export default function StatisticsPageContent() {
       </div>
     )
   }
+
+  if (!isPinVerified) {
+    return (
+        <>
+            <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
+            <div className="flex justify-start">
+                <Button variant="outline" asChild>
+                    <Link href="/?view=advanced">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Volver a Gestión Avanzada
+                    </Link>
+                </Button>
+            </div>
+            <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                <CardHeader>
+                    <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                        Necesitas verificar tu PIN de propietario para gestionar esta sección.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={() => setIsPinDialogOpen(true)}>
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        Verificar PIN
+                    </Button>
+                </CardContent>
+            </Card>
+        </>
+    );
+}
 
   return (
     <div className="space-y-8">
@@ -266,20 +321,10 @@ export default function StatisticsPageContent() {
         </Card>
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
-          <CardHeader><CardTitle className="text-slate-800 dark:text-slate-100">Popularidad por Horario</CardTitle></CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <BarChart data={chartData.sessionPopularityByTime} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
-                <CartesianGrid vertical={false} /><XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} /><YAxis />
-                <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
-                <Bar dataKey="personas" fill="var(--color-personas)" radius={4} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
-          <CardHeader><CardTitle className="text-slate-800 dark:text-slate-100">Nuevas Personas por Mes</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><UserPlus className="h-5 w-5"/>Nuevas Personas por Mes</CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-400">Total de alumnos que se unieron cada mes.</CardDescription>
+          </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="h-[300px] w-full">
               <LineChart data={chartData.monthlyNewMembers} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
@@ -287,6 +332,24 @@ export default function StatisticsPageContent() {
                 <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
                 <Line type="monotone" dataKey="nuevasPersonas" stroke="var(--color-nuevasPersonas)" strokeWidth={2} dot={{ r: 4, fill: "var(--color-nuevasPersonas)" }} activeDot={{ r: 6 }} name="Nuevas Personas" />
               </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-slate-800 dark:text-slate-100"><UserXIcon className="h-5 w-5"/>Bajas por Mes</CardTitle>
+            <CardDescription className="text-slate-600 dark:text-slate-400">Total de alumnos desactivados cada mes.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <BarChart data={chartData.monthlyDeactivations} margin={{ top: 20, right: 20, left: -10, bottom: 5 }}>
+                <CartesianGrid vertical={false} />
+                <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
+                <YAxis allowDecimals={false} />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dot" />} />
+                <Bar dataKey="bajas" fill="var(--color-bajas)" radius={4} />
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -401,4 +464,3 @@ export default function StatisticsPageContent() {
     </div>
   );
 }
-

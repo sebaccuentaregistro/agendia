@@ -151,9 +151,9 @@ export function EnrollmentsDialog({ person, onClose }: EnrollmentsDialogProps) {
                 {isOverLimit && (
                     <Alert variant="destructive" className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 [&>svg]:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertTitle>Atención</AlertTitle>
+                        <AlertTitle>Límite del Plan Excedido</AlertTitle>
                         <AlertDescription>
-                            Con {watchedSessionIds.length} clases, {person.name} supera el límite de {tariffFrequency} de su plan. Puedes inscribirlo igualmente.
+                           Con {watchedSessionIds.length} clases, {person.name} supera el límite de {tariffFrequency} de su plan. No podrás seleccionar más clases.
                         </AlertDescription>
                     </Alert>
                 )}
@@ -178,15 +178,15 @@ export function EnrollmentsDialog({ person, onClose }: EnrollmentsDialogProps) {
                                                         const level = levels.find(l => l.id === session.levelId);
                                                         const capacity = space?.capacity ?? 0;
                                                         const enrolledCount = session.personIds.length;
-                                                        const isFull = enrolledCount >= capacity;
-                                                        const isAlreadyEnrolled = field.value?.includes(session.id);
+                                                        const isAlreadyEnrolledInThisClass = field.value?.includes(session.id);
+                                                        const isFull = enrolledCount >= capacity && !isAlreadyEnrolledInThisClass;
 
                                                         return (
-                                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 hover:bg-accent/50 transition-colors data-[disabled]:opacity-50" data-disabled={isFull && !isAlreadyEnrolled}>
+                                                            <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-3 hover:bg-accent/50 transition-colors data-[disabled]:opacity-50" data-disabled={isFull || (isOverLimit && !isAlreadyEnrolledInThisClass)}>
                                                                 <FormControl>
                                                                     <Checkbox
-                                                                        checked={isAlreadyEnrolled}
-                                                                        disabled={isFull && !isAlreadyEnrolled}
+                                                                        checked={isAlreadyEnrolledInThisClass}
+                                                                        disabled={isFull || (isOverLimit && !isAlreadyEnrolledInThisClass)}
                                                                         onCheckedChange={(checked) => {
                                                                             return checked
                                                                                 ? field.onChange([...(field.value || []), session.id])
