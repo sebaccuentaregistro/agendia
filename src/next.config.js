@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Force cache invalidation to fix build error
 const nextConfig = {
   images: {
     remotePatterns: [
