@@ -30,7 +30,7 @@ interface StudioContextType {
     closeTutorial: () => void;
     addPerson: (person: NewPersonData) => Promise<string | undefined>;
     updatePerson: (person: Person) => void;
-    deletePerson: (personId: string) => void;
+    deactivatePerson: (personId: string) => void;
     reactivatePerson: (personId: string, personName: string) => void;
     addSession: (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => void;
     updateSession: (session: Session) => void;
@@ -235,7 +235,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const deletePerson = async (personId: string) => {
+    const deactivatePerson = async (personId: string) => {
         if (!collectionRefs || !activeOperator) return;
         const personToDelete = (data.people as Person[]).find((p: Person) => p.id === personId);
         if (!personToDelete) return;
@@ -532,7 +532,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             },
             addPerson,
             updatePerson,
-            deletePerson,
+            deactivatePerson,
             reactivatePerson,
             recordPayment,
             revertLastPayment,

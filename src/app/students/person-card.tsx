@@ -41,7 +41,7 @@ interface PersonCardProps {
 }
 
 export function PersonCard({ person, sessions, actividades, specialists, spaces, levels, tariffs, allPayments, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: PersonCardProps) {
-    const { deletePerson, revertLastPayment } = useStudio();
+    const { deactivatePerson, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
     
@@ -324,7 +324,7 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader><AlertDialogTitleAlert>¿Desactivar a {person.name}?</AlertDialogTitleAlert><AlertDialogDescriptionAlert>Esta acción marcará a la persona como inactiva y la desinscribirá de todas sus clases. No se borrará su historial.</AlertDialogDescriptionAlert></AlertDialogHeader>
-                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deletePerson(person.id)} className="bg-destructive hover:bg-destructive/90">Desactivar</AlertDialogAction></AlertDialogFooter>
+                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deactivatePerson(person.id)} className="bg-destructive hover:bg-destructive/90">Desactivar</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 
