@@ -139,14 +139,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     const docData = doc.data();
                     const id = doc.id;
                     
-                    const itemWithId = { ...docData, id };
+                    const itemWithId: {[key: string]: any} = { ...docData, id };
                     
                     // Universal date parsing for all collections
-                    itemWithId.date = safelyParseDate(docData, 'date');
-                    itemWithId.createdAt = safelyParseDate(docData, 'createdAt');
-                    itemWithId.timestamp = safelyParseDate(docData, 'timestamp');
-                    itemWithId.joinDate = safelyParseDate(docData, 'joinDate');
-                    itemWithId.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
+                    if (docData.date) itemWithId.date = safelyParseDate(docData, 'date');
+                    if (docData.createdAt) itemWithId.createdAt = safelyParseDate(docData, 'createdAt');
+                    if (docData.timestamp) itemWithId.timestamp = safelyParseDate(docData, 'timestamp');
+                    if (docData.joinDate) itemWithId.joinDate = safelyParseDate(docData, 'joinDate');
+                    if (docData.lastPaymentDate) itemWithId.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
                     
                     if (itemWithId.vacationPeriods && Array.isArray(itemWithId.vacationPeriods)) {
                         itemWithId.vacationPeriods = itemWithId.vacationPeriods.map((v: any) => ({
