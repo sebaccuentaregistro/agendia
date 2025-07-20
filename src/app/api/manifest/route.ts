@@ -5,8 +5,8 @@ import fs from 'fs/promises';
 
 export async function GET() {
   try {
-    // Construir la ruta al archivo manifest.json en la carpeta public
-    const manifestPath = path.join(process.cwd(), 'public', 'manifest.json');
+    // Construir la ruta al archivo manifest.json en la carpeta src
+    const manifestPath = path.join(process.cwd(), 'src', 'manifest.json');
     
     // Leer el contenido del archivo
     const manifestContent = await fs.readFile(manifestPath, 'utf-8');

@@ -1,12 +1,11 @@
-
 {
-  "name": "YogaFlow Manager",
-  "short_name": "YogaFlow",
-  "description": "Gestión para tu estudio de Yoga y Bienestar.",
+  "name": "Agendia - Gestión de Bienestar",
+  "short_name": "Agendia",
+  "description": "Aplicación para la gestión de centros de bienestar como yoga y gimnasios.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F4F2F7",
-  "theme_color": "#9D7CBF",
+  "background_color": "#FFFFFF",
+  "theme_color": "#A855F7",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
