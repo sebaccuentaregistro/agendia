@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useStudio } from '@/context/StudioContext';
 import { Session } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 interface EnrollPeopleDialogProps {
   session: Session;
@@ -18,7 +19,7 @@ interface EnrollPeopleDialogProps {
 }
 
 export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps) {
-  const { people, spaces, enrollPeopleInClass, actividades } = useStudio();
+  const { people, spaces, enrollPeopleInClass, actividades, tariffs, sessions: allSessions } = useStudio();
   const [searchTerm, setSearchTerm] = useState('');
 
   const form = useForm<{ personIds: string[] }>({
@@ -30,21 +31,35 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
   const capacity = space?.capacity ?? 0;
   const actividad = actividades.find(a => a.id === session.actividadId);
 
-  function onSubmit(data: { personIds: string[] }) {
-    enrollPeopleInClass(session.id, data.personIds);
-    onClose();
-  }
+  const peopleWithEnrollmentData = useMemo(() => {
+    return people.map(person => {
+      const personTariff = tariffs.find(t => t.id === person.tariffId);
+      const weeklyClassLimit = personTariff?.frequency;
+      
+      const currentWeeklyClasses = allSessions.filter(s => s.personIds.includes(person.id)).length;
 
-  const sortedPeople = useMemo(() => [...people].sort((a, b) => a.name.localeCompare(b.name)), [people]);
+      return {
+        ...person,
+        weeklyClassLimit,
+        currentWeeklyClasses
+      };
+    }).sort((a,b) => a.name.localeCompare(b.name));
+  }, [people, tariffs, allSessions]);
 
   const filteredPeople = useMemo(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
-    return sortedPeople.filter(person => {
+    return peopleWithEnrollmentData.filter(person => {
       const isSelected = watchedPersonIds.includes(person.id);
       const nameMatches = person.name.toLowerCase().includes(lowercasedFilter);
       return isSelected || nameMatches;
     });
-  }, [searchTerm, sortedPeople, watchedPersonIds]);
+  }, [searchTerm, peopleWithEnrollmentData, watchedPersonIds]);
+
+
+  function onSubmit(data: { personIds: string[] }) {
+    enrollPeopleInClass(session.id, data.personIds);
+    onClose();
+  }
 
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
@@ -71,35 +86,55 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
               render={() => (
                 <FormItem>
                   <ScrollArea className="h-72 rounded-md border p-4">
-                    {filteredPeople.length > 0 ? filteredPeople.map(person => (
-                      <FormField
-                        key={person.id}
-                        control={form.control}
-                        name="personIds"
-                        render={({ field }) => (
-                          <FormItem key={person.id} className="flex flex-row items-center space-x-3 space-y-0 py-2">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(person.id)}
-                                disabled={
-                                  !field.value?.includes(person.id) &&
-                                  watchedPersonIds.length >= capacity
-                                }
-                                onCheckedChange={checked => {
-                                  const currentValues = field.value || [];
-                                  return checked
-                                    ? field.onChange([...currentValues, person.id])
-                                    : field.onChange(
-                                        currentValues.filter(value => value !== person.id)
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">{person.name}</FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                    )) : <p className="text-center text-sm text-muted-foreground">No se encontraron personas.</p>}
+                    {filteredPeople.length > 0 ? filteredPeople.map(person => {
+                      const isAlreadyEnrolledInThisClass = session.personIds.includes(person.id);
+                      
+                      const effectiveClassCount = isAlreadyEnrolledInThisClass
+                        ? person.currentWeeklyClasses - 1
+                        : person.currentWeeklyClasses;
+                      
+                      const hasReachedLimit = person.weeklyClassLimit !== undefined && effectiveClassCount >= person.weeklyClassLimit;
+
+                      return (
+                        <FormField
+                          key={person.id}
+                          control={form.control}
+                          name="personIds"
+                          render={({ field }) => (
+                            <FormItem
+                              key={person.id}
+                              className="flex flex-row items-center space-x-3 space-y-0 py-2"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(person.id)}
+                                  disabled={
+                                    (!field.value?.includes(person.id) && watchedPersonIds.length >= capacity) ||
+                                    (hasReachedLimit && !isAlreadyEnrolledInThisClass)
+                                  }
+                                  onCheckedChange={checked => {
+                                    const currentValues = field.value || [];
+                                    return checked
+                                      ? field.onChange([...currentValues, person.id])
+                                      : field.onChange(
+                                          currentValues.filter(value => value !== person.id)
+                                        );
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal flex items-center gap-2">
+                                {person.name}
+                                {person.weeklyClassLimit !== undefined && (
+                                   <Badge variant={person.currentWeeklyClasses >= person.weeklyClassLimit ? "destructive" : "secondary"}>
+                                       {person.currentWeeklyClasses}/{person.weeklyClassLimit} clases
+                                   </Badge>
+                                )}
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      );
+                    }) : <p className="text-center text-sm text-muted-foreground">No se encontraron personas.</p>}
                   </ScrollArea>
                   <FormMessage />
                 </FormItem>
