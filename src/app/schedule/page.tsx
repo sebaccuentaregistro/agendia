@@ -40,6 +40,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
+import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -49,107 +50,6 @@ const formSchema = z.object({
   time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
   levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
 });
-
-function EnrollPeopleDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
-  const { people, spaces, enrollPeopleInClass, actividades } = useStudio();
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const form = useForm<{ personIds: string[] }>({
-    defaultValues: { personIds: session.personIds || [] },
-  });
-  const watchedPersonIds = form.watch('personIds');
-
-  const space = spaces.find(s => s.id === session.spaceId);
-  const capacity = space?.capacity ?? 0;
-  const actividad = actividades.find(a => a.id === session.actividadId);
-
-  function onSubmit(data: { personIds: string[] }) {
-    enrollPeopleInClass(session.id, data.personIds);
-    onClose();
-  }
-
-  const sortedPeople = useMemo(() => [...people].sort((a, b) => a.name.localeCompare(b.name)), [people]);
-
-  const filteredPeople = useMemo(() => {
-    const lowercasedFilter = searchTerm.toLowerCase();
-    return sortedPeople.filter(person => {
-      const isSelected = watchedPersonIds.includes(person.id);
-      const nameMatches = person.name.toLowerCase().includes(lowercasedFilter);
-      return isSelected || nameMatches;
-    });
-  }, [searchTerm, sortedPeople, watchedPersonIds]);
-
-  return (
-    <Dialog open onOpenChange={open => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Inscribir: {actividad?.name}</DialogTitle>
-          <DialogDescription>
-            Selecciona las personas para la sesión. Ocupación: {watchedPersonIds.length}/{capacity}.
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="my-2">
-              <Input
-                placeholder="Buscar por nombre..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <FormField
-              control={form.control}
-              name="personIds"
-              render={() => (
-                <FormItem>
-                  <ScrollArea className="h-72 rounded-md border p-4">
-                    {filteredPeople.length > 0 ? filteredPeople.map(person => (
-                      <FormField
-                        key={person.id}
-                        control={form.control}
-                        name="personIds"
-                        render={({ field }) => (
-                          <FormItem key={person.id} className="flex flex-row items-center space-x-3 space-y-0 py-2">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(person.id)}
-                                disabled={
-                                  !field.value?.includes(person.id) &&
-                                  watchedPersonIds.length >= capacity
-                                }
-                                onCheckedChange={checked => {
-                                  const currentValues = field.value || [];
-                                  return checked
-                                    ? field.onChange([...currentValues, person.id])
-                                    : field.onChange(
-                                        currentValues.filter(value => value !== person.id)
-                                      );
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">{person.name}</FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                    )) : <p className="text-center text-sm text-muted-foreground">No se encontraron personas.</p>}
-                  </ScrollArea>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancelar
-              </Button>
-              <Button type="submit">Guardar</Button>
-            </DialogFooter>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 const formatTime = (time: string) => {
     if (!time || !time.includes(':')) return 'N/A';
