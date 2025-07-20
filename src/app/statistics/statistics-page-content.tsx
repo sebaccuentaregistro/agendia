@@ -12,19 +12,26 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Users, ClipboardCheck, Divide, ArrowLeft, UserPlus, UserX as UserXIcon } from 'lucide-react';
+import { Users, ClipboardCheck, Divide, ArrowLeft, UserPlus, UserX as UserXIcon, KeyRound } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Person } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { PinDialog } from '@/components/pin-dialog';
 
 
 export default function StatisticsPageContent() {
   const { sessions, people, inactivePeople, actividades, loading, payments, tariffs, attendance } = useStudio();
+  const { authLoading, isPinVerified, setPinVerified } = useAuth();
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
+    if (!authLoading && !isPinVerified) {
+        setIsPinDialogOpen(true);
+    }
+  }, [isPinVerified, authLoading]);
 
   const chartData = useMemo(() => {
     if (!isMounted) return {
@@ -232,7 +239,7 @@ export default function StatisticsPageContent() {
     );
   };
   
-  if (!isMounted || loading) {
+  if (!isMounted || loading || authLoading) {
     return (
        <div className="space-y-8">
         <PageHeader title="Estadísticas del Estudio" />
@@ -245,6 +252,36 @@ export default function StatisticsPageContent() {
       </div>
     )
   }
+
+  if (!isPinVerified) {
+    return (
+        <>
+            <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
+            <div className="flex justify-start">
+                <Button variant="outline" asChild>
+                    <Link href="/?view=advanced">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Volver a Gestión Avanzada
+                    </Link>
+                </Button>
+            </div>
+            <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                <CardHeader>
+                    <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                        Necesitas verificar tu PIN de propietario para gestionar esta sección.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button onClick={() => setIsPinDialogOpen(true)}>
+                        <KeyRound className="mr-2 h-4 w-4" />
+                        Verificar PIN
+                    </Button>
+                </CardContent>
+            </Card>
+        </>
+    );
+}
 
   return (
     <div className="space-y-8">

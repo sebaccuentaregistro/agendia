@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -9,25 +9,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, KeyRound, ShieldAlert } from 'lucide-react';
+import { PinDialog } from '@/components/pin-dialog';
+import { useState } from 'react';
+
 
 function ActivityLogContent() {
     const { audit_logs, loading: studioLoading } = useStudio();
-    const { activeOperator, isPinVerified, loading: authLoading } = useAuth();
-    const router = useRouter();
+    const { activeOperator, isPinVerified, loading: authLoading, setPinVerified } = useAuth();
+    const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
 
     useEffect(() => {
-        // Redirect to home if the pin is not verified, regardless of role.
         if (!authLoading && !isPinVerified) {
-            router.push('/');
+            setIsPinDialogOpen(true);
         }
-    }, [authLoading, isPinVerified, router]);
+    }, [isPinVerified, authLoading]);
 
     const sortedLogs = useMemo(() => {
         return [...audit_logs].sort((a, b) => {
@@ -47,7 +48,7 @@ function ActivityLogContent() {
         return 'secondary';
     }
 
-    if (studioLoading || authLoading || !isPinVerified) {
+    if (studioLoading || authLoading) {
         return (
              <div className="space-y-8">
                 <PageHeader title="Registro de Actividad" />
@@ -58,6 +59,37 @@ function ActivityLogContent() {
             </div>
         )
     }
+    
+    if (!isPinVerified) {
+        return (
+            <>
+                <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
+                <div className="flex justify-start">
+                    <Button variant="outline" asChild>
+                        <Link href="/?view=advanced">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Volver a Gestión Avanzada
+                        </Link>
+                    </Button>
+                </div>
+                <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                    <CardHeader>
+                        <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>
+                        <CardDescription className="text-slate-600 dark:text-slate-400">
+                            Necesitas verificar tu PIN de propietario para gestionar esta sección.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button onClick={() => setIsPinDialogOpen(true)}>
+                            <KeyRound className="mr-2 h-4 w-4" />
+                            Verificar PIN
+                        </Button>
+                    </CardContent>
+                </Card>
+            </>
+        );
+    }
+
 
     // After loading, check if the active operator is an admin.
     if (activeOperator?.role !== 'admin') {
