@@ -45,6 +45,7 @@ import { WaitlistOpportunities } from '@/components/waitlist-opportunities';
 import { PinDialog } from '@/components/pin-dialog';
 import { ChurnRiskAlerts } from '@/components/churn-risk-alerts';
 import { PaymentReminders } from '@/components/payment-reminders';
+import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 
 function MassReminderDialog({ reminders, onOpenChange }: { reminders: PaymentReminderInfo[]; onOpenChange: (open: boolean) => void; }) {
     const { institute } = useAuth();
@@ -145,84 +146,7 @@ function PaymentReminderDialog({ reminderInfo, onOpenChange }: { reminderInfo: P
     );
 }
 
-// Helper function to render student cards inside the sheet
-function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
-  const { people, actividades, specialists, spaces, attendance, isPersonOnVacation } = useStudio();
-  const [isMounted, setIsMounted] = useState(false);
-  
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
-  const { todayStr, today, enrolledPeople, sessionDetails } = useMemo(() => {
-    if (!isMounted) {
-      return { todayStr: '', today: new Date(), enrolledPeople: [], sessionDetails: {} };
-    }
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
-    
-    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-    const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
-    
-    const regularIds = session.personIds.filter(pid => {
-        const person = people.find(p => p.id === pid);
-        return person && !isPersonOnVacation(person, today);
-    });
-    
-    const allEnrolledIds = Array.from(new Set([...regularIds, ...oneTimeIds]));
-    
-    const enrolledPeople = people
-      .filter(p => allEnrolledIds.includes(p.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
-    const specialist = specialists.find((i) => i.id === session.instructorId);
-    const actividad = actividades.find((s) => s.id === session.actividadId);
-    const space = spaces.find((s) => s.id === session.spaceId);
-    
-    return { todayStr, today, enrolledPeople, sessionDetails: { specialist, actividad, space } };
-  }, [isMounted, people, session, attendance, isPersonOnVacation, specialists, actividades, spaces]);
-
-  const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
-
-  return (
-    <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="w-full sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle>Inscriptos en {(sessionDetails as any).actividad?.name || 'Sesión'}</SheetTitle>
-          <SheetDescription>
-            {session.dayOfWeek} a las {session.time} en {(sessionDetails as any).space?.name || 'N/A'}.
-            <br/>
-            {enrolledPeople.length} de {(sessionDetails as any).space?.capacity || 0} personas inscriptas.
-          </SheetDescription>
-        </SheetHeader>
-        <ScrollArea className="mt-4 space-y-4 h-[calc(100%-8rem)] pr-4">
-          {enrolledPeople.length > 0 ? (
-            enrolledPeople.map(person => (
-              <Card key={person.id} className="p-3 bg-card/80 border">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className="font-semibold text-foreground">{person.name}</p>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{person.phone}</span>
-                       <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                          <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                          <span className="sr-only">Enviar WhatsApp a {person.name}</span>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))
-          ) : (
-            <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border/30">
-                <p className="text-sm text-muted-foreground">No hay personas inscriptas.</p>
-            </div>
-          )}
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
-  )
-}
 
 function DashboardPageContent() {
   const { 
