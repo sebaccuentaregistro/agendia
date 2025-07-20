@@ -1,5 +1,17 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  async headers() {
+    return [
+      {
+        source: '/manifest.json',
+        headers: [
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-Requested-With, content-type, Authorization' },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {
@@ -12,7 +24,7 @@ const nextConfig = {
   },
   webpack: (config, { isServer, dev }) => {
     if (!isServer && !dev) {
-      const InjectManifest = require('workbox-webpack-plugin').InjectManifest;
+      const { InjectManifest } = require('workbox-webpack-plugin');
       config.plugins.push(
         new InjectManifest({
           swSrc: './src/lib/sw.js',
