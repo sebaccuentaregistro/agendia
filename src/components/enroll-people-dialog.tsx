@@ -122,14 +122,19 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                                   }}
                                 />
                               </FormControl>
-                              <FormLabel className="font-normal flex items-center gap-2">
-                                {person.name}
-                                {person.weeklyClassLimit !== undefined && (
-                                   <Badge variant={person.currentWeeklyClasses >= person.weeklyClassLimit ? "destructive" : "secondary"}>
-                                       {person.currentWeeklyClasses}/{person.weeklyClassLimit} clases
-                                   </Badge>
+                              <div className="flex flex-col">
+                                <FormLabel className="font-normal flex items-center gap-2">
+                                  {person.name}
+                                  {person.weeklyClassLimit !== undefined && (
+                                    <Badge variant={hasReachedLimit ? "destructive" : "secondary"}>
+                                        {person.currentWeeklyClasses}/{person.weeklyClassLimit} clases
+                                    </Badge>
+                                  )}
+                                </FormLabel>
+                                {hasReachedLimit && !isAlreadyEnrolledInThisClass && (
+                                    <p className="text-xs text-destructive">Límite del plan alcanzado.</p>
                                 )}
-                              </FormLabel>
+                              </div>
                             </FormItem>
                           )}
                         />
