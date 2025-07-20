@@ -49,6 +49,10 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     const level = levels.find(l => l.id === person.levelId);
     
+    const personPaymentCount = useMemo(() => {
+        return allPayments.filter(p => p.personId === person.id).length;
+    }, [allPayments, person.id]);
+
     const getStatusBadgeClass = () => {
         switch (paymentStatusInfo.status) {
             case 'Al día': return "bg-green-600 hover:bg-green-700 border-green-700 text-white";
@@ -238,7 +242,7 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Historial de Pagos</DropdownMenuItem>
                                 <DropdownMenuItem onSelect={() => onViewAttendanceHistory(person)}><CalendarIcon className="mr-2 h-4 w-4" />Historial de Asistencia</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setIsRevertDialogOpen(true)}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setIsRevertDialogOpen(true)} disabled={personPaymentCount === 0}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
                             </DropdownMenuContent>
