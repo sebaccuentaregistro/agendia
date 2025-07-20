@@ -22,8 +22,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
 import { AttendanceSheet } from '@/components/attendance-sheet';
@@ -41,6 +39,7 @@ import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
+import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -55,66 +54,6 @@ const formatTime = (time: string) => {
     if (!time || !time.includes(':')) return 'N/A';
     return time;
 };
-
-// Helper component to show enrolled people, similar to the one in dashboard
-function EnrolledPeopleSheet({ session, onClose }: { session: Session; onClose: () => void; }) {
-  const { people, actividades, spaces } = useStudio();
-
-  const enrolledPeople = useMemo(() => {
-    return people.filter(p => session.personIds.includes(p.id));
-  }, [people, session]);
-
-  const actividad = useMemo(() => {
-    return actividades.find((s) => s.id === session.actividadId);
-  }, [session, actividades]);
-  
-  const space = useMemo(() => {
-    return spaces.find((s) => s.id === session.spaceId);
-  }, [session, spaces]);
-
-  const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
-
-  return (
-    <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent>
-        <SheetHeader>
-          <SheetTitle>Inscriptos en {actividad?.name || 'Sesión'}</SheetTitle>
-          <SheetDescription>
-            {session.dayOfWeek} a las {formatTime(session.time)} en {space?.name || 'N/A'}.
-            <br/>
-            {enrolledPeople.length} de {space?.capacity || 0} personas inscriptas.
-          </SheetDescription>
-        </SheetHeader>
-        <ScrollArea className="mt-4 h-[calc(100%-8rem)] pr-4">
-          {enrolledPeople.length > 0 ? (
-            <div className="space-y-4">
-              {enrolledPeople.map(person => (
-                <Card key={person.id} className="p-3 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl border-white/20">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <p className="font-semibold text-slate-800 dark:text-slate-100">{person.name}</p>
-                      <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                        <span>{person.phone}</span>
-                        <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                            <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                            <span className="sr-only">Enviar WhatsApp a {person.name}</span>
-                        </a>
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-white/30">
-                <p className="text-sm text-slate-500 dark:text-slate-400">No hay personas inscriptas.</p>
-            </div>
-          )}
-        </ScrollArea>
-      </SheetContent>
-    </Sheet>
-  )
-}
 
 function SchedulePageContent() {
   const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading, isPersonOnVacation, attendance } = useStudio();
@@ -956,7 +895,7 @@ function SchedulePageContent() {
 
       {sessionToManage && <EnrollPeopleDialog session={sessionToManage} onClose={() => setSessionToManage(null)} />}
       {sessionForPuntual && <OneTimeAttendeeDialog session={sessionForPuntual} preselectedPersonId={personIdForRecovery} onClose={() => setSessionForPuntual(null)} />}
-      {sessionForRoster && <EnrolledPeopleSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
+      {sessionForRoster && <EnrolledStudentsSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
       {sessionForAttendance && <AttendanceSheet session={sessionForAttendance} onClose={() => setSessionForAttendance(null)} />}
       {sessionToNotify && <NotifyAttendeesDialog session={sessionToNotify} onClose={() => setSessionToNotify(null)} />}
       {sessionForWaitlist && <WaitlistDialog session={sessionForWaitlist} onClose={() => setSessionForWaitlist(null)} />}
@@ -971,3 +910,4 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
