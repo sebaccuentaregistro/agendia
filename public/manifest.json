@@ -1,0 +1,22 @@
+
+{
+  "name": "YogaFlow Manager",
+  "short_name": "YogaFlow",
+  "description": "Gestión para tu estudio de Yoga y Bienestar.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F2F7",
+  "theme_color": "#9D7CBF",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

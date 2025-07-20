@@ -220,7 +220,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const addPerson = async (personData: NewPersonData) => {
         if (!collectionRefs || !activeOperator) return;
         return withOperator(
-            (operator) => addPersonAction(collectionRefs.people, personData, collectionRefs.audit_logs, operator),
+            (operator) => addPersonAction(
+                collectionRefs.people, 
+                personData, 
+                data.tariffs as Tariff[], 
+                collectionRefs.payments, 
+                collectionRefs.audit_logs, 
+                operator
+            ),
             `${personData.name} ha sido añadido con éxito.`,
             `Error al añadir a ${personData.name}.`
         );

@@ -20,7 +20,7 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import type { Person, NewPersonData } from '@/types';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Checkbox } from '../ui/checkbox';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),

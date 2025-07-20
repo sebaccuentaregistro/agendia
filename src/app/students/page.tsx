@@ -732,8 +732,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
-
-
-
-
