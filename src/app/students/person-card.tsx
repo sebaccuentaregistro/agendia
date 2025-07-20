@@ -31,6 +31,7 @@ interface PersonCardProps {
     tariffs: Tariff[];
     allPayments: Payment[];
     recoveryCredits: RecoveryCredit[];
+    onDeactivated: () => void;
     onManageVacations: (person: Person) => void;
     onEdit: (person: Person) => void;
     onViewHistory: (person: Person) => void;
@@ -40,7 +41,7 @@ interface PersonCardProps {
     onRecordPayment: (person: Person) => void;
 }
 
-export function PersonCard({ person, sessions, actividades, specialists, spaces, levels, tariffs, allPayments, recoveryCredits, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: PersonCardProps) {
+export function PersonCard({ person, sessions, actividades, specialists, spaces, levels, tariffs, allPayments, recoveryCredits, onDeactivated, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: PersonCardProps) {
     const { deactivatePerson, revertLastPayment } = useStudio();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
@@ -68,6 +69,13 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
         currency: 'ARS',
         minimumFractionDigits: 0,
       }).format(price);
+    };
+
+    const handleDeactivate = () => {
+        deactivatePerson(person.id).then(() => {
+            onDeactivated();
+            setIsDeleteDialogOpen(false);
+        });
     };
 
     const handleRevertPayment = () => {
@@ -324,7 +332,7 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
             <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader><AlertDialogTitleAlert>¿Desactivar a {person.name}?</AlertDialogTitleAlert><AlertDialogDescriptionAlert>Esta acción marcará a la persona como inactiva y la desinscribirá de todas sus clases. No se borrará su historial.</AlertDialogDescriptionAlert></AlertDialogHeader>
-                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => deactivatePerson(person.id)} className="bg-destructive hover:bg-destructive/90">Desactivar</AlertDialogAction></AlertDialogFooter>
+                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDeactivate} className="bg-destructive hover:bg-destructive/90">Desactivar</AlertDialogAction></AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
 
