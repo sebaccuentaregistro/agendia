@@ -8,7 +8,7 @@ Agendia es una aplicación web (SaaS) para la gestión integral de centros de bi
 
 ## 2. Stack Tecnológico
 
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 14  (App Router)
 - **Lenguaje**: TypeScript
 - **Base de Datos**: Google Firestore
 - **Autenticación**: Firebase Authentication
