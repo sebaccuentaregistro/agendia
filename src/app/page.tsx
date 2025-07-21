@@ -570,7 +570,7 @@ function DashboardPageContent() {
                             <ul className="space-y-4">
                             {filteredSessions.map(session => {
                                 const { specialist, actividad, space } = getSessionDetails(session);
-                                const { enrolledCount, waitlistCount } = session as any;
+                                const { enrolledCount } = session as any;
                                 const capacity = space?.capacity ?? 0;
                                 const utilization = capacity > 0 ? enrolledCount / capacity : 0;
                                 const isFull = utilization >= 1;
