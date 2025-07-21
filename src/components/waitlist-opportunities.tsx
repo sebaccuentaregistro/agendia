@@ -33,7 +33,7 @@ interface WaitlistOpportunitiesProps {
 }
 
 export function WaitlistOpportunities({ opportunities, summary, totalCount, onHeaderClick }: WaitlistOpportunitiesProps) {
-  const { enrollFromWaitlist, enrollProspectFromWaitlist, people } = useStudio();
+  const { enrollFromWaitlist, enrollProspectFromWaitlist, people, spaces } = useStudio();
   const [personToCreate, setPersonToCreate] = useState<{ prospect: WaitlistProspect; sessionId: string; } | null>(null);
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
@@ -81,38 +81,44 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
                     Se han liberado cupos en estas clases. Contacta a las personas en espera para inscribirlas.
                 </AlertDescription>
             </Alert>
-            {opportunities.map(({ notification, session, actividadName, waitlist }) => (
-                <div key={session.id} className="p-3 rounded-lg bg-primary/10">
-                    <h4 className="font-bold text-primary mb-2">Cupo en {actividadName} ({session.dayOfWeek} {session.time})</h4>
-                    <div className="space-y-2">
-                        {waitlist.map((person, index) => {
-                             const isProspect = 'isProspect' in person && person.isProspect;
-                             return (
-                                <div key={index} className="flex justify-between items-center text-sm bg-background/50 p-2 rounded-md">
-                                    <div className="flex items-center gap-2">
-                                        <User className="h-4 w-4 text-muted-foreground"/>
-                                        <p className="font-semibold">{person.name}</p>
+            {opportunities.map(({ notification, session, actividadName, waitlist }) => {
+                const space = spaces.find(s => s.id === session.spaceId);
+                const capacity = space?.capacity || 0;
+                const isFull = session.personIds.length >= capacity;
+
+                return (
+                    <div key={session.id} className="p-3 rounded-lg bg-primary/10">
+                        <h4 className="font-bold text-primary mb-2">Cupo en {actividadName} ({session.dayOfWeek} {session.time})</h4>
+                        <div className="space-y-2">
+                            {waitlist.map((person, index) => {
+                                 const isProspect = 'isProspect' in person && person.isProspect;
+                                 return (
+                                    <div key={index} className="flex justify-between items-center text-sm bg-background/50 p-2 rounded-md">
+                                        <div className="flex items-center gap-2">
+                                            <User className="h-4 w-4 text-muted-foreground"/>
+                                            <p className="font-semibold">{person.name}</p>
+                                        </div>
+                                        <Button 
+                                            size="sm" 
+                                            variant="secondary" 
+                                            onClick={(e) => {
+                                                if (isProspect) {
+                                                    handleCreateAndEnroll(e, person as WaitlistProspect, session.id);
+                                                } else {
+                                                    handleEnroll(e, notification.id!, session.id, person as Person);
+                                                }
+                                            }}
+                                            disabled={isFull || (!isProspect && !people.some(p => p.id === (person as Person).id))}
+                                        >
+                                            Inscribir
+                                        </Button>
                                     </div>
-                                    <Button 
-                                        size="sm" 
-                                        variant="secondary" 
-                                        onClick={(e) => {
-                                            if (isProspect) {
-                                                handleCreateAndEnroll(e, person as WaitlistProspect, session.id);
-                                            } else {
-                                                handleEnroll(e, notification.id!, session.id, person as Person);
-                                            }
-                                        }}
-                                        disabled={!isProspect && !people.some(p => p.id === (person as Person).id)}
-                                    >
-                                        Inscribir
-                                    </Button>
-                                </div>
-                             )
-                        })}
+                                 )
+                            })}
+                        </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
           </div>
         )}
 
