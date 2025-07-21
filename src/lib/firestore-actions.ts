@@ -85,43 +85,53 @@ export const addPersonAction = async (
 ) => {
     const now = new Date();
     const batch = writeBatch(db);
-
     const personDocRef = doc(peopleRef);
-    let finalLastPaymentDate = personData.lastPaymentDate || null;
-    let finalOutstandingPayments = personData.lastPaymentDate ? 0 : 1;
 
-    // If recording the first payment, override the due date logic
-    if (personData.recordFirstPayment) {
-        const tariff = tariffs.find(t => t.id === personData.tariffId);
-        if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
-        
-        finalLastPaymentDate = calculateNextPaymentDate(now, now, tariff);
-        finalOutstandingPayments = 0;
+    let finalLastPaymentDate: Date | null = null;
+    let finalOutstandingPayments: number = 0;
+    const joinDate = personData.joinDate || now;
 
-        // Create the payment record
-        const paymentRecord: Omit<Payment, 'id'> = {
-            personId: personDocRef.id,
-            date: now,
-            amount: tariff.price,
-            tariffId: tariff.id,
-            createdAt: now,
-            timestamp: now,
-        };
-        batch.set(doc(paymentsRef), cleanDataForFirestore(paymentRecord));
+    switch (personData.paymentOption) {
+        case 'recordNow': {
+            const tariff = tariffs.find(t => t.id === personData.tariffId);
+            if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
+            
+            finalLastPaymentDate = calculateNextPaymentDate(now, joinDate, tariff);
+            finalOutstandingPayments = 0;
 
-        // Create audit log for the payment itself
-        batch.set(doc(auditLogRef), {
-            operatorId: operator.id,
-            operatorName: operator.name,
-            action: 'REGISTRO_PAGO',
-            entityType: 'pago',
-            entityId: personDocRef.id,
-            entityName: personData.name,
-            timestamp: now,
-            details: { amount: tariff.price, tariffName: tariff.name }
-        } as Omit<AuditLog, 'id'>);
+            const paymentRecord: Omit<Payment, 'id'> = {
+                personId: personDocRef.id,
+                date: now,
+                amount: tariff.price,
+                tariffId: tariff.id,
+                createdAt: now,
+                timestamp: now,
+            };
+            batch.set(doc(paymentsRef), cleanDataForFirestore(paymentRecord));
+            
+            batch.set(doc(auditLogRef), {
+                operatorId: operator.id,
+                operatorName: operator.name,
+                action: 'REGISTRO_PAGO',
+                entityType: 'pago',
+                entityId: personDocRef.id,
+                entityName: personData.name,
+                timestamp: now,
+                details: { amount: tariff.price, tariffName: tariff.name }
+            } as Omit<AuditLog, 'id'>);
+            break;
+        }
+        case 'setManually':
+            finalLastPaymentDate = personData.lastPaymentDate || null;
+            finalOutstandingPayments = 0;
+            break;
+        case 'pending':
+        default:
+            finalLastPaymentDate = null;
+            finalOutstandingPayments = 1;
+            break;
     }
-    
+
     const newPerson: Omit<Person, 'id'> = {
         name: personData.name,
         phone: personData.phone,
@@ -129,7 +139,7 @@ export const addPersonAction = async (
         levelId: personData.levelId,
         healthInfo: personData.healthInfo,
         notes: personData.notes,
-        joinDate: personData.joinDate || now,
+        joinDate: joinDate,
         lastPaymentDate: finalLastPaymentDate,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
@@ -137,11 +147,9 @@ export const addPersonAction = async (
         status: 'active',
         inactiveDate: null,
     };
-    
-    // Create the person document
+
     batch.set(personDocRef, cleanDataForFirestore(newPerson));
 
-    // Add audit log for person creation
     batch.set(doc(auditLogRef), {
         operatorId: operator.id,
         operatorName: operator.name,
@@ -156,6 +164,7 @@ export const addPersonAction = async (
 
     return personDocRef.id;
 };
+
 
 export const deactivatePersonAction = async (sessionsRef: CollectionReference, peopleRef: CollectionReference, personId: string, personName: string, auditLogRef: CollectionReference, operator: Operator) => {
     const batch = writeBatch(db);
@@ -250,6 +259,8 @@ export const recordPaymentAction = async (
 
     // 1. Calculate new state for the person
     const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
+    
+    // The key change: calculate from the *previous* due date, not from today.
     const newExpiryDate = (newOutstandingPayments === 0) 
         ? calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff)
         : person.lastPaymentDate;

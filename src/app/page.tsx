@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
@@ -33,7 +32,7 @@ import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { PersonDialog } from './students/person-dialog';
+import { PersonDialog } from '@/components/students/person-dialog';
 import { doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { deleteEntity } from '@/lib/firestore-actions';
@@ -81,7 +80,7 @@ function DashboardPageContent() {
   const dashboardView = searchParams.get('view') || 'main';
 
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
-  const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
+  const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
   const [revenuePeriod, setRevenuePeriod] = useState<'today' | 'week' | 'month'>('month');
   
   useEffect(() => {
@@ -760,7 +759,7 @@ function DashboardPageContent() {
                     {topDebtors.length > 0 ? (
                         <ul className="space-y-3">
                             {topDebtors.map(person => {
-                                const tariff = tariffs.find(t => t.id === person.tariffId)
+                                const tariff = tariffs.find(t => t.id === person.tariffId);
                                 const totalDebtForPerson = (tariff?.price || 0) * (person.outstandingPayments || 1);
                                 return (
                                 <li key={person.id} className="flex items-center justify-between text-sm">
@@ -827,7 +826,7 @@ function DashboardPageContent() {
         onOpenChange={setIsPersonDialogOpen}
         onPersonCreated={(person) => {
           if (person.tariffId) {
-            setPersonForWelcome(person as NewPersonData);
+            setPersonForWelcome(person);
           }
         }}
         isLimitReached={isLimitReached}
@@ -846,3 +845,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
