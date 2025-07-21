@@ -80,7 +80,7 @@ function DashboardPageContent() {
   const dashboardView = searchParams.get('view') || 'main';
 
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
-  const [personForWelcome, setPersonForWelcome] = useState<NewPersonData | null>(null);
+  const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
   const [revenuePeriod, setRevenuePeriod] = useState<'today' | 'week' | 'month'>('month');
   
   useEffect(() => {
@@ -826,7 +826,7 @@ function DashboardPageContent() {
         onOpenChange={setIsPersonDialogOpen}
         onPersonCreated={(person) => {
           if (person.tariffId) {
-            setPersonForWelcome(person as NewPersonData);
+            setPersonForWelcome(person);
           }
         }}
         isLimitReached={isLimitReached}

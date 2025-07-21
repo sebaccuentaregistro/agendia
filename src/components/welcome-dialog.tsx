@@ -4,14 +4,11 @@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
-import type { Person, NewPersonData } from '@/types';
+import type { Person } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useStudio } from '@/context/StudioContext';
 
-// Accept a more generic type that covers both Person and NewPersonData
-type WelcomePerson = Partial<Person> & Pick<NewPersonData, 'name' | 'phone'>;
-
-export function WelcomeDialog({ person, onOpenChange }: { person: WelcomePerson | null; onOpenChange: (open: boolean) => void; }) {
+export function WelcomeDialog({ person, onOpenChange }: { person: Person | null; onOpenChange: (open: boolean) => void; }) {
     const { institute } = useAuth();
     const { tariffs } = useStudio();
     
