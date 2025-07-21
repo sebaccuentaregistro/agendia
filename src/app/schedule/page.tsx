@@ -270,33 +270,26 @@ function SchedulePageContent() {
 
   const sessionsWithDetails = useMemo(() => {
     if (!isMounted) return [];
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
     
+    // For the general schedule view, the enrollment count is just the length of personIds.
+    // Daily variations (vacations, one-time attendees) are handled on the main page.
     return filteredSessions.map(session => {
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-        
+        const enrolledCount = session.personIds.length;
+        const waitlistCount = session.waitlist?.length || 0;
+
+        // People on vacation are not relevant for this general count
         const peopleOnVacationToday = session.personIds
             .map(pid => people.find(p => p.id === pid))
-            .filter((p): p is Person => !!p && isPersonOnVacation(p, today));
-
-        const activeRegulars = session.personIds.filter(pid => !peopleOnVacationToday.some(p => p.id === pid));
-        
-        // Correctly calculate total unique attendees for today
-        const allAttendeesForToday = new Set([...activeRegulars, ...oneTimeAttendees]);
-        const enrolledCount = allAttendeesForToday.size;
-
-        const waitlistCount = session.waitlist?.length || 0;
+            .filter((p): p is Person => !!p && isPersonOnVacation(p, new Date()));
 
         return {
             ...session,
             enrolledCount,
             waitlistCount,
-            peopleOnVacationToday,
+            peopleOnVacationToday, // Kept for consistency, though not used in count
         };
     });
-  }, [filteredSessions, attendance, people, isPersonOnVacation, isMounted]);
+  }, [filteredSessions, people, isPersonOnVacation, isMounted]);
 
 
   const handleExportSchedule = () => {
@@ -915,6 +908,7 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
 
 
