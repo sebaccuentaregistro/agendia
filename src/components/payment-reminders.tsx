@@ -40,11 +40,6 @@ export function PaymentReminders({ reminders, topDebtors, onSendReminder, onSend
                         <Bell className="h-5 w-5 text-blue-500" />
                         Estado de Pagos
                     </CardTitle>
-                    {reminders.length > 1 && (
-                        <Button variant="link" size="sm" className="p-0 h-auto" onClick={onSendAll}>
-                            Enviar a todos
-                        </Button>
-                    )}
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -78,7 +73,14 @@ export function PaymentReminders({ reminders, topDebtors, onSendReminder, onSend
                 )}
                 {reminders.length > 0 && (
                     <div className="space-y-3">
-                        <h4 className="font-semibold text-sm flex items-center gap-2 text-blue-600 dark:text-blue-400"><Bell className="h-4 w-4"/>Vencimientos Próximos</h4>
+                        <div className="flex justify-between items-center">
+                            <h4 className="font-semibold text-sm flex items-center gap-2 text-blue-600 dark:text-blue-400"><Bell className="h-4 w-4"/>Vencimientos Próximos</h4>
+                             {reminders.length > 1 && (
+                                <Button variant="link" size="sm" className="p-0 h-auto text-xs" onClick={onSendAll}>
+                                    Enviar a todos
+                                </Button>
+                            )}
+                        </div>
                         <ul className="space-y-3">
                             {reminders.map(reminder => (
                                 <li key={reminder.person.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 rounded-lg bg-blue-500/10 text-sm">
