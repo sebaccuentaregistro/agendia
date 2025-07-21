@@ -144,7 +144,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{person ? 'Editar Persona' : 'Añadir Nueva Persona'}</DialogTitle>
+          <DialogTitle>{person ? 'Editar Persona' : 'Añadir Nueva Personita'}</DialogTitle>
            <DialogDescription>
             {person ? 'Actualiza los datos de la persona.' : 'Añade un nuevo alumno a tu estudio.'}
           </DialogDescription>
