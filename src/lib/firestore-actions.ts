@@ -621,15 +621,31 @@ type AllDataContext = {
 };
 
 export const deleteWithUsageCheckAction = async (
-    entityId: string,
-    checks: { collection: string; field: string; label: string, type?: 'array' }[],
     collectionRefs: Record<string, CollectionReference>,
+    entityId: string,
+    collectionKey: string,
+    checks: { collection: string; field: string; type?: 'array' }[],
     allDataForMessages: AllDataContext
 ) => {
     const usageMessages: string[] = [];
-    const allPeople = allDataForMessages.people || [];
+
+    // Special check for sessions: they can't be deleted if personIds is not empty.
+    if (collectionKey === 'sessions') {
+        const sessionDoc = await getDoc(doc(collectionRefs.sessions, entityId));
+        if (sessionDoc.exists()) {
+            const sessionData = sessionDoc.data() as Session;
+            if (sessionData.personIds && sessionData.personIds.length > 0) {
+                 const peopleData = allDataForMessages.people || [];
+                 const personNames = sessionData.personIds.map(id => peopleData.find(p => p.id === id)?.name || id);
+                 usageMessages.push(`La sesión tiene ${sessionData.personIds.length} persona(s) inscrita(s): ${personNames.join(', ')}.`);
+            }
+        }
+    }
+
 
     for (const check of checks) {
+        if (collectionKey === 'sessions' && check.collection === 'people') continue;
+
         const collectionToCheckRef = collectionRefs[check.collection];
         if (!collectionToCheckRef) {
             console.warn(`Collection reference not found for: ${check.collection}`);
@@ -637,56 +653,13 @@ export const deleteWithUsageCheckAction = async (
         }
 
         const fieldToCheck = check.field;
-        let itemsInUse: any[] = [];
+        const operator = check.type === 'array' ? 'array-contains' : '==';
+        const q = query(collectionToCheckRef, where(fieldToCheck, operator, entityId));
+        const snapshot = await getDocs(q);
         
-        // Firestore queries are now complex, so we check locally for simplicity
-        if (check.collection === 'sessions') {
-            itemsInUse = allDataForMessages.sessions.filter(s => (s as any)[fieldToCheck] === entityId);
-        } else if (check.collection === 'people') {
-            itemsInUse = allPeople.filter(p => (p as any)[fieldToCheck] === entityId);
-        } else if (check.collection === 'specialists') {
-            itemsInUse = allDataForMessages.specialists.filter(s => check.type === 'array' ? (s as any)[fieldToCheck].includes(entityId) : (s as any)[fieldToCheck] === entityId);
-        } else if (check.collection === 'attendance') {
-            // Special handling for attendance is tricky without direct query. This is a simplification.
-            // For a robust check, a query would be needed.
-            // Let's assume for now this is not a common case or handled differently.
-        }
-
-        if (itemsInUse.length > 0) {
-            let details = '';
-            if (check.collection === 'sessions') {
-                const sessionDetails = itemsInUse.map(s => {
-                    const actividad = allDataForMessages.actividades.find(a => a.id === s.actividadId);
-                    return `- ${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`;
-                });
-                if (sessionDetails.length > 0) {
-                    details = `\n${sessionDetails.join('\n')}`;
-                    usageMessages.push(`Está asignado a ${itemsInUse.length} sesión(es):${details}`);
-                }
-            } else if (check.collection === 'people') {
-                 const personDetails = itemsInUse.map(p => `- ${p.name}`);
-                 if (personDetails.length > 0) {
-                     details = `\n${personDetails.join('\n')}`;
-                     usageMessages.push(`Está asignado a ${itemsInUse.length} persona(s):${details}`);
-                 }
-            } else if (check.collection === 'specialists') {
-                 const specialistDetails = itemsInUse.map(s => `- ${s.name}`);
-                 if (specialistDetails.length > 0) {
-                    details = `\n${specialistDetails.join('\n')}`;
-                    usageMessages.push(`Está asignado a ${itemsInUse.length} especialista(s):${details}`);
-                 }
-            } else {
-                 // For sessions, if it's being checked for personIds
-                 if (check.field === 'personIds' && check.type === 'array') {
-                    const personNames = itemsInUse.map(personId => allPeople.find(p => p.id === personId)?.name || 'Desconocido');
-                    if(personNames.length > 0){
-                       details = `\n- ${personNames.join('\n- ')}`;
-                       usageMessages.push(`No se puede eliminar porque ${personNames.length > 1 ? 'las siguientes personas están' : 'la siguiente persona está'} en la lista de inscriptos:${details}`);
-                    }
-                 } else {
-                    usageMessages.push(`Está en uso por ${itemsInUse.length} ${check.label}(s).`);
-                 }
-            }
+        if (!snapshot.empty) {
+            const names = snapshot.docs.map(d => d.data().name || 'un elemento').slice(0, 3);
+            usageMessages.push(`Está en uso por ${snapshot.size} ${check.collection}: ${names.join(', ')}...`);
         }
     }
 
@@ -740,6 +713,3 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     
     return updatedCount;
 };
-
-    
-

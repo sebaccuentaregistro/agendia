@@ -375,40 +375,40 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                 sessions: data.sessions, people: [...people, ...inactivePeople], actividades: data.actividades,
                 specialists: data.specialists, spaces: data.spaces, levels: data.levels,
             };
-            await deleteWithUsageCheckAction(entityId, checks, collectionRefs, allDataForMessages);
+            await deleteWithUsageCheckAction(collectionRefs, entityId, collectionKey, checks, allDataForMessages);
             await handleAction(deleteEntity(doc(collectionRefs[collectionKey], entityId)), successMessage, errorMessage);
         } catch (error: any) {
-            toast({ variant: 'destructive', title: "No se puede eliminar", description: error.message });
+            toast({ variant: 'destructive', title: "No se puede eliminar", description: error.message, duration: 6000 });
         }
     };
     
     const addSession = (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => addGenericEntity('sessions', { ...session, personIds: [], waitlist: [] }, "Sesión creada.", "Error al crear la sesión.");
     const updateSession = (session: Session) => updateGenericEntity('sessions', session, "Sesión actualizada.", "Error al actualizar la sesión.");
-    const deleteSession = (id: string) => deleteGenericEntityWithUsageCheck('sessions', id, "Sesión eliminada.", "Error al eliminar la sesión.", [{collection: 'people', field: 'personIds', type: 'array', label: 'personas'}]);
+    const deleteSession = (id: string) => deleteGenericEntityWithUsageCheck('sessions', id, "Sesión eliminada.", "Error al eliminar la sesión.", [{ collection: 'people', field: 'personIds', type: 'array' }]);
 
     const addActividad = (actividad: Omit<Actividad, 'id'>) => addGenericEntity('actividades', actividad, "Actividad creada.", "Error al crear la actividad.");
     const updateActividad = (actividad: Actividad) => updateGenericEntity('actividades', actividad, "Actividad actualizada.", "Error al actualizar la actividad.");
     const deleteActividad = (id: string) => deleteGenericEntityWithUsageCheck('actividades', id, "Actividad eliminada.", "Error al eliminar la actividad.", [
-        {collection: 'sessions', field: 'actividadId', label: 'sesiones'}, {collection: 'specialists', field: 'actividadIds', label: 'especialistas', type: 'array'}
+        {collection: 'sessions', field: 'actividadId'}, {collection: 'specialists', field: 'actividadIds', type: 'array'}
     ]);
 
     const addSpecialist = (specialist: Omit<Specialist, 'id' | 'avatar'>) => addGenericEntity('specialists', { ...specialist, avatar: `https://placehold.co/100x100.png` }, "Especialista creado.", "Error al crear el especialista.");
     const updateSpecialist = (specialist: Specialist) => updateGenericEntity('specialists', specialist, "Especialista actualizado.", "Error al actualizar el especialista.");
-    const deleteSpecialist = (id: string) => deleteGenericEntityWithUsageCheck('specialists', id, "Especialista eliminado.", "Error al eliminar el especialista.", [{collection: 'sessions', field: 'instructorId', label: 'sesiones'}]);
+    const deleteSpecialist = (id: string) => deleteGenericEntityWithUsageCheck('specialists', id, "Especialista eliminado.", "Error al eliminar el especialista.", [{collection: 'sessions', field: 'instructorId'}]);
 
     const addSpace = (space: Omit<Space, 'id'>) => addGenericEntity('spaces', space, "Espacio creado.", "Error al crear el espacio.");
     const updateSpace = (space: Space) => updateGenericEntity('spaces', space, "Espacio actualizado.", "Error al actualizar el espacio.");
-    const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId', label: 'sesiones'}]);
+    const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId'}]);
     
     const addLevel = (level: Omit<Level, 'id'>) => addGenericEntity('levels', level, "Nivel creado.", "Error al crear el nivel.");
     const updateLevel = (level: Level) => updateGenericEntity('levels', level, "Nivel actualizado.", "Error al actualizar el nivel.");
     const deleteLevel = (id: string) => deleteGenericEntityWithUsageCheck('levels', id, "Nivel eliminado.", "Error al eliminar el nivel.", [
-        {collection: 'sessions', field: 'levelId', label: 'sesiones'}, {collection: 'people', field: 'levelId', label: 'personas'}
+        {collection: 'sessions', field: 'levelId'}, {collection: 'people', field: 'levelId'}
     ]);
     
     const addTariff = (tariff: Omit<Tariff, 'id'>) => addGenericEntity('tariffs', tariff, "Arancel creado.", "Error al crear el arancel.");
     const updateTariff = (tariff: Tariff) => updateGenericEntity('tariffs', tariff, "Arancel actualizado.", "Error al actualizar el arancel.");
-    const deleteTariff = (id: string) => deleteGenericEntityWithUsageCheck('tariffs', id, "Arancel eliminado.", "Error al eliminar el arancel.", [{collection: 'people', field: 'tariffId', label: 'personas'}]);
+    const deleteTariff = (id: string) => deleteGenericEntityWithUsageCheck('tariffs', id, "Arancel eliminado.", "Error al eliminar el arancel.", [{collection: 'people', field: 'tariffId'}]);
     
     const addOperator = (operator: Omit<Operator, 'id'>) => addGenericEntity('operators', operator, "Operador creado.", "Error al crear operador.");
     const updateOperator = (operator: Operator) => updateGenericEntity('operators', operator, "Operador actualizado.", "Error al actualizar operador.");
@@ -634,4 +634,3 @@ export function useStudio() {
     }
     return context;
 }
-
