@@ -37,7 +37,7 @@ import { Alert, AlertTitle, AlertDescription as AlertDescriptionComponent } from
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
-import { PersonDialog } from './person-dialog';
+import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from '@/components/welcome-dialog';
 import { PaymentReceiptDialog, type ReceiptInfo } from '@/components/payment-receipt-dialog';
 import { PersonCard } from './person-card';
