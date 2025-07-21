@@ -191,6 +191,34 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
                   )}
                 />
             </div>
+            {person && (
+                 <FormField
+                    control={form.control}
+                    name="lastPaymentDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col animate-in fade-in-0 zoom-in-95">
+                        <FormLabel>Fecha del Próximo Vencimiento</FormLabel>
+                        <Popover>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button
+                                variant="outline"
+                                className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                            >
+                                {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            )}
             {!person && (
                 <FormField
                   control={form.control}
