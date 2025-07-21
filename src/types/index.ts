@@ -98,7 +98,7 @@ export type NewPersonData = {
     healthInfo?: string;
     notes?: string;
     joinDate?: Date;
-    lastPaymentDate?: Date | null;
+    lastPaymentDate: Date | null;
     paymentOption: 'recordNow' | 'setManually' | 'pending';
 };
 
