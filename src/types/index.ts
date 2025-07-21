@@ -100,6 +100,7 @@ export type NewPersonData = {
     joinDate?: Date;
     lastPaymentDate?: Date | null;
     recordFirstPayment?: boolean;
+    paymentOption?: 'recordNow' | 'setManually' | 'pending';
 };
 
 export type WaitlistProspect = {
