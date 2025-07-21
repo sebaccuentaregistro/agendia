@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { useStudio } from '@/context/StudioContext';
-import { Session } from '@/types';
+import { Session, Person } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -35,6 +35,7 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
   const isOverCapacity = watchedPersonIds.length > capacity;
   const actividad = actividades.find(a => a.id === session.actividadId);
 
+  // Memoize the list of people with their enrollment data
   const peopleWithEnrollmentData = useMemo(() => {
     return people.map(person => {
       const personTariff = tariffs.find(t => t.id === person.tariffId);
@@ -50,14 +51,31 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
     }).sort((a,b) => a.name.localeCompare(b.name));
   }, [people, tariffs, allSessions]);
 
-  const filteredPeople = useMemo(() => {
+  // This list now includes all people, so we can see the "ghosts"
+  const allPeopleInList = useMemo(() => {
+    const sessionPersonIds = new Set(session.personIds || []);
+    return peopleWithEnrollmentData.filter(p => sessionPersonIds.has(p.id));
+  }, [session.personIds, peopleWithEnrollmentData]);
+
+
+  // Filtered list for display, based on search term and existing selections
+  const filteredPeopleForDisplay = useMemo(() => {
     const lowercasedFilter = searchTerm.toLowerCase();
-    return peopleWithEnrollmentData.filter(person => {
-      const isSelected = watchedPersonIds.includes(person.id);
-      const nameMatches = person.name.toLowerCase().includes(lowercasedFilter);
-      return isSelected || nameMatches;
+    
+    // Always include people already in the session, regardless of search term
+    const enrolledPeople = allPeopleInList;
+    const enrolledIds = new Set(enrolledPeople.map(p => p.id));
+    
+    const searchedPeople = peopleWithEnrollmentData.filter(person => {
+        // Exclude if already in the enrolled list to avoid duplication
+        if (enrolledIds.has(person.id)) return false; 
+        
+        // Match by search term
+        return person.name.toLowerCase().includes(lowercasedFilter);
     });
-  }, [searchTerm, peopleWithEnrollmentData, watchedPersonIds]);
+
+    return [...enrolledPeople, ...searchedPeople];
+  }, [searchTerm, peopleWithEnrollmentData, allPeopleInList]);
 
 
   function onSubmit(data: { personIds: string[] }) {
@@ -91,14 +109,14 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
               render={() => (
                 <FormItem>
                   <ScrollArea className="h-72 rounded-md border p-4">
-                    {filteredPeople.length > 0 ? filteredPeople.map(person => {
-                      const isAlreadyEnrolledInThisClass = session.personIds.includes(person.id);
+                    {filteredPeopleForDisplay.length > 0 ? filteredPeopleForDisplay.map(person => {
+                      const isCurrentlyEnrolled = form.getValues('personIds').includes(person.id);
                       
-                      const effectiveClassCount = isAlreadyEnrolledInThisClass
-                        ? person.currentWeeklyClasses - 1
-                        : person.currentWeeklyClasses;
+                      const effectiveClassCount = isCurrentlyEnrolled
+                        ? person.currentWeeklyClasses
+                        : person.currentWeeklyClasses + 1;
                       
-                      const hasReachedLimit = person.weeklyClassLimit !== undefined && effectiveClassCount >= person.weeklyClassLimit;
+                      const hasReachedLimit = person.weeklyClassLimit !== undefined && effectiveClassCount > person.weeklyClassLimit;
 
                       return (
                         <FormField
@@ -115,7 +133,7 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                                   checked={field.value?.includes(person.id)}
                                   disabled={
                                     (!field.value?.includes(person.id) && watchedPersonIds.length >= capacity) ||
-                                    (hasReachedLimit && !isAlreadyEnrolledInThisClass)
+                                    (hasReachedLimit && !field.value?.includes(person.id))
                                   }
                                   onCheckedChange={checked => {
                                     const currentValues = field.value || [];
@@ -132,11 +150,11 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                                   {person.name}
                                   {person.weeklyClassLimit !== undefined && (
                                     <Badge variant={hasReachedLimit ? "destructive" : "secondary"}>
-                                        {person.currentWeeklyClasses}/{person.weeklyClassLimit} clases
+                                        {isCurrentlyEnrolled ? person.currentWeeklyClasses : person.currentWeeklyClasses + 1}/{person.weeklyClassLimit} clases
                                     </Badge>
                                   )}
                                 </FormLabel>
-                                {hasReachedLimit && !isAlreadyEnrolledInThisClass && (
+                                {hasReachedLimit && !field.value?.includes(person.id) && (
                                     <p className="text-xs text-destructive">Límite del plan alcanzado.</p>
                                 )}
                               </div>

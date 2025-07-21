@@ -1,7 +1,8 @@
 
+
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
-import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse } from 'date-fns';
@@ -454,17 +455,39 @@ export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReferen
 
 export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+    const q = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+    const querySnapshot = await getDocs(q);
 
-    const snap = await getDocs(attendanceQuery);
-    if (snap.empty) {
-        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [], oneTimeAttendees: [personId] });
-    } else {
-        const record = snap.docs[0].data() as SessionAttendance;
-        const updatedAttendees = Array.from(new Set([...(record.oneTimeAttendees || []), personId]));
-        await updateEntity(snap.docs[0].ref, { oneTimeAttendees: updatedAttendees });
-    }
+    return runTransaction(db, async (transaction) => {
+        let docRef;
+        let currentData: Partial<SessionAttendance> = {};
+
+        if (querySnapshot.empty) {
+            docRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
+        } else {
+            docRef = querySnapshot.docs[0].ref;
+            const existingDoc = await transaction.get(docRef);
+            currentData = existingDoc.data() || {};
+        }
+
+        const oneTimeAttendees = Array.from(new Set([...(currentData.oneTimeAttendees || []), personId]));
+        const presentIds = Array.from(new Set([...(currentData.presentIds || []), personId]));
+
+        if (querySnapshot.empty) {
+            transaction.set(docRef, {
+                sessionId,
+                date: dateStr,
+                oneTimeAttendees,
+                presentIds,
+                absentIds: [],
+                justifiedAbsenceIds: [],
+            });
+        } else {
+            transaction.update(docRef, { oneTimeAttendees, presentIds });
+        }
+    });
 };
+
 
 export const addVacationPeriodAction = async (personDocRef: any, person: Person, startDate: Date, endDate: Date) => {
     const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
