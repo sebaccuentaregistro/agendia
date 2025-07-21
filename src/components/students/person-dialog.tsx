@@ -99,21 +99,33 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
     if (!person && isLimitReached) {
         return;
     }
-    const finalValues: NewPersonData = {
-        name: values.name,
-        phone: values.phone,
-        tariffId: values.tariffId,
-        levelId: values.levelId === 'none' ? undefined : values.levelId,
-        healthInfo: values.healthInfo,
-        notes: values.notes,
-        joinDate: values.joinDate,
-        lastPaymentDate: values.lastPaymentDate,
-        paymentOption: values.paymentOption,
-    };
     
     if (person) {
-      await updatePerson({ ...person, ...finalValues });
+      // Logic for updating an existing person
+      await updatePerson({ 
+          ...person, 
+          name: values.name,
+          phone: values.phone,
+          tariffId: values.tariffId,
+          levelId: values.levelId === 'none' ? undefined : values.levelId,
+          healthInfo: values.healthInfo,
+          notes: values.notes,
+          joinDate: values.joinDate || person.joinDate,
+          lastPaymentDate: values.lastPaymentDate, // Directly use the value from the form
+      });
     } else {
+      // Logic for creating a new person
+      const finalValues: NewPersonData = {
+          name: values.name,
+          phone: values.phone,
+          tariffId: values.tariffId,
+          levelId: values.levelId === 'none' ? undefined : values.levelId,
+          healthInfo: values.healthInfo,
+          notes: values.notes,
+          joinDate: values.joinDate,
+          lastPaymentDate: values.lastPaymentDate,
+          paymentOption: values.paymentOption,
+      };
       const newPersonId = await addPerson(finalValues);
       if (onPersonCreated && newPersonId) {
         onPersonCreated({
