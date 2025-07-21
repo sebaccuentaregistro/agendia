@@ -282,7 +282,11 @@ function SchedulePageContent() {
             .filter((p): p is Person => !!p && isPersonOnVacation(p, today));
 
         const activeRegulars = session.personIds.filter(pid => !peopleOnVacationToday.some(p => p.id === pid));
-        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+        
+        // Correctly calculate total unique attendees for today
+        const allAttendeesForToday = new Set([...activeRegulars, ...oneTimeAttendees]);
+        const enrolledCount = allAttendeesForToday.size;
+
         const waitlistCount = session.waitlist?.length || 0;
 
         return {
@@ -911,5 +915,6 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
 
