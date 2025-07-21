@@ -48,6 +48,7 @@ import { PaymentReminders } from '@/components/payment-reminders';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
 import { MassReminderDialog } from '@/components/mass-reminder-dialog';
+import { MainCards } from '@/components/dashboard/main-cards';
 
 
 
@@ -308,11 +309,6 @@ function DashboardPageContent() {
     }
   }, [openTutorial, isMounted]);
 
-  const mainCards = [
-    { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
-    { href: "/students", label: "Personas", icon: Users, count: people.length },
-  ];
-  
   const formatPrice = (price: number) => {
       return new Intl.NumberFormat('es-AR', {
         style: 'currency',
@@ -414,109 +410,15 @@ function DashboardPageContent() {
           
           {dashboardView === 'main' && (
             <>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                    <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
-                        <Card className={cn(
-                            "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                            overdueCount > 0 ? "hover:border-red-500/50" : "hover:border-green-500/50"
-                        )}>
-                        <div className={cn(
-                            "absolute inset-0 bg-gradient-to-br to-transparent",
-                            overdueCount > 0 ? "from-red-500/10" : "from-green-500/10"
-                        )}></div>
-                        <div className={cn(
-                            "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                            overdueCount > 0 ? "from-red-500/20" : "from-green-500/20"
-                        )}></div>
-                        <div className={cn(
-                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                            overdueCount > 0 ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"
-                        )}>
-                            {overdueCount > 0 ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                        </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">
-                            Atrasados
-                        </CardTitle>
-                        <p className="text-2xl font-bold text-foreground">{overdueCount}</p>
-                        </Card>
-                    </Link>
-                    <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
-                        <Card className={cn(
-                            "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                            pendingRecoveryCount > 0 ? "hover:border-yellow-500/50" : "hover:border-primary/50"
-                        )}>
-                        <div className={cn(
-                            "absolute inset-0 bg-gradient-to-br to-transparent",
-                            pendingRecoveryCount > 0 ? "from-yellow-500/10" : "from-primary/10"
-                        )}></div>
-                        <div className={cn(
-                            "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                            pendingRecoveryCount > 0 ? "from-yellow-500/20" : "from-primary/20"
-                        )}></div>
-                        <div className={cn(
-                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                            pendingRecoveryCount > 0 ? "bg-yellow-500/10 text-yellow-500" : "bg-primary/10 text-primary"
-                        )}>
-                            <CalendarClock className="h-4 w-4" />
-                        </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">
-                            Recuperos
-                        </CardTitle>
-                        <p className="text-2xl font-bold text-foreground">{pendingRecoveryCount}</p>
-                        </Card>
-                    </Link>
-                    <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
-                        <Card className={cn(
-                            "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                            onVacationCount > 0 ? "hover:border-cyan-500/50" : "hover:border-primary/50"
-                        )}>
-                        <div className={cn(
-                            "absolute inset-0 bg-gradient-to-br to-transparent",
-                            onVacationCount > 0 ? "from-cyan-500/10" : "from-primary/10"
-                        )}></div>
-                        <div className={cn(
-                            "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                            onVacationCount > 0 ? "from-cyan-500/20" : "from-primary/20"
-                        )}></div>
-                        <div className={cn(
-                            "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                            onVacationCount > 0 ? "bg-cyan-500/10 text-cyan-500" : "bg-primary/10 text-primary"
-                        )}>
-                            <Plane className="h-4 w-4" />
-                        </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">
-                            Vacaciones
-                        </CardTitle>
-                        <p className="text-2xl font-bold text-foreground">{onVacationCount}</p>
-                        </Card>
-                    </Link>
-                    {mainCards.map((item) => (
-                    <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                        <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                        <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <item.icon className="h-4 w-4" />
-                        </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                        {item.count !== null && (
-                        <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                        )}
-                        </Card>
-                    </Link>
-                    ))}
-                    <Link href="/?view=management" className="transition-transform hover:-translate-y-1">
-                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                        <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <Settings className="h-4 w-4" />
-                        </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">Gestión</CardTitle>
-                        <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-                    </Card>
-                    </Link>
-                </div>
+                <MainCards 
+                  overdueCount={overdueCount}
+                  pendingRecoveryCount={pendingRecoveryCount}
+                  onVacationCount={onVacationCount}
+                  sessionsCount={sessions.length}
+                  peopleCount={people.length}
+                  isPinVerified={isPinVerified}
+                  setIsPinDialogOpen={setIsPinDialogOpen}
+                />
                 
                 <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
                     <CardHeader>
@@ -867,6 +769,7 @@ export default function RootPage() {
     
 
     
+
 
 
 
