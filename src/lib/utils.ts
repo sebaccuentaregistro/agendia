@@ -11,6 +11,7 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Calculates the next payment date based on a starting date and a tariff's payment cycle.
+ * It correctly handles monthly cycles by anchoring to the original join date's day.
  * @param fromDate The date to calculate from (e.g., the current expiry date or today).
  * @param joinDate The original date the person joined, used to anchor the day of the month for monthly cycles. (Optional)
  * @param tariff The tariff object, which may contain a paymentCycle property.
@@ -28,16 +29,21 @@ export function calculateNextPaymentDate(fromDate: Date, joinDate: Date | null |
       return addMonths(fromDate, 2);
     case 'monthly':
     default:
+      // Always calculate from the *previous* due date to maintain the payment day.
       const fromDateInFuture = addMonths(fromDate, 1);
-      if (joinDate) {
-        let targetDay = getDate(joinDate);
-        const daysInNewMonth = getDaysInMonth(fromDateInFuture);
-        if (targetDay > daysInNewMonth) {
-          targetDay = daysInNewMonth;
-        }
-        return set(fromDateInFuture, { date: targetDay });
+      
+      // Use the join date to anchor the day of the month.
+      const anchorDate = joinDate || fromDate;
+      let targetDay = getDate(anchorDate);
+      
+      const daysInNewMonth = getDaysInMonth(fromDateInFuture);
+      
+      // If the target day is greater than the number of days in the new month (e.g., joining on 31st, next month is Feb),
+      // set it to the last day of that month.
+      if (targetDay > daysInNewMonth) {
+        targetDay = daysInNewMonth;
       }
-      return fromDateInFuture;
+      return set(fromDateInFuture, { date: targetDay });
   }
 }
 

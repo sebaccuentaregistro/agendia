@@ -89,13 +89,14 @@ export const addPersonAction = async (
 
     let finalLastPaymentDate: Date | null = null;
     let finalOutstandingPayments: number = 0;
+    const joinDate = personData.joinDate || now;
 
     switch (personData.paymentOption) {
         case 'recordNow': {
             const tariff = tariffs.find(t => t.id === personData.tariffId);
             if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
             
-            finalLastPaymentDate = calculateNextPaymentDate(now, personData.joinDate || now, tariff);
+            finalLastPaymentDate = calculateNextPaymentDate(now, joinDate, tariff);
             finalOutstandingPayments = 0;
 
             const paymentRecord: Omit<Payment, 'id'> = {
@@ -138,7 +139,7 @@ export const addPersonAction = async (
         levelId: personData.levelId,
         healthInfo: personData.healthInfo,
         notes: personData.notes,
-        joinDate: personData.joinDate || now,
+        joinDate: joinDate,
         lastPaymentDate: finalLastPaymentDate,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
@@ -258,6 +259,8 @@ export const recordPaymentAction = async (
 
     // 1. Calculate new state for the person
     const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
+    
+    // The key change: calculate from the *previous* due date, not from today.
     const newExpiryDate = (newOutstandingPayments === 0) 
         ? calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff)
         : person.lastPaymentDate;
