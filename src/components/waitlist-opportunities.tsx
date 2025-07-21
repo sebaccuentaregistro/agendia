@@ -9,7 +9,7 @@ import { WhatsAppIcon } from './whatsapp-icon';
 import type { Session, Person, WaitlistProspect, AppNotification, WaitlistEntry, NewPersonData } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useState } from 'react';
-import { PersonDialog } from '@/app/students/person-dialog';
+import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from './welcome-dialog';
 
 type Opportunity = {
