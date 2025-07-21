@@ -189,13 +189,14 @@ function DashboardPageContent() {
             return person && !isPersonOnVacation(person, now);
         });
 
-        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
-        const waitlistCount = session.waitlist?.length || 0;
+        // Corrected enrollment count logic
+        const allAttendeesForToday = new Set([...activeRegulars, ...oneTimeAttendees]);
+        const enrolledCount = allAttendeesForToday.size;
 
         return {
           ...session,
           enrolledCount: enrolledCount,
-          waitlistCount: waitlistCount,
+          waitlistCount: session.waitlist?.length || 0,
         };
       })
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -215,7 +216,7 @@ function DashboardPageContent() {
             const person = people.find(p => p.id === pid);
             return person && !isPersonOnVacation(person, now);
         });
-        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+        const enrolledCount = new Set([...activeRegulars, ...oneTimeAttendees]).size;
 
         const hasSpot = enrolledCount < capacity;
         const hasWaitlist = session.waitlist && session.waitlist.length > 0;
