@@ -372,7 +372,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (!collectionRefs) return;
         try {
             const allDataForMessages = {
-                sessions: data.sessions, people: data.people, actividades: data.actividades,
+                sessions: data.sessions, people: [...people, ...inactivePeople], actividades: data.actividades,
                 specialists: data.specialists, spaces: data.spaces, levels: data.levels,
             };
             await deleteWithUsageCheckAction(entityId, checks, collectionRefs, allDataForMessages);
@@ -384,7 +384,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     
     const addSession = (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => addGenericEntity('sessions', { ...session, personIds: [], waitlist: [] }, "Sesión creada.", "Error al crear la sesión.");
     const updateSession = (session: Session) => updateGenericEntity('sessions', session, "Sesión actualizada.", "Error al actualizar la sesión.");
-    const deleteSession = (id: string) => deleteGenericEntityWithUsageCheck('sessions', id, "Sesión eliminada.", "Error al eliminar la sesión.", [{collection: 'attendance', field: 'sessionId', label: 'asistencias'}]);
+    const deleteSession = (id: string) => deleteGenericEntityWithUsageCheck('sessions', id, "Sesión eliminada.", "Error al eliminar la sesión.", [{collection: 'people', field: 'personIds', type: 'array', label: 'personas'}]);
 
     const addActividad = (actividad: Omit<Actividad, 'id'>) => addGenericEntity('actividades', actividad, "Actividad creada.", "Error al crear la actividad.");
     const updateActividad = (actividad: Actividad) => updateGenericEntity('actividades', actividad, "Actividad actualizada.", "Error al actualizar la actividad.");
@@ -634,3 +634,4 @@ export function useStudio() {
     }
     return context;
 }
+
