@@ -188,8 +188,7 @@ function DashboardPageContent() {
             const person = people.find(p => p.id === pid);
             return person && !isPersonOnVacation(person, now);
         });
-
-        // Corrected enrollment count logic
+        
         const allAttendeesForToday = new Set([...activeRegulars, ...oneTimeAttendees]);
         const enrolledCount = allAttendeesForToday.size;
 
@@ -612,7 +611,7 @@ function DashboardPageContent() {
                                             ? "text-amber-600 dark:text-amber-500" 
                                             : "text-foreground"
                                         )}>
-                                            {enrolledCount}/{capacity} inscriptos
+                                            {enrolledCount}/{capacity} anotados
                                         </p>
                                         </div>
                                         <TooltipProvider>
