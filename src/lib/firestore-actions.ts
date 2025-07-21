@@ -2,7 +2,7 @@
 
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
-import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse } from 'date-fns';
@@ -182,35 +182,35 @@ export const deactivatePersonAction = async (sessionsRef: CollectionReference, p
         timestamp: now,
     } as Omit<AuditLog, 'id'>);
 
-    // Remove person from all sessions they are enrolled in
-    const personSessionsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
-    const personSessionsSnap = await getDocs(personSessionsQuery);
+    // Get all sessions to check both personIds and waitlist
+    const allSessionsSnap = await getDocs(sessionsRef);
     
-    personSessionsSnap.forEach(sessionDoc => {
+    allSessionsSnap.forEach(sessionDoc => {
         const sessionData = sessionDoc.data() as Session;
-        const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
-        batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
-        if (!affectedSessionIds.includes(sessionDoc.id)) {
+        let wasModified = false;
+
+        // Check if person is in the main enrollment list
+        if (sessionData.personIds?.includes(personId)) {
+            const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
+            batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
+            wasModified = true;
+        }
+
+        // Check if person is in the waitlist (as an ID)
+        if (sessionData.waitlist?.some(entry => typeof entry === 'string' && entry === personId)) {
+            const updatedWaitlist = sessionData.waitlist.filter(entry => {
+                return !(typeof entry === 'string' && entry === personId);
+            });
+            batch.update(sessionDoc.ref, { waitlist: updatedWaitlist });
+            wasModified = true;
+        }
+
+        if (wasModified && !affectedSessionIds.includes(sessionDoc.id)) {
             affectedSessionIds.push(sessionDoc.id);
         }
     });
 
-    // Also remove from waitlists
-    const personWaitlistQuery = query(sessionsRef, where('waitlist', 'array-contains', personId));
-    const personWaitlistSnap = await getDocs(personWaitlistQuery);
-    personWaitlistSnap.forEach(sessionDoc => {
-        const sessionData = sessionDoc.data() as Session;
-        const updatedWaitlist = (sessionData.waitlist || []).filter(entry => {
-            if (typeof entry === 'string') return entry !== personId;
-            return true;
-        });
-        batch.update(sessionDoc.ref, { waitlist: updatedWaitlist });
-        if (!affectedSessionIds.includes(sessionDoc.id)) {
-            affectedSessionIds.push(sessionDoc.id);
-        }
-    });
-
-    // Update the person's status to inactive instead of deleting
+    // Update the person's status to inactive
     const personRef = doc(peopleRef, personId);
     batch.update(personRef, { status: 'inactive', inactiveDate: now });
 
@@ -455,17 +455,39 @@ export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReferen
 
 export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+    const q = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+    const querySnapshot = await getDocs(q);
 
-    const snap = await getDocs(attendanceQuery);
-    if (snap.empty) {
-        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [], oneTimeAttendees: [personId] });
-    } else {
-        const record = snap.docs[0].data() as SessionAttendance;
-        const updatedAttendees = Array.from(new Set([...(record.oneTimeAttendees || []), personId]));
-        await updateEntity(snap.docs[0].ref, { oneTimeAttendees: updatedAttendees });
-    }
+    return runTransaction(db, async (transaction) => {
+        let docRef;
+        let currentData: Partial<SessionAttendance> = {};
+
+        if (querySnapshot.empty) {
+            docRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
+        } else {
+            docRef = querySnapshot.docs[0].ref;
+            const existingDoc = await transaction.get(docRef);
+            currentData = existingDoc.data() || {};
+        }
+
+        const oneTimeAttendees = Array.from(new Set([...(currentData.oneTimeAttendees || []), personId]));
+        const presentIds = Array.from(new Set([...(currentData.presentIds || []), personId]));
+
+        if (querySnapshot.empty) {
+            transaction.set(docRef, {
+                sessionId,
+                date: dateStr,
+                oneTimeAttendees,
+                presentIds,
+                absentIds: [],
+                justifiedAbsenceIds: [],
+            });
+        } else {
+            transaction.update(docRef, { oneTimeAttendees, presentIds });
+        }
+    });
 };
+
 
 export const addVacationPeriodAction = async (personDocRef: any, person: Person, startDate: Date, endDate: Date) => {
     const newVacation: VacationPeriod = { id: `vac-${Date.now()}`, startDate, endDate };
@@ -599,14 +621,31 @@ type AllDataContext = {
 };
 
 export const deleteWithUsageCheckAction = async (
-    entityId: string,
-    checks: { collection: string; field: string; label: string, type?: 'array' }[],
     collectionRefs: Record<string, CollectionReference>,
+    entityId: string,
+    collectionKey: string,
+    checks: { collection: string; field: string; type?: 'array' }[],
     allDataForMessages: AllDataContext
 ) => {
     const usageMessages: string[] = [];
 
+    // Special check for sessions: they can't be deleted if personIds is not empty.
+    if (collectionKey === 'sessions') {
+        const sessionDoc = await getDoc(doc(collectionRefs.sessions, entityId));
+        if (sessionDoc.exists()) {
+            const sessionData = sessionDoc.data() as Session;
+            if (sessionData.personIds && sessionData.personIds.length > 0) {
+                 const peopleData = allDataForMessages.people || [];
+                 const personNames = sessionData.personIds.map(id => peopleData.find(p => p.id === id)?.name || id);
+                 usageMessages.push(`La sesión tiene ${sessionData.personIds.length} persona(s) inscrita(s): ${personNames.join(', ')}.`);
+            }
+        }
+    }
+
+
     for (const check of checks) {
+        if (collectionKey === 'sessions' && check.collection === 'people') continue;
+
         const collectionToCheckRef = collectionRefs[check.collection];
         if (!collectionToCheckRef) {
             console.warn(`Collection reference not found for: ${check.collection}`);
@@ -614,31 +653,13 @@ export const deleteWithUsageCheckAction = async (
         }
 
         const fieldToCheck = check.field;
-        const q = check.type === 'array'
-            ? query(collectionToCheckRef, where(fieldToCheck, 'array-contains', entityId))
-            : query(collectionToCheckRef, where(fieldToCheck, '==', entityId));
-        
+        const operator = check.type === 'array' ? 'array-contains' : '==';
+        const q = query(collectionToCheckRef, where(fieldToCheck, operator, entityId));
         const snapshot = await getDocs(q);
-
+        
         if (!snapshot.empty) {
-            const itemsInUse = snapshot.docs.map(d => d.data());
-            let details = '';
-            
-            if (check.collection === 'sessions') {
-                details = itemsInUse.map(s => {
-                    const actividad = allDataForMessages.actividades.find(a => a.id === s.actividadId);
-                    return `- ${actividad?.name || 'Clase'} (${s.dayOfWeek} ${s.time})`;
-                }).join('\n');
-                usageMessages.push(`Está asignado a ${itemsInUse.length} sesión(es):\n${details}`);
-            } else if (check.collection === 'people') {
-                 details = itemsInUse.map(p => `- ${p.name}`).join('\n');
-                 usageMessages.push(`Está asignado a ${itemsInUse.length} persona(s):\n${details}`);
-            } else if (check.collection === 'specialists') {
-                 details = itemsInUse.map(s => `- ${s.name}`).join('\n');
-                 usageMessages.push(`Está asignado a ${itemsInUse.length} especialista(s):\n${details}`);
-            } else {
-                usageMessages.push(`Está en uso por ${itemsInUse.length} ${check.label}(s).`);
-            }
+            const names = snapshot.docs.map(d => d.data().name || 'un elemento').slice(0, 3);
+            usageMessages.push(`Está en uso por ${snapshot.size} ${check.collection}: ${names.join(', ')}...`);
         }
     }
 

@@ -183,13 +183,19 @@ function DashboardPageContent() {
       .map(session => {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        
         const activeRegulars = session.personIds.filter(pid => {
             const person = people.find(p => p.id === pid);
             return person && !isPersonOnVacation(person, now);
         });
+        
+        const allAttendeesForToday = new Set([...activeRegulars, ...oneTimeAttendees]);
+        const enrolledCount = allAttendeesForToday.size;
+
         return {
           ...session,
-          enrolledCount: activeRegulars.length + oneTimeAttendees.length,
+          enrolledCount: enrolledCount,
+          waitlistCount: session.waitlist?.length || 0,
         };
       })
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -209,7 +215,7 @@ function DashboardPageContent() {
             const person = people.find(p => p.id === pid);
             return person && !isPersonOnVacation(person, now);
         });
-        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+        const enrolledCount = new Set([...activeRegulars, ...oneTimeAttendees]).size;
 
         const hasSpot = enrolledCount < capacity;
         const hasWaitlist = session.waitlist && session.waitlist.length > 0;
@@ -564,7 +570,7 @@ function DashboardPageContent() {
                             <ul className="space-y-4">
                             {filteredSessions.map(session => {
                                 const { specialist, actividad, space } = getSessionDetails(session);
-                                const enrolledCount = (session as any).enrolledCount;
+                                const { enrolledCount } = session as any;
                                 const capacity = space?.capacity ?? 0;
                                 const utilization = capacity > 0 ? enrolledCount / capacity : 0;
                                 const isFull = utilization >= 1;
@@ -605,7 +611,7 @@ function DashboardPageContent() {
                                             ? "text-amber-600 dark:text-amber-500" 
                                             : "text-foreground"
                                         )}>
-                                            {enrolledCount}/{capacity} inscriptos
+                                            {enrolledCount}/{capacity} anotados
                                         </p>
                                         </div>
                                         <TooltipProvider>
@@ -773,8 +779,10 @@ function DashboardPageContent() {
                                 const totalDebtForPerson = (tariff?.price || 0) * (person.outstandingPayments || 1);
                                 return (
                                 <li key={person.id} className="flex items-center justify-between text-sm">
-                                    <Link href={`/students?search=${encodeURIComponent(person.name)}`} className="group">
-                                        <div className="font-medium text-foreground group-hover:text-primary group-hover:underline">{person.name}</div>
+                                    <div>
+                                        <Link href={`/students?search=${encodeURIComponent(person.name)}`} className="group">
+                                            <div className="font-medium text-foreground group-hover:text-primary group-hover:underline">{person.name}</div>
+                                        </Link>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                             <span>{person.phone}</span>
                                             <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
@@ -782,7 +790,7 @@ function DashboardPageContent() {
                                                 <span className="sr-only">Enviar WhatsApp a {person.name}</span>
                                             </a>
                                         </div>
-                                    </Link>
+                                    </div>
                                     <div className="text-right">
                                         <span className="font-semibold text-red-600 dark:text-red-400">{formatPrice(totalDebtForPerson)}</span>
                                         <p className="text-xs text-muted-foreground">hace {person.daysOverdue} {person.daysOverdue === 1 ? 'día' : 'días'}</p>
@@ -859,3 +867,6 @@ export default function RootPage() {
     
 
     
+
+
+

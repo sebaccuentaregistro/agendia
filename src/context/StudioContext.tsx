@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs } from 'firebase/firestore';
+import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
 import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction } from '@/lib/firestore-actions';
@@ -108,6 +108,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...Object.fromEntries(Object.keys(collections).map(key => [key, []]))
     });
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+    const [isMigrationDone, setIsMigrationDone] = useState(false);
     const instituteId = institute?.id;
 
     const collectionRefs = useMemo(() => {
@@ -179,6 +180,48 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             clearTimeout(timer);
         };
     }, [collectionRefs, toast]);
+    
+     useEffect(() => {
+        if (loading || !instituteId || isMigrationDone || data.sessions.length === 0) return;
+
+        const migrateWaitlists = async () => {
+            const sessionsWithOldWaitlist = (data.sessions as Session[]).filter(s => s.hasOwnProperty('waitlistPersonIds'));
+            
+            if (sessionsWithOldWaitlist.length > 0) {
+                console.log(`Migrating ${sessionsWithOldWaitlist.length} sessions with old waitlist format...`);
+                toast({ title: "Actualizando datos...", description: "Estamos mejorando la estructura de tus listas de espera." });
+
+                const batch = writeBatch(db);
+
+                sessionsWithOldWaitlist.forEach(session => {
+                    const sessionRef = doc(db, 'institutes', instituteId, 'sessions', session.id);
+                    // @ts-ignore
+                    const oldWaitlistIds = (session.waitlistPersonIds as string[]) || [];
+                    
+                    const existingWaitlist = session.waitlist || [];
+                    const mergedWaitlist = [...existingWaitlist, ...oldWaitlistIds];
+                    const uniqueWaitlist = Array.from(new Set(mergedWaitlist));
+
+                    batch.update(sessionRef, {
+                        waitlist: uniqueWaitlist,
+                        waitlistPersonIds: deleteField()
+                    });
+                });
+
+                try {
+                    await batch.commit();
+                    console.log("Migration successful!");
+                    toast({ title: "Actualización completada", description: "Tus datos ahora están en el formato más reciente." });
+                } catch (error) {
+                    console.error("Waitlist migration failed:", error);
+                    toast({ variant: "destructive", title: "Error en actualización", description: "No se pudieron actualizar todos los datos." });
+                }
+            }
+             setIsMigrationDone(true); // Mark as done even if there's nothing to migrate or if it fails, to avoid re-running.
+        };
+
+        migrateWaitlists();
+    }, [loading, data.sessions, instituteId, isMigrationDone, toast]);
 
      // Update loading state only when all collections have been processed at least once
     useEffect(() => {
@@ -329,43 +372,43 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         if (!collectionRefs) return;
         try {
             const allDataForMessages = {
-                sessions: data.sessions, people: data.people, actividades: data.actividades,
+                sessions: data.sessions, people: [...people, ...inactivePeople], actividades: data.actividades,
                 specialists: data.specialists, spaces: data.spaces, levels: data.levels,
             };
-            await deleteWithUsageCheckAction(entityId, checks, collectionRefs, allDataForMessages);
+            await deleteWithUsageCheckAction(collectionRefs, entityId, collectionKey, checks, allDataForMessages);
             await handleAction(deleteEntity(doc(collectionRefs[collectionKey], entityId)), successMessage, errorMessage);
         } catch (error: any) {
-            toast({ variant: 'destructive', title: "No se puede eliminar", description: error.message });
+            toast({ variant: 'destructive', title: "No se puede eliminar", description: error.message, duration: 6000 });
         }
     };
     
     const addSession = (session: Omit<Session, 'id' | 'personIds' | 'waitlist'>) => addGenericEntity('sessions', { ...session, personIds: [], waitlist: [] }, "Sesión creada.", "Error al crear la sesión.");
     const updateSession = (session: Session) => updateGenericEntity('sessions', session, "Sesión actualizada.", "Error al actualizar la sesión.");
-    const deleteSession = (id: string) => deleteGenericEntityWithUsageCheck('sessions', id, "Sesión eliminada.", "Error al eliminar la sesión.", [{collection: 'attendance', field: 'sessionId', label: 'asistencias'}]);
+    const deleteSession = (id: string) => deleteGenericEntityWithUsageCheck('sessions', id, "Sesión eliminada.", "Error al eliminar la sesión.", [{ collection: 'people', field: 'personIds', type: 'array' }]);
 
     const addActividad = (actividad: Omit<Actividad, 'id'>) => addGenericEntity('actividades', actividad, "Actividad creada.", "Error al crear la actividad.");
     const updateActividad = (actividad: Actividad) => updateGenericEntity('actividades', actividad, "Actividad actualizada.", "Error al actualizar la actividad.");
     const deleteActividad = (id: string) => deleteGenericEntityWithUsageCheck('actividades', id, "Actividad eliminada.", "Error al eliminar la actividad.", [
-        {collection: 'sessions', field: 'actividadId', label: 'sesiones'}, {collection: 'specialists', field: 'actividadIds', label: 'especialistas', type: 'array'}
+        {collection: 'sessions', field: 'actividadId'}, {collection: 'specialists', field: 'actividadIds', type: 'array'}
     ]);
 
     const addSpecialist = (specialist: Omit<Specialist, 'id' | 'avatar'>) => addGenericEntity('specialists', { ...specialist, avatar: `https://placehold.co/100x100.png` }, "Especialista creado.", "Error al crear el especialista.");
     const updateSpecialist = (specialist: Specialist) => updateGenericEntity('specialists', specialist, "Especialista actualizado.", "Error al actualizar el especialista.");
-    const deleteSpecialist = (id: string) => deleteGenericEntityWithUsageCheck('specialists', id, "Especialista eliminado.", "Error al eliminar el especialista.", [{collection: 'sessions', field: 'instructorId', label: 'sesiones'}]);
+    const deleteSpecialist = (id: string) => deleteGenericEntityWithUsageCheck('specialists', id, "Especialista eliminado.", "Error al eliminar el especialista.", [{collection: 'sessions', field: 'instructorId'}]);
 
     const addSpace = (space: Omit<Space, 'id'>) => addGenericEntity('spaces', space, "Espacio creado.", "Error al crear el espacio.");
     const updateSpace = (space: Space) => updateGenericEntity('spaces', space, "Espacio actualizado.", "Error al actualizar el espacio.");
-    const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId', label: 'sesiones'}]);
+    const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId'}]);
     
     const addLevel = (level: Omit<Level, 'id'>) => addGenericEntity('levels', level, "Nivel creado.", "Error al crear el nivel.");
     const updateLevel = (level: Level) => updateGenericEntity('levels', level, "Nivel actualizado.", "Error al actualizar el nivel.");
     const deleteLevel = (id: string) => deleteGenericEntityWithUsageCheck('levels', id, "Nivel eliminado.", "Error al eliminar el nivel.", [
-        {collection: 'sessions', field: 'levelId', label: 'sesiones'}, {collection: 'people', field: 'levelId', label: 'personas'}
+        {collection: 'sessions', field: 'levelId'}, {collection: 'people', field: 'levelId'}
     ]);
     
     const addTariff = (tariff: Omit<Tariff, 'id'>) => addGenericEntity('tariffs', tariff, "Arancel creado.", "Error al crear el arancel.");
     const updateTariff = (tariff: Tariff) => updateGenericEntity('tariffs', tariff, "Arancel actualizado.", "Error al actualizar el arancel.");
-    const deleteTariff = (id: string) => deleteGenericEntityWithUsageCheck('tariffs', id, "Arancel eliminado.", "Error al eliminar el arancel.", [{collection: 'people', field: 'tariffId', label: 'personas'}]);
+    const deleteTariff = (id: string) => deleteGenericEntityWithUsageCheck('tariffs', id, "Arancel eliminado.", "Error al eliminar el arancel.", [{collection: 'people', field: 'tariffId'}]);
     
     const addOperator = (operator: Omit<Operator, 'id'>) => addGenericEntity('operators', operator, "Operador creado.", "Error al crear operador.");
     const updateOperator = (operator: Operator) => updateGenericEntity('operators', operator, "Operador actualizado.", "Error al actualizar operador.");
