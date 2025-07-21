@@ -111,7 +111,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           healthInfo: values.healthInfo,
           notes: values.notes,
           joinDate: values.joinDate || person.joinDate,
-          lastPaymentDate: values.lastPaymentDate, // Directly use the value from the form
+          lastPaymentDate: values.lastPaymentDate || null, // Directly use the value from the form
       });
     } else {
       // Logic for creating a new person
