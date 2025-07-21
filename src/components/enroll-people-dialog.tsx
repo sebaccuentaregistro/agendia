@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -12,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import { useStudio } from '@/context/StudioContext';
 import { Session } from '@/types';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface EnrollPeopleDialogProps {
   session: Session;
@@ -29,6 +32,7 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
 
   const space = spaces.find(s => s.id === session.spaceId);
   const capacity = space?.capacity ?? 0;
+  const isOverCapacity = watchedPersonIds.length > capacity;
   const actividad = actividades.find(a => a.id === session.actividadId);
 
   const peopleWithEnrollmentData = useMemo(() => {
@@ -57,6 +61,7 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
 
 
   function onSubmit(data: { personIds: string[] }) {
+    if (isOverCapacity) return;
     enrollPeopleInClass(session.id, data.personIds);
     onClose();
   }
@@ -145,11 +150,20 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                 </FormItem>
               )}
             />
+             {isOverCapacity && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Límite de Capacidad Excedido</AlertTitle>
+                <AlertDescription>
+                  Has seleccionado {watchedPersonIds.length} personas, pero la capacidad máxima es {capacity}.
+                </AlertDescription>
+              </Alert>
+            )}
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancelar
               </Button>
-              <Button type="submit">Guardar</Button>
+              <Button type="submit" disabled={isOverCapacity}>Guardar</Button>
             </DialogFooter>
           </form>
         </Form>
