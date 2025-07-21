@@ -99,8 +99,7 @@ export type NewPersonData = {
     notes?: string;
     joinDate?: Date;
     lastPaymentDate?: Date | null;
-    recordFirstPayment?: boolean;
-    paymentOption?: 'recordNow' | 'setManually' | 'pending';
+    paymentOption: 'recordNow' | 'setManually' | 'pending';
 };
 
 export type WaitlistProspect = {
