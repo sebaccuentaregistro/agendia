@@ -612,7 +612,7 @@ function DashboardPageContent() {
                                             ? "text-amber-600 dark:text-amber-500" 
                                             : "text-foreground"
                                         )}>
-                                            {enrolledCount}/{capacity} inscriptos
+                                            {enrolledCount}/{capacity} anotados
                                         </p>
                                         </div>
                                         <TooltipProvider>
