@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
@@ -201,7 +202,16 @@ function DashboardPageContent() {
       .map(session => {
         const space = spaces.find(s => s.id === session.spaceId);
         const capacity = space?.capacity || 0;
-        const hasSpot = session.personIds.length < capacity;
+        
+        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        const activeRegulars = session.personIds.filter(pid => {
+            const person = people.find(p => p.id === pid);
+            return person && !isPersonOnVacation(person, now);
+        });
+        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+
+        const hasSpot = enrolledCount < capacity;
         const hasWaitlist = session.waitlist && session.waitlist.length > 0;
 
         if (hasSpot && hasWaitlist) {
@@ -845,5 +855,7 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
 
     

@@ -99,21 +99,33 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
     if (!person && isLimitReached) {
         return;
     }
-    const finalValues: NewPersonData = {
-        name: values.name,
-        phone: values.phone,
-        tariffId: values.tariffId,
-        levelId: values.levelId === 'none' ? undefined : values.levelId,
-        healthInfo: values.healthInfo,
-        notes: values.notes,
-        joinDate: values.joinDate,
-        lastPaymentDate: values.lastPaymentDate,
-        paymentOption: values.paymentOption,
-    };
     
     if (person) {
-      await updatePerson({ ...person, ...finalValues });
+      // Logic for updating an existing person
+      await updatePerson({ 
+          ...person, 
+          name: values.name,
+          phone: values.phone,
+          tariffId: values.tariffId,
+          levelId: values.levelId === 'none' ? undefined : values.levelId,
+          healthInfo: values.healthInfo,
+          notes: values.notes,
+          joinDate: values.joinDate || person.joinDate,
+          lastPaymentDate: values.lastPaymentDate, // Directly use the value from the form
+      });
     } else {
+      // Logic for creating a new person
+      const finalValues: NewPersonData = {
+          name: values.name,
+          phone: values.phone,
+          tariffId: values.tariffId,
+          levelId: values.levelId === 'none' ? undefined : values.levelId,
+          healthInfo: values.healthInfo,
+          notes: values.notes,
+          joinDate: values.joinDate,
+          lastPaymentDate: values.lastPaymentDate,
+          paymentOption: values.paymentOption,
+      };
       const newPersonId = await addPerson(finalValues);
       if (onPersonCreated && newPersonId) {
         onPersonCreated({
@@ -191,6 +203,34 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
                   )}
                 />
             </div>
+            {person && (
+                 <FormField
+                    control={form.control}
+                    name="lastPaymentDate"
+                    render={({ field }) => (
+                    <FormItem className="flex flex-col animate-in fade-in-0 zoom-in-95">
+                        <FormLabel>Fecha del Próximo Vencimiento</FormLabel>
+                        <Popover>
+                        <PopoverTrigger asChild>
+                            <FormControl>
+                            <Button
+                                variant="outline"
+                                className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                            >
+                                {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                            </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                            <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
+                        </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                    </FormItem>
+                    )}
+                />
+            )}
             {!person && (
                 <FormField
                   control={form.control}
