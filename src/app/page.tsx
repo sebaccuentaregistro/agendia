@@ -189,6 +189,8 @@ function DashboardPageContent() {
             return person && !isPersonOnVacation(person, now);
         });
         
+        // ** CORRECT LOGIC **
+        // Create a unique set of all people attending today
         const allAttendeesForToday = new Set([...activeRegulars, ...oneTimeAttendees]);
         const enrolledCount = allAttendeesForToday.size;
 
@@ -865,3 +867,4 @@ export default function RootPage() {
     
 
     
+
