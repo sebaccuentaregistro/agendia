@@ -1,5 +1,4 @@
 
-
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc } from 'firebase/firestore';
@@ -182,35 +181,35 @@ export const deactivatePersonAction = async (sessionsRef: CollectionReference, p
         timestamp: now,
     } as Omit<AuditLog, 'id'>);
 
-    // Remove person from all sessions they are enrolled in
-    const personSessionsQuery = query(sessionsRef, where('personIds', 'array-contains', personId));
-    const personSessionsSnap = await getDocs(personSessionsQuery);
+    // Get all sessions to check both personIds and waitlist
+    const allSessionsSnap = await getDocs(sessionsRef);
     
-    personSessionsSnap.forEach(sessionDoc => {
+    allSessionsSnap.forEach(sessionDoc => {
         const sessionData = sessionDoc.data() as Session;
-        const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
-        batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
-        if (!affectedSessionIds.includes(sessionDoc.id)) {
+        let wasModified = false;
+
+        // Check if person is in the main enrollment list
+        if (sessionData.personIds?.includes(personId)) {
+            const updatedPersonIds = sessionData.personIds.filter(id => id !== personId);
+            batch.update(sessionDoc.ref, { personIds: updatedPersonIds });
+            wasModified = true;
+        }
+
+        // Check if person is in the waitlist (as an ID)
+        if (sessionData.waitlist?.some(entry => typeof entry === 'string' && entry === personId)) {
+            const updatedWaitlist = sessionData.waitlist.filter(entry => {
+                return !(typeof entry === 'string' && entry === personId);
+            });
+            batch.update(sessionDoc.ref, { waitlist: updatedWaitlist });
+            wasModified = true;
+        }
+
+        if (wasModified && !affectedSessionIds.includes(sessionDoc.id)) {
             affectedSessionIds.push(sessionDoc.id);
         }
     });
 
-    // Also remove from waitlists
-    const personWaitlistQuery = query(sessionsRef, where('waitlist', 'array-contains', personId));
-    const personWaitlistSnap = await getDocs(personWaitlistQuery);
-    personWaitlistSnap.forEach(sessionDoc => {
-        const sessionData = sessionDoc.data() as Session;
-        const updatedWaitlist = (sessionData.waitlist || []).filter(entry => {
-            if (typeof entry === 'string') return entry !== personId;
-            return true;
-        });
-        batch.update(sessionDoc.ref, { waitlist: updatedWaitlist });
-        if (!affectedSessionIds.includes(sessionDoc.id)) {
-            affectedSessionIds.push(sessionDoc.id);
-        }
-    });
-
-    // Update the person's status to inactive instead of deleting
+    // Update the person's status to inactive
     const personRef = doc(peopleRef, personId);
     batch.update(personRef, { status: 'inactive', inactiveDate: now });
 
@@ -692,3 +691,5 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     
     return updatedCount;
 };
+
+    
