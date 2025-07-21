@@ -504,47 +504,6 @@ function DashboardPageContent() {
           )}
         </div>
         <div className="space-y-8">
-            
-            <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-yellow-500/20">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-foreground">
-                        <DollarSign className="h-5 w-5 text-yellow-500" />
-                        Top Deudores
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    {topDebtors.length > 0 ? (
-                        <ul className="space-y-3">
-                            {topDebtors.map(person => {
-                                const tariff = tariffs.find(t => t.id === person.tariffId);
-                                const totalDebtForPerson = (tariff?.price || 0) * (person.outstandingPayments || 1);
-                                return (
-                                <li key={person.id} className="flex items-center justify-between text-sm">
-                                    <div>
-                                        <Link href={`/students?search=${encodeURIComponent(person.name)}`} className="group">
-                                            <div className="font-medium text-foreground group-hover:text-primary group-hover:underline">{person.name}</div>
-                                        </Link>
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                            <span>{person.phone}</span>
-                                            <a href={`https://wa.me/${person.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                                                <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                                                <span className="sr-only">Enviar WhatsApp a {person.name}</span>
-                                            </a>
-                                        </div>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="font-semibold text-red-600 dark:text-red-400">{formatPrice(totalDebtForPerson)}</span>
-                                        <p className="text-xs text-muted-foreground">hace {person.daysOverdue} {person.daysOverdue === 1 ? 'día' : 'días'}</p>
-                                    </div>
-                                </li>
-                            )})}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-center text-muted-foreground py-4">¡Excelente! No hay deudores por el momento.</p>
-                    )}
-                </CardContent>
-            </Card>
-
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
 
             <WaitlistOpportunities
@@ -556,6 +515,7 @@ function DashboardPageContent() {
 
             <PaymentReminders 
                 reminders={paymentReminders} 
+                topDebtors={topDebtors}
                 onSendReminder={setPaymentReminderInfo}
                 onSendAll={() => setIsMassReminderOpen(true)}
             />
@@ -604,14 +564,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-    
-
-    
-
-
-
-
-
-
-    
