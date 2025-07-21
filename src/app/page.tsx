@@ -183,13 +183,19 @@ function DashboardPageContent() {
       .map(session => {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        
         const activeRegulars = session.personIds.filter(pid => {
             const person = people.find(p => p.id === pid);
             return person && !isPersonOnVacation(person, now);
         });
+
+        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+        const waitlistCount = session.waitlist?.length || 0;
+
         return {
           ...session,
-          enrolledCount: activeRegulars.length + oneTimeAttendees.length,
+          enrolledCount: enrolledCount,
+          waitlistCount: waitlistCount,
         };
       })
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -564,7 +570,7 @@ function DashboardPageContent() {
                             <ul className="space-y-4">
                             {filteredSessions.map(session => {
                                 const { specialist, actividad, space } = getSessionDetails(session);
-                                const enrolledCount = (session as any).enrolledCount;
+                                const { enrolledCount, waitlistCount } = session as any;
                                 const capacity = space?.capacity ?? 0;
                                 const utilization = capacity > 0 ? enrolledCount / capacity : 0;
                                 const isFull = utilization >= 1;

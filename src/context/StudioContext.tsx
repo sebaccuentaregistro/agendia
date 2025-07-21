@@ -3,7 +3,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
-import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs } from 'firebase/firestore';
+import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
 import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction } from '@/lib/firestore-actions';
@@ -108,6 +108,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         ...Object.fromEntries(Object.keys(collections).map(key => [key, []]))
     });
     const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+    const [isMigrationDone, setIsMigrationDone] = useState(false);
     const instituteId = institute?.id;
 
     const collectionRefs = useMemo(() => {
@@ -179,6 +180,48 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             clearTimeout(timer);
         };
     }, [collectionRefs, toast]);
+    
+     useEffect(() => {
+        if (loading || !instituteId || isMigrationDone || data.sessions.length === 0) return;
+
+        const migrateWaitlists = async () => {
+            const sessionsWithOldWaitlist = (data.sessions as Session[]).filter(s => s.hasOwnProperty('waitlistPersonIds'));
+            
+            if (sessionsWithOldWaitlist.length > 0) {
+                console.log(`Migrating ${sessionsWithOldWaitlist.length} sessions with old waitlist format...`);
+                toast({ title: "Actualizando datos...", description: "Estamos mejorando la estructura de tus listas de espera." });
+
+                const batch = writeBatch(db);
+
+                sessionsWithOldWaitlist.forEach(session => {
+                    const sessionRef = doc(db, 'institutes', instituteId, 'sessions', session.id);
+                    // @ts-ignore
+                    const oldWaitlistIds = (session.waitlistPersonIds as string[]) || [];
+                    
+                    const existingWaitlist = session.waitlist || [];
+                    const mergedWaitlist = [...existingWaitlist, ...oldWaitlistIds];
+                    const uniqueWaitlist = Array.from(new Set(mergedWaitlist));
+
+                    batch.update(sessionRef, {
+                        waitlist: uniqueWaitlist,
+                        waitlistPersonIds: deleteField()
+                    });
+                });
+
+                try {
+                    await batch.commit();
+                    console.log("Migration successful!");
+                    toast({ title: "Actualización completada", description: "Tus datos ahora están en el formato más reciente." });
+                } catch (error) {
+                    console.error("Waitlist migration failed:", error);
+                    toast({ variant: "destructive", title: "Error en actualización", description: "No se pudieron actualizar todos los datos." });
+                }
+            }
+             setIsMigrationDone(true); // Mark as done even if there's nothing to migrate or if it fails, to avoid re-running.
+        };
+
+        migrateWaitlists();
+    }, [loading, data.sessions, instituteId, isMigrationDone, toast]);
 
      // Update loading state only when all collections have been processed at least once
     useEffect(() => {

@@ -283,10 +283,12 @@ function SchedulePageContent() {
 
         const activeRegulars = session.personIds.filter(pid => !peopleOnVacationToday.some(p => p.id === pid));
         const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+        const waitlistCount = session.waitlist?.length || 0;
 
         return {
             ...session,
             enrolledCount,
+            waitlistCount,
             peopleOnVacationToday,
         };
     });
@@ -583,12 +585,11 @@ function SchedulePageContent() {
                       sessionsWithDetails.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
-                      const { enrolledCount, peopleOnVacationToday } = session;
+                      const { enrolledCount, waitlistCount, peopleOnVacationToday } = session;
 
                       const availableSpots = capacity - enrolledCount;
                       const sessionTitle = `${actividad?.name || 'Sesión'}`;
                       const isFull = availableSpots <= 0;
-                      const waitlistCount = session.waitlist?.length || 0;
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
@@ -910,4 +911,5 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
