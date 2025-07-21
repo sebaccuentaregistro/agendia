@@ -504,6 +504,13 @@ function DashboardPageContent() {
           )}
         </div>
         <div className="space-y-8">
+            <PaymentReminders 
+                reminders={paymentReminders} 
+                topDebtors={topDebtors}
+                onSendReminder={setPaymentReminderInfo}
+                onSendAll={() => setIsMassReminderOpen(true)}
+            />
+
             <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
 
             <WaitlistOpportunities
@@ -512,14 +519,6 @@ function DashboardPageContent() {
               totalCount={totalWaitlistCount}
               onHeaderClick={() => setIsWaitlistSheetOpen(true)}
             />
-
-            <PaymentReminders 
-                reminders={paymentReminders} 
-                topDebtors={topDebtors}
-                onSendReminder={setPaymentReminderInfo}
-                onSendAll={() => setIsMassReminderOpen(true)}
-            />
-            
         </div>
       </div>
     
