@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -37,6 +37,12 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
         personId: preselectedPersonId || undefined,
     }
   });
+
+  useEffect(() => {
+    if (preselectedPersonId) {
+      form.setValue('personId', preselectedPersonId);
+    }
+  }, [preselectedPersonId, form]);
 
   const selectedDate = form.watch('date');
 
