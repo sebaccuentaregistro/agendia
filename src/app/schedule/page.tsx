@@ -172,7 +172,7 @@ function SchedulePageContent() {
   }, [watchedActividadId, specialists]);
 
   const availableActividades = useMemo(() => {
-    if (!watchedInstructorId) return actividades;
+    if (!watchedInstructorId) return [];
     const specialist = specialists.find(s => s.id === watchedInstructorId);
     if (!specialist) return [];
     const specialistActividadIds = new Set(specialist.actividadIds);
@@ -961,3 +961,4 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
