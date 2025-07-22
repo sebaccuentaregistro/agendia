@@ -45,8 +45,8 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
 
   const sessionDayNumber = dayMap[session.dayOfWeek];
 
-  const { occupationMessage, isFull, disableReason } = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha para ver la disponibilidad.', isFull: true, disableReason: '' };
+  const { occupationMessage, isFull } = useMemo(() => {
+    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha para ver la disponibilidad.', isFull: true };
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
@@ -58,28 +58,15 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     
     const fixedEnrolledCount = session.personIds.length;
     const currentOccupation = (fixedEnrolledCount - vacationingPeople.length) + oneTimeIds.length;
+    
+    if (currentOccupation >= capacity) {
+        return { occupationMessage: 'No hay cupos disponibles para esta fecha.', isFull: true };
+    }
+
     const availableSpots = capacity - currentOccupation;
-
-    if (availableSpots <= 0) {
-        return { 
-            occupationMessage: 'No hay cupos disponibles para esta fecha.', 
-            isFull: true,
-            disableReason: 'Clase llena.'
-        };
-    }
-
-    if (availableSpots === 1) {
-        return { 
-            occupationMessage: 'El último cupo está reservado para inscripciones fijas.', 
-            isFull: true,
-            disableReason: 'Reservado para inscripción fija.'
-        };
-    }
-
     return {
-      occupationMessage: `Hay ${availableSpots -1} cupo(s) de recupero disponibles.`,
-      isFull: false,
-      disableReason: ''
+      occupationMessage: `Hay ${availableSpots} cupo(s) disponible(s).`,
+      isFull: false
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
