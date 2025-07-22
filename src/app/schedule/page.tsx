@@ -4,7 +4,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus, ChevronDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -40,6 +40,8 @@ import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
 
 const formSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -294,8 +296,8 @@ function SchedulePageContent() {
 
         const attendanceRecordForToday = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendeeIds = attendanceRecordForToday?.oneTimeAttendees || [];
-        const oneTimeAttendeeNames = oneTimeAttendeeIds.map(pid => people.find(p => p.id === pid)?.name).filter((name): name is string => !!name);
-        const oneTimeAttendeesCount = oneTimeAttendeeNames.length;
+        const oneTimeAttendees = oneTimeAttendeeIds.map(pid => people.find(p => p.id === pid)).filter((name): name is Person => !!name);
+        const oneTimeAttendeesCount = oneTimeAttendees.length;
         
         const dailyEnrolledCount = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
         
@@ -328,14 +330,10 @@ function SchedulePageContent() {
                 fixed: fixedSpotsAvailable,
                 temporary: vacationCount,
             },
-            debug: {
-                fixedCount: fixedEnrolledCount,
-                fixedNames: fixedEnrolledNames.join(', ') || 'Ninguno',
-                vacationCount: vacationCount,
-                vacationNames: vacationingNames.join(', ') || 'Ninguno',
-                recoveryCount: oneTimeAttendeesCount,
-                recoveryNames: oneTimeAttendeeNames.join(', ') || 'Ninguno',
-                finalCount: dailyEnrolledCount,
+            dailyAttendees: {
+                fixed: fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today)).map(p => p.name),
+                oneTime: oneTimeAttendees.map(p => p.name),
+                onVacation: vacationingPeople.map(p => p.name),
             }
         };
     });
@@ -632,7 +630,7 @@ function SchedulePageContent() {
                       sessionsWithDetails.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
-                      const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots, fixedEnrolledCount, debug } = session;
+                      const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots, fixedEnrolledCount, dailyAttendees } = session;
                       const isFixedFull = fixedEnrolledCount >= capacity;
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
@@ -694,7 +692,7 @@ function SchedulePageContent() {
                               </DropdownMenu>
                             </div>
                           </CardHeader>
-                          <CardContent className="flex-grow p-4 pt-2 space-y-4">
+                          <CardContent className="flex-grow p-4 pt-2 space-y-3">
                             <div className="space-y-2 text-sm text-slate-700 dark:text-slate-300">
                               <div className="flex items-center gap-3">
                                 <Clock className="h-4 w-4 text-slate-500" />
@@ -711,18 +709,18 @@ function SchedulePageContent() {
                             </div>
                             <div className="space-y-1">
                                 <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
-                                    <span
+                                    <div
                                       className="font-semibold text-foreground cursor-pointer hover:underline"
                                       onClick={() => setSessionForRoster({ session, rosterType: 'fixed' })}
                                     >
                                       Inscriptos Fijos: {fixedEnrolledCount}/{capacity}
-                                    </span>
-                                    <span
+                                    </div>
+                                    <div
                                       className="font-semibold text-foreground cursor-pointer hover:underline"
                                       onClick={() => setSessionForRoster({ session, rosterType: 'daily' })}
                                     >
                                       Ocupación Hoy: {dailyEnrolledCount}/{capacity}
-                                    </span>
+                                    </div>
                                 </div>
                                 <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
                                     <div
@@ -730,33 +728,27 @@ function SchedulePageContent() {
                                     style={{ width: `${capacity > 0 ? (dailyEnrolledCount / capacity) * 100 : 0}%` }}
                                     />
                                 </div>
-                                <div className="text-xs text-red-500 font-mono mt-1 space-y-0.5">
-                                    <div>DEBUG: {debug.finalCount} = {debug.fixedCount}(F) - {debug.vacationCount}(V) + {debug.recoveryCount}(R)</div>
-                                    <div>Fijos: {debug.fixedNames}</div>
-                                    <div>Vacaciones: {debug.vacationNames}</div>
-                                    <div>Recupero: {debug.recoveryNames}</div>
-                                </div>
-                               {waitlistDetails.length > 0 && (
-                                <div className="pt-2 text-xs text-muted-foreground">
-                                    <span className="font-semibold">En espera: </span>
-                                     <div className="space-y-1 mt-1">
-                                        {waitlistDetails.map((p, index) => (
-                                            <div key={index} className="flex items-center justify-between gap-2">
-                                                <span>{p.name}</span>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-5 w-5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                    onClick={() => setEntryToRemoveFromWaitlist({session, entry: p.entry, name: p.name})}
-                                                >
-                                                    <Trash2 className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                               )}
                             </div>
+                             <Collapsible className="space-y-2">
+                                <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted">
+                                    <span>Asistentes del Día</span>
+                                    <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="space-y-2 pt-2 text-xs">
+                                     <div className="rounded-md border p-2">
+                                        <h4 className="font-semibold mb-1 flex items-center gap-1.5"><Users className="h-3 w-3"/>Fijos ({dailyAttendees.fixed.length})</h4>
+                                        {dailyAttendees.fixed.length > 0 ? dailyAttendees.fixed.join(', ') : <span className="text-muted-foreground">Ninguno</span>}
+                                    </div>
+                                    <div className="rounded-md border p-2">
+                                        <h4 className="font-semibold mb-1 flex items-center gap-1.5"><CalendarClock className="h-3 w-3"/>Recuperos Hoy ({dailyAttendees.oneTime.length})</h4>
+                                        {dailyAttendees.oneTime.length > 0 ? dailyAttendees.oneTime.join(', ') : <span className="text-muted-foreground">Ninguno</span>}
+                                    </div>
+                                    <div className="rounded-md border p-2">
+                                        <h4 className="font-semibold mb-1 flex items-center gap-1.5"><Plane className="h-3 w-3"/>De Vacaciones Hoy ({dailyAttendees.onVacation.length})</h4>
+                                        {dailyAttendees.onVacation.length > 0 ? dailyAttendees.onVacation.join(', ') : <span className="text-muted-foreground">Ninguno</span>}
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
                           </CardContent>
                           <CardFooter className="flex flex-col gap-2 p-3 mt-auto border-t border-slate-100 dark:border-zinc-700/80">
                                 <TooltipProvider>
@@ -984,3 +976,4 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
