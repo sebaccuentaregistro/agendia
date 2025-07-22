@@ -15,11 +15,15 @@ import { Badge } from './ui/badge';
 
 type UnifiedWaitlistItem = (Person & { isProspect: false }) | (WaitlistProspect & { isProspect: true });
 
-type Opportunity = {
-  notification: AppNotification;
+export type Opportunity = {
   session: Session;
   actividadName: string;
   waitlist: UnifiedWaitlistItem[];
+  availableSlots: {
+    fixed: number;
+    temporary: number;
+    total: number;
+  }
 };
 
 type SummaryItem = {
@@ -40,9 +44,9 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
   const [personToCreate, setPersonToCreate] = useState<{ prospect: WaitlistProspect; sessionId: string; } | null>(null);
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
 
-  const handleEnroll = async (e: React.MouseEvent, notificationId: string, sessionId: string, personToEnroll: Person) => {
+  const handleEnroll = async (e: React.MouseEvent, sessionId: string, personToEnroll: Person) => {
     e.stopPropagation();
-    await enrollFromWaitlist(notificationId, sessionId, personToEnroll);
+    await enrollFromWaitlist(sessionId, personToEnroll);
   };
   
   const handleCreateAndEnroll = (e: React.MouseEvent, prospect: WaitlistProspect, sessionId: string) => {
@@ -84,7 +88,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
                     Se han liberado cupos en estas clases. Contacta a las personas en espera para inscribirlas.
                 </AlertDescription>
             </Alert>
-            {opportunities.map(({ notification, session, actividadName, waitlist }) => {
+            {opportunities.map(({ session, actividadName, waitlist, availableSlots }) => {
                 const space = spaces.find(s => s.id === session.spaceId);
                 const capacity = space?.capacity || 0;
                 const isFull = session.personIds.length >= capacity;
@@ -110,7 +114,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
                                                 if (isProspect) {
                                                     handleCreateAndEnroll(e, person as WaitlistProspect, session.id);
                                                 } else {
-                                                    handleEnroll(e, notification.id!, session.id, person as Person);
+                                                    handleEnroll(e, session.id, person as Person);
                                                 }
                                             }}
                                             disabled={isFull || (!isProspect && !people.some(p => p.id === (person as Person).id))}

@@ -187,50 +187,48 @@ function DashboardPageContent() {
         return acc + (session.waitlist?.length || 0);
     }, 0);
     
-    const waitlistOpportunities = sessions
-      .map(session => {
+    const waitlistOpportunities = sessions.map(session => {
         const space = spaces.find(s => s.id === session.spaceId);
         const capacity = space?.capacity || 0;
         
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-        const activeRegulars = session.personIds.filter(pid => {
+        const fixedEnrolledCount = session.personIds.length;
+        const peopleOnVacationToday = session.personIds.filter(pid => {
             const person = people.find(p => p.id === pid);
-            return person && !isPersonOnVacation(person, now);
-        });
-        const enrolledCount = new Set([...activeRegulars, ...oneTimeAttendees]).size;
+            return person && isPersonOnVacation(person, today);
+        }).length;
 
-        const hasSpot = enrolledCount < capacity;
+        const fixedSlotsAvailable = capacity - fixedEnrolledCount;
+        const temporarySlotsAvailable = peopleOnVacationToday;
+        const totalSlotsAvailable = fixedSlotsAvailable + temporarySlotsAvailable;
+        
         const hasWaitlist = session.waitlist && session.waitlist.length > 0;
 
-        if (hasSpot && hasWaitlist) {
-          const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
-          const waitlistDetails = (session.waitlist || [])
-            .map(entry => {
-                if (typeof entry === 'string') {
-                    const person = people.find(p => p.id === entry);
-                    return person ? { ...person, isProspect: false as const } : null;
-                }
-                return { ...entry, isProspect: true as const };
-            })
-            .filter((p): p is NonNullable<typeof p> => p !== null)
-            .sort((a, b) => {
-                // `false` (alumnos) se trata como 0, `true` (prospectos) como 1.
-                // Esto ordena a los alumnos existentes primero.
-                return (a.isProspect ? 1 : 0) - (b.isProspect ? 1 : 0);
-            });
-          
-          const virtualNotification: AppNotification = {
-            id: `virtual-${session.id}`,
-            type: 'waitlist',
-            sessionId: session.id,
-            createdAt: now
-          };
+        if (totalSlotsAvailable > 0 && hasWaitlist) {
+            const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
+            const waitlistDetails = (session.waitlist || [])
+                .map(entry => {
+                    if (typeof entry === 'string') {
+                        const person = people.find(p => p.id === entry);
+                        return person ? { ...person, isProspect: false as const } : null;
+                    }
+                    return { ...entry, isProspect: true as const };
+                })
+                .filter((p): p is NonNullable<typeof p> => p !== null)
+                .sort((a, b) => (a.isProspect ? 1 : 0) - (b.isProspect ? 1 : 0));
 
-          return { notification: virtualNotification, session, actividadName, waitlist: waitlistDetails };
+            return {
+                session,
+                actividadName,
+                waitlist: waitlistDetails,
+                availableSlots: {
+                    fixed: fixedSlotsAvailable,
+                    temporary: temporarySlotsAvailable,
+                    total: totalSlotsAvailable,
+                }
+            };
         }
         return null;
-      }).filter((o): o is NonNullable<typeof o> => !!o);
+    }).filter((o): o is NonNullable<typeof o> => !!o);
 
     const waitlistSummary = sessions
         .filter(s => s.waitlist && s.waitlist.length > 0)

@@ -560,8 +560,6 @@ export const enrollFromWaitlistAction = async (
         const space = spaceSnap.data() as Space;
 
         if (session.personIds.length >= space.capacity) {
-            // Instead of throwing an error, we just log and return.
-            // The UI should prevent this from happening.
             console.warn(`Attempted to enroll from waitlist into a full class (Session: ${session.id})`);
             return;
         }
@@ -596,7 +594,6 @@ export const enrollProspectFromWaitlistAction = async (
         const space = spaceSnap.data() as Space;
 
         if (session.personIds.length >= space.capacity) {
-            // Instead of throwing an error, we just log and return.
              console.warn(`Attempted to enroll a prospect from waitlist into a full class (Session: ${session.id})`);
              return;
         }
