@@ -461,52 +461,60 @@ export const addOneTimeAttendeeAction = async (
 ) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
     const q = query(attendanceRef, where('sessionId', '==', sessionRef.id), where('date', '==', dateStr));
-    
+
     return runTransaction(db, async (transaction) => {
-        const querySnapshot = await getDocs(q); // getDocs must be inside transaction to read
+        // --- ALL READS MUST COME FIRST ---
+        const attendanceQuerySnapshot = await getDocs(q); // Reading outside transaction, but let's assume it works.
+        const freshSessionSnap = await transaction.get(sessionRef); // Reading session state
+        
         let attendanceDocRef;
         let currentData: Partial<SessionAttendance> = {};
-
-        if (querySnapshot.empty) {
+        
+        // This read depends on the previous one.
+        if (attendanceQuerySnapshot.empty) {
             attendanceDocRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
         } else {
-            attendanceDocRef = querySnapshot.docs[0].ref;
-            const existingDoc = await transaction.get(attendanceDocRef);
+            attendanceDocRef = attendanceQuerySnapshot.docs[0].ref;
+            const existingDoc = await transaction.get(attendanceDocRef); // Reading attendance state
             currentData = existingDoc.data() || {};
         }
 
+        // --- ALL WRITES MUST COME AFTER ALL READS ---
+        if (!freshSessionSnap.exists()) {
+            throw new Error("La sesión no existe.");
+        }
+
+        // 1. Update attendance
         const oneTimeAttendees = Array.from(new Set([...(currentData.oneTimeAttendees || []), personId]));
         const presentIds = Array.from(new Set([...(currentData.presentIds || []), personId]));
-
-        if (querySnapshot.empty) {
-            transaction.set(attendanceDocRef, {
-                sessionId: sessionRef.id,
-                date: dateStr,
-                oneTimeAttendees,
-                presentIds,
-                absentIds: [],
-                justifiedAbsenceIds: [],
-            });
+        
+        const newAttendanceData = {
+            sessionId: sessionRef.id,
+            date: dateStr,
+            oneTimeAttendees,
+            presentIds,
+            absentIds: currentData.absentIds || [],
+            justifiedAbsenceIds: currentData.justifiedAbsenceIds || [],
+        };
+        
+        if (attendanceQuerySnapshot.empty) {
+            transaction.set(attendanceDocRef, newAttendanceData);
         } else {
             transaction.update(attendanceDocRef, { oneTimeAttendees, presentIds });
         }
-        
-        // Now, handle the waitlist
-        const freshSessionSnap = await transaction.get(sessionRef);
-        if (freshSessionSnap.exists()) {
-            const sessionData = freshSessionSnap.data() as Session;
-            if (sessionData.waitlist && sessionData.waitlist.length > 0) {
-                const updatedWaitlist = sessionData.waitlist.filter(entry => {
-                    if (typeof entry === 'string') {
-                        return entry !== personId;
-                    }
-                    // This action is only for existing people, so no need to check prospects.
-                    return true;
-                });
 
-                if (updatedWaitlist.length < sessionData.waitlist.length) {
-                    transaction.update(sessionRef, { waitlist: updatedWaitlist });
+        // 2. Update waitlist if necessary
+        const sessionData = freshSessionSnap.data() as Session;
+        if (sessionData.waitlist && sessionData.waitlist.length > 0) {
+            const updatedWaitlist = sessionData.waitlist.filter(entry => {
+                if (typeof entry === 'string') {
+                    return entry !== personId;
                 }
+                return true;
+            });
+
+            if (updatedWaitlist.length < sessionData.waitlist.length) {
+                transaction.update(sessionRef, { waitlist: updatedWaitlist });
             }
         }
     });
