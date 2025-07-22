@@ -3,7 +3,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus, ChevronDown, Pointer, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -87,6 +87,11 @@ function SchedulePageContent() {
     resolver: zodResolver(formSchema),
     defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
   });
+
+  const handleActionWithSession = (eventName: string) => (session: Session) => {
+    const event = new CustomEvent(eventName, { detail: session });
+    document.dispatchEvent(event);
+  };
 
   useEffect(() => {
     const handleEdit = (e: Event) => handleEditSession((e as CustomEvent).detail);
