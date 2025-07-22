@@ -85,20 +85,7 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
   async function onSubmit(data: { personIds: string[] }) {
     if (isOverCapacity || !session) return;
     
-    const originalPersonIds = new Set(session.personIds || []);
-    const newPersonIds = new Set(data.personIds);
-
-    // This function simply updates the single session with the new list of people
     await enrollPeopleInClass(session.id, data.personIds);
-
-    // Now, we determine who was removed to trigger a waitlist check for them if necessary
-    originalPersonIds.forEach(originalId => {
-      if (!newPersonIds.has(originalId)) {
-        // This person was removed from this class, so we need to check if a spot opened up.
-        // In the context of this dialog, this is the main session being edited.
-        triggerWaitlistCheck(session.id);
-      }
-    });
 
     onClose();
   }
@@ -175,9 +162,6 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                                     </Badge>
                                   )}
                                 </FormLabel>
-                                {hasReachedLimit && !field.value?.includes(person.id) && (
-                                    <p className="text-xs text-destructive">Límite del plan alcanzado.</p>
-                                )}
                               </div>
                             </FormItem>
                           )}
