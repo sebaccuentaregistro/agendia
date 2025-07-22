@@ -31,7 +31,7 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
     form.reset({ personIds: session?.personIds || [] });
   }, [session, form]);
 
-  const watchedPersonIds = form.watch('personIds');
+  const watchedPersonIds = form.watch('personIds') || [];
 
   const space = useMemo(() => session ? spaces.find(s => s.id === session.spaceId) : undefined, [spaces, session]);
   const capacity = space?.capacity ?? 0;
