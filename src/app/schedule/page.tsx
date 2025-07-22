@@ -275,9 +275,11 @@ function SchedulePageContent() {
         const vacationCount = fixedEnrolledPeople.length - activeFixedPeople.length;
         
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-        const recoveryNames = oneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
-        const recoveryCount = oneTimeAttendees.length; // Correct way to count
+        // CRITICAL FIX: Filter out invalid/ghost IDs from oneTimeAttendees
+        const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || []).filter(id => people.some(p => p.id === id));
+        
+        const recoveryNames = validOneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
+        const recoveryCount = validOneTimeAttendees.length; // Count only valid attendees
         
         const dailyOccupancy = activeFixedPeople.length + recoveryCount;
         
@@ -406,7 +408,7 @@ function SchedulePageContent() {
                     ) : (
                         <div className="grid grid-cols-2 gap-2 w-full">
                            <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>{`Fija - ${enrolledCount}`}</Button>
-                           <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>{`Recupero`}</Button>
+                           <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>{`Recupero - ${recoveryNames.length}`}</Button>
                         </div>
                     )}
                 </div>
@@ -700,10 +702,3 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
-
-
-
-
-
-
-
