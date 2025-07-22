@@ -235,7 +235,6 @@ function SchedulePageContent() {
     const { specialist, actividad, space, level } = getSessionDetails(session);
     const enrolledCount = session.personIds.length;
     const spaceCapacity = space?.capacity ?? 0;
-    const isFull = enrolledCount >= spaceCapacity;
 
     const today = startOfDay(new Date());
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
@@ -291,6 +290,7 @@ function SchedulePageContent() {
     }, [session, people, isPersonOnVacation, attendance, today]);
     
      const waitlistDetails = useMemo(() => {
+        if (!session.waitlist) return [];
         return (session.waitlist || [])
             .map(entry => {
                 if (typeof entry === 'string') {
@@ -311,7 +311,8 @@ function SchedulePageContent() {
         return null;
     }
 
-    const utilization = spaceCapacity > 0 ? (enrolledCount / spaceCapacity) * 100 : 0;
+    const utilization = spaceCapacity > 0 ? (isToday ? dailyOccupancy : enrolledCount) / spaceCapacity * 100 : 0;
+    const isFull = utilization >= 100;
     const isNearlyFull = utilization >= 80 && !isFull;
 
     return (
@@ -364,30 +365,37 @@ function SchedulePageContent() {
                 </Collapsible>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                <div className="w-full px-2 pt-1">
+                 <div className="w-full px-2 pt-1 space-y-1">
+                    <div className="flex justify-between items-center">
+                        <span className="text-xs font-semibold text-muted-foreground">{isToday ? "Ocupación Hoy" : "Ocupación Fija"}</span>
+                        <span className="text-xs font-bold text-foreground">
+                            {isToday ? dailyOccupancy : enrolledCount} / {spaceCapacity}
+                        </span>
+                    </div>
                     <Progress
                         value={utilization}
-                        className={cn("h-1.5", isNearlyFull && "[&>div]:bg-amber-500", isFull && "[&>div]:bg-red-500")}
+                        className={cn(
+                            "h-1.5",
+                            "[&>div]:bg-green-500", // Default to green
+                            isNearlyFull && "[&>div]:bg-yellow-500",
+                            isFull && "[&>div]:bg-red-500"
+                        )}
                     />
                 </div>
                 {isToday ? (
-                     <div className="w-full">
-                        <p className="text-xs text-center font-bold mb-1 text-primary">Ocupación Hoy</p>
-                        <div className="grid grid-cols-2 gap-2">
-                           <Button variant="outline" size="sm" onClick={() => setSessionForStudentsSheet(session)}>{`Fija - ${dailyOccupancy}/${spaceCapacity}`}</Button>
-                            <TooltipProvider delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <span className="w-full" tabIndex={0}>
-                                            <Button variant="secondary" size="sm" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed} className="w-full">
-                                                <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
-                                            </Button>
-                                        </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        </div>
+                     <div className="w-full grid grid-cols-1">
+                        <TooltipProvider delayDuration={100}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className="w-full" tabIndex={0}>
+                                        <Button variant="secondary" size="sm" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed} className="w-full">
+                                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
                 ) : (
                     <div className="grid grid-cols-2 gap-2 w-full">
