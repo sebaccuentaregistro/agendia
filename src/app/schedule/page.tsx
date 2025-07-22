@@ -526,7 +526,7 @@ function SchedulePageContent() {
             <CalendarClock className="h-4 w-4 !text-primary" />
             <AlertTitle>Modo Recuperación</AlertTitle>
             <AlertDescription>
-              Estás buscando un lugar para que recupere una clase <strong>{personForRecovery.name}</strong>. Haz clic en "Recuperar Aquí" en la clase deseada.
+              Estás buscando un lugar para que recupere una clase <strong>{personForRecovery.name}</strong>. Haz clic en "Inscripción Recupero" en la clase deseada.
             </AlertDescription>
         </Alert>
       )}
@@ -600,10 +600,10 @@ function SchedulePageContent() {
                       sessionsWithDetails.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
-                      const { dailyEnrolledCount, fixedEnrolledCount, waitlistCount, vacationCount } = session;
+                      const { dailyEnrolledCount, vacationCount, waitlistCount, availableSpots } = session;
+                      const isFullForFixed = availableSpots.fixed <= 0;
+                      const hasOpenings = availableSpots.fixed > 0 || availableSpots.temporary > 0;
 
-                      const isFullForFixed = fixedEnrolledCount >= capacity;
-                      
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
 
@@ -612,7 +612,7 @@ function SchedulePageContent() {
                           key={session.id} 
                           className={cn(
                             "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden",
-                            recoveryMode && session.availableSpots.temporary > 0 && "border-primary/40 hover:border-primary"
+                            recoveryMode && availableSpots.temporary > 0 && "border-primary/40 hover:border-primary"
                           )}
                         >
                           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
@@ -652,9 +652,6 @@ function SchedulePageContent() {
                                       <DropdownMenuItem onSelect={() => setSessionToNotify(session)}>
                                           <Send className="mr-2 h-4 w-4" />
                                           Notificar Asistentes
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary === 0}>
-                                        <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem onSelect={() => openDeleteDialog(session)} className="text-destructive focus:text-destructive">
@@ -705,39 +702,38 @@ function SchedulePageContent() {
                               </div>
                             </div>
                           </CardContent>
-                          <CardFooter className="grid grid-cols-1 gap-4 p-4 mt-auto border-t border-slate-100 dark:border-zinc-700/80">
-                            {recoveryMode ? (
-                                <Button className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary === 0}>
-                                    <CalendarClock className="mr-2 h-4 w-4" />
-                                    Recuperar Aquí ({session.availableSpots.temporary} cupos)
-                                </Button>
-                            ) : (
-                               <div className="grid grid-cols-3 gap-2">
-                                 <TooltipProvider>
+                          <CardFooter className="flex flex-col gap-2 p-3 mt-auto border-t border-slate-100 dark:border-zinc-700/80">
+                                <TooltipProvider>
                                     <Tooltip>
-                                      <TooltipTrigger asChild>
+                                    <TooltipTrigger asChild>
                                         <span tabIndex={0} className="w-full">
-                                          <Button variant="outline" className="w-full font-semibold border-slate-300 dark:border-zinc-600" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
-                                              <ClipboardCheck className="mr-2 h-4 w-4"/>
-                                              Asistencia
-                                          </Button>
+                                        <Button variant="outline" className="w-full font-semibold border-slate-300 dark:border-zinc-600" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
+                                            <ClipboardCheck className="mr-2 h-4 w-4"/>
+                                            Asistencia
+                                        </Button>
                                         </span>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
                                         <p>{tooltipMessage}</p>
-                                      </TooltipContent>
+                                    </TooltipContent>
                                     </Tooltip>
-                                  </TooltipProvider>
-                                  <Button className="w-full font-bold col-span-2" onClick={() => setSessionToManage(session)} disabled={isFullForFixed}>
-                                    <Users className="mr-2 h-4 w-4" />
-                                    Inscripción Fija
-                                  </Button>
-                                  <Button variant="secondary" className="w-full font-bold col-span-3" onClick={() => setSessionForWaitlist(session)} disabled={!isFullForFixed}>
-                                    <ListPlus className="mr-2 h-4 w-4" />
-                                    Anotar en Espera
-                                  </Button>
-                               </div>
-                            )}
+                                </TooltipProvider>
+                                <div className="grid grid-cols-2 gap-2 w-full">
+                                    <Button className="w-full font-bold" onClick={() => setSessionToManage(session)} disabled={isFullForFixed}>
+                                        <Users className="mr-2 h-4 w-4" />
+                                        Fija ({availableSpots.fixed})
+                                    </Button>
+                                     <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.temporary <= 0}>
+                                        <CalendarClock className="mr-2 h-4 w-4" />
+                                        Recupero ({availableSpots.temporary})
+                                    </Button>
+                                </div>
+                                {!hasOpenings && (
+                                     <Button variant="outline" className="w-full" onClick={() => setSessionForWaitlist(session)}>
+                                        <ListPlus className="mr-2 h-4 w-4" />
+                                        Anotar en Espera
+                                    </Button>
+                                )}
                           </CardFooter>
                         </Card>
                       );
@@ -826,7 +822,7 @@ function SchedulePageContent() {
                                                         <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={isFullForFixed}>
                                                           <Users className="mr-2 h-4 w-4" />Inscripción Fija
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary === 0}>
+                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary <= 0}>
                                                           <CalendarDays className="mr-2 h-4 w-4" />Inscripción Recupero
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
@@ -912,3 +908,4 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
