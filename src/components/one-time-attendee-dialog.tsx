@@ -54,8 +54,8 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
 
   const sessionDayNumber = dayMap[session.dayOfWeek];
 
-  const { occupationMessage, isFull } = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha para ver la disponibilidad.', isFull: true };
+  const debugData = useMemo(() => {
+    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true, eligiblePeople: [], debug: {} };
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
@@ -67,46 +67,45 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     
     const fixedEnrolledCount = session.personIds.length;
     const currentOccupation = (fixedEnrolledCount - vacationingPeople.length) + oneTimeIds.length;
+    const isFull = currentOccupation >= capacity;
     
-    if (currentOccupation >= capacity) {
-        return { occupationMessage: 'No hay cupos disponibles para esta fecha.', isFull: true };
+    let occupationMessage = '';
+    if (isFull) {
+        occupationMessage = 'No hay cupos disponibles para esta fecha.';
+    } else {
+        const availableSpots = capacity - currentOccupation;
+        occupationMessage = `Hay ${availableSpots} cupo(s) disponible(s).`;
     }
 
-    const availableSpots = capacity - currentOccupation;
-    return {
-      occupationMessage: `Hay ${availableSpots} cupo(s) disponible(s).`,
-      isFull: false
-    }
-  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
-
-  const eligiblePeople = useMemo(() => {
     const balances: Record<string, number> = {};
     people.forEach(p => (balances[p.id] = 0));
-
     attendance.forEach(record => {
-      (record.justifiedAbsenceIds || []).forEach(personId => {
-        if (balances[personId] !== undefined) balances[personId]++;
-      });
-      (record.oneTimeAttendees || []).forEach(personId => {
-        if (balances[personId] !== undefined) balances[personId]--;
-      });
+      (record.justifiedAbsenceIds || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]++; });
+      (record.oneTimeAttendees || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
     });
     
-    const list = people
-      .filter(person => (balances[person.id] > 0))
+    const eligiblePeopleList = people
+      .filter(person => (balances[person.id] > 0 || person.id === preselectedPersonId))
       .sort((a, b) => a.name.localeCompare(b.name));
-      
-    // Manually add the preselected person if they are not in the list, so they are always an option.
-    if (preselectedPersonId) {
-        const preselectedPerson = people.find(p => p.id === preselectedPersonId);
-        if (preselectedPerson && !list.some(p => p.id === preselectedPersonId)) {
-            list.unshift(preselectedPerson);
+
+    return {
+        occupationMessage,
+        isFull,
+        eligiblePeople: eligiblePeopleList,
+        debug: {
+            selectedDate: selectedDate.toISOString(),
+            fixedEnrolled: fixedEnrolledCount,
+            onVacation: vacationingPeople.length,
+            oneTimeAttendees: oneTimeIds.length,
+            calculatedOccupation: currentOccupation,
+            capacity: capacity,
+            isFull: isFull,
+            eligibleCount: eligiblePeopleList.length
         }
     }
+  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity, preselectedPersonId]);
 
-    return list;
-  }, [people, attendance, preselectedPersonId]);
-
+  const { occupationMessage, isFull, eligiblePeople, debug } = debugData;
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
     addOneTimeAttendee(session.id, values.personId, values.date);
@@ -179,10 +178,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                             <FormItem>
                                 <FormLabel>Persona con recuperos pendientes</FormLabel>
                                 <Select 
-                                    onValueChange={(value) => {
-                                      field.onChange(value);
-                                      form.trigger('personId');
-                                    }}
+                                    onValueChange={field.onChange}
                                     value={field.value} 
                                     disabled={!selectedDate || isFull}
                                 >
@@ -207,6 +203,20 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                             </FormItem>
                         )}
                     />
+                     {/* DEBUG PANEL */}
+                    <div className="p-2 border rounded-md bg-zinc-800 text-zinc-300 text-xs font-mono mt-4">
+                        <pre>
+                            DEBUG INFO:<br/>
+                            {JSON.stringify({
+                                isValid: form.formState.isValid,
+                                errors: form.formState.errors,
+                                values: form.getValues(),
+                                isFull,
+                                eligiblePeopleCount: eligiblePeople.length,
+                                ...debug,
+                            }, null, 2)}
+                        </pre>
+                    </div>
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
