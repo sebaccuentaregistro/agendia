@@ -97,7 +97,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlistCount: 0, waitlistOpportunities: [], waitlistSummary: [], revenueToday: 0, revenueWeek: 0, revenueMonth: 0 };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, paymentReminders: [], totalWaitlistCount: 0, waitlistOpportunities: [], waitlistSummary: [], revenueToday: 0, revenueWeek: 0, revenueMonth: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -138,18 +138,6 @@ function DashboardPageContent() {
     const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
     const overdueCount = overduePeople.length;
     
-    const topDebtors = overduePeople.map(person => {
-        const tariff = tariffs.find(t => t.id === person.tariffId);
-        const statusInfo = getStudentPaymentStatus(person, now);
-        return { ...person, debt: tariff?.price || 0, daysOverdue: statusInfo.daysOverdue || 0 };
-    }).sort((a, b) => b.debt - a.debt).slice(0, 5);
-
-    const totalDebt = overduePeople.reduce((acc, person) => {
-        const tariff = tariffs.find(t => t.id === person.tariffId);
-        const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
-        return acc + debtAmount;
-    }, 0);
-
     const onVacationCount = people.filter(p => isPersonOnVacation(p, now)).length;
 
     const balances: Record<string, number> = {};
@@ -164,6 +152,12 @@ function DashboardPageContent() {
         const tariff = tariffs.find(t => t.id === person.tariffId);
         return acc + (tariff?.price || 0);
     }, 0);
+
+    const totalDebt = overduePeople.reduce((acc, person) => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
+        return acc + debtAmount;
+    }, 0);
     
     const collectionPercentage = potentialIncome > 0 ? (revenueMonth / potentialIncome) * 100 : 0;
 
@@ -171,20 +165,23 @@ function DashboardPageContent() {
       .filter(session => session.dayOfWeek === currentTodayName)
       .map(session => {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        const oneTimeAttendeeIds = attendanceRecord?.oneTimeAttendees || [];
+        const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.includes(p.id));
         
-        const activeRegulars = session.personIds.filter(pid => {
-            const person = people.find(p => p.id === pid);
-            return person && !isPersonOnVacation(person, now);
-        });
+        const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
+        const vacationingPeople = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today));
         
-        const allAttendeesForToday = new Set([...activeRegulars, ...oneTimeAttendees]);
-        const enrolledCount = allAttendeesForToday.size;
+        const enrolledCount = (fixedEnrolledPeople.length - vacationingPeople.length) + oneTimeAttendees.length;
 
         return {
           ...session,
-          enrolledCount: enrolledCount,
+          enrolledCount,
           waitlistCount: session.waitlist?.length || 0,
+          dailyAttendees: {
+              fixed: fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today)).map(p => p.name),
+              oneTime: oneTimeAttendees.map(p => p.name),
+              onVacation: vacationingPeople.map(p => p.name),
+          }
         };
       })
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -193,40 +190,48 @@ function DashboardPageContent() {
         return acc + (session.waitlist?.length || 0);
     }, 0);
     
-    const waitlistOpportunities = sessions
-      .map(session => {
+    const waitlistOpportunities = sessions.map(session => {
         const space = spaces.find(s => s.id === session.spaceId);
         const capacity = space?.capacity || 0;
         
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-        const activeRegulars = session.personIds.filter(pid => {
+        const fixedEnrolledCount = session.personIds.length;
+        const peopleOnVacationToday = session.personIds.filter(pid => {
             const person = people.find(p => p.id === pid);
-            return person && !isPersonOnVacation(person, now);
-        });
-        const enrolledCount = new Set([...activeRegulars, ...oneTimeAttendees]).size;
+            return person && isPersonOnVacation(person, today);
+        }).length;
 
-        const hasSpot = enrolledCount < capacity;
+        const fixedSlotsAvailable = capacity - fixedEnrolledCount;
+        const temporarySlotsAvailable = peopleOnVacationToday;
+        const totalSlotsAvailable = fixedSlotsAvailable + temporarySlotsAvailable;
+        
         const hasWaitlist = session.waitlist && session.waitlist.length > 0;
 
-        if (hasSpot && hasWaitlist) {
-          const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
-          const waitlistDetails = session.waitlist.map(entry => {
-            if (typeof entry === 'string') return people.find(p => p.id === entry);
-            return entry;
-          }).filter((p): p is Person | WaitlistProspect => !!p);
-          
-          const virtualNotification: AppNotification = {
-            id: `virtual-${session.id}`,
-            type: 'waitlist',
-            sessionId: session.id,
-            createdAt: now
-          };
+        if (totalSlotsAvailable > 0 && hasWaitlist) {
+            const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
+            const waitlistDetails = (session.waitlist || [])
+                .map(entry => {
+                    if (typeof entry === 'string') {
+                        const person = people.find(p => p.id === entry);
+                        return person ? { ...person, isProspect: false as const } : null;
+                    }
+                    return { ...entry, isProspect: true as const };
+                })
+                .filter((p): p is NonNullable<typeof p> => p !== null)
+                .sort((a, b) => (a.isProspect ? 1 : 0) - (b.isProspect ? 1 : 0));
 
-          return { notification: virtualNotification, session, actividadName, waitlist: waitlistDetails };
+            return {
+                session,
+                actividadName,
+                waitlist: waitlistDetails,
+                availableSlots: {
+                    fixed: fixedSlotsAvailable,
+                    temporary: temporarySlotsAvailable,
+                    total: totalSlotsAvailable,
+                }
+            };
         }
         return null;
-      }).filter((o): o is NonNullable<typeof o> => !!o);
+    }).filter((o): o is NonNullable<typeof o> => !!o);
 
     const waitlistSummary = sessions
         .filter(s => s.waitlist && s.waitlist.length > 0)
@@ -248,7 +253,6 @@ function DashboardPageContent() {
       potentialIncome,
       totalDebt,
       collectionPercentage,
-      topDebtors,
       paymentReminders,
       totalWaitlistCount,
       waitlistOpportunities,
@@ -268,7 +272,6 @@ function DashboardPageContent() {
     potentialIncome,
     totalDebt,
     collectionPercentage,
-    topDebtors,
     paymentReminders,
     totalWaitlistCount,
     waitlistOpportunities,
@@ -376,8 +379,6 @@ function DashboardPageContent() {
                   onVacationCount={onVacationCount}
                   sessionsCount={sessions.length}
                   peopleCount={people.length}
-                  isPinVerified={isPinVerified}
-                  setIsPinDialogOpen={setIsPinDialogOpen}
                 />
                 
                 <TodaySessions
@@ -506,7 +507,6 @@ function DashboardPageContent() {
         <div className="space-y-8">
             <PaymentReminders 
                 reminders={paymentReminders} 
-                topDebtors={topDebtors}
                 onSendReminder={setPaymentReminderInfo}
                 onSendAll={() => setIsMassReminderOpen(true)}
             />
@@ -531,6 +531,7 @@ function DashboardPageContent() {
          <EnrolledStudentsSheet 
             session={selectedSessionForStudents}
             onClose={() => setSelectedSessionForStudents(null)}
+            rosterType={'daily'}
           />
       )}
       {sessionForAttendance && (
@@ -563,3 +564,9 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+
+
+
+
+

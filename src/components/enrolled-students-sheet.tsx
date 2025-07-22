@@ -1,3 +1,5 @@
+
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -8,63 +10,137 @@ import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Session, Person } from '@/types';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { Plane, AlertTriangle, Trash2 } from 'lucide-react';
+import { Button } from './ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-export function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
-  const { people, actividades, specialists, spaces, attendance, isPersonOnVacation } = useStudio();
+
+type EnrollmentStatus = 'Fijo' | 'Recupero';
+
+type EnrolledPerson = Person & {
+    enrollmentStatus: EnrollmentStatus;
+    displayDate?: string;
+};
+
+interface EnrolledStudentsSheetProps {
+    session: Session;
+    rosterType: 'fixed' | 'daily';
+    onClose: () => void;
+}
+
+export function EnrolledStudentsSheet({ session, rosterType, onClose }: EnrolledStudentsSheetProps) {
+  const { people, actividades, specialists, spaces, attendance, isPersonOnVacation, removeOneTimeAttendee, removePersonFromSession } = useStudio();
   const [isMounted, setIsMounted] = useState(false);
+  const [personToRemove, setPersonToRemove] = useState<EnrolledPerson | null>(null);
   
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  const { enrolledPeople, sessionDetails } = useMemo(() => {
-    if (!isMounted) {
-      return { enrolledPeople: [], sessionDetails: {} };
+  const { enrolledPeople, sessionDetails, title, description } = useMemo(() => {
+    if (!isMounted || !session) {
+      return { enrolledPeople: [], sessionDetails: {}, title: '', description: '' };
     }
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
-    
-    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-    const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
-    
-    const regularIds = session.personIds.filter(pid => {
-        const person = people.find(p => p.id === pid);
-        return person && !isPersonOnVacation(person, today);
-    });
-    
-    const allEnrolledIds = Array.from(new Set([...regularIds, ...oneTimeIds]));
-    
-    const enrolledPeople = people
-      .filter(p => allEnrolledIds.includes(p.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
     const specialist = specialists.find((i) => i.id === session.instructorId);
     const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    
-    return { enrolledPeople, sessionDetails: { specialist, actividad, space } };
-  }, [isMounted, people, session, attendance, isPersonOnVacation, specialists, actividades, spaces]);
+
+    let attendees: EnrolledPerson[] = [];
+    let rosterTitle = '';
+    let rosterDescription = '';
+
+    if (rosterType === 'fixed') {
+        rosterTitle = 'Inscriptos Fijos';
+        rosterDescription = `Lista de todas las personas con un cupo permanente en ${actividad?.name || 'la sesión'}.`;
+        attendees = session.personIds
+            .map(pid => people.find(p => p.id === pid))
+            .filter((p): p is Person => !!p)
+            .map(p => ({...p, enrollmentStatus: 'Fijo'}));
+
+    } else { // rosterType === 'daily'
+        rosterTitle = 'Asistentes de Hoy';
+        rosterDescription = `Personas que se espera que asistan hoy a ${actividad?.name || 'la sesión'}.`;
+        
+        const fixedEnrolledPeople = session.personIds
+            .map(pid => people.find(p => p.id === pid))
+            .filter((p): p is Person => !!p);
+
+        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
+
+        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
+        const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
+
+        const allAttendeesMap = new Map<string, EnrolledPerson>();
+        activeFixedPeople.forEach(p => allAttendeesMap.set(p.id, {...p, enrollmentStatus: 'Fijo'}));
+        oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, {...p, enrollmentStatus: 'Recupero'}));
+        
+        attendees = Array.from(allAttendeesMap.values());
+    }
+
+    return { 
+        enrolledPeople: attendees.sort((a, b) => a.name.localeCompare(b.name)),
+        sessionDetails: { specialist, actividad, space, count: attendees.length },
+        title: rosterTitle,
+        description: rosterDescription,
+    };
+  }, [isMounted, session, rosterType, people, attendance, isPersonOnVacation, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
+  const { specialist, actividad, space, count } = sessionDetails as any;
+  
+  const handleRemoveClick = (person: EnrolledPerson) => {
+    setPersonToRemove(person);
+  };
+
+  const handleConfirmRemove = () => {
+    if (!personToRemove) return;
+    
+    if (personToRemove.enrollmentStatus === 'Recupero') {
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      removeOneTimeAttendee(session.id, personToRemove.id, todayStr);
+    } else {
+      removePersonFromSession(session.id, personToRemove.id);
+    }
+    setPersonToRemove(null);
+  };
+
   return (
+    <>
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Inscriptos en {(sessionDetails as any).actividad?.name || 'Sesión'}</SheetTitle>
+          <SheetTitle>{title}</SheetTitle>
           <SheetDescription>
-            {session.dayOfWeek} a las {session.time} en {(sessionDetails as any).space?.name || 'N/A'}.
-            <br/>
-            {enrolledPeople.length} de {(sessionDetails as any).space?.capacity || 0} personas inscriptas.
+            {description}
+            <br />
+            Total: {count || 0} persona(s).
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="mt-4 space-y-4 h-[calc(100%-8rem)] pr-4">
+        <ScrollArea className="mt-4 space-y-4 h-[calc(100%-10rem)] pr-4">
           {enrolledPeople.length > 0 ? (
             enrolledPeople.map(person => (
-              <Card key={person.id} className="p-3 bg-card/80 border">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className="font-semibold text-foreground">{person.name}</p>
+              <Card key={person.id} className={cn(
+                "p-3 bg-card/80 border"
+              )}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-1">
+                     <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-foreground">{person.name}</p>
+                        <Badge variant={person.enrollmentStatus === 'Fijo' ? 'default' : 'secondary'} className={cn(
+                            "text-xs",
+                            person.enrollmentStatus === 'Fijo' && "bg-primary/80",
+                            person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white"
+                        )}>
+                            {person.enrollmentStatus}
+                        </Badge>
+                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>{person.phone}</span>
                        <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
@@ -73,16 +149,39 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
                       </a>
                     </div>
                   </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveClick(person)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Eliminar asistente</span>
+                  </Button>
                 </div>
               </Card>
             ))
           ) : (
             <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border/30">
-                <p className="text-sm text-muted-foreground">No hay personas inscriptas.</p>
+                <p className="text-sm text-muted-foreground">No hay personas en esta lista.</p>
             </div>
           )}
         </ScrollArea>
       </SheetContent>
     </Sheet>
+    
+    <AlertDialog open={!!personToRemove} onOpenChange={(open) => !open && setPersonToRemove(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    {personToRemove?.enrollmentStatus === 'Recupero' 
+                        ? `Estás a punto de quitar a ${personToRemove.name} de la lista de recuperos de hoy. Esta acción no se puede deshacer.`
+                        : `Estás a punto de desinscribir permanentemente a ${personToRemove?.name} de esta clase. ¿Estás seguro?`
+                    }
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setPersonToRemove(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmRemove}>Confirmar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -28,7 +29,7 @@ export function EnrollmentsDialog({ person, onClose }: EnrollmentsDialogProps) {
     const [searchTerm, setSearchTerm] = useState('');
     
     const form = useForm<{ sessionIds: string[] }>();
-    const watchedSessionIds = form.watch('sessionIds');
+    const watchedSessionIds = form.watch('sessionIds') || [];
 
     const { enrolledSessionIds, filteredAndSortedSessions } = useMemo(() => {
         const enrolledIds = person ? sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id) : [];
@@ -83,7 +84,7 @@ export function EnrollmentsDialog({ person, onClose }: EnrollmentsDialogProps) {
     }
 
     const tariffFrequency = personTariff?.frequency;
-    const isOverLimit = tariffFrequency !== undefined && watchedSessionIds.length > tariffFrequency;
+    const isOverLimit = tariffFrequency !== undefined && watchedSessionIds.length >= tariffFrequency;
     
     const onSubmit = async (data: { sessionIds: string[] }) => {
         if (!person) return;
@@ -153,7 +154,7 @@ export function EnrollmentsDialog({ person, onClose }: EnrollmentsDialogProps) {
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Límite del Plan Excedido</AlertTitle>
                         <AlertDescription>
-                           Con {watchedSessionIds.length} clases, {person.name} supera el límite de {tariffFrequency} de su plan. No podrás seleccionar más clases.
+                           Con {watchedSessionIds.length} clases, {person.name} ha alcanzado el límite de {tariffFrequency} de su plan. No podrás seleccionar más clases.
                         </AlertDescription>
                     </Alert>
                 )}

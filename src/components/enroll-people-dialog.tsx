@@ -17,23 +17,26 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 
 interface EnrollPeopleDialogProps {
-  session: Session;
+  session: Session | null;
   onClose: () => void;
 }
 
 export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps) {
-  const { people, spaces, enrollPeopleInClass, actividades, tariffs, sessions: allSessions } = useStudio();
+  const { people, spaces, enrollPeopleInClass, actividades, tariffs, sessions: allSessions, triggerWaitlistCheck } = useStudio();
   const [searchTerm, setSearchTerm] = useState('');
 
-  const form = useForm<{ personIds: string[] }>({
-    defaultValues: { personIds: session.personIds || [] },
-  });
-  const watchedPersonIds = form.watch('personIds');
+  const form = useForm<{ personIds: string[] }>();
+  
+  useEffect(() => {
+    form.reset({ personIds: session?.personIds || [] });
+  }, [session, form]);
 
-  const space = spaces.find(s => s.id === session.spaceId);
+  const watchedPersonIds = form.watch('personIds') || [];
+
+  const space = useMemo(() => session ? spaces.find(s => s.id === session.spaceId) : undefined, [spaces, session]);
   const capacity = space?.capacity ?? 0;
   const isOverCapacity = watchedPersonIds.length > capacity;
-  const actividad = actividades.find(a => a.id === session.actividadId);
+  const actividad = useMemo(() => session ? actividades.find(a => a.id === session.actividadId) : undefined, [actividades, session]);
 
   // Memoize the list of people with their enrollment data
   const peopleWithEnrollmentData = useMemo(() => {
@@ -53,9 +56,10 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
 
   // This list now includes all people, so we can see the "ghosts"
   const allPeopleInList = useMemo(() => {
+    if (!session) return [];
     const sessionPersonIds = new Set(session.personIds || []);
     return peopleWithEnrollmentData.filter(p => sessionPersonIds.has(p.id));
-  }, [session.personIds, peopleWithEnrollmentData]);
+  }, [session, peopleWithEnrollmentData]);
 
 
   // Filtered list for display, based on search term and existing selections
@@ -78,17 +82,21 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
   }, [searchTerm, peopleWithEnrollmentData, allPeopleInList]);
 
 
-  function onSubmit(data: { personIds: string[] }) {
-    if (isOverCapacity) return;
-    enrollPeopleInClass(session.id, data.personIds);
+  async function onSubmit(data: { personIds: string[] }) {
+    if (isOverCapacity || !session) return;
+    
+    await enrollPeopleInClass(session.id, data.personIds);
+
     onClose();
   }
+  
+  if (!session) return null;
 
   return (
     <Dialog open onOpenChange={open => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Inscribir: {actividad?.name}</DialogTitle>
+          <DialogTitle>Inscripción Fija: {actividad?.name}</DialogTitle>
           <DialogDescription>
             Selecciona las personas para la sesión. Ocupación: {watchedPersonIds.length}/{capacity}.
           </DialogDescription>
@@ -112,11 +120,9 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                     {filteredPeopleForDisplay.length > 0 ? filteredPeopleForDisplay.map(person => {
                       const isCurrentlyEnrolled = form.getValues('personIds').includes(person.id);
                       
-                      const effectiveClassCount = isCurrentlyEnrolled
-                        ? person.currentWeeklyClasses
-                        : person.currentWeeklyClasses + 1;
+                      const effectiveClassCount = person.currentWeeklyClasses;
                       
-                      const hasReachedLimit = person.weeklyClassLimit !== undefined && effectiveClassCount > person.weeklyClassLimit;
+                      const hasReachedLimit = person.weeklyClassLimit !== undefined && effectiveClassCount >= person.weeklyClassLimit;
 
                       return (
                         <FormField
@@ -150,13 +156,10 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                                   {person.name}
                                   {person.weeklyClassLimit !== undefined && (
                                     <Badge variant={hasReachedLimit ? "destructive" : "secondary"}>
-                                        {isCurrentlyEnrolled ? person.currentWeeklyClasses : person.currentWeeklyClasses + 1}/{person.weeklyClassLimit} clases
+                                        {person.currentWeeklyClasses}/{person.weeklyClassLimit} clases
                                     </Badge>
                                   )}
                                 </FormLabel>
-                                {hasReachedLimit && !field.value?.includes(person.id) && (
-                                    <p className="text-xs text-destructive">Límite del plan alcanzado.</p>
-                                )}
                               </div>
                             </FormItem>
                           )}

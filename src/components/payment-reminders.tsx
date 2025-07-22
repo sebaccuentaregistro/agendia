@@ -11,19 +11,23 @@ import Link from 'next/link';
 import { WhatsAppIcon } from './whatsapp-icon';
 import { useStudio } from '@/context/StudioContext';
 
-interface TopDebtor extends Person {
-  debt: number;
-  daysOverdue: number;
-}
-
 interface PaymentRemindersProps {
   reminders: PaymentReminderInfo[];
-  topDebtors: TopDebtor[];
   onSendReminder: (reminder: PaymentReminderInfo) => void;
   onSendAll: () => void;
 }
 
-export function PaymentReminders({ reminders, topDebtors, onSendReminder, onSendAll }: PaymentRemindersProps) {
+export function PaymentReminders({ reminders, onSendReminder, onSendAll }: PaymentRemindersProps) {
+
+    const { tariffs, people } = useStudio();
+    const overduePeople = people.filter(p => p.outstandingPayments && p.outstandingPayments > 0);
+    const topDebtors = overduePeople.map(person => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
+        const daysOverdue = person.lastPaymentDate ? Math.max(0, Math.floor((new Date().getTime() - person.lastPaymentDate.getTime()) / (1000 * 3600 * 24))) : 0;
+        return { ...person, debt: debtAmount, daysOverdue };
+    }).sort((a, b) => b.debt - a.debt).slice(0, 5);
+
 
     const formatDaysUntilDue = (days: number) => {
         if (days === 0) return 'Hoy';

@@ -2,10 +2,10 @@
 
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
-import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField, arrayRemove } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
 import { db } from './firebase';
-import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse } from 'date-fns';
+import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval, addDays, isAfter } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -366,7 +366,7 @@ export const revertLastPaymentAction = async (paymentsRef: CollectionReference, 
         }
     } as Omit<AuditLog, 'id'>);
 
-    return await batch.commit();
+    await batch.commit();
 };
 
 
@@ -402,10 +402,15 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
 };
 
 
-
-
-export const enrollPeopleInClassAction = async (sessionRef: any, personIds: string[]) => {
-    return await updateEntity(sessionRef, { personIds });
+export const enrollPeopleInClassAction = async (sessionRef: DocumentReference, personIds: string[]) => {
+    // This is a transactional update to prevent race conditions.
+    return runTransaction(db, async (transaction) => {
+        const sessionDoc = await transaction.get(sessionRef);
+        if (!sessionDoc.exists()) {
+            throw new Error("La sesión que intentas modificar ya no existe.");
+        }
+        transaction.update(sessionRef, { personIds });
+    });
 };
 
 
@@ -423,15 +428,19 @@ export const saveAttendanceAction = async (
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
     const snap = await getDocs(attendanceQuery);
     
+    const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
+    let docRef;
+
     if (snap.empty) {
-        const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
-        await addEntity(attendanceRef, record);
+        // If it doesn't exist, create a new doc reference
+        docRef = doc(attendanceRef);
     } else {
-        const docRef = snap.docs[0].ref;
-        const existingData = snap.docs[0].data() as SessionAttendance;
-        const updatedData = { ...existingData, presentIds, absentIds, justifiedAbsenceIds };
-        await updateEntity(docRef, updatedData);
+        // If it exists, use the existing doc reference
+        docRef = snap.docs[0].ref;
     }
+    
+    // Use set with merge to either create or update the document atomically.
+    await setDoc(docRef, record, { merge: true });
     
     // Check for churn risk for each absent person
     for (const personId of absentIds) {
@@ -453,40 +462,51 @@ export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReferen
     }
 };
 
-export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
+export const addOneTimeAttendeeAction = async (
+    attendanceRef: CollectionReference,
+    sessionRef: DocumentReference,
+    personId: string,
+    date: Date
+) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const q = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-    const querySnapshot = await getDocs(q);
+    const q = query(attendanceRef, where('sessionId', '==', sessionRef.id), where('date', '==', dateStr));
+    
+    // Perform reads outside the transaction
+    const attendanceQuerySnapshot = await getDocs(q);
+    let attendanceDocRef;
+    let attendanceDocExists = false;
+
+    if (attendanceQuerySnapshot.empty) {
+        attendanceDocRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
+    } else {
+        attendanceDocRef = attendanceQuerySnapshot.docs[0].ref;
+        attendanceDocExists = true;
+    }
 
     return runTransaction(db, async (transaction) => {
-        let docRef;
-        let currentData: Partial<SessionAttendance> = {};
+        // --- All reads are done. Perform writes. ---
 
-        if (querySnapshot.empty) {
-            docRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
+        // 1. Update attendance
+        const currentData = attendanceDocExists ? (await transaction.get(attendanceDocRef)).data() : {};
+        const oneTimeAttendees = Array.from(new Set([...(currentData?.oneTimeAttendees || []), personId]));
+        const presentIds = Array.from(new Set([...(currentData?.presentIds || []), personId]));
+
+        if (attendanceDocExists) {
+            transaction.update(attendanceDocRef, { oneTimeAttendees, presentIds });
         } else {
-            docRef = querySnapshot.docs[0].ref;
-            const existingDoc = await transaction.get(docRef);
-            currentData = existingDoc.data() || {};
-        }
-
-        const oneTimeAttendees = Array.from(new Set([...(currentData.oneTimeAttendees || []), personId]));
-        const presentIds = Array.from(new Set([...(currentData.presentIds || []), personId]));
-
-        if (querySnapshot.empty) {
-            transaction.set(docRef, {
-                sessionId,
+            const newAttendanceData = {
+                sessionId: sessionRef.id,
                 date: dateStr,
                 oneTimeAttendees,
                 presentIds,
                 absentIds: [],
                 justifiedAbsenceIds: [],
-            });
-        } else {
-            transaction.update(docRef, { oneTimeAttendees, presentIds });
+            };
+            transaction.set(attendanceDocRef, newAttendanceData);
         }
     });
 };
+
 
 
 export const addVacationPeriodAction = async (personDocRef: any, person: Person, startDate: Date, endDate: Date) => {
@@ -500,6 +520,88 @@ export const removeVacationPeriodAction = async (personDocRef: any, person: Pers
     const updatedVacations = person.vacationPeriods.filter(v => v.id !== vacationId);
     return updateEntity(personDocRef, { vacationPeriods: updatedVacations });
 };
+
+export const removeOneTimeAttendeeAction = async (attendanceRef: CollectionReference, sessionId: string, personId: string, date: string) => {
+    const q = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', date));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        console.warn("No attendance record found to remove one-time attendee from.");
+        return;
+    }
+
+    const docRef = querySnapshot.docs[0].ref;
+    const data = querySnapshot.docs[0].data() as SessionAttendance;
+
+    const updatedOneTimeAttendees = (data.oneTimeAttendees || []).filter(id => id !== personId);
+    const updatedPresentIds = (data.presentIds || []).filter(id => id !== personId);
+
+    return updateDoc(docRef, { 
+        oneTimeAttendees: updatedOneTimeAttendees,
+        presentIds: updatedPresentIds,
+    });
+};
+
+export const removePersonFromSessionAction = async (sessionDocRef: DocumentReference, personId: string) => {
+  return updateDoc(sessionDocRef, {
+    personIds: arrayRemove(personId)
+  });
+};
+
+
+export const findVacationConflicts = async (person: Person, sessions: Session[], attendance: SessionAttendance[], people: Person[], newVacationPeriods: VacationPeriod[]) => {
+    const originalPeriods = person.vacationPeriods || [];
+    const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
+    if (personSessionIds.size === 0) return []; // No enrolled sessions, no conflicts.
+
+    const findPeriodById = (id: string, periods: VacationPeriod[]) => periods.find(p => p.id === id);
+
+    const conflicts: { date: string; attendeeName: string; sessionId: string, attendeeId: string }[] = [];
+
+    // Find deleted or shortened periods
+    for (const originalPeriod of originalPeriods) {
+        const newPeriod = findPeriodById(originalPeriod.id, newVacationPeriods);
+        let reactivatedStart: Date | null = null;
+        let reactivatedEnd: Date | null = null;
+
+        if (!newPeriod) { // Period was deleted entirely
+            reactivatedStart = originalPeriod.startDate;
+            reactivatedEnd = originalPeriod.endDate;
+        } else if (originalPeriod.endDate && newPeriod.endDate && isBefore(newPeriod.endDate, originalPeriod.endDate)) { // Period was shortened from the end
+            reactivatedStart = addDays(newPeriod.endDate, 1);
+            reactivatedEnd = originalPeriod.endDate;
+        } else if (originalPeriod.startDate && newPeriod.startDate && isAfter(newPeriod.startDate, originalPeriod.startDate)) { // Period was shortened from the beginning
+            reactivatedStart = originalPeriod.startDate;
+            reactivatedEnd = addDays(newPeriod.startDate, -1);
+        }
+
+        if (reactivatedStart && reactivatedEnd) {
+            // Find one-time attendees in this person's slots during the now-active period
+            const conflictingAttendance = attendance.filter(att => 
+                personSessionIds.has(att.sessionId) &&
+                att.oneTimeAttendees &&
+                att.oneTimeAttendees.length > 0 &&
+                isWithinInterval(parse(att.date, 'yyyy-MM-dd', new Date()), { start: reactivatedStart!, end: reactivatedEnd! })
+            );
+
+            for (const record of conflictingAttendance) {
+                for (const attendeeId of record.oneTimeAttendees!) {
+                    const attendee = people.find(p => p.id === attendeeId);
+                    conflicts.push({
+                        date: record.date,
+                        attendeeName: attendee?.name || 'Desconocido',
+                        attendeeId: attendeeId,
+                        sessionId: record.sessionId,
+                    });
+                }
+            }
+        }
+    }
+
+    return conflicts;
+};
+
+
 
 export const addToWaitlistAction = async (
     sessionDocRef: DocumentReference,
@@ -560,7 +662,8 @@ export const enrollFromWaitlistAction = async (
         const space = spaceSnap.data() as Space;
 
         if (session.personIds.length >= space.capacity) {
-            throw new Error("No hay cupos disponibles en esta clase.");
+            console.warn(`Attempted to enroll from waitlist into a full class (Session: ${session.id})`);
+            return;
         }
         
         // Add the person to the session's main roster
@@ -593,7 +696,8 @@ export const enrollProspectFromWaitlistAction = async (
         const space = spaceSnap.data() as Space;
 
         if (session.personIds.length >= space.capacity) {
-            throw new Error("No hay cupos disponibles en esta clase.");
+             console.warn(`Attempted to enroll a prospect from waitlist into a full class (Session: ${session.id})`);
+             return;
         }
         
         // Add the new person to the session's main roster

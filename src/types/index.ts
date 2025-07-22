@@ -69,8 +69,8 @@ export type Specialist = {
 
 export type VacationPeriod = {
   id: string;
-  startDate: Date | null;
-  endDate: Date | null;
+  startDate: Date;
+  endDate: Date;
 };
 
 export type Person = {

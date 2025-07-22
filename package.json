@@ -2,7 +2,7 @@
   "name": "agendia",
   "version": "1.0.3",
   "private": true,
-  "description": "Final build fix attempt. Forcing a clean reinstall by updating package description.",
+  "description": "Forcing a clean reinstall of dependencies to fix a build error.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
