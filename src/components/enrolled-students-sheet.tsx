@@ -13,9 +13,9 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Plane } from 'lucide-react';
+import { Plane, AlertTriangle } from 'lucide-react';
 
-type EnrollmentStatus = 'Fijo' | 'Recupero' | 'Vacaciones';
+type EnrollmentStatus = 'Fijo' | 'Recupero';
 
 type EnrolledPerson = Person & {
     enrollmentStatus: EnrollmentStatus;
@@ -36,9 +36,9 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
     setIsMounted(true);
   }, []);
 
-  const { enrolledPeople, sessionDetails, title, description } = useMemo(() => {
+  const { enrolledPeople, sessionDetails, title, description, debugInfo } = useMemo(() => {
     if (!isMounted || !session) {
-      return { enrolledPeople: [], sessionDetails: {}, title: '', description: '' };
+      return { enrolledPeople: [], sessionDetails: {}, title: '', description: '', debugInfo: null };
     }
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
@@ -49,6 +49,7 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
     let attendees: EnrolledPerson[] = [];
     let rosterTitle = '';
     let rosterDescription = '';
+    let debugData: any = {};
 
     if (rosterType === 'fixed') {
         rosterTitle = 'Inscriptos Fijos';
@@ -61,29 +62,30 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
     } else { // rosterType === 'daily'
         rosterTitle = 'Asistentes de Hoy';
         rosterDescription = `Personas que se espera que asistan hoy a ${actividad?.name || 'la sesión'}.`;
+        
+        const fixedEnrolledPeople = session.personIds
+            .map(pid => people.find(p => p.id === pid))
+            .filter((p): p is Person => !!p);
+
+        const vacationingPeople = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today));
+        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
+
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
-        
-        const allAttendeesMap = new Map<string, EnrolledPerson>();
-        
-        // Add fixed people who are NOT on vacation
-        session.personIds.forEach(pid => {
-            const person = people.find(p => p.id === pid);
-            if (person && !isPersonOnVacation(person, today)) {
-                 allAttendeesMap.set(pid, {...person, enrollmentStatus: 'Fijo'});
-            }
-        });
+        const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
 
-        // Add one-time attendees for today
-        oneTimeAttendeeIds.forEach(pid => {
-            const person = people.find(p => p.id === pid);
-            if (person) {
-                // If they were already in as fixed, this will just overwrite with new status.
-                // But since they can't be on vacation and also a one-time attendee, this is fine.
-                allAttendeesMap.set(pid, {...person, enrollmentStatus: 'Recupero'});
-            }
-        });
+        const allAttendeesMap = new Map<string, EnrolledPerson>();
+        activeFixedPeople.forEach(p => allAttendeesMap.set(p.id, {...p, enrollmentStatus: 'Fijo'}));
+        oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, {...p, enrollmentStatus: 'Recupero'}));
+        
         attendees = Array.from(allAttendeesMap.values());
+        
+        debugData = {
+          fixed: fixedEnrolledPeople.map(p => p.name),
+          vacation: vacationingPeople.map(p => p.name),
+          oneTime: oneTimeAttendees.map(p => p.name),
+          finalCount: fixedEnrolledPeople.length - vacationingPeople.length + oneTimeAttendees.length
+        };
     }
 
     return { 
@@ -91,6 +93,7 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
         sessionDetails: { specialist, actividad, space, count: attendees.length },
         title: rosterTitle,
         description: rosterDescription,
+        debugInfo: debugData
     };
   }, [isMounted, session, rosterType, people, attendance, isPersonOnVacation, specialists, actividades, spaces]);
 
@@ -109,24 +112,21 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
             Total: {count || 0} persona(s).
           </SheetDescription>
         </SheetHeader>
-        <ScrollArea className="mt-4 space-y-4 h-[calc(100%-8rem)] pr-4">
+        <ScrollArea className="mt-4 space-y-4 h-[calc(100%-14rem)] pr-4">
           {enrolledPeople.length > 0 ? (
             enrolledPeople.map(person => (
               <Card key={person.id} className={cn(
-                "p-3 bg-card/80 border",
-                person.enrollmentStatus === 'Vacaciones' && "opacity-60 bg-muted/50"
+                "p-3 bg-card/80 border"
               )}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-1">
                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-foreground">{person.name}</p>
-                        <Badge variant={person.enrollmentStatus === 'Fijo' ? 'default' : person.enrollmentStatus === 'Vacaciones' ? 'outline' : 'secondary'} className={cn(
+                        <Badge variant={person.enrollmentStatus === 'Fijo' ? 'default' : 'secondary'} className={cn(
                             "text-xs",
                             person.enrollmentStatus === 'Fijo' && "bg-primary/80",
-                            person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white",
-                            person.enrollmentStatus === 'Vacaciones' && "border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/10"
+                            person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white"
                         )}>
-                            {person.enrollmentStatus === 'Vacaciones' && <Plane className="h-3 w-3 mr-1" />}
                             {person.enrollmentStatus}
                         </Badge>
                      </div>
@@ -147,6 +147,15 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
             </div>
           )}
         </ScrollArea>
+        {rosterType === 'daily' && debugInfo && (
+            <div className="mt-4 p-3 border-2 border-dashed border-destructive/50 rounded-lg text-xs">
+                <h4 className="font-bold text-destructive flex items-center gap-2 mb-2"><AlertTriangle className="h-4 w-4"/>Desglose del Cálculo</h4>
+                <p><strong>+ Inscriptos Fijos ({debugInfo.fixed.length}):</strong> {debugInfo.fixed.join(', ') || 'Ninguno'}</p>
+                <p><strong>- De Vacaciones ({debugInfo.vacation.length}):</strong> {debugInfo.vacation.join(', ') || 'Ninguno'}</p>
+                <p><strong>+ Recuperos Hoy ({debugInfo.oneTime.length}):</strong> {debugInfo.oneTime.join(', ') || 'Ninguno'}</p>
+                <p className="font-bold mt-1 pt-1 border-t"><strong>= Total Ocupación Hoy: {debugInfo.finalCount}</strong></p>
+            </div>
+        )}
       </SheetContent>
     </Sheet>
   )
