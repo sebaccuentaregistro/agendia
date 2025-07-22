@@ -54,11 +54,6 @@ const formSchema = z.object({
   levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
 });
 
-const formatTime = (time: string) => {
-    if (!time || !time.includes(':')) return 'N/A';
-    return time;
-};
-
 type UnifiedWaitlistItem =
   | (Person & { isProspect: false; entry: string })
   | (WaitlistProspect & { isProspect: true; entry: WaitlistProspect });
@@ -542,6 +537,3 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
-
-
-    
