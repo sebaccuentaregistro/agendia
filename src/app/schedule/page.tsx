@@ -617,7 +617,7 @@ function SchedulePageContent() {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
                       const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots } = session;
-                      const hasOpenings = availableSpots.fixed > 0 || availableSpots.temporary > 0;
+                      const hasOpenings = availableSpots.fixed > 0 || availableSpots.total > 0;
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
@@ -748,11 +748,9 @@ function SchedulePageContent() {
                                 </TooltipProvider>
                                  <div className="grid grid-cols-2 gap-2 w-full">
                                     <Button className="w-full font-bold" onClick={() => setSessionToManage(session)} disabled={availableSpots.fixed <= 0}>
-                                        <Users className="mr-2 h-4 w-4" />
                                         Fija ({availableSpots.fixed})
                                     </Button>
                                     <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.total <= 0}>
-                                        <CalendarClock className="mr-2 h-4 w-4" />
                                         Recupero ({availableSpots.total})
                                     </Button>
                                 </div>
@@ -958,6 +956,7 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
 
 
