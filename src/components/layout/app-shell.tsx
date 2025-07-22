@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { ReactNode } from 'react';
@@ -8,12 +9,14 @@ import { StudioProvider } from '@/context/StudioContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 import { OperatorLoginScreen } from './operator-login-screen';
+import { cn } from '@/lib/utils';
+import { Heart } from 'lucide-react';
 
 function ShellContent({ children }: { children: ReactNode }) {
     const { activeOperator } = useAuth();
     const pathname = usePathname();
     const isOperatorsPage = pathname === '/operators';
-    const isSuperAdminPage = pathname === '/superadmin';
+    const isSuperAdminPage = pathname.startsWith('/superadmin');
 
     // Allow access to operators page and superadmin page without an active operator selected
     if (!activeOperator && !isOperatorsPage && !isSuperAdminPage) {
@@ -38,8 +41,11 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     if (loading) {
         return (
-            <div className="flex h-screen w-full items-center justify-center">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="flex h-screen w-full items-center justify-center bg-background">
+                <div className="flex flex-col items-center gap-4">
+                    <Heart className="h-12 w-12 text-fuchsia-500 animate-pulse" />
+                    <p className="text-muted-foreground">Cargando tu estudio...</p>
+                </div>
             </div>
         );
     }
@@ -49,9 +55,15 @@ export function AppShell({ children }: { children: ReactNode }) {
     }
     
     if (!user || !userProfile || userProfile.status !== 'active') {
+        if (pathname === '/login') {
+             return <>{children}</>;
+        }
         return (
-            <div className="flex h-screen w-full items-center justify-center">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <div className="flex h-screen w-full items-center justify-center bg-background">
+                 <div className="flex flex-col items-center gap-4">
+                    <Heart className="h-12 w-12 text-fuchsia-500 animate-pulse" />
+                    <p className="text-muted-foreground">Cargando...</p>
+                </div>
             </div>
         );
     }

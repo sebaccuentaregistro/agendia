@@ -373,8 +373,6 @@ function DashboardPageContent() {
                   onVacationCount={onVacationCount}
                   sessionsCount={sessions.length}
                   peopleCount={people.length}
-                  isPinVerified={isPinVerified}
-                  setIsPinDialogOpen={setIsPinDialogOpen}
                 />
                 
                 <TodaySessions
@@ -559,4 +557,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -14,8 +15,6 @@ interface MainCardsProps {
     onVacationCount: number;
     sessionsCount: number;
     peopleCount: number;
-    isPinVerified: boolean;
-    setIsPinDialogOpen: (open: boolean) => void;
 }
 
 const mainCards = [
@@ -29,8 +28,6 @@ export function MainCards({
     onVacationCount,
     sessionsCount,
     peopleCount,
-    isPinVerified,
-    setIsPinDialogOpen
 }: MainCardsProps) {
     const router = useRouter();
 
