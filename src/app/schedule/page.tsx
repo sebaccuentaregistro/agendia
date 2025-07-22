@@ -291,19 +291,19 @@ function SchedulePageContent() {
     }, [session, people, isPersonOnVacation, attendance, today]);
     
      const waitlistDetails = useMemo(() => {
-        const details: UnifiedWaitlistItem[] = (session.waitlist || [])
+        return (session.waitlist || [])
             .map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
                     if (!person) return null;
                     return { ...person, isProspect: false as const, entry: entry };
                 }
-                return { ...entry, isProspect: true as const, entry: entry };
+                return { ...entry, isProspect: true as const, entry: entry as WaitlistProspect };
             })
             .filter((p): p is UnifiedWaitlistItem => !!p);
      }, [session.waitlist, people]);
 
-    const waitlistCount = waitlistDetails.length;
+    const waitlistCount = waitlistDetails?.length || 0;
     
     const canRecover = dailyOccupancy < spaceCapacity;
 
@@ -676,3 +676,4 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
+
