@@ -27,11 +27,10 @@ type EnrolledPerson = Person & {
 
 interface EnrolledStudentsSheetProps {
     session: Session;
-    rosterType: 'fixed' | 'daily';
     onClose: () => void;
 }
 
-export function EnrolledStudentsSheet({ session, rosterType, onClose }: EnrolledStudentsSheetProps) {
+export function EnrolledStudentsSheet({ session, onClose }: EnrolledStudentsSheetProps) {
   const { people, actividades, specialists, spaces, attendance, isPersonOnVacation, removeOneTimeAttendee, removePersonFromSession } = useStudio();
   const [isMounted, setIsMounted] = useState(false);
   const [personToRemove, setPersonToRemove] = useState<EnrolledPerson | null>(null);
@@ -40,77 +39,55 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
     setIsMounted(true);
   }, []);
 
-  const { enrolledPeople, sessionDetails, title, description, debugInfo } = useMemo(() => {
+  const { enrolledPeople, sessionDetails, title, description } = useMemo(() => {
     if (!isMounted || !session) {
-      return { enrolledPeople: [], sessionDetails: {}, title: '', description: '', debugInfo: {} };
+      return { enrolledPeople: [], sessionDetails: {}, title: '', description: '' };
     }
     
     const dayMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
     const today = startOfDay(new Date());
     const sessionDayIndex = dayMap[session.dayOfWeek];
-    const sessionDate = today.getDay() === sessionDayIndex ? today : nextDay(today, sessionDayIndex);
+    
+    let sessionDate = today;
+    if (today.getDay() !== sessionDayIndex) {
+        sessionDate = nextDay(today, sessionDayIndex);
+    }
+
     const sessionDateStr = format(sessionDate, 'yyyy-MM-dd');
 
     const specialist = specialists.find((i) => i.id === session.instructorId);
     const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
 
-    let attendees: EnrolledPerson[] = [];
-    let rosterTitle = '';
-    let rosterDescription = '';
-    let debugData: any = {};
+    const fixedEnrolledPeople = session.personIds
+        .map(pid => people.find(p => p.id === pid))
+        .filter((p): p is Person => !!p);
 
-    if (rosterType === 'fixed') {
-        rosterTitle = 'Inscriptos Fijos';
-        rosterDescription = `Lista de todas las personas con un cupo permanente en ${actividad?.name || 'la sesión'}.`;
-        attendees = session.personIds
-            .map(pid => people.find(p => p.id === pid))
-            .filter((p): p is Person => !!p)
-            .map(p => ({...p, enrollmentStatus: 'Fijo'}));
+    const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, sessionDate));
 
-    } else { // rosterType === 'daily'
-        rosterTitle = `Asistentes del ${format(sessionDate, "eeee dd/MM", { locale: es })}`;
-        rosterDescription = `Personas que se espera que asistan a ${actividad?.name || 'la sesión'} en esta fecha.`;
-        
-        const fixedEnrolledPeople = session.personIds
-            .map(pid => people.find(p => p.id === pid))
-            .filter((p): p is Person => !!p);
+    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === sessionDateStr);
+    const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
+    const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
 
-        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, sessionDate));
-
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === sessionDateStr);
-        const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
-        const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
-
-        const allAttendeesMap = new Map<string, EnrolledPerson>();
-        
-        activeFixedPeople.forEach(p => allAttendeesMap.set(p.id, {...p, enrollmentStatus: 'Fijo'}));
-        
-        oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, {
-            ...p, 
-            enrollmentStatus: 'Recupero',
-            displayDate: format(parse(attendanceRecord!.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy')
-        }));
-        
-        attendees = Array.from(allAttendeesMap.values());
-        
-        debugData = {
-          usedDate: sessionDateStr,
-          foundFixed: activeFixedPeople.length,
-          foundOneTime: oneTimeAttendees.length,
-          oneTimeNames: oneTimeAttendees.map(p => p.name),
-          totalInList: attendees.length
-        };
-    }
+    const allAttendeesMap = new Map<string, EnrolledPerson>();
+    
+    activeFixedPeople.forEach(p => allAttendeesMap.set(p.id, {...p, enrollmentStatus: 'Fijo'}));
+    
+    oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, {
+        ...p, 
+        enrollmentStatus: 'Recupero',
+        displayDate: format(parse(attendanceRecord!.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy')
+    }));
+    
+    const attendees = Array.from(allAttendeesMap.values());
 
     return { 
         enrolledPeople: attendees.sort((a, b) => a.name.localeCompare(b.name)),
         sessionDetails: { specialist, actividad, space, count: attendees.length },
-        title: rosterTitle,
-        description: rosterDescription,
-        debugInfo: debugData
+        title: `Asistentes del ${format(sessionDate, "eeee dd/MM", { locale: es })}`,
+        description: `Personas que se espera que asistan a ${actividad?.name || 'la sesión'} en esta fecha.`
     };
-  }, [isMounted, session, rosterType, people, attendance, isPersonOnVacation, specialists, actividades, spaces]);
+  }, [isMounted, session, people, attendance, isPersonOnVacation, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
@@ -145,13 +122,6 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
           </SheetDescription>
         </SheetHeader>
 
-        <Card className="mt-4 p-2 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500/50">
-          <p className="text-xs font-bold text-yellow-700 dark:text-yellow-300">PANEL DE DEBUG (Temporal)</p>
-          <pre className="text-[10px] text-yellow-800 dark:text-yellow-200 whitespace-pre-wrap break-all">
-            {JSON.stringify(debugInfo, null, 2)}
-          </pre>
-        </Card>
-
         <ScrollArea className="mt-4 space-y-4 h-[calc(100%-10rem)] pr-4">
           {enrolledPeople.length > 0 ? (
             enrolledPeople.map(person => (
@@ -167,7 +137,7 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
                             person.enrollmentStatus === 'Fijo' && "bg-primary/80",
                             person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white"
                         )}>
-                            {person.enrollmentStatus} {person.displayDate}
+                            {person.enrollmentStatus} {person.enrollmentStatus === 'Recupero' && person.displayDate}
                         </Badge>
                      </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
