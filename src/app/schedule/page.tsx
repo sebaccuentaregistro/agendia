@@ -264,7 +264,7 @@ function SchedulePageContent() {
 
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
 
-    const { dailyOccupancy, recoveryNames, onVacationNames, debugInfo } = useMemo(() => {
+    const { dailyOccupancy, recoveryNames, onVacationNames } = useMemo(() => {
         const todayStr = format(today, 'yyyy-MM-dd');
         
         const fixedEnrolledPeople = session.personIds
@@ -272,24 +272,20 @@ function SchedulePageContent() {
             .filter((p): p is Person => !!p);
 
         const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
-        const vacationCount = fixedEnrolledPeople.length - activeFixedPeople.length;
         
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        // CRITICAL FIX: Filter out invalid/ghost IDs from oneTimeAttendees
         const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || []).filter(id => people.some(p => p.id === id));
         
-        const recoveryNames = validOneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
-        const recoveryCount = validOneTimeAttendees.length; // Count only valid attendees
-        
+        const recoveryCount = validOneTimeAttendees.length;
+        const oneTimeNames = validOneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
+
         const dailyOccupancy = activeFixedPeople.length + recoveryCount;
         
         const onVacationNames = fixedEnrolledPeople
           .filter(p => isPersonOnVacation(p, today))
           .map(p => p.name);
-
-        const debugInfo = `DEBUG: Fijos(${activeFixedPeople.length}) - Vac(${vacationCount}) + Rec(${recoveryCount}) = ${dailyOccupancy} | Recuperos: [${recoveryNames.join(', ')}]`;
-
-        return { dailyOccupancy, recoveryNames, onVacationNames, debugInfo };
+          
+        return { dailyOccupancy, recoveryNames: oneTimeNames, onVacationNames };
     }, [session, people, isPersonOnVacation, attendance, today]);
     
      const waitlistDetails = useMemo(() => {
@@ -308,13 +304,14 @@ function SchedulePageContent() {
 
     const waitlistCount = waitlistDetails?.length || 0;
     
-    const canRecover = dailyOccupancy < spaceCapacity;
+    const occupancyToday = isToday ? dailyOccupancy : enrolledCount;
+    const canRecover = occupancyToday < spaceCapacity;
 
     if (recoveryMode && !canRecover) {
         return null;
     }
 
-    const utilization = spaceCapacity > 0 ? (isToday ? dailyOccupancy : enrolledCount) / spaceCapacity * 100 : 0;
+    const utilization = spaceCapacity > 0 ? (occupancyToday / spaceCapacity) * 100 : 0;
     const isFull = utilization >= 100;
     const isNearlyFull = utilization >= 80 && !isFull;
     
@@ -371,14 +368,13 @@ function SchedulePageContent() {
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
-                {/* <div className="text-xs text-red-500 font-mono bg-red-500/10 p-1 rounded">{debugInfo}</div> */}
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                  <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
                     <div className="flex justify-between items-center text-xs font-semibold">
                          <span className="text-muted-foreground">{isToday ? "Ocupación Hoy" : "Ocupación Fija"}</span>
                          <span className="text-foreground">
-                             {isToday ? `${dailyOccupancy} / ${spaceCapacity}` : `${enrolledCount} / ${spaceCapacity}`}
+                             {occupancyToday} / {spaceCapacity}
                          </span>
                     </div>
                     <Progress
@@ -391,12 +387,12 @@ function SchedulePageContent() {
                         )}
                     />
                 </div>
-                <div className="w-full grid grid-cols-1">
+                <div className="grid grid-cols-2 gap-2 w-full">
                     {isToday ? (
                         <TooltipProvider delayDuration={100}>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <span className="w-full" tabIndex={0}>
+                                    <span className="w-full col-span-2" tabIndex={0}>
                                         <Button variant="secondary" size="sm" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed} className="w-full">
                                             <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
                                         </Button>
@@ -406,12 +402,18 @@ function SchedulePageContent() {
                             </Tooltip>
                         </TooltipProvider>
                     ) : (
-                        <div className="grid grid-cols-2 gap-2 w-full">
+                        <>
                            <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
                            <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
-                        </div>
+                        </>
                     )}
                 </div>
+                 {isToday && !isFull && (
+                    <div className="grid grid-cols-2 gap-2 w-full">
+                       <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
+                       <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
+                    </div>
+                )}
                  <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full" onClick={() => setSessionForWaitlist(session)}>
                     <ListPlus className="mr-2 h-4 w-4" />
                     {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
