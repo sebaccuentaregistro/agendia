@@ -56,8 +56,8 @@ const formatTime = (time: string) => {
 };
 
 type UnifiedWaitlistItem =
-  | (Person & { isProspect: false; entry: string })
-  | (WaitlistProspect & { isProspect: true; entry: WaitlistProspect });
+  | (Person & { isProspect: false; entry: WaitlistEntry })
+  | (WaitlistProspect & { isProspect: true; entry: WaitlistEntry });
 
 
 function SchedulePageContent() {
@@ -284,13 +284,18 @@ function SchedulePageContent() {
         const space = spaces.find(s => s.id === session.spaceId);
         const capacity = space?.capacity || 0;
         
-        const attendanceRecordForToday = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendeesCount = attendanceRecordForToday?.oneTimeAttendees?.length || 0;
-        
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
         const fixedEnrolledCount = fixedEnrolledPeople.length;
+        const fixedEnrolledNames = fixedEnrolledPeople.map(p => p.name);
 
-        const vacationCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
+        const vacationingPeople = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today));
+        const vacationCount = vacationingPeople.length;
+        const vacationingNames = vacationingPeople.map(p => p.name);
+
+        const attendanceRecordForToday = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        const oneTimeAttendeeIds = attendanceRecordForToday?.oneTimeAttendees || [];
+        const oneTimeAttendeesCount = oneTimeAttendeeIds.length;
+        const oneTimeAttendeeNames = oneTimeAttendeeIds.map(pid => people.find(p => p.id === pid)?.name).filter((name): name is string => !!name);
         
         const dailyEnrolledCount = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
         
@@ -320,7 +325,13 @@ function SchedulePageContent() {
                 temporary: vacationCount,
             },
             debug: {
-                oneTimeAttendeesCount
+                fixedCount: fixedEnrolledCount,
+                fixedNames: fixedEnrolledNames.join(', ') || 'Ninguno',
+                vacationCount: vacationCount,
+                vacationNames: vacationingNames.join(', ') || 'Ninguno',
+                recoveryCount: oneTimeAttendeesCount,
+                recoveryNames: oneTimeAttendeeNames.join(', ') || 'Ninguno',
+                finalCount: dailyEnrolledCount,
             }
         };
     });
@@ -715,8 +726,11 @@ function SchedulePageContent() {
                                     style={{ width: `${capacity > 0 ? (dailyEnrolledCount / capacity) * 100 : 0}%` }}
                                     />
                                 </div>
-                                <div className="text-xs text-red-500 font-mono mt-1">
-                                    DEBUG: Fijos({fixedEnrolledCount}) - Vac({vacationCount}) + Rec({debug.oneTimeAttendeesCount}) = {dailyEnrolledCount}
+                                <div className="text-xs text-red-500 font-mono mt-1 space-y-0.5">
+                                    <div>DEBUG: {debug.finalCount} = {debug.fixedCount}(F) - {debug.vacationCount}(V) + {debug.recoveryCount}(R)</div>
+                                    <div>Fijos: {debug.fixedNames}</div>
+                                    <div>Vacaciones: {debug.vacationNames}</div>
+                                    <div>Recupero: {debug.recoveryNames}</div>
                                 </div>
                                {waitlistDetails.length > 0 && (
                                 <div className="pt-2 text-xs text-muted-foreground">
