@@ -22,7 +22,7 @@ interface EnrollPeopleDialogProps {
 }
 
 export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps) {
-  const { people, spaces, enrollPersonInSessions, actividades, tariffs, sessions: allSessions, triggerWaitlistCheck } = useStudio();
+  const { people, spaces, enrollPeopleInClass, actividades, tariffs, sessions: allSessions, triggerWaitlistCheck } = useStudio();
   const [searchTerm, setSearchTerm] = useState('');
 
   const form = useForm<{ personIds: string[] }>();
@@ -84,12 +84,22 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
 
   async function onSubmit(data: { personIds: string[] }) {
     if (isOverCapacity || !session) return;
-    const removedFromSessionIds = await enrollPersonInSessions(session.id, data.personIds);
-    if (removedFromSessionIds && Array.isArray(removedFromSessionIds)) {
-        removedFromSessionIds.forEach(sessionId => {
-            triggerWaitlistCheck(sessionId);
-        });
-    }
+    
+    const originalPersonIds = new Set(session.personIds || []);
+    const newPersonIds = new Set(data.personIds);
+
+    // This function simply updates the single session with the new list of people
+    await enrollPeopleInClass(session.id, data.personIds);
+
+    // Now, we determine who was removed to trigger a waitlist check for them if necessary
+    originalPersonIds.forEach(originalId => {
+      if (!newPersonIds.has(originalId)) {
+        // This person was removed from this class, so we need to check if a spot opened up.
+        // In the context of this dialog, this is the main session being edited.
+        triggerWaitlistCheck(session.id);
+      }
+    });
+
     onClose();
   }
   
