@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -159,7 +160,13 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Persona con recuperos pendientes</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || isFull || !!preselectedPersonId}>
+                                <Select 
+                                    onValueChange={(value) => {
+                                        field.onChange(value);
+                                    }} 
+                                    value={field.value} 
+                                    disabled={!selectedDate || isFull || !!preselectedPersonId}
+                                >
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecciona una persona" />
