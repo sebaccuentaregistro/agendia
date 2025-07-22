@@ -237,8 +237,8 @@ function SchedulePageContent() {
     const enrolledCount = session.personIds.length;
     const spaceCapacity = space?.capacity ?? 0;
     
-    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const today = startOfDay(new Date());
+    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const isToday = session.dayOfWeek === dayMap[today.getDay()];
 
     const [now, setNow] = useState(new Date());
@@ -246,6 +246,13 @@ function SchedulePageContent() {
         const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
         return () => clearInterval(timer);
     }, []);
+    
+    const checkDate = useMemo(() => {
+      if (isToday) return today;
+      const dayIndexMap: Record<Session['dayOfWeek'], number> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
+      const sessionDayIndex = dayIndexMap[session.dayOfWeek];
+      return nextDay(today, sessionDayIndex);
+    }, [isToday, session.dayOfWeek, today]);
 
     const sessionStartTime = useMemo(() => {
         if (!isToday) return null;
@@ -265,27 +272,27 @@ function SchedulePageContent() {
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
 
     const { dailyOccupancy, recoveryCount, onVacationCount, vacationingPeople } = useMemo(() => {
-        const todayStr = format(today, 'yyyy-MM-dd');
-        
-        const fixedEnrolledPeople = session.personIds
-            .map(pid => people.find(p => p.id === pid))
-            .filter((p): p is Person => !!p);
+      const dateStrToUse = format(checkDate, 'yyyy-MM-dd');
 
-        const vacationing = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today));
-        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
-        
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        
-        const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
-            .map(id => people.find(p => p.id === id))
-            .filter((p): p is Person => !!p);
+      const fixedEnrolledPeople = session.personIds
+          .map(pid => people.find(p => p.id === pid))
+          .filter((p): p is Person => !!p);
 
-        const recoveryCount = validOneTimeAttendees.length;
+      const vacationing = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, checkDate));
+      const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, checkDate));
+      
+      const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStrToUse);
+      
+      const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
+          .map(id => people.find(p => p.id === id))
+          .filter((p): p is Person => !!p);
 
-        const dailyOccupancy = activeFixedPeople.length + recoveryCount;
-        
-        return { dailyOccupancy, recoveryCount, onVacationCount: vacationing.length, vacationingPeople: vacationing };
-    }, [session, people, isPersonOnVacation, attendance, today]);
+      const recoveryCount = validOneTimeAttendees.length;
+
+      const dailyOccupancy = activeFixedPeople.length + recoveryCount;
+      
+      return { dailyOccupancy, recoveryCount, onVacationCount: vacationing.length, vacationingPeople: vacationing };
+    }, [session, people, isPersonOnVacation, attendance, checkDate]);
     
     const waitlistDetails = useMemo(() => {
         if (!session.waitlist) return [];
@@ -321,10 +328,8 @@ function SchedulePageContent() {
 
     const nextOccurrenceDate = useMemo(() => {
       if (isToday) return null;
-      const dayIndexMap: Record<Session['dayOfWeek'], number> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
-      const sessionDayIndex = dayIndexMap[session.dayOfWeek];
-      return nextDay(today, sessionDayIndex);
-    }, [isToday, session.dayOfWeek, today]);
+      return checkDate;
+    }, [isToday, checkDate]);
 
 
     return (
@@ -333,7 +338,7 @@ function SchedulePageContent() {
                 <div className="flex items-start justify-between">
                     <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{actividad?.name}</CardTitle>
                      <div className="flex items-center">
-                        {isToday && vacationingPeople.length > 0 && (
+                        {vacationingPeople.length > 0 && (
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-500 hover:bg-cyan-500/10">
@@ -342,7 +347,7 @@ function SchedulePageContent() {
                                 </PopoverTrigger>
                                 <PopoverContent className="w-60">
                                     <div className="space-y-2">
-                                        <h4 className="font-medium leading-none">De Vacaciones Hoy</h4>
+                                        <h4 className="font-medium leading-none">De Vacaciones el {format(checkDate, 'dd/MM/yy')}</h4>
                                         <ul className="text-sm text-muted-foreground list-disc pl-4">
                                             {vacationingPeople.map(p => (
                                                 <li key={p.id}>
