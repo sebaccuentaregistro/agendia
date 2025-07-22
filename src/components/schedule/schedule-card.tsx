@@ -77,9 +77,9 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
     const enrolledCount = session.personIds.length;
     const spaceCapacity = space?.capacity ?? 0;
     
-    const utilization = spaceCapacity > 0 ? (enrolledCount / spaceCapacity) * 100 : 0;
+    const utilization = spaceCapacity > 0 ? (dailyOccupancy / spaceCapacity) * 100 : 0;
     const isFull = dailyOccupancy >= spaceCapacity;
-    const isNearlyFull = dailyOccupancy / spaceCapacity >= 0.8 && !isFull;
+    const isNearlyFull = utilization >= 80 && !isFull;
     
     const canRecover = dailyOccupancy < spaceCapacity;
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
@@ -113,6 +113,12 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
     const handleAction = (eventName: string) => {
         document.dispatchEvent(new CustomEvent(eventName, { detail: session }));
     };
+    
+    const progressColorClass = useMemo(() => {
+        if (isFull) return "bg-red-500";
+        if (isNearlyFull) return "bg-yellow-500";
+        return "bg-primary";
+    }, [isFull, isNearlyFull]);
 
     return (
         <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
@@ -148,7 +154,7 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                         <span className="text-muted-foreground">Ocupación Fija</span>
                         <span className="text-foreground">{enrolledCount} / {spaceCapacity}</span>
                     </div>
-                    <Progress value={utilization} className="h-1.5" />
+                    <Progress value={(dailyOccupancy / spaceCapacity) * 100} indicatorClassName={progressColorClass} className="h-1.5" />
                     <p className="text-[11px] text-muted-foreground text-center">
                         Ocupación Hoy: {dailyOccupancy} (Rec: {recoveryCount} | Vac: {onVacationCount})
                     </p>
