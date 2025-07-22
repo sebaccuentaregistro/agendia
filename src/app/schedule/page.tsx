@@ -301,11 +301,10 @@ function SchedulePageContent() {
         
         const dailyEnrolledCount = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
         
-        const waitlistDetails: UnifiedWaitlistItem[] = (session.waitlist || [])
+        const waitlistDetails = (session.waitlist || [])
             .map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
-                    // Use a type assertion here after filtering for non-null people
                     if (person) {
                        return { ...person, isProspect: false as const, entry: entry as string };
                     }
