@@ -34,13 +34,14 @@ import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle, AlertCircle } from '@/components/ui/alert';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Progress } from '@/components/ui/progress';
 
 
 const formSchema = z.object({
@@ -263,7 +264,6 @@ function SchedulePageContent() {
 
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
 
-    // Daily occupancy logic
     const { dailyOccupancy, recoveryNames, onVacationNames } = useMemo(() => {
         const todayStr = format(today, 'yyyy-MM-dd');
         const vacationCount = session.personIds.filter(pid => {
@@ -310,6 +310,9 @@ function SchedulePageContent() {
     if (recoveryMode && !canRecover) {
         return null;
     }
+
+    const utilization = spaceCapacity > 0 ? (enrolledCount / spaceCapacity) * 100 : 0;
+    const isNearlyFull = utilization >= 80 && !isFull;
 
     return (
         <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
@@ -361,6 +364,12 @@ function SchedulePageContent() {
                 </Collapsible>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
+                <div className="w-full px-2 pt-1">
+                    <Progress
+                        value={utilization}
+                        className={cn("h-1.5", isNearlyFull && "[&>div]:bg-amber-500", isFull && "[&>div]:bg-red-500")}
+                    />
+                </div>
                 {isToday ? (
                      <div className="w-full">
                         <p className="text-xs text-center font-bold mb-1 text-primary">Ocupación Hoy</p>
@@ -676,4 +685,5 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
+
 
