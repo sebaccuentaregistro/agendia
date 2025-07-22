@@ -94,7 +94,10 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
         <ScrollArea className="mt-4 space-y-4 h-[calc(100%-8rem)] pr-4">
           {enrolledPeople.length > 0 ? (
             enrolledPeople.map(person => (
-              <Card key={person.id} className="p-3 bg-card/80 border">
+              <Card key={person.id} className={cn(
+                "p-3 bg-card/80 border",
+                person.enrollmentStatus === 'Vacaciones' && "opacity-60 bg-muted/50"
+              )}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1 space-y-1">
                      <div className="flex items-center gap-2 flex-wrap">
