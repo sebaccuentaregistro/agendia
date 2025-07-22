@@ -294,8 +294,8 @@ function SchedulePageContent() {
 
         const attendanceRecordForToday = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendeeIds = attendanceRecordForToday?.oneTimeAttendees || [];
-        const oneTimeAttendeesCount = oneTimeAttendeeIds.length;
         const oneTimeAttendeeNames = oneTimeAttendeeIds.map(pid => people.find(p => p.id === pid)?.name).filter((name): name is string => !!name);
+        const oneTimeAttendeesCount = oneTimeAttendeeNames.length;
         
         const dailyEnrolledCount = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
         
@@ -303,7 +303,11 @@ function SchedulePageContent() {
             .map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
-                    return person ? { ...person, isProspect: false as const, entry: entry as string } : null;
+                    // Use a type assertion here after filtering for non-null people
+                    if (person) {
+                       return { ...person, isProspect: false as const, entry: entry as string };
+                    }
+                    return null;
                 }
                 return { ...entry, isProspect: true as const, entry: entry as WaitlistProspect };
             })
