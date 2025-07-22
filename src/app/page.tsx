@@ -167,17 +167,18 @@ function DashboardPageContent() {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
         
+        // Correct Logic: Filter out people on vacation from their regular spot
         const activeRegulars = session.personIds.filter(pid => {
             const person = people.find(p => p.id === pid);
             return person && !isPersonOnVacation(person, now);
         });
         
-        const allAttendeesForToday = new Set([...activeRegulars, ...oneTimeAttendees]);
-        const enrolledCount = allAttendeesForToday.size;
+        // The total number of people attending today is the sum of active regulars and one-time attendees.
+        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
 
         return {
           ...session,
-          enrolledCount: enrolledCount,
+          enrolledCount,
           waitlistCount: session.waitlist?.length || 0,
         };
       })
