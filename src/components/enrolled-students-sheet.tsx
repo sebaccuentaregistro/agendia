@@ -145,14 +145,12 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
           </SheetDescription>
         </SheetHeader>
 
-        {/* --- DEBUG PANEL --- */}
         <Card className="mt-4 p-2 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500/50">
           <p className="text-xs font-bold text-yellow-700 dark:text-yellow-300">PANEL DE DEBUG (Temporal)</p>
           <pre className="text-[10px] text-yellow-800 dark:text-yellow-200 whitespace-pre-wrap break-all">
             {JSON.stringify(debugInfo, null, 2)}
           </pre>
         </Card>
-        {/* --- END DEBUG PANEL --- */}
 
         <ScrollArea className="mt-4 space-y-4 h-[calc(100%-10rem)] pr-4">
           {enrolledPeople.length > 0 ? (
