@@ -7,22 +7,21 @@ import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ClipboardCheck, User as UserIcon, DoorOpen } from 'lucide-react';
+import { ClipboardCheck, User as UserIcon, DoorOpen, Plane, CalendarClock, Users, ChevronDown } from 'lucide-react';
 import type { Session, Specialist, Actividad, Space } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
 
 interface TodaySessionsProps {
   sessions: (Session & { 
     enrolledCount: number; 
     waitlistCount: number;
-    debugInfo: {
-        fixedCount: number;
-        vacationCount: number;
-        recoveryCount: number;
-        fixedNames: string;
-        vacationNames: string;
-        recoveryNames: string;
+    dailyAttendees: {
+        fixed: string[];
+        oneTime: string[];
+        onVacation: string[];
     };
   })[];
   specialists: Specialist[];
@@ -138,7 +137,7 @@ export function TodaySessions({
                 <ul className="space-y-4">
                 {filteredSessions.map(session => {
                     const { specialist, actividad, space } = getSessionDetails(session);
-                    const { enrolledCount, debugInfo } = session;
+                    const { enrolledCount, dailyAttendees } = session;
                     const capacity = space?.capacity ?? 0;
                     const utilization = capacity > 0 ? enrolledCount / capacity : 0;
                     const isFull = utilization >= 1;
@@ -200,12 +199,26 @@ export function TodaySessions({
                                 </TooltipProvider>
                             </div>
                         </div>
-                        <div className="mt-2 text-xs p-2 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                            <p className="font-mono font-bold text-zinc-600 dark:text-zinc-300">DEBUG: {debugInfo.enrolledCount} = {debugInfo.fixedCount}(F) - {debugInfo.vacationCount}(V) + {debugInfo.recoveryCount}(R)</p>
-                            <p className="font-mono text-zinc-500 dark:text-zinc-400">Fijos: {debugInfo.fixedNames}</p>
-                            <p className="font-mono text-zinc-500 dark:text-zinc-400">Vacaciones: {debugInfo.vacationNames}</p>
-                            <p className="font-mono text-zinc-500 dark:text-zinc-400">Recupero: {debugInfo.recoveryNames}</p>
-                        </div>
+                        <Collapsible className="space-y-2 mt-2">
+                            <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted">
+                                <span>Asistentes del Día</span>
+                                <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="space-y-2 pt-2 text-xs">
+                                    <div className="rounded-md border p-2">
+                                    <h4 className="font-semibold mb-1 flex items-center gap-1.5"><Users className="h-3 w-3"/>Fijos ({dailyAttendees.fixed.length})</h4>
+                                    {dailyAttendees.fixed.length > 0 ? dailyAttendees.fixed.join(', ') : <span className="text-muted-foreground">Ninguno</span>}
+                                </div>
+                                <div className="rounded-md border p-2">
+                                    <h4 className="font-semibold mb-1 flex items-center gap-1.5"><CalendarClock className="h-3 w-3"/>Recuperos Hoy ({dailyAttendees.oneTime.length})</h4>
+                                    {dailyAttendees.oneTime.length > 0 ? dailyAttendees.oneTime.join(', ') : <span className="text-muted-foreground">Ninguno</span>}
+                                </div>
+                                <div className="rounded-md border p-2">
+                                    <h4 className="font-semibold mb-1 flex items-center gap-1.5"><Plane className="h-3 w-3"/>De Vacaciones Hoy ({dailyAttendees.onVacation.length})</h4>
+                                    {dailyAttendees.onVacation.length > 0 ? dailyAttendees.onVacation.join(', ') : <span className="text-muted-foreground">Ninguno</span>}
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
                     </li>
                     );
                 })}

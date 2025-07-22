@@ -178,13 +178,10 @@ function DashboardPageContent() {
           ...session,
           enrolledCount,
           waitlistCount: session.waitlist?.length || 0,
-          debugInfo: { // ADDING DEBUG INFO
-            fixedCount: fixedEnrolledPeople.length,
-            vacationCount: vacationingPeople.length,
-            recoveryCount: oneTimeAttendeesCount,
-            fixedNames: fixedEnrolledPeople.map(p => p.name).join(', ') || 'Ninguno',
-            vacationNames: vacationingPeople.map(p => p.name).join(', ') || 'Ninguno',
-            recoveryNames: oneTimeAttendees.map(p => p.name).join(', ') || 'Ninguno',
+          dailyAttendees: {
+              fixed: fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today)).map(p => p.name),
+              oneTime: oneTimeAttendees.map(p => p.name),
+              onVacation: vacationingPeople.map(p => p.name),
           }
         };
       })
@@ -250,7 +247,7 @@ function DashboardPageContent() {
       onVacationCount,
       pendingRecoveryCount,
       todaysSessions,
-      todayName: currentTodayName,
+      todayName,
       hasOverdue: overdueCount > 0,
       hasOnVacation: onVacationCount > 0,
       hasPendingRecovery: pendingRecoveryCount > 0,
@@ -567,6 +564,7 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
 
 
