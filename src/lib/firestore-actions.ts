@@ -402,10 +402,15 @@ export const enrollPersonInSessionsAction = async (sessionsRef: CollectionRefere
 };
 
 
-
-
-export const enrollPeopleInClassAction = async (sessionRef: any, personIds: string[]) => {
-    return await updateEntity(sessionRef, { personIds });
+export const enrollPeopleInClassAction = async (sessionRef: DocumentReference, personIds: string[]) => {
+    // This is a transactional update to prevent race conditions.
+    return runTransaction(db, async (transaction) => {
+        const sessionDoc = await transaction.get(sessionRef);
+        if (!sessionDoc.exists()) {
+            throw new Error("La sesión que intentas modificar ya no existe.");
+        }
+        transaction.update(sessionRef, { personIds });
+    });
 };
 
 
