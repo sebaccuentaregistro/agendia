@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -263,7 +264,7 @@ function SchedulePageContent() {
 
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
 
-    const { dailyOccupancy, recoveryNames, onVacationNames } = useMemo(() => {
+    const { dailyOccupancy, recoveryCount, onVacationCount } = useMemo(() => {
       const todayStr = format(today, 'yyyy-MM-dd');
 
       const fixedEnrolledPeople = session.personIds
@@ -272,23 +273,19 @@ function SchedulePageContent() {
 
       const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
       
+      const onVacationCount = fixedEnrolledPeople.length - activeFixedPeople.length;
+      
       const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
 
-      // Validate one-time attendees to prevent counting "ghosts"
       const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
         .map(id => people.find(p => p.id === id))
         .filter((p): p is Person => !!p);
         
       const recoveryCount = validOneTimeAttendees.length;
-      const oneTimeNames = validOneTimeAttendees.map(p => p.name);
 
       const dailyOccupancy = activeFixedPeople.length + recoveryCount;
       
-      const onVacationNames = fixedEnrolledPeople
-        .filter(p => isPersonOnVacation(p, today))
-        .map(p => p.name);
-        
-      return { dailyOccupancy, recoveryNames: oneTimeNames, onVacationNames };
+      return { dailyOccupancy, recoveryCount, onVacationCount };
   }, [session, people, isPersonOnVacation, attendance, today]);
     
      const waitlistDetails = useMemo(() => {
@@ -350,27 +347,6 @@ function SchedulePageContent() {
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
                     {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
                 </div>
-                
-                 <Collapsible className="space-y-2">
-                    <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm font-semibold text-muted-foreground transition-colors hover:bg-muted">
-                        <span>Asistentes del Día</span>
-                        <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-2 pt-2 text-xs">
-                        <div className="rounded-md border p-2">
-                            <h4 className="font-semibold mb-1 flex items-center gap-1.5"><Users className="h-3 w-3"/>Fijos ({session.personIds.length})</h4>
-                            {session.personIds.map(id => people.find(p=>p.id===id)?.name).join(', ') || <span className="text-muted-foreground">Ninguno</span>}
-                        </div>
-                        <div className="rounded-md border p-2">
-                            <h4 className="font-semibold mb-1 flex items-center gap-1.5"><CalendarClock className="h-3 w-3"/>Recuperos Hoy ({recoveryNames.length})</h4>
-                            {recoveryNames.length > 0 ? recoveryNames.join(', ') : <span className="text-muted-foreground">Ninguno</span>}
-                        </div>
-                        <div className="rounded-md border p-2">
-                            <h4 className="font-semibold mb-1 flex items-center gap-1.5"><Plane className="h-3 w-3"/>De Vacaciones Hoy ({onVacationNames.length})</h4>
-                            {onVacationNames.length > 0 ? onVacationNames.join(', ') : <span className="text-muted-foreground">Ninguno</span>}
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                  <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
@@ -389,6 +365,11 @@ function SchedulePageContent() {
                             isFull && "[&>div]:bg-red-500"
                         )}
                     />
+                    {isToday && (
+                        <p className="text-[11px] text-muted-foreground text-center">
+                            (Fijos: {enrolledCount - onVacationCount} | Recuperos: {recoveryCount} | Vacaciones: {onVacationCount})
+                        </p>
+                    )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 w-full">
                     {isToday ? (
