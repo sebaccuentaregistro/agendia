@@ -45,8 +45,8 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
 
   const sessionDayNumber = dayMap[session.dayOfWeek];
 
-  const { occupationMessage, isFull, vacationingPeopleNames } = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: '', isFull: false, vacationingPeopleNames: [] };
+  const { occupationMessage, isFull, disableReason } = useMemo(() => {
+    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha para ver la disponibilidad.', isFull: true, disableReason: '' };
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
@@ -56,13 +56,30 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
         .map(pid => people.find(p => p.id === pid))
         .filter((p): p is NonNullable<typeof p> => !!p && isPersonOnVacation(p, selectedDate));
     
-    const vacationingPeopleNames = vacationingPeople.map(p => p.name);
-    const availableRecoverySpots = vacationingPeople.length - oneTimeIds.length;
+    const fixedEnrolledCount = session.personIds.length;
+    const currentOccupation = (fixedEnrolledCount - vacationingPeople.length) + oneTimeIds.length;
+    const availableSpots = capacity - currentOccupation;
+
+    if (availableSpots <= 0) {
+        return { 
+            occupationMessage: 'No hay cupos disponibles para esta fecha.', 
+            isFull: true,
+            disableReason: 'Clase llena.'
+        };
+    }
+
+    if (availableSpots === 1) {
+        return { 
+            occupationMessage: 'El último cupo está reservado para inscripciones fijas.', 
+            isFull: true,
+            disableReason: 'Reservado para inscripción fija.'
+        };
+    }
 
     return {
-      occupationMessage: `Cupos de recupero para el ${format(selectedDate, 'dd/MM/yy')}: ${availableRecoverySpots > 0 ? availableRecoverySpots : 0}`,
-      isFull: availableRecoverySpots <= 0,
-      vacationingPeopleNames,
+      occupationMessage: `Hay ${availableSpots -1} cupo(s) de recupero disponibles.`,
+      isFull: false,
+      disableReason: ''
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
@@ -143,11 +160,6 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                 {occupationMessage && (
                                     <div className={cn("text-sm mt-2 p-2 rounded-md", isFull ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
                                         <p className="font-semibold">{occupationMessage}</p>
-                                        {vacationingPeopleNames.length > 0 && (
-                                            <p className="text-xs mt-1">
-                                                (Liberado por: {vacationingPeopleNames.join(', ')})
-                                            </p>
-                                        )}
                                     </div>
                                 )}
                                 <FormMessage />
