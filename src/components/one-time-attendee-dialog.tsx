@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -90,11 +89,20 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
         if (balances[personId] !== undefined) balances[personId]--;
       });
     });
-
-    return people
-      .filter(person => (balances[person.id] > 0) || person.id === preselectedPersonId)
+    
+    const list = people
+      .filter(person => (balances[person.id] > 0))
       .sort((a, b) => a.name.localeCompare(b.name));
       
+    // Manually add the preselected person if they are not in the list
+    if (preselectedPersonId) {
+        const preselectedPerson = people.find(p => p.id === preselectedPersonId);
+        if (preselectedPerson && !list.some(p => p.id === preselectedPersonId)) {
+            list.unshift(preselectedPerson);
+        }
+    }
+
+    return list;
   }, [people, attendance, preselectedPersonId]);
 
 
@@ -194,9 +202,25 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                             </FormItem>
                         )}
                     />
+
+                    {/* --- DEBUG BOX --- */}
+                    <div className="mt-4 p-3 border-2 border-dashed border-red-500 rounded-md bg-red-500/10 text-xs">
+                        <h3 className="font-bold text-red-700 dark:text-red-300">DEBUG INFO</h3>
+                        <pre className="whitespace-pre-wrap font-mono">
+                            {JSON.stringify({
+                                isValid: form.formState.isValid,
+                                errors: form.formState.errors,
+                                values: form.watch(),
+                                isFull,
+                                eligiblePeopleCount: eligiblePeople.length,
+                            }, null, 2)}
+                        </pre>
+                    </div>
+                    {/* --- END DEBUG BOX --- */}
+
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button type="submit" disabled={isFull || !form.formState.isValid}>Añadir Persona</Button>
+                        <Button type="submit" disabled={!form.formState.isValid || isFull}>Añadir Persona</Button>
                     </DialogFooter>
                 </form>
             </Form>
@@ -204,3 +228,5 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     </Dialog>
   );
 }
+
+    
