@@ -29,7 +29,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, startOfDay } from 'date-fns';
+import { format, startOfDay, nextDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -236,11 +236,11 @@ function SchedulePageContent() {
     const { specialist, actividad, space, level } = getSessionDetails(session);
     const enrolledCount = session.personIds.length;
     const spaceCapacity = space?.capacity ?? 0;
-
-    const today = startOfDay(new Date());
-    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
-    const isToday = session.dayOfWeek === dayMap[today.getDay()];
     
+    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
+    const today = startOfDay(new Date());
+    const isToday = session.dayOfWeek === dayMap[today.getDay()];
+
     const [now, setNow] = useState(new Date());
     useEffect(() => {
         const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
@@ -266,29 +266,28 @@ function SchedulePageContent() {
 
     const { dailyOccupancy, recoveryCount, onVacationCount } = useMemo(() => {
       const todayStr = format(today, 'yyyy-MM-dd');
-
+      
       const fixedEnrolledPeople = session.personIds
           .map(pid => people.find(p => p.id === pid))
           .filter((p): p is Person => !!p);
 
       const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
-      
       const onVacationCount = fixedEnrolledPeople.length - activeFixedPeople.length;
       
       const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-
+      
       const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
         .map(id => people.find(p => p.id === id))
         .filter((p): p is Person => !!p);
-        
+
       const recoveryCount = validOneTimeAttendees.length;
 
       const dailyOccupancy = activeFixedPeople.length + recoveryCount;
       
       return { dailyOccupancy, recoveryCount, onVacationCount };
-  }, [session, people, isPersonOnVacation, attendance, today]);
+    }, [session, people, isPersonOnVacation, attendance, today]);
     
-     const waitlistDetails = useMemo(() => {
+    const waitlistDetails = useMemo(() => {
         if (!session.waitlist) return [];
         return (session.waitlist || [])
             .map(entry => {
@@ -300,7 +299,7 @@ function SchedulePageContent() {
                 return { ...entry, isProspect: true as const, entry: entry as WaitlistProspect };
             })
             .filter((p): p is UnifiedWaitlistItem => !!p);
-     }, [session.waitlist, people]);
+    }, [session.waitlist, people]);
 
     const waitlistCount = waitlistDetails?.length || 0;
     
@@ -319,6 +318,14 @@ function SchedulePageContent() {
         setRosterTypeForSheet(isToday ? 'daily' : 'fixed');
         setSessionForStudentsSheet(session);
     };
+
+    const nextOccurrenceDate = useMemo(() => {
+      if (isToday) return null;
+      const dayIndexMap: Record<Session['dayOfWeek'], number> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
+      const sessionDayIndex = dayIndexMap[session.dayOfWeek];
+      return nextDay(today, sessionDayIndex);
+    }, [isToday, session.dayOfWeek, today]);
+
 
     return (
         <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
@@ -365,10 +372,16 @@ function SchedulePageContent() {
                             isFull && "[&>div]:bg-red-500"
                         )}
                     />
-                    {isToday && (
+                    {isToday ? (
                         <p className="text-[11px] text-muted-foreground text-center">
                             (Fijos: {enrolledCount - onVacationCount} | Recuperos: {recoveryCount} | Vacaciones: {onVacationCount})
                         </p>
+                    ) : (
+                       nextOccurrenceDate && (
+                         <p className="text-[11px] text-muted-foreground text-center capitalize">
+                           Próximo: {format(nextOccurrenceDate, 'eeee, dd MMM', {locale: es})}
+                         </p>
+                       )
                     )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 w-full">
