@@ -6,7 +6,8 @@ import { useState, useMemo } from 'react';
 import { Card, CardTitle, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { Session, Specialist, Actividad, Space } from '@/types';
-import { ScheduleCard } from '@/components/schedule/schedule-card'; // Assuming you create this
+import { ScheduleCard } from '@/components/schedule/schedule-card';
+import { useStudio } from '@/context/StudioContext';
 
 interface TodaySessionsProps {
   sessions: Session[];
