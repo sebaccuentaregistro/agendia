@@ -912,8 +912,3 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
-
-
-
-
-
