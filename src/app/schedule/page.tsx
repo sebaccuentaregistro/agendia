@@ -326,12 +326,6 @@ function SchedulePageContent() {
         setSessionForStudentsSheet(session);
     };
 
-    const nextOccurrenceDate = useMemo(() => {
-      if (isToday) return null;
-      return checkDate;
-    }, [isToday, checkDate]);
-
-
     return (
         <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
             <CardHeader className="p-4 pb-2">
@@ -403,16 +397,10 @@ function SchedulePageContent() {
                             isFull && "[&>div]:bg-red-500"
                         )}
                     />
-                    {isToday ? (
+                    {isToday && (
                         <p className="text-[11px] text-muted-foreground text-center">
                             (Fijos: {enrolledCount - onVacationCount} | Recuperos: {recoveryCount} | Vacaciones: {onVacationCount})
                         </p>
-                    ) : (
-                       nextOccurrenceDate && (
-                         <p className="text-[11px] text-muted-foreground text-center capitalize">
-                           Próximo: {format(nextOccurrenceDate, 'eeee, dd MMM', {locale: es})}
-                         </p>
-                       )
                     )}
                 </div>
                  <div className="grid grid-cols-2 gap-2 w-full">
