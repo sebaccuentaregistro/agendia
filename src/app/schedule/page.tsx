@@ -4,7 +4,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus, ChevronDown } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus, ChevronDown, Pointer } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -75,6 +75,7 @@ function SchedulePageContent() {
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   const [sessionForStudentsSheet, setSessionForStudentsSheet] = useState<Session | null>(null);
+  const [rosterTypeForSheet, setRosterTypeForSheet] = useState<'fixed' | 'daily'>('daily');
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -314,6 +315,11 @@ function SchedulePageContent() {
     const utilization = spaceCapacity > 0 ? (isToday ? dailyOccupancy : enrolledCount) / spaceCapacity * 100 : 0;
     const isFull = utilization >= 100;
     const isNearlyFull = utilization >= 80 && !isFull;
+    
+    const handleOccupancyClick = () => {
+        setRosterTypeForSheet(isToday ? 'daily' : 'fixed');
+        setSessionForStudentsSheet(session);
+    };
 
     return (
         <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
@@ -365,7 +371,7 @@ function SchedulePageContent() {
                 </Collapsible>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                 <div className="w-full px-2 pt-1 space-y-1">
+                 <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
                     <div className="flex justify-between items-center">
                         <span className="text-xs font-semibold text-muted-foreground">{isToday ? "Ocupación Hoy" : "Ocupación Fija"}</span>
                         <span className="text-xs font-bold text-foreground">
@@ -376,7 +382,7 @@ function SchedulePageContent() {
                         value={utilization}
                         className={cn(
                             "h-1.5",
-                            "[&>div]:bg-green-500", // Default to green
+                            !isNearlyFull && !isFull && "[&>div]:bg-green-500",
                             isNearlyFull && "[&>div]:bg-yellow-500",
                             isFull && "[&>div]:bg-red-500"
                         )}
@@ -650,7 +656,7 @@ function SchedulePageContent() {
          <EnrolledStudentsSheet 
             session={sessionForStudentsSheet}
             onClose={() => setSessionForStudentsSheet(null)}
-            rosterType={'daily'}
+            rosterType={rosterTypeForSheet}
           />
       )}
 
@@ -693,5 +699,6 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
+
 
 
