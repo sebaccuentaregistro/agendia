@@ -57,7 +57,7 @@ const formatTime = (time: string) => {
 
 type UnifiedWaitlistItem =
   | (Person & { isProspect: false; entry: string })
-  | (WaitlistProspect & { entry: WaitlistProspect });
+  | (WaitlistProspect & { isProspect: true; entry: WaitlistProspect });
 
 
 function SchedulePageContent() {
@@ -299,11 +299,11 @@ function SchedulePageContent() {
             .map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
-                    return person ? { ...person, isProspect: false as const, entry } : null;
+                    return person ? { ...person, isProspect: false, entry } : null;
                 }
-                return { ...entry, isProspect: true as const, entry };
+                return { ...entry, isProspect: true, entry };
             })
-            .filter((p): p is NonNullable<typeof p> => p !== null);
+            .filter((p): p is UnifiedWaitlistItem => !!p);
 
         const waitlistCount = waitlistDetails.length;
         
