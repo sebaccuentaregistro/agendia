@@ -464,11 +464,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         'Error al justificar la ausencia.'
     );
     
-    const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => handleAction(
-        addOneTimeAttendeeAction(collectionRefs!.attendance, personId, sessionId, date),
-        'Asistente puntual añadido.',
-        'Error al añadir asistente puntual.'
-    );
+    const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
+        if (!collectionRefs) return;
+        handleAction(
+            addOneTimeAttendeeAction(collectionRefs.attendance, doc(collectionRefs.sessions, sessionId), personId, date),
+            'Asistente puntual añadido.',
+            'Error al añadir asistente puntual.'
+        );
+    };
     
     const addToWaitlist = (sessionId: string, entry: WaitlistEntry) => {
         if (!collectionRefs) return;

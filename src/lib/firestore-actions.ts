@@ -453,20 +453,25 @@ export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReferen
     }
 };
 
-export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
+export const addOneTimeAttendeeAction = async (
+    attendanceRef: CollectionReference,
+    sessionRef: DocumentReference,
+    personId: string,
+    date: Date
+) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const q = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-    const querySnapshot = await getDocs(q);
-
+    const q = query(attendanceRef, where('sessionId', '==', sessionRef.id), where('date', '==', dateStr));
+    
     return runTransaction(db, async (transaction) => {
-        let docRef;
+        const querySnapshot = await getDocs(q); // getDocs must be inside transaction to read
+        let attendanceDocRef;
         let currentData: Partial<SessionAttendance> = {};
 
         if (querySnapshot.empty) {
-            docRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
+            attendanceDocRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
         } else {
-            docRef = querySnapshot.docs[0].ref;
-            const existingDoc = await transaction.get(docRef);
+            attendanceDocRef = querySnapshot.docs[0].ref;
+            const existingDoc = await transaction.get(attendanceDocRef);
             currentData = existingDoc.data() || {};
         }
 
@@ -474,8 +479,8 @@ export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReferenc
         const presentIds = Array.from(new Set([...(currentData.presentIds || []), personId]));
 
         if (querySnapshot.empty) {
-            transaction.set(docRef, {
-                sessionId,
+            transaction.set(attendanceDocRef, {
+                sessionId: sessionRef.id,
                 date: dateStr,
                 oneTimeAttendees,
                 presentIds,
@@ -483,7 +488,26 @@ export const addOneTimeAttendeeAction = async (attendanceRef: CollectionReferenc
                 justifiedAbsenceIds: [],
             });
         } else {
-            transaction.update(docRef, { oneTimeAttendees, presentIds });
+            transaction.update(attendanceDocRef, { oneTimeAttendees, presentIds });
+        }
+        
+        // Now, handle the waitlist
+        const freshSessionSnap = await transaction.get(sessionRef);
+        if (freshSessionSnap.exists()) {
+            const sessionData = freshSessionSnap.data() as Session;
+            if (sessionData.waitlist && sessionData.waitlist.length > 0) {
+                const updatedWaitlist = sessionData.waitlist.filter(entry => {
+                    if (typeof entry === 'string') {
+                        return entry !== personId;
+                    }
+                    // This action is only for existing people, so no need to check prospects.
+                    return true;
+                });
+
+                if (updatedWaitlist.length < sessionData.waitlist.length) {
+                    transaction.update(sessionRef, { waitlist: updatedWaitlist });
+                }
+            }
         }
     });
 };
