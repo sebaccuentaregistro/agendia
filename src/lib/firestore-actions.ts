@@ -423,15 +423,19 @@ export const saveAttendanceAction = async (
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
     const snap = await getDocs(attendanceQuery);
     
+    const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
+    let docRef;
+
     if (snap.empty) {
-        const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
-        await addEntity(attendanceRef, record);
+        // If it doesn't exist, create a new doc reference
+        docRef = doc(attendanceRef);
     } else {
-        const docRef = snap.docs[0].ref;
-        const existingData = snap.docs[0].data() as SessionAttendance;
-        const updatedData = { ...existingData, presentIds, absentIds, justifiedAbsenceIds };
-        await updateEntity(docRef, updatedData);
+        // If it exists, use the existing doc reference
+        docRef = snap.docs[0].ref;
     }
+    
+    // Use set with merge to either create or update the document atomically.
+    await setDoc(docRef, record, { merge: true });
     
     // Check for churn risk for each absent person
     for (const personId of absentIds) {
