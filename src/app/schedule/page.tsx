@@ -67,7 +67,7 @@ function SchedulePageContent() {
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
   const [sessionToDelete, setSessionToDelete] = useState<Session | null>(null);
   const [sessionToManage, setSessionToManage] = useState<Session | null>(null);
-  const [sessionForRoster, setSessionForRoster] = useState<Session | null>(null);
+  const [sessionForRoster, setSessionForRoster] = useState<{session: Session, rosterType: 'fixed' | 'daily'} | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [sessionForPuntual, setSessionForPuntual] = useState<Session | null>(null);
   const [sessionToNotify, setSessionToNotify] = useState<Session | null>(null);
@@ -299,9 +299,9 @@ function SchedulePageContent() {
             .map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
-                    return person ? { ...person, isProspect: false, entry } : null;
+                    return person ? { ...person, isProspect: false as const, entry: entry as string } : null;
                 }
-                return { ...entry, isProspect: true, entry };
+                return { ...entry, isProspect: true as const, entry: entry as WaitlistProspect };
             })
             .filter((p): p is UnifiedWaitlistItem => !!p);
 
@@ -693,12 +693,19 @@ function SchedulePageContent() {
                               </div>
                             </div>
                             <div className="space-y-1">
-                                <div
-                                    className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
-                                    onClick={() => setSessionForRoster(session)}
-                                >
-                                    <span className={cn("font-semibold", isFixedFull ? "text-pink-600" : "text-foreground")}>Inscriptos Fijos: {fixedEnrolledCount}/{capacity}</span>
-                                    <span className="font-semibold text-foreground">Ocupación Hoy: {dailyEnrolledCount}/{capacity}</span>
+                                <div className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400">
+                                    <span
+                                      className="font-semibold text-foreground cursor-pointer hover:underline"
+                                      onClick={() => setSessionForRoster({ session, rosterType: 'fixed' })}
+                                    >
+                                      Inscriptos Fijos: {fixedEnrolledCount}/{capacity}
+                                    </span>
+                                    <span
+                                      className="font-semibold text-foreground cursor-pointer hover:underline"
+                                      onClick={() => setSessionForRoster({ session, rosterType: 'daily' })}
+                                    >
+                                      Ocupación Hoy: {dailyEnrolledCount}/{capacity}
+                                    </span>
                                 </div>
                                 <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
                                     <div
@@ -895,7 +902,7 @@ function SchedulePageContent() {
                 actividades={actividades}
                 spaces={spaces}
                 levels={levels}
-                onSessionClick={setSessionForRoster}
+                onSessionClick={(session) => setSessionForRoster({session, rosterType: 'daily'})}
             />
           )}
         </TabsContent>
@@ -939,7 +946,7 @@ function SchedulePageContent() {
 
       {sessionToManage && <EnrollPeopleDialog session={sessionToManage} onClose={() => setSessionToManage(null)} />}
       {sessionForPuntual && <OneTimeAttendeeDialog session={sessionForPuntual} preselectedPersonId={personIdForRecovery} onClose={() => setSessionForPuntual(null)} />}
-      {sessionForRoster && <EnrolledStudentsSheet session={sessionForRoster} onClose={() => setSessionForRoster(null)} />}
+      {sessionForRoster && <EnrolledStudentsSheet session={sessionForRoster.session} rosterType={sessionForRoster.rosterType} onClose={() => setSessionForRoster(null)} />}
       {sessionForAttendance && <AttendanceSheet session={sessionForAttendance} onClose={() => setSessionForAttendance(null)} />}
       {sessionToNotify && <NotifyAttendeesDialog session={sessionToNotify} onClose={() => setSessionToNotify(null)} />}
       {sessionForWaitlist && <WaitlistDialog session={sessionForWaitlist} onClose={() => setSessionForWaitlist(null)} />}
