@@ -58,8 +58,8 @@ const formatTime = (time: string) => {
 };
 
 type UnifiedWaitlistItem =
-  | (Person & { isProspect: false; entry: WaitlistEntry })
-  | (WaitlistProspect & { isProspect: true; entry: WaitlistEntry });
+  | (Person & { isProspect: false; entry: string })
+  | (WaitlistProspect & { isProspect: true; entry: WaitlistProspect });
 
 
 function SchedulePageContent() {
@@ -306,11 +306,11 @@ function SchedulePageContent() {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
                     if (person) {
-                       return { ...person, isProspect: false as const, entry: entry as string };
+                       return { ...person, isProspect: false as const, entry: entry };
                     }
                     return null;
                 }
-                return { ...entry, isProspect: true as const, entry: entry as WaitlistProspect };
+                return { ...entry, isProspect: true as const, entry: entry };
             })
             .filter((p): p is UnifiedWaitlistItem => !!p);
 
@@ -975,4 +975,3 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
-
