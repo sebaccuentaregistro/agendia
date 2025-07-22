@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -12,7 +13,18 @@ import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
 
 interface TodaySessionsProps {
-  sessions: (Session & { enrolledCount: number; waitlistCount: number })[];
+  sessions: (Session & { 
+    enrolledCount: number; 
+    waitlistCount: number;
+    debugInfo: {
+        fixedCount: number;
+        vacationCount: number;
+        recoveryCount: number;
+        fixedNames: string;
+        vacationNames: string;
+        recoveryNames: string;
+    };
+  })[];
   specialists: Specialist[];
   actividades: Actividad[];
   spaces: Space[];
@@ -126,7 +138,7 @@ export function TodaySessions({
                 <ul className="space-y-4">
                 {filteredSessions.map(session => {
                     const { specialist, actividad, space } = getSessionDetails(session);
-                    const { enrolledCount } = session;
+                    const { enrolledCount, debugInfo } = session;
                     const capacity = space?.capacity ?? 0;
                     const utilization = capacity > 0 ? enrolledCount / capacity : 0;
                     const isFull = utilization >= 1;
@@ -144,47 +156,55 @@ export function TodaySessions({
                     <li 
                         key={session.id}
                         className={cn(
-                        "flex flex-col sm:flex-row items-start sm:items-center gap-4 rounded-xl border p-3 transition-all duration-200 bg-background/60 shadow-md hover:shadow-lg hover:border-primary/30",
+                        "flex flex-col rounded-xl border p-3 transition-all duration-200 bg-background/60 shadow-md hover:shadow-lg hover:border-primary/30",
                         isFull && "bg-pink-500/10 border-pink-500/30",
                         isNearlyFull && "bg-amber-500/10 border-amber-500/20"
                         )}
                     >
-                        <div className="flex-1 space-y-1 cursor-pointer" onClick={() => onSessionClick(session)}>
-                        <p className="font-semibold text-foreground">{actividad?.name || 'Sesión'}</p>
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1.5"><UserIcon className="h-4 w-4" />{specialist?.name || 'N/A'}</span>
-                            <span className="flex items-center gap-1.5"><DoorOpen className="h-4 w-4" />{space?.name || 'N/A'}</span>
-                        </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-right self-end sm:self-center">
-                            <div>
-                            <p className="font-bold text-primary">{formatTime(session.time)}</p>
-                            <p className={cn(
-                                "text-base font-semibold",
-                                isFull 
-                                ? "text-pink-600 dark:text-pink-400" 
-                                : isNearlyFull 
-                                ? "text-amber-600 dark:text-amber-500" 
-                                : "text-foreground"
-                            )}>
-                                {enrolledCount}/{capacity} hoy
-                            </p>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <div className="flex-1 space-y-1 cursor-pointer" onClick={() => onSessionClick(session)}>
+                            <p className="font-semibold text-foreground">{actividad?.name || 'Sesión'}</p>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                                <span className="flex items-center gap-1.5"><UserIcon className="h-4 w-4" />{specialist?.name || 'N/A'}</span>
+                                <span className="flex items-center gap-1.5"><DoorOpen className="h-4 w-4" />{space?.name || 'N/A'}</span>
                             </div>
-                            <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                <span tabIndex={0}>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:bg-accent" onClick={() => onAttendanceClick(session)} disabled={!isAttendanceAllowed}>
-                                    <ClipboardCheck className="h-5 w-5" />
-                                    <span className="sr-only">Pasar Lista</span>
-                                    </Button>
-                                </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                <p>{tooltipMessage}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                            </TooltipProvider>
+                            </div>
+                            <div className="flex items-center gap-2 text-right self-end sm:self-center">
+                                <div>
+                                <p className="font-bold text-primary">{formatTime(session.time)}</p>
+                                <p className={cn(
+                                    "text-base font-semibold",
+                                    isFull 
+                                    ? "text-pink-600 dark:text-pink-400" 
+                                    : isNearlyFull 
+                                    ? "text-amber-600 dark:text-amber-500" 
+                                    : "text-foreground"
+                                )}>
+                                    {enrolledCount}/{capacity} hoy
+                                </p>
+                                </div>
+                                <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                    <span tabIndex={0}>
+                                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:bg-accent" onClick={() => onAttendanceClick(session)} disabled={!isAttendanceAllowed}>
+                                        <ClipboardCheck className="h-5 w-5" />
+                                        <span className="sr-only">Pasar Lista</span>
+                                        </Button>
+                                    </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                    <p>{tooltipMessage}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                        </div>
+                        <div className="mt-2 text-xs p-2 rounded-md bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                            <p className="font-mono font-bold text-zinc-600 dark:text-zinc-300">DEBUG: {debugInfo.enrolledCount} = {debugInfo.fixedCount}(F) - {debugInfo.vacationCount}(V) + {debugInfo.recoveryCount}(R)</p>
+                            <p className="font-mono text-zinc-500 dark:text-zinc-400">Fijos: {debugInfo.fixedNames}</p>
+                            <p className="font-mono text-zinc-500 dark:text-zinc-400">Vacaciones: {debugInfo.vacationNames}</p>
+                            <p className="font-mono text-zinc-500 dark:text-zinc-400">Recupero: {debugInfo.recoveryNames}</p>
                         </div>
                     </li>
                     );

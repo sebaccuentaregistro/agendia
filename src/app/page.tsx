@@ -165,17 +165,27 @@ function DashboardPageContent() {
       .filter(session => session.dayOfWeek === currentTodayName)
       .map(session => {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
+        const oneTimeAttendeeIds = attendanceRecord?.oneTimeAttendees || [];
+        const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.includes(p.id));
+        const oneTimeAttendeesCount = oneTimeAttendees.length;
         
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
-        const vacationCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
+        const vacationingPeople = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today));
         
-        const enrolledCount = (fixedEnrolledPeople.length - vacationCount) + oneTimeAttendeesCount;
+        const enrolledCount = (fixedEnrolledPeople.length - vacationingPeople.length) + oneTimeAttendeesCount;
 
         return {
           ...session,
           enrolledCount,
           waitlistCount: session.waitlist?.length || 0,
+          debugInfo: { // ADDING DEBUG INFO
+            fixedCount: fixedEnrolledPeople.length,
+            vacationCount: vacationingPeople.length,
+            recoveryCount: oneTimeAttendeesCount,
+            fixedNames: fixedEnrolledPeople.map(p => p.name).join(', ') || 'Ninguno',
+            vacationNames: vacationingPeople.map(p => p.name).join(', ') || 'Ninguno',
+            recoveryNames: oneTimeAttendees.map(p => p.name).join(', ') || 'Ninguno',
+          }
         };
       })
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -557,5 +567,6 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
 
