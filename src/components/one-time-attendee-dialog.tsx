@@ -40,7 +40,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
 
   useEffect(() => {
     if (preselectedPersonId) {
-      form.setValue('personId', preselectedPersonId);
+      form.setValue('personId', preselectedPersonId, { shouldValidate: true });
     }
   }, [preselectedPersonId, form]);
 
@@ -77,7 +77,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
-  const { preselectedPerson, otherEligiblePeople } = useMemo(() => {
+  const eligiblePeople = useMemo(() => {
     const balances: Record<string, number> = {};
     people.forEach(p => (balances[p.id] = 0));
 
@@ -90,17 +90,11 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
       });
     });
 
-    const preselected = preselectedPersonId ? people.find(p => p.id === preselectedPersonId) : null;
-    const others = people
-      .filter(person => {
-        const hasCredits = balances[person.id] > 0;
-        const isNotPreselected = person.id !== preselectedPersonId;
-        return hasCredits && isNotPreselected;
-      })
+    return people
+      .filter(person => balances[person.id] > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
       
-    return { preselectedPerson: preselected, otherEligiblePeople: others };
-  }, [people, attendance, preselectedPersonId]);
+  }, [people, attendance]);
 
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
@@ -174,9 +168,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                             <FormItem>
                                 <FormLabel>Persona con recuperos pendientes</FormLabel>
                                 <Select 
-                                    onValueChange={(value) => {
-                                        field.onChange(value);
-                                    }} 
+                                    onValueChange={field.onChange} 
                                     value={field.value} 
                                     disabled={!selectedDate || isFull}
                                 >
@@ -186,17 +178,12 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {preselectedPerson && (
-                                            <SelectItem key={preselectedPerson.id} value={preselectedPerson.id}>
-                                                {preselectedPerson.name}
-                                            </SelectItem>
-                                        )}
-                                        {otherEligiblePeople.map(person => (
+                                        {eligiblePeople.map(person => (
                                             <SelectItem key={person.id} value={person.id}>
                                               {person.name}
                                             </SelectItem>
                                         ))}
-                                        {!preselectedPerson && otherEligiblePeople.length === 0 && (
+                                        {eligiblePeople.length === 0 && (
                                             <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
                                     </SelectContent>
@@ -208,7 +195,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                     />
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button type="submit" disabled={isFull || !form.formState.isValid}>Añadir Asistente</Button>
+                        <Button type="submit" disabled={isFull || !form.formState.isValid}>Añadir Persona</Button>
                     </DialogFooter>
                 </form>
             </Form>
