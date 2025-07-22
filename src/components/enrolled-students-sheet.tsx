@@ -11,9 +11,12 @@ import { Session, Person } from '@/types';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { Plane } from 'lucide-react';
+
+type EnrollmentStatus = 'Fijo' | 'Recupero' | 'Vacaciones';
 
 type EnrolledPerson = Person & {
-    enrollmentStatus: 'Fijo' | 'Recupero';
+    enrollmentStatus: EnrollmentStatus;
 };
 
 export function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
@@ -34,22 +37,29 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
     
-    // Filter out people on vacation from their regular spot
-    const regularIds = new Set(session.personIds.filter(pid => {
-        const person = people.find(p => p.id === pid);
-        return person && !isPersonOnVacation(person, today);
-    }));
-
     const allAttendees: EnrolledPerson[] = [];
+    const processedIds = new Set<string>();
 
-    people.forEach(person => {
-        const isRegular = regularIds.has(person.id);
-        const isOneTime = oneTimeAttendeeIds.has(person.id);
+    // First, process all fixed members of the session
+    session.personIds.forEach(personId => {
+        const person = people.find(p => p.id === personId);
+        if (person) {
+            const onVacation = isPersonOnVacation(person, today);
+            allAttendees.push({
+                ...person,
+                enrollmentStatus: onVacation ? 'Vacaciones' : 'Fijo'
+            });
+            processedIds.add(personId);
+        }
+    });
 
-        if(isRegular) {
-            allAttendees.push({ ...person, enrollmentStatus: 'Fijo' });
-        } else if (isOneTime) {
-            allAttendees.push({ ...person, enrollmentStatus: 'Recupero' });
+    // Then, add any one-time attendees who aren't already in the list
+    oneTimeAttendeeIds.forEach(personId => {
+        if (!processedIds.has(personId)) {
+            const person = people.find(p => p.id === personId);
+            if (person) {
+                allAttendees.push({ ...person, enrollmentStatus: 'Recupero' });
+            }
         }
     });
     
@@ -57,23 +67,28 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
     const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     
+    // The total count for display should be the active people for today
+    const dailyEnrolledCount = allAttendees.filter(p => p.enrollmentStatus !== 'Vacaciones').length;
+
     return { 
         enrolledPeople: allAttendees.sort((a, b) => a.name.localeCompare(b.name)),
-        sessionDetails: { specialist, actividad, space } 
+        sessionDetails: { specialist, actividad, space, dailyEnrolledCount } 
     };
   }, [isMounted, people, session, attendance, isPersonOnVacation, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
+  const { specialist, actividad, space, dailyEnrolledCount } = sessionDetails as any;
+
   return (
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Inscriptos en {(sessionDetails as any).actividad?.name || 'Sesión'}</SheetTitle>
+          <SheetTitle>Inscriptos en {actividad?.name || 'Sesión'}</SheetTitle>
           <SheetDescription>
-            {session.dayOfWeek} a las {session.time} en {(sessionDetails as any).space?.name || 'N/A'}.
+            {session.dayOfWeek} a las {session.time} en {space?.name || 'N/A'}.
             <br/>
-            {enrolledPeople.length} de {(sessionDetails as any).space?.capacity || 0} personas inscriptas.
+            {dailyEnrolledCount || 0} de {space?.capacity || 0} personas asisten hoy.
           </SheetDescription>
         </SheetHeader>
         <ScrollArea className="mt-4 space-y-4 h-[calc(100%-8rem)] pr-4">
@@ -84,11 +99,13 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
                   <div className="flex-1 space-y-1">
                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-foreground">{person.name}</p>
-                        <Badge variant={person.enrollmentStatus === 'Fijo' ? 'default' : 'secondary'} className={cn(
+                        <Badge variant={person.enrollmentStatus === 'Fijo' ? 'default' : person.enrollmentStatus === 'Vacaciones' ? 'outline' : 'secondary'} className={cn(
                             "text-xs",
                             person.enrollmentStatus === 'Fijo' && "bg-primary/80",
-                            person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white"
+                            person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white",
+                            person.enrollmentStatus === 'Vacaciones' && "border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/10"
                         )}>
+                            {person.enrollmentStatus === 'Vacaciones' && <Plane className="h-3 w-3 mr-1" />}
                             {person.enrollmentStatus}
                         </Badge>
                      </div>
