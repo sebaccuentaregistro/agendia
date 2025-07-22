@@ -13,7 +13,10 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Plane, AlertTriangle } from 'lucide-react';
+import { Plane, AlertTriangle, Trash2 } from 'lucide-react';
+import { Button } from './ui/button';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
 
 type EnrollmentStatus = 'Fijo' | 'Recupero';
 
@@ -29,8 +32,9 @@ interface EnrolledStudentsSheetProps {
 }
 
 export function EnrolledStudentsSheet({ session, rosterType, onClose }: EnrolledStudentsSheetProps) {
-  const { people, actividades, specialists, spaces, attendance, isPersonOnVacation } = useStudio();
+  const { people, actividades, specialists, spaces, attendance, isPersonOnVacation, removeOneTimeAttendee, removePersonFromSession } = useStudio();
   const [isMounted, setIsMounted] = useState(false);
+  const [personToRemove, setPersonToRemove] = useState<EnrolledPerson | null>(null);
   
   useEffect(() => {
     setIsMounted(true);
@@ -90,8 +94,25 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
   const { specialist, actividad, space, count } = sessionDetails as any;
+  
+  const handleRemoveClick = (person: EnrolledPerson) => {
+    setPersonToRemove(person);
+  };
+
+  const handleConfirmRemove = () => {
+    if (!personToRemove) return;
+    
+    if (personToRemove.enrollmentStatus === 'Recupero') {
+      const todayStr = format(new Date(), 'yyyy-MM-dd');
+      removeOneTimeAttendee(session.id, personToRemove.id, todayStr);
+    } else {
+      removePersonFromSession(session.id, personToRemove.id);
+    }
+    setPersonToRemove(null);
+  };
 
   return (
+    <>
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
@@ -128,6 +149,10 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
                       </a>
                     </div>
                   </div>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveClick(person)}>
+                    <Trash2 className="h-4 w-4" />
+                    <span className="sr-only">Eliminar asistente</span>
+                  </Button>
                 </div>
               </Card>
             ))
@@ -139,5 +164,24 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
         </ScrollArea>
       </SheetContent>
     </Sheet>
+    
+    <AlertDialog open={!!personToRemove} onOpenChange={(open) => !open && setPersonToRemove(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Confirmar eliminación?</AlertDialogTitle>
+                <AlertDialogDescription>
+                    {personToRemove?.enrollmentStatus === 'Recupero' 
+                        ? `Estás a punto de quitar a ${personToRemove.name} de la lista de recuperos de hoy. Esta acción no se puede deshacer.`
+                        : `Estás a punto de desinscribir permanentemente a ${personToRemove?.name} de esta clase. ¿Estás seguro?`
+                    }
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setPersonToRemove(null)}>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleConfirmRemove}>Confirmar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

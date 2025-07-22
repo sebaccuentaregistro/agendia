@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction } from '@/lib/firestore-actions';
+import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction, removePersonFromSessionAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -45,6 +45,7 @@ interface StudioContextType {
     removeOneTimeAttendee: (sessionId: string, personId: string, date: string) => Promise<void>;
     addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
     addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
+    removePersonFromSession: (sessionId: string, personId: string) => void;
     addToWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
     removeFromWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
     addActividad: (actividad: Omit<Actividad, 'id'>) => void;
@@ -415,6 +416,16 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const updateOperator = (operator: Operator) => updateGenericEntity('operators', operator, "Operador actualizado.", "Error al actualizar operador.");
     const deleteOperator = (id: string) => handleAction(deleteEntity(doc(collectionRefs!.operators, id)), "Operador eliminado.", "Error al eliminar operador.");
 
+    const removePersonFromSession = (sessionId: string, personId: string) => {
+      if (!collectionRefs) return;
+      handleAction(
+        removePersonFromSessionAction(doc(collectionRefs.sessions, sessionId), personId),
+        'Persona eliminada de la sesión.',
+        'Error al eliminar a la persona de la sesión.'
+      ).then(() => {
+        triggerWaitlistCheck(sessionId);
+      });
+    };
 
     const enrollPeopleInClass = (sessionId: string, personIds: string[]) => handleAction(
         enrollPeopleInClassAction(doc(collectionRefs!.sessions, sessionId), personIds),
@@ -617,6 +628,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             removeOneTimeAttendee,
             addJustifiedAbsence,
             addOneTimeAttendee,
+            removePersonFromSession,
             addToWaitlist,
             removeFromWaitlist,
             addActividad,

@@ -4,7 +4,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus, ChevronDown, Pointer } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus, ChevronDown, Pointer, AlertCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
@@ -34,7 +34,7 @@ import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Alert, AlertDescription, AlertTitle, AlertCircle } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
@@ -248,11 +248,10 @@ function SchedulePageContent() {
     }, []);
     
     const checkDate = useMemo(() => {
-      if (isToday) return today;
       const dayIndexMap: Record<Session['dayOfWeek'], number> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
       const sessionDayIndex = dayIndexMap[session.dayOfWeek];
       return nextDay(today, sessionDayIndex);
-    }, [isToday, session.dayOfWeek, today]);
+    }, [session.dayOfWeek, today]);
 
     const sessionStartTime = useMemo(() => {
         if (!isToday) return null;
@@ -310,7 +309,7 @@ function SchedulePageContent() {
 
     const waitlistCount = waitlistDetails?.length || 0;
     
-    const occupancyToday = isToday ? dailyOccupancy : enrolledCount;
+    const occupancyToday = dailyOccupancy;
     const canRecover = occupancyToday < spaceCapacity;
 
     if (recoveryMode && !canRecover) {
@@ -383,9 +382,9 @@ function SchedulePageContent() {
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                  <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
                     <div className="flex justify-between items-center text-xs font-semibold">
-                         <span className="text-muted-foreground">{isToday ? "Ocupación Hoy" : "Ocupación Fija"}</span>
+                         <span className="text-muted-foreground">Ocupación Fija</span>
                          <span className="text-foreground">
-                             {occupancyToday} / {spaceCapacity}
+                             {enrolledCount} / {spaceCapacity}
                          </span>
                     </div>
                     <Progress
@@ -397,11 +396,9 @@ function SchedulePageContent() {
                             isFull && "[&>div]:bg-red-500"
                         )}
                     />
-                    {isToday && (
-                        <p className="text-[11px] text-muted-foreground text-center">
-                            (Fijos: {enrolledCount - onVacationCount} | Recuperos: {recoveryCount} | Vacaciones: {onVacationCount})
-                        </p>
-                    )}
+                    <p className="text-[11px] text-muted-foreground text-center">
+                        Ocupación Hoy: {dailyOccupancy} (Rec: {recoveryCount} | Vac: {onVacationCount})
+                    </p>
                 </div>
                  <div className="grid grid-cols-2 gap-2 w-full">
                     {isToday ? (
@@ -419,19 +416,18 @@ function SchedulePageContent() {
                         </TooltipProvider>
                     ) : null}
 
-                    {!isFull && (
+                    {enrolledCount < spaceCapacity ? (
                         <>
                             <Button variant="secondary" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
                             <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
                         </>
+                    ) : (
+                       <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => setSessionForWaitlist(session)}>
+                            <ListPlus className="mr-2 h-4 w-4" />
+                            {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
+                        </Button>
                     )}
                 </div>
-                {isFull && (
-                    <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full" onClick={() => setSessionForWaitlist(session)}>
-                        <ListPlus className="mr-2 h-4 w-4" />
-                        {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
-                    </Button>
-                )}
             </CardFooter>
         </Card>
     );
