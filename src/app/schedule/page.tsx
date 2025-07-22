@@ -266,26 +266,22 @@ function SchedulePageContent() {
 
     const { dailyOccupancy, recoveryNames, onVacationNames } = useMemo(() => {
         const todayStr = format(today, 'yyyy-MM-dd');
-        const vacationCount = session.personIds.filter(pid => {
-            const p = people.find(p => p.id === pid);
-            return p && isPersonOnVacation(p, today);
-        }).length;
+        
+        const fixedEnrolledPeople = session.personIds
+            .map(pid => people.find(p => p.id === pid))
+            .filter((p): p is Person => !!p);
+
+        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
         
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
-        const oneTimeAttendeesCount = oneTimeAttendees.length;
         const recoveryNames = oneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
         
-        const fixedEnrolledCount = session.personIds.length;
-        const dailyOccupancy = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
+        const dailyOccupancy = activeFixedPeople.length + oneTimeAttendees.length;
         
-        const onVacationNames = session.personIds.map(id => {
-            const p = people.find(p => p.id === id);
-            if (p && isPersonOnVacation(p, today)) {
-                return p.name;
-            }
-            return null;
-        }).filter((name): name is string => name !== null);
+        const onVacationNames = fixedEnrolledPeople
+          .filter(p => isPersonOnVacation(p, today))
+          .map(p => p.name);
 
         return { dailyOccupancy, recoveryNames, onVacationNames };
     }, [session, people, isPersonOnVacation, attendance, today]);
@@ -301,7 +297,7 @@ function SchedulePageContent() {
                 }
                 return { ...entry, isProspect: true as const, entry: entry as WaitlistProspect };
             })
-            .filter((p): p is UnifiedWaitlistItem => !!p);
+            .filter((p): p is NonNullable<typeof p> => !!p);
      }, [session.waitlist, people]);
 
     const waitlistCount = waitlistDetails?.length || 0;
@@ -371,7 +367,7 @@ function SchedulePageContent() {
                 </Collapsible>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                 <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
+                <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
                     <div className="flex justify-between items-center">
                         <span className="text-xs font-semibold text-muted-foreground">{isToday ? "Ocupación Hoy" : "Ocupación Fija"}</span>
                         <span className="text-xs font-bold text-foreground">
@@ -388,8 +384,8 @@ function SchedulePageContent() {
                         )}
                     />
                 </div>
-                {isToday ? (
-                     <div className="w-full grid grid-cols-1">
+                <div className="w-full grid grid-cols-1">
+                    {isToday ? (
                         <TooltipProvider delayDuration={100}>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -402,13 +398,13 @@ function SchedulePageContent() {
                                 <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                        <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>{`Fija - ${enrolledCount}`}</Button>
-                        <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>{`Recupero - ${recoveryNames.length}`}</Button>
-                    </div>
-                )}
+                    ) : (
+                        <div className="grid grid-cols-2 gap-2 w-full">
+                            <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Fija - {enrolledCount}</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Recupero</Button>
+                        </div>
+                    )}
+                </div>
                  <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full" onClick={() => setSessionForWaitlist(session)}>
                     <ListPlus className="mr-2 h-4 w-4" />
                     {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
@@ -699,6 +695,7 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
+
 
 
 
