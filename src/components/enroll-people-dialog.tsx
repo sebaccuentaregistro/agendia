@@ -120,11 +120,9 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                     {filteredPeopleForDisplay.length > 0 ? filteredPeopleForDisplay.map(person => {
                       const isCurrentlyEnrolled = form.getValues('personIds').includes(person.id);
                       
-                      const effectiveClassCount = isCurrentlyEnrolled
-                        ? person.currentWeeklyClasses
-                        : person.currentWeeklyClasses + 1;
+                      const effectiveClassCount = person.currentWeeklyClasses;
                       
-                      const hasReachedLimit = person.weeklyClassLimit !== undefined && effectiveClassCount > person.weeklyClassLimit;
+                      const hasReachedLimit = person.weeklyClassLimit !== undefined && effectiveClassCount >= person.weeklyClassLimit;
 
                       return (
                         <FormField
@@ -158,7 +156,7 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                                   {person.name}
                                   {person.weeklyClassLimit !== undefined && (
                                     <Badge variant={hasReachedLimit ? "destructive" : "secondary"}>
-                                        {isCurrentlyEnrolled ? person.currentWeeklyClasses : person.currentWeeklyClasses + 1}/{person.weeklyClassLimit} clases
+                                        {person.currentWeeklyClasses}/{person.weeklyClassLimit} clases
                                     </Badge>
                                   )}
                                 </FormLabel>
