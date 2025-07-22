@@ -167,12 +167,11 @@ function DashboardPageContent() {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendeeIds = attendanceRecord?.oneTimeAttendees || [];
         const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.includes(p.id));
-        const oneTimeAttendeesCount = oneTimeAttendees.length;
         
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
         const vacationingPeople = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today));
         
-        const enrolledCount = (fixedEnrolledPeople.length - vacationingPeople.length) + oneTimeAttendeesCount;
+        const enrolledCount = (fixedEnrolledPeople.length - vacationingPeople.length) + oneTimeAttendees.length;
 
         return {
           ...session,
@@ -247,7 +246,7 @@ function DashboardPageContent() {
       onVacationCount,
       pendingRecoveryCount,
       todaysSessions,
-      todayName,
+      todayName: currentTodayName,
       hasOverdue: overdueCount > 0,
       hasOnVacation: onVacationCount > 0,
       hasPendingRecovery: pendingRecoveryCount > 0,
@@ -564,6 +563,7 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
 
 
