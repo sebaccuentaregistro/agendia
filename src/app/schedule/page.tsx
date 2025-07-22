@@ -29,7 +29,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format, startOfDay, nextDay } from 'date-fns';
+import { format, startOfDay, nextDay, Day } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -250,7 +250,7 @@ function SchedulePageContent() {
     const checkDate = useMemo(() => {
       const dayIndexMap: Record<Session['dayOfWeek'], number> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
       const sessionDayIndex = dayIndexMap[session.dayOfWeek];
-      return nextDay(today, sessionDayIndex);
+      return nextDay(today, sessionDayIndex as Day);
     }, [session.dayOfWeek, today]);
 
     const sessionStartTime = useMemo(() => {
