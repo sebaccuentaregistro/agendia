@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -277,10 +276,11 @@ function SchedulePageContent() {
 
       // Validate one-time attendees to prevent counting "ghosts"
       const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
-        .filter(id => people.some(p => p.id === id));
+        .map(id => people.find(p => p.id === id))
+        .filter((p): p is Person => !!p);
         
       const recoveryCount = validOneTimeAttendees.length;
-      const oneTimeNames = validOneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
+      const oneTimeNames = validOneTimeAttendees.map(p => p.name);
 
       const dailyOccupancy = activeFixedPeople.length + recoveryCount;
       
@@ -392,31 +392,33 @@ function SchedulePageContent() {
                 </div>
                 <div className="grid grid-cols-2 gap-2 w-full">
                     {isToday ? (
-                        <TooltipProvider delayDuration={100}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <span className="w-full col-span-2" tabIndex={0}>
-                                        <Button variant="secondary" size="sm" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed} className="w-full">
-                                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
-                                        </Button>
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                        <>
+                            <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <span className="w-full col-span-2" tabIndex={0}>
+                                            <Button variant="secondary" size="sm" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed} className="w-full">
+                                                <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
+                                            </Button>
+                                        </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                            {!isFull && (
+                                <>
+                                    <Button variant="secondary" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
+                                    <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
+                                </>
+                            )}
+                        </>
                     ) : (
                         <>
-                           <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
+                           <Button variant="secondary" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
                            <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
                         </>
                     )}
                 </div>
-                 {isToday && !isFull && (
-                    <div className="grid grid-cols-2 gap-2 w-full">
-                       <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
-                       <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
-                    </div>
-                )}
                  <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full" onClick={() => setSessionForWaitlist(session)}>
                     <ListPlus className="mr-2 h-4 w-4" />
                     {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
@@ -707,3 +709,6 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
+
+
+    
