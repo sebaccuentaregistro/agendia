@@ -301,7 +301,6 @@ function SchedulePageContent() {
                 return { ...entry, isProspect: true as const, entry: entry };
             })
             .filter((p): p is UnifiedWaitlistItem => !!p);
-        return details;
      }, [session.waitlist, people]);
 
     const waitlistCount = waitlistDetails.length;
@@ -362,7 +361,7 @@ function SchedulePageContent() {
                 </Collapsible>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                {isToday && (
+                {isToday ? (
                      <div className="w-full">
                         <p className="text-xs text-center font-bold mb-1 text-primary">Ocupación Hoy</p>
                         <div className="grid grid-cols-2 gap-2">
@@ -381,8 +380,7 @@ function SchedulePageContent() {
                             </TooltipProvider>
                         </div>
                     </div>
-                )}
-                {!isToday && (
+                ) : (
                     <div className="grid grid-cols-2 gap-2 w-full">
                         <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>{`Fija - ${enrolledCount}`}</Button>
                         <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>{`Recupero - ${recoveryNames.length}`}</Button>
