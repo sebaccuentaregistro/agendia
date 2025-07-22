@@ -71,7 +71,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
-  const eligiblePeople = useMemo(() => {
+  const { preselectedPerson, otherEligiblePeople } = useMemo(() => {
     const balances: Record<string, number> = {};
     people.forEach(p => (balances[p.id] = 0));
 
@@ -84,15 +84,16 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
       });
     });
 
-    return people
+    const preselected = preselectedPersonId ? people.find(p => p.id === preselectedPersonId) : null;
+    const others = people
       .filter(person => {
         const hasCredits = balances[person.id] > 0;
-        const isPreselected = person.id === preselectedPersonId;
-        // Include if they have credits AND are not the one preselected.
-        // The preselected person is handled by the form's default value.
-        return hasCredits && !isPreselected;
+        const isNotPreselected = person.id !== preselectedPersonId;
+        return hasCredits && isNotPreselected;
       })
       .sort((a, b) => a.name.localeCompare(b.name));
+      
+    return { preselectedPerson: preselected, otherEligiblePeople: others };
   }, [people, attendance, preselectedPersonId]);
 
 
@@ -171,22 +172,26 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                         field.onChange(value);
                                     }} 
                                     value={field.value} 
-                                    disabled={!selectedDate || isFull || !!preselectedPersonId}
+                                    disabled={!selectedDate || isFull}
                                 >
                                     <FormControl>
                                         <SelectTrigger>
-                                            <SelectValue placeholder={preselectedPersonId ? people.find(p => p.id === preselectedPersonId)?.name : "Selecciona una persona"} />
+                                            <SelectValue placeholder="Selecciona una persona" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {eligiblePeople.length > 0 ? (
-                                          eligiblePeople.map(person => (
+                                        {preselectedPerson && (
+                                            <SelectItem key={preselectedPerson.id} value={preselectedPerson.id}>
+                                                {preselectedPerson.name}
+                                            </SelectItem>
+                                        )}
+                                        {otherEligiblePeople.map(person => (
                                             <SelectItem key={person.id} value={person.id}>
                                               {person.name}
                                             </SelectItem>
-                                          ))
-                                        ) : (
-                                          !preselectedPersonId && <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
+                                        ))}
+                                        {!preselectedPerson && otherEligiblePeople.length === 0 && (
+                                            <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
                                     </SelectContent>
                                 </Select>
