@@ -91,11 +91,19 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
             {opportunities.map(({ session, actividadName, waitlist, availableSlots }) => {
                 const space = spaces.find(s => s.id === session.spaceId);
                 const capacity = space?.capacity || 0;
-                const isFull = session.personIds.length >= capacity;
-
+                
+                // A fixed enrollment is only possible if there is at least one fixed slot available.
+                const canEnrollFixed = availableSlots.fixed > 0;
+                
                 return (
                     <div key={session.id} className="p-3 rounded-lg bg-primary/10">
                         <h4 className="font-bold text-primary mb-2">Cupo en {actividadName} ({session.dayOfWeek} {session.time})</h4>
+                        
+                        <div className="mb-2 text-xs font-semibold text-primary-darker dark:text-primary-lighter space-y-1">
+                           {availableSlots.fixed > 0 && <div>- {availableSlots.fixed} Cupo(s) Fijo(s) Disponible(s)</div>}
+                           {availableSlots.temporary > 0 && <div>- {availableSlots.temporary} Cupo(s) Temporal(es) (por vacaciones)</div>}
+                        </div>
+
                         <div className="space-y-2">
                             {waitlist.map((person, index) => {
                                  const isProspect = 'isProspect' in person && person.isProspect;
@@ -117,7 +125,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
                                                     handleEnroll(e, session.id, person as Person);
                                                 }
                                             }}
-                                            disabled={isFull || (!isProspect && !people.some(p => p.id === (person as Person).id))}
+                                            disabled={!canEnrollFixed}
                                         >
                                             Inscribir
                                         </Button>
