@@ -42,6 +42,7 @@ import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Progress } from '@/components/ui/progress';
+import { ScheduleCard } from '@/components/schedule/schedule-card';
 
 
 const formSchema = z.object({
@@ -62,187 +63,6 @@ type UnifiedWaitlistItem =
   | (Person & { isProspect: false; entry: string })
   | (WaitlistProspect & { isProspect: true; entry: WaitlistProspect });
 
-
-function SessionCard({ session }: { session: Session }) {
-    const { specialists, actividades, spaces, levels, people, isPersonOnVacation, attendance } = useStudio();
-    const { specialist, actividad, space, level } = useMemo(() => {
-        const specialist = specialists.find((i) => i.id === session.instructorId);
-        const actividad = actividades.find((s) => s.id === session.actividadId);
-        const space = spaces.find((s) => s.id === session.spaceId);
-        const level = levels.find(l => l.id === session.levelId);
-        return { specialist, actividad, space, level };
-    }, [session, specialists, actividades, spaces, levels]);
-
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
-    const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
-    const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
-    const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
-    const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
-    const [sessionForOneTime, setSessionForOneTime] = useState<Session | null>(null);
-    const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
-    const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
-    const [sessionForStudentsSheet, setSessionForStudentsSheet] = useState<Session | null>(null);
-
-    const searchParams = useSearchParams();
-    const { deleteSession } = useStudio();
-
-    const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
-    });
-
-    const handleEdit = (session: Session) => {
-        // This should probably open a dialog defined in the parent page
-        // to avoid duplicating state logic here.
-        // For now, let's assume parent handles this.
-        // This card should not manage its own dialog state for editing.
-    };
-
-    const handleDelete = () => {
-        if (sessionForDelete) {
-            deleteSession(sessionForDelete.id);
-            setSessionForDelete(null);
-        }
-    };
-  
-    const handleOpenOneTime = (session: Session) => {
-        // Also handled by parent
-    };
-
-    const { dailyOccupancy, recoveryCount, onVacationCount } = useMemo(() => {
-        const today = startOfDay(new Date());
-        const dayIndexMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
-        const sessionDayIndex = dayIndexMap[session.dayOfWeek];
-        const checkDate = nextDay(today, sessionDayIndex);
-        const dateStrToUse = format(checkDate, 'yyyy-MM-dd');
-
-        const fixedEnrolledPeople = session.personIds
-            .map(pid => people.find(p => p.id === pid))
-            .filter((p): p is Person => !!p);
-
-        const vacationing = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, checkDate));
-        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, checkDate));
-        
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStrToUse);
-        const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
-            .map(id => people.find(p => p.id === id))
-            .filter((p): p is Person => !!p);
-
-        return {
-            dailyOccupancy: activeFixedPeople.length + validOneTimeAttendees.length,
-            recoveryCount: validOneTimeAttendees.length,
-            onVacationCount: vacationing.length,
-        };
-    }, [session, people, isPersonOnVacation, attendance]);
-    
-    const waitlistCount = session.waitlist?.length || 0;
-    const enrolledCount = session.personIds.length;
-    const spaceCapacity = space?.capacity ?? 0;
-    
-    const utilization = spaceCapacity > 0 ? (dailyOccupancy / spaceCapacity) * 100 : 0;
-    const isFull = utilization >= 100;
-    const isNearlyFull = utilization >= 80 && !isFull;
-    
-    const canRecover = dailyOccupancy < spaceCapacity;
-    const recoveryMode = searchParams.get('recoveryMode') === 'true';
-    if (recoveryMode && !canRecover) return null;
-
-    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
-    const today = startOfDay(new Date());
-    const isToday = session.dayOfWeek === dayMap[today.getDay()];
-
-    const [now, setNow] = useState(new Date());
-    useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
-        return () => clearInterval(timer);
-    }, []);
-
-    const sessionStartTime = useMemo(() => {
-        if (!isToday) return null;
-        const [hour, minute] = session.time.split(':').map(Number);
-        const startTime = new Date(today);
-        startTime.setHours(hour, minute, 0, 0);
-        return startTime;
-    }, [isToday, session.time, today]);
-
-    const attendanceWindowStart = useMemo(() => {
-        return sessionStartTime ? new Date(sessionStartTime.getTime() - 20 * 60 * 1000) : null;
-    }, [sessionStartTime]);
-
-    const isAttendanceAllowed = attendanceWindowStart ? now >= attendanceWindowStart : false;
-    const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes.";
-
-    return (
-        <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-            <CardHeader className="p-4 pb-2">
-                <div className="flex items-start justify-between">
-                    <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{actividad?.name}</CardTitle>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => (document.dispatchEvent(new CustomEvent('edit-session', { detail: session })))}><Pencil className="mr-2 h-4 w-4" />Editar Sesión</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => (document.dispatchEvent(new CustomEvent('notify-session', { detail: session })))}><Send className="mr-2 h-4 w-4" />Notificar Asistentes</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => (document.dispatchEvent(new CustomEvent('delete-session', { detail: session })))} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar Sesión</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                </div>
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                    <p className="font-semibold">{session.dayOfWeek}, {formatTime(session.time)}</p>
-                </div>
-            </CardHeader>
-            <CardContent className="p-4 pt-2 flex-grow space-y-4">
-                <div className="space-y-1 text-sm">
-                    <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
-                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
-                    {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
-                </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => document.dispatchEvent(new CustomEvent('view-students', { detail: session }))}>
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                        <span className="text-muted-foreground">Ocupación Fija</span>
-                        <span className="text-foreground">{enrolledCount} / {spaceCapacity}</span>
-                    </div>
-                    <Progress value={(enrolledCount / spaceCapacity) * 100} className="h-1.5" />
-                    <p className="text-[11px] text-muted-foreground text-center">
-                        Ocupación Hoy: {dailyOccupancy} (Rec: {recoveryCount} | Vac: {onVacationCount})
-                    </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2 w-full">
-                    {isToday ? (
-                        <TooltipProvider delayDuration={100}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <span className="w-full col-span-2" tabIndex={0}>
-                                        <Button variant="secondary" size="sm" onClick={() => document.dispatchEvent(new CustomEvent('take-attendance', { detail: session }))} disabled={!isAttendanceAllowed} className="w-full">
-                                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
-                                        </Button>
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    ) : null}
-
-                    {enrolledCount < spaceCapacity ? (
-                        <>
-                            <Button variant="secondary" size="sm" onClick={() => document.dispatchEvent(new CustomEvent('enroll-people', { detail: session }))}>Inscripción Fija</Button>
-                            <Button variant="outline" size="sm" onClick={() => document.dispatchEvent(new CustomEvent('one-time-attendee', { detail: session }))}>Inscripción Recupero</Button>
-                        </>
-                    ) : (
-                       <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => document.dispatchEvent(new CustomEvent('manage-waitlist', { detail: session }))}>
-                            <ListPlus className="mr-2 h-4 w-4" />
-                            {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
-                        </Button>
-                    )}
-                </div>
-            </CardFooter>
-        </Card>
-    );
-}
 
 function SchedulePageContent() {
   const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading } = useStudio();
@@ -277,30 +97,24 @@ function SchedulePageContent() {
     const handleEdit = (e: Event) => handleEditSession((e as CustomEvent).detail);
     const handleDelete = (e: Event) => setSessionForDelete((e as CustomEvent).detail);
     const handleEnroll = (e: Event) => setSessionForEnrollment((e as CustomEvent).detail);
-    const handleAttendance = (e: Event) => setSessionForAttendance((e as CustomEvent).detail);
     const handleOneTime = (e: Event) => handleOpenOneTime((e as CustomEvent).detail);
     const handleWaitlist = (e: Event) => setSessionForWaitlist((e as CustomEvent).detail);
     const handleNotify = (e: Event) => setSessionForNotification((e as CustomEvent).detail);
-    const handleViewStudents = (e: Event) => setSessionForStudentsSheet((e as CustomEvent).detail);
     
     document.addEventListener('edit-session', handleEdit);
     document.addEventListener('delete-session', handleDelete);
     document.addEventListener('enroll-people', handleEnroll);
-    document.addEventListener('take-attendance', handleAttendance);
     document.addEventListener('one-time-attendee', handleOneTime);
     document.addEventListener('manage-waitlist', handleWaitlist);
     document.addEventListener('notify-session', handleNotify);
-    document.addEventListener('view-students', handleViewStudents);
 
     return () => {
         document.removeEventListener('edit-session', handleEdit);
         document.removeEventListener('delete-session', handleDelete);
         document.removeEventListener('enroll-people', handleEnroll);
-        document.removeEventListener('take-attendance', handleAttendance);
         document.removeEventListener('one-time-attendee', handleOneTime);
         document.removeEventListener('manage-waitlist', handleWaitlist);
         document.removeEventListener('notify-session', handleNotify);
-        document.removeEventListener('view-students', handleViewStudents);
     };
   }, []);
   
@@ -527,7 +341,12 @@ function SchedulePageContent() {
               ) : filteredAndSortedSessions.length > 0 ? (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {filteredAndSortedSessions.map((session) => (
-                    <SessionCard key={session.id} session={session} />
+                    <ScheduleCard 
+                        key={session.id} 
+                        session={session}
+                        onSessionClick={setSessionForStudentsSheet}
+                        onAttendanceClick={setSessionForAttendance}
+                    />
                   ))}
                 </div>
               ) : (
