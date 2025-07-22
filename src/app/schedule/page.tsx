@@ -318,6 +318,9 @@ function SchedulePageContent() {
             availableSpots: {
                 fixed: fixedSpotsAvailable,
                 temporary: vacationCount,
+            },
+            debug: {
+                oneTimeAttendeesCount
             }
         };
     });
@@ -614,7 +617,7 @@ function SchedulePageContent() {
                       sessionsWithDetails.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
-                      const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots, fixedEnrolledCount } = session;
+                      const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots, fixedEnrolledCount, debug } = session;
                       const isFixedFull = fixedEnrolledCount >= capacity;
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
@@ -711,6 +714,9 @@ function SchedulePageContent() {
                                     className={cn("h-2 rounded-full", dailyEnrolledCount >= capacity ? "bg-pink-500" : "bg-green-500")}
                                     style={{ width: `${capacity > 0 ? (dailyEnrolledCount / capacity) * 100 : 0}%` }}
                                     />
+                                </div>
+                                <div className="text-xs text-red-500 font-mono mt-1">
+                                    DEBUG: Fijos({fixedEnrolledCount}) - Vac({vacationCount}) + Rec({debug.oneTimeAttendeesCount}) = {dailyEnrolledCount}
                                 </div>
                                {waitlistDetails.length > 0 && (
                                 <div className="pt-2 text-xs text-muted-foreground">
