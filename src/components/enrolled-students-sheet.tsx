@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -8,6 +9,11 @@ import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Session, Person } from '@/types';
 import { format } from 'date-fns';
+import { Badge } from '@/components/ui/badge';
+
+type EnrolledPerson = Person & {
+    enrollmentStatus: 'Fijo' | 'Recupero';
+};
 
 export function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
   const { people, actividades, specialists, spaces, attendance, isPersonOnVacation } = useStudio();
@@ -25,24 +31,34 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
     const todayStr = format(today, 'yyyy-MM-dd');
     
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-    const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
+    const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
     
-    const regularIds = session.personIds.filter(pid => {
+    const regularIds = new Set(session.personIds.filter(pid => {
         const person = people.find(p => p.id === pid);
         return person && !isPersonOnVacation(person, today);
+    }));
+
+    const allAttendees: EnrolledPerson[] = [];
+
+    people.forEach(person => {
+        const isRegular = regularIds.has(person.id);
+        const isOneTime = oneTimeAttendeeIds.has(person.id);
+
+        if(isRegular) {
+            allAttendees.push({ ...person, enrollmentStatus: 'Fijo' });
+        } else if (isOneTime) {
+            allAttendees.push({ ...person, enrollmentStatus: 'Recupero' });
+        }
     });
     
-    const allEnrolledIds = Array.from(new Set([...regularIds, ...oneTimeIds]));
-    
-    const enrolledPeople = people
-      .filter(p => allEnrolledIds.includes(p.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-
     const specialist = specialists.find((i) => i.id === session.instructorId);
     const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
     
-    return { enrolledPeople, sessionDetails: { specialist, actividad, space } };
+    return { 
+        enrolledPeople: allAttendees.sort((a, b) => a.name.localeCompare(b.name)),
+        sessionDetails: { specialist, actividad, space } 
+    };
   }, [isMounted, people, session, attendance, isPersonOnVacation, specialists, actividades, spaces]);
 
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
