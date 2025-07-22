@@ -312,7 +312,10 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
                     </div>
                 </CardContent>
                 
-                <CardFooter className="grid grid-cols-2 gap-2 p-2 border-t mt-auto">
+                 <CardFooter className={cn(
+                    "grid gap-2 p-2 border-t mt-auto",
+                    recoveryCredits.length > 0 ? "grid-cols-3" : "grid-cols-2"
+                 )}>
                     <Button
                         onClick={() => onManageEnrollments(person)}
                         variant="outline"
@@ -321,6 +324,14 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
                         <ClipboardList className="mr-2 h-4 w-4" />
                         Inscribir
                     </Button>
+                    {recoveryCredits.length > 0 && (
+                        <Button asChild variant="secondary" className="w-full font-semibold">
+                            <Link href={`/schedule?recoveryMode=true&personId=${person.id}`}>
+                                <CalendarClock className="mr-2 h-4 w-4" />
+                                Recuperar
+                            </Link>
+                        </Button>
+                    )}
                     <Button onClick={() => onRecordPayment(person)} className="w-full font-bold">
                         <DollarSign className="mr-2 h-4 w-4" />
                         Registrar Pago
