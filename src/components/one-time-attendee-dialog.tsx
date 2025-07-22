@@ -15,7 +15,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useStudio } from '@/context/StudioContext';
 import { Session } from '@/types';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, User } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -35,9 +35,10 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     resolver: zodResolver(oneTimeAttendeeSchema),
     defaultValues: {
         personId: preselectedPersonId || undefined,
+        date: undefined,
     }
   });
-
+  
   useEffect(() => {
     if (preselectedPersonId) {
       form.setValue('personId', preselectedPersonId, { shouldValidate: true });
@@ -82,19 +83,19 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     people.forEach(p => (balances[p.id] = 0));
 
     attendance.forEach(record => {
-      record.justifiedAbsenceIds?.forEach(personId => {
+      (record.justifiedAbsenceIds || []).forEach(personId => {
         if (balances[personId] !== undefined) balances[personId]++;
       });
-      record.oneTimeAttendees?.forEach(personId => {
+      (record.oneTimeAttendees || []).forEach(personId => {
         if (balances[personId] !== undefined) balances[personId]--;
       });
     });
 
     return people
-      .filter(person => balances[person.id] > 0)
+      .filter(person => (balances[person.id] > 0) || person.id === preselectedPersonId)
       .sort((a, b) => a.name.localeCompare(b.name));
       
-  }, [people, attendance]);
+  }, [people, attendance, preselectedPersonId]);
 
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
