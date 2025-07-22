@@ -319,7 +319,7 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
                         className="w-full font-semibold"
                     >
                         <ClipboardList className="mr-2 h-4 w-4" />
-                        Horarios
+                        Inscribir
                     </Button>
                     <Button onClick={() => onRecordPayment(person)} className="w-full font-bold">
                         <DollarSign className="mr-2 h-4 w-4" />
