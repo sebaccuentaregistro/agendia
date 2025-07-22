@@ -306,7 +306,7 @@ function SchedulePageContent() {
         const waitlistCount = waitlistDetails.length;
         
         const fixedSpotsAvailable = Math.max(0, capacity - fixedEnrolledCount);
-        const temporarySpotsAvailable = Math.max(0, vacationCount - oneTimeAttendeesCount);
+        const temporarySpotsAvailable = Math.max(0, vacationCount);
         const totalAvailableForRecovery = fixedSpotsAvailable + temporarySpotsAvailable;
         
         return {
@@ -616,7 +616,7 @@ function SchedulePageContent() {
                       sessionsWithDetails.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
-                      const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots } = session;
+                      const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots, fixedEnrolledCount } = session;
                       const hasOpenings = availableSpots.fixed > 0 || availableSpots.total > 0;
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
@@ -956,6 +956,7 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
 
 
