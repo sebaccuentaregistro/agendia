@@ -290,19 +290,31 @@ function SchedulePageContent() {
         const dailyEnrolledCount = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
         
         const waitlistCount = session.waitlist?.length || 0;
+        const waitlistDetails = (session.waitlist || [])
+            .map(entry => {
+                if (typeof entry === 'string') {
+                    const person = people.find(p => p.id === entry);
+                    return person ? { ...person, isProspect: false as const } : null;
+                }
+                return { ...entry, isProspect: true as const };
+            })
+            .filter((p): p is NonNullable<typeof p> => p !== null);
 
         const fixedSpotsAvailable = Math.max(0, capacity - fixedEnrolledCount);
         const temporarySpotsAvailable = Math.max(0, vacationCount - oneTimeAttendeesCount);
+        const totalAvailableForRecovery = fixedSpotsAvailable + temporarySpotsAvailable;
         
         return {
             ...session,
             dailyEnrolledCount,
             fixedEnrolledCount,
             waitlistCount,
+            waitlistDetails,
             vacationCount,
             availableSpots: {
                 fixed: fixedSpotsAvailable,
                 temporary: temporarySpotsAvailable,
+                total: totalAvailableForRecovery,
             }
         };
     });
@@ -599,10 +611,9 @@ function SchedulePageContent() {
                       sessionsWithDetails.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
-                      const { dailyEnrolledCount, vacationCount, waitlistCount, availableSpots } = session;
+                      const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots } = session;
                       const hasOpenings = availableSpots.fixed > 0 || availableSpots.temporary > 0;
-                      const totalAvailableForRecovery = availableSpots.fixed + availableSpots.temporary;
-
+                      
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
 
@@ -611,7 +622,7 @@ function SchedulePageContent() {
                           key={session.id} 
                           className={cn(
                             "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden",
-                            recoveryMode && totalAvailableForRecovery > 0 && "border-primary/40 hover:border-primary"
+                            recoveryMode && availableSpots.total > 0 && "border-primary/40 hover:border-primary"
                           )}
                         >
                           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
@@ -677,21 +688,14 @@ function SchedulePageContent() {
                               </div>
                             </div>
                             <div className="space-y-1">
-                               <div className="flex items-center justify-between">
-                                  <div
-                                      className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
-                                      onClick={() => setSessionForRoster(session)}
-                                    >
-                                    <Users className="h-4 w-4" />
-                                    <span>
-                                        {dailyEnrolledCount}/{capacity} hoy
-                                    </span>
-                                    {waitlistCount > 0 && (
-                                        <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-700 dark:text-amber-400 bg-amber-500/10 text-xs">
-                                            {waitlistCount} en espera
-                                        </Badge>
-                                    )}
-                                  </div>
+                               <div
+                                  className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
+                                  onClick={() => setSessionForRoster(session)}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Users className="h-4 w-4" />
+                                        <span>{dailyEnrolledCount}/{capacity} hoy</span>
+                                    </div>
                                </div>
                               <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
                                 <div
@@ -699,6 +703,12 @@ function SchedulePageContent() {
                                   style={{ width: `${capacity > 0 ? (dailyEnrolledCount / capacity) * 100 : 0}%` }}
                                 />
                               </div>
+                               {waitlistDetails.length > 0 && (
+                                <div className="pt-2 text-xs text-muted-foreground">
+                                    <span className="font-semibold">En espera: </span>
+                                    {waitlistDetails.map(p => p.name).join(', ')}
+                                </div>
+                               )}
                             </div>
                           </CardContent>
                           <CardFooter className="flex flex-col gap-2 p-3 mt-auto border-t border-slate-100 dark:border-zinc-700/80">
@@ -722,9 +732,9 @@ function SchedulePageContent() {
                                         <Users className="mr-2 h-4 w-4" />
                                         Fija ({availableSpots.fixed})
                                     </Button>
-                                     <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={totalAvailableForRecovery <= 0}>
+                                     <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.total <= 0}>
                                         <CalendarClock className="mr-2 h-4 w-4" />
-                                        Recupero ({totalAvailableForRecovery})
+                                        Recupero ({availableSpots.total})
                                     </Button>
                                 </div>
                                 {!hasOpenings && (
@@ -818,10 +828,10 @@ function SchedulePageContent() {
                                                         <DropdownMenuItem onSelect={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
                                                           <ClipboardCheck className="mr-2 h-4 w-4" />Asistencia
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={isFullForFixed}>
+                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={session.availableSpots.fixed <= 0}>
                                                           <Users className="mr-2 h-4 w-4" />Inscripción Fija
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary <= 0}>
+                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.total <= 0}>
                                                           <CalendarDays className="mr-2 h-4 w-4" />Inscripción Recupero
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
@@ -907,4 +917,5 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
