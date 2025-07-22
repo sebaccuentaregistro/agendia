@@ -273,11 +273,11 @@ function SchedulePageContent() {
         
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        const oneTimeAttendeesCount = oneTimeAttendees.length;
         const recoveryNames = oneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
-        const recoveryCount = recoveryNames.length;
         
         const fixedEnrolledCount = session.personIds.length;
-        const dailyOccupancy = (fixedEnrolledCount - vacationCount) + recoveryCount;
+        const dailyOccupancy = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
         
         const onVacationNames = session.personIds.map(id => {
             const p = people.find(p => p.id === id);
@@ -296,9 +296,9 @@ function SchedulePageContent() {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
                     if (!person) return null;
-                    return { ...person, isProspect: false as const, entry };
+                    return { ...person, isProspect: false as const, entry: entry };
                 }
-                return { ...entry, isProspect: true as const, entry };
+                return { ...entry, isProspect: true as const, entry: entry };
             })
             .filter((p): p is UnifiedWaitlistItem => !!p);
         return details;
