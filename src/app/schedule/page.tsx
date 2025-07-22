@@ -291,9 +291,8 @@ function SchedulePageContent() {
         
         const waitlistCount = session.waitlist?.length || 0;
 
-        // Calculate available spots
-        const fixedSpotsAvailable = capacity - fixedEnrolledCount;
-        const temporarySpotsAvailable = vacationCount - oneTimeAttendeesCount;
+        const fixedSpotsAvailable = Math.max(0, capacity - fixedEnrolledCount);
+        const temporarySpotsAvailable = Math.max(0, vacationCount - oneTimeAttendeesCount);
         
         return {
             ...session,
@@ -302,8 +301,8 @@ function SchedulePageContent() {
             waitlistCount,
             vacationCount,
             availableSpots: {
-                fixed: fixedSpotsAvailable > 0 ? fixedSpotsAvailable : 0,
-                temporary: temporarySpotsAvailable > 0 ? temporarySpotsAvailable : 0,
+                fixed: fixedSpotsAvailable,
+                temporary: temporarySpotsAvailable,
             }
         };
     });
@@ -601,8 +600,8 @@ function SchedulePageContent() {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
                       const { dailyEnrolledCount, vacationCount, waitlistCount, availableSpots } = session;
-                      const isFullForFixed = availableSpots.fixed <= 0;
                       const hasOpenings = availableSpots.fixed > 0 || availableSpots.temporary > 0;
+                      const totalAvailableForRecovery = availableSpots.fixed + availableSpots.temporary;
 
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
@@ -612,7 +611,7 @@ function SchedulePageContent() {
                           key={session.id} 
                           className={cn(
                             "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden",
-                            recoveryMode && availableSpots.temporary > 0 && "border-primary/40 hover:border-primary"
+                            recoveryMode && totalAvailableForRecovery > 0 && "border-primary/40 hover:border-primary"
                           )}
                         >
                           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
@@ -719,13 +718,13 @@ function SchedulePageContent() {
                                     </Tooltip>
                                 </TooltipProvider>
                                 <div className="grid grid-cols-2 gap-2 w-full">
-                                    <Button className="w-full font-bold" onClick={() => setSessionToManage(session)} disabled={isFullForFixed}>
+                                    <Button className="w-full font-bold" onClick={() => setSessionToManage(session)} disabled={availableSpots.fixed <= 0}>
                                         <Users className="mr-2 h-4 w-4" />
                                         Fija ({availableSpots.fixed})
                                     </Button>
-                                     <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.temporary <= 0}>
+                                     <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={totalAvailableForRecovery <= 0}>
                                         <CalendarClock className="mr-2 h-4 w-4" />
-                                        Recupero ({availableSpots.temporary})
+                                        Recupero ({totalAvailableForRecovery})
                                     </Button>
                                 </div>
                                 {!hasOpenings && (
