@@ -8,7 +8,7 @@ import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserP
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import type { Person, Session, WaitlistEntry } from '@/types';
+import type { Person, Session, WaitlistEntry, WaitlistProspect } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -55,7 +55,9 @@ const formatTime = (time: string) => {
     return time;
 };
 
-type UnifiedWaitlistItem = (Person & { isProspect: false; entry: WaitlistEntry; }) | ({ isProspect: true; entry: WaitlistEntry; } & WaitlistEntry);
+type UnifiedWaitlistItem =
+  | (Person & { isProspect: false; entry: string })
+  | (WaitlistProspect & { entry: WaitlistProspect });
 
 
 function SchedulePageContent() {
@@ -297,16 +299,15 @@ function SchedulePageContent() {
             .map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
-                    return person ? { ...person, isProspect: false, entry } : null;
+                    return person ? { ...person, isProspect: false as const, entry } : null;
                 }
-                return { ...entry, isProspect: true, entry };
+                return { ...entry, isProspect: true as const, entry };
             })
             .filter((p): p is NonNullable<typeof p> => p !== null);
 
         const waitlistCount = waitlistDetails.length;
         
         const fixedSpotsAvailable = Math.max(0, capacity - fixedEnrolledCount);
-        const temporarySpotsAvailableForRecovery = vacationCount;
         
         return {
             ...session,
@@ -317,7 +318,7 @@ function SchedulePageContent() {
             vacationCount,
             availableSpots: {
                 fixed: fixedSpotsAvailable,
-                temporary: temporarySpotsAvailableForRecovery,
+                temporary: vacationCount,
             }
         };
     });
@@ -744,7 +745,7 @@ function SchedulePageContent() {
                                     </Tooltip>
                                 </TooltipProvider>
                                  <div className="grid grid-cols-2 gap-2 w-full">
-                                    <Button className="w-full font-bold" onClick={() => setSessionToManage(session)} disabled={availableSpots.fixed <= 0}>
+                                    <Button className="w-full font-bold" onClick={() => setSessionToManage(session)} disabled={isFixedFull}>
                                         Fija ({availableSpots.fixed})
                                     </Button>
                                     <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.temporary <= 0}>
@@ -842,7 +843,7 @@ function SchedulePageContent() {
                                                         <DropdownMenuItem onSelect={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
                                                           <ClipboardCheck className="mr-2 h-4 w-4" />Asistencia
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={session.availableSpots.fixed <= 0}>
+                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={isFullForFixed}>
                                                           <Users className="mr-2 h-4 w-4" />Inscripción Fija
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary <= 0}>
