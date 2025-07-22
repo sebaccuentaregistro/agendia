@@ -264,15 +264,15 @@ function SchedulePageContent() {
 
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
 
-    const { dailyOccupancy, recoveryCount, onVacationCount } = useMemo(() => {
+    const { dailyOccupancy, recoveryCount, onVacationCount, vacationingPeople } = useMemo(() => {
         const todayStr = format(today, 'yyyy-MM-dd');
         
         const fixedEnrolledPeople = session.personIds
             .map(pid => people.find(p => p.id === pid))
             .filter((p): p is Person => !!p);
 
+        const vacationing = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today));
         const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
-        const onVacationCount = fixedEnrolledPeople.length - activeFixedPeople.length;
         
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         
@@ -284,7 +284,7 @@ function SchedulePageContent() {
 
         const dailyOccupancy = activeFixedPeople.length + recoveryCount;
         
-        return { dailyOccupancy, recoveryCount, onVacationCount };
+        return { dailyOccupancy, recoveryCount, onVacationCount: vacationing.length, vacationingPeople: vacationing };
     }, [session, people, isPersonOnVacation, attendance, today]);
     
     const waitlistDetails = useMemo(() => {
@@ -332,17 +332,43 @@ function SchedulePageContent() {
             <CardHeader className="p-4 pb-2">
                 <div className="flex items-start justify-between">
                     <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{actividad?.name}</CardTitle>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreHorizontal className="h-4 w-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleEdit(session)}><Pencil className="mr-2 h-4 w-4" />Editar Sesión</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => setSessionForNotification(session)}><Send className="mr-2 h-4 w-4" />Notificar Asistentes</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => setSessionForDelete(session)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar Sesión</DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                     <div className="flex items-center">
+                        {isToday && vacationingPeople.length > 0 && (
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-500 hover:bg-cyan-500/10">
+                                        <Plane className="h-4 w-4" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-60">
+                                    <div className="space-y-2">
+                                        <h4 className="font-medium leading-none">De Vacaciones Hoy</h4>
+                                        <ul className="text-sm text-muted-foreground list-disc pl-4">
+                                            {vacationingPeople.map(p => (
+                                                <li key={p.id}>
+                                                    {p.name}
+                                                    <span className="text-xs block">
+                                                        (hasta {p.vacationPeriods && p.vacationPeriods.length > 0 ? format(p.vacationPeriods[p.vacationPeriods.length-1].endDate, 'dd/MM/yy') : 'N/A'})
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300"><MoreHorizontal className="h-4 w-4" /></Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onSelect={() => handleEdit(session)}><Pencil className="mr-2 h-4 w-4" />Editar Sesión</DropdownMenuItem>
+                                <DropdownMenuItem onSelect={() => setSessionForNotification(session)}><Send className="mr-2 h-4 w-4" />Notificar Asistentes</DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={() => setSessionForDelete(session)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar Sesión</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
                 <div className="text-sm text-slate-600 dark:text-slate-400">
                     <p className="font-semibold">{session.dayOfWeek}, {formatTime(session.time)}</p>
