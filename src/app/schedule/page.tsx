@@ -371,10 +371,10 @@ function SchedulePageContent() {
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
-                {isToday && <div className="text-xs text-red-500 font-mono bg-red-500/10 p-1 rounded">{debugInfo}</div>}
+                {/* <div className="text-xs text-red-500 font-mono bg-red-500/10 p-1 rounded">{debugInfo}</div> */}
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
+                 <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
                     <div className="flex justify-between items-center text-xs font-semibold">
                          <span className="text-muted-foreground">{isToday ? "Ocupación Hoy" : "Ocupación Fija"}</span>
                          <span className="text-foreground">
@@ -407,8 +407,8 @@ function SchedulePageContent() {
                         </TooltipProvider>
                     ) : (
                         <div className="grid grid-cols-2 gap-2 w-full">
-                           <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>{`Fija - ${enrolledCount}`}</Button>
-                           <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>{`Recupero - ${recoveryNames.length}`}</Button>
+                           <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
+                           <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
                         </div>
                     )}
                 </div>
