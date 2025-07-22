@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { Button } from '@/components/ui/button';
@@ -287,11 +286,10 @@ function SchedulePageContent() {
         const attendanceRecordForToday = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendeesCount = attendanceRecordForToday?.oneTimeAttendees?.length || 0;
         
-        const fixedEnrolledCount = session.personIds.length;
-        const vacationCount = session.personIds.filter(pid => {
-            const person = people.find(p => p.id === pid);
-            return person && isPersonOnVacation(person, today);
-        }).length;
+        const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter(p => p);
+        const fixedEnrolledCount = fixedEnrolledPeople.length;
+
+        const vacationCount = fixedEnrolledPeople.filter(p => p && isPersonOnVacation(p, today)).length;
         
         const dailyEnrolledCount = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
         
@@ -962,3 +960,4 @@ export default function SchedulePage() {
   );
 }
 
+    
