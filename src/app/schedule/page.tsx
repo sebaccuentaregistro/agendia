@@ -276,8 +276,9 @@ function SchedulePageContent() {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
         const recoveryNames = oneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
+        const recoveryCount = oneTimeAttendees.length; // Correct way to count
         
-        const dailyOccupancy = activeFixedPeople.length + oneTimeAttendees.length;
+        const dailyOccupancy = activeFixedPeople.length + recoveryCount;
         
         const onVacationNames = fixedEnrolledPeople
           .filter(p => isPersonOnVacation(p, today))
@@ -293,11 +294,11 @@ function SchedulePageContent() {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
                     if (!person) return null;
-                    return { ...person, isProspect: false as const, entry: entry };
+                    return { ...person, isProspect: false as const, entry: entry as string };
                 }
                 return { ...entry, isProspect: true as const, entry: entry as WaitlistProspect };
             })
-            .filter((p): p is NonNullable<typeof p> => !!p);
+            .filter((p): p is UnifiedWaitlistItem => !!p);
      }, [session.waitlist, people]);
 
     const waitlistCount = waitlistDetails?.length || 0;
@@ -368,17 +369,17 @@ function SchedulePageContent() {
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
-                    <div className="flex justify-between items-center">
-                        <span className="text-xs font-semibold text-muted-foreground">{isToday ? "Ocupación Hoy" : "Ocupación Fija"}</span>
-                        <span className="text-xs font-bold text-foreground">
-                            {isToday ? dailyOccupancy : enrolledCount} / {spaceCapacity}
-                        </span>
+                    <div className="flex justify-between items-center text-xs font-semibold">
+                         <span className="text-muted-foreground">{isToday ? "Ocupación Hoy" : "Ocupación Fija"}</span>
+                         <span className="text-foreground">
+                             {isToday ? `${dailyOccupancy} / ${spaceCapacity}` : `${enrolledCount} / ${spaceCapacity}`}
+                         </span>
                     </div>
                     <Progress
                         value={utilization}
                         className={cn(
                             "h-1.5",
-                            !isNearlyFull && !isFull && "[&>div]:bg-green-500",
+                            !isFull && !isNearlyFull && "[&>div]:bg-green-500",
                             isNearlyFull && "[&>div]:bg-yellow-500",
                             isFull && "[&>div]:bg-red-500"
                         )}
@@ -400,8 +401,8 @@ function SchedulePageContent() {
                         </TooltipProvider>
                     ) : (
                         <div className="grid grid-cols-2 gap-2 w-full">
-                            <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Fija - {enrolledCount}</Button>
-                            <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Recupero</Button>
+                           <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Fija - {enrolledCount}</Button>
+                           <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Recupero</Button>
                         </div>
                     )}
                 </div>
@@ -695,6 +696,7 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
+
 
 
 
