@@ -167,7 +167,7 @@ export function TodaySessions({
                                 ? "text-amber-600 dark:text-amber-500" 
                                 : "text-foreground"
                             )}>
-                                {enrolledCount}/{capacity} anotados
+                                {enrolledCount}/{capacity} hoy
                             </p>
                             </div>
                             <TooltipProvider>
