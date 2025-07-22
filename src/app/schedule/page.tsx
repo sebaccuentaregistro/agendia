@@ -265,28 +265,31 @@ function SchedulePageContent() {
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
 
     const { dailyOccupancy, recoveryNames, onVacationNames } = useMemo(() => {
-        const todayStr = format(today, 'yyyy-MM-dd');
-        
-        const fixedEnrolledPeople = session.personIds
-            .map(pid => people.find(p => p.id === pid))
-            .filter((p): p is Person => !!p);
+      const todayStr = format(today, 'yyyy-MM-dd');
 
-        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
-        
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || []).filter(id => people.some(p => p.id === id));
-        
-        const recoveryCount = validOneTimeAttendees.length;
-        const oneTimeNames = validOneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
+      const fixedEnrolledPeople = session.personIds
+          .map(pid => people.find(p => p.id === pid))
+          .filter((p): p is Person => !!p);
 
-        const dailyOccupancy = activeFixedPeople.length + recoveryCount;
+      const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
+      
+      const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+
+      // Validate one-time attendees to prevent counting "ghosts"
+      const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
+        .filter(id => people.some(p => p.id === id));
         
-        const onVacationNames = fixedEnrolledPeople
-          .filter(p => isPersonOnVacation(p, today))
-          .map(p => p.name);
-          
-        return { dailyOccupancy, recoveryNames: oneTimeNames, onVacationNames };
-    }, [session, people, isPersonOnVacation, attendance, today]);
+      const recoveryCount = validOneTimeAttendees.length;
+      const oneTimeNames = validOneTimeAttendees.map(id => people.find(p => p.id === id)?.name || 'Desconocido');
+
+      const dailyOccupancy = activeFixedPeople.length + recoveryCount;
+      
+      const onVacationNames = fixedEnrolledPeople
+        .filter(p => isPersonOnVacation(p, today))
+        .map(p => p.name);
+        
+      return { dailyOccupancy, recoveryNames: oneTimeNames, onVacationNames };
+  }, [session, people, isPersonOnVacation, attendance, today]);
     
      const waitlistDetails = useMemo(() => {
         if (!session.waitlist) return [];
