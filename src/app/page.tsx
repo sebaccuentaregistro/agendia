@@ -165,16 +165,12 @@ function DashboardPageContent() {
       .filter(session => session.dayOfWeek === currentTodayName)
       .map(session => {
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
+        const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
         
-        // Correct Logic: Filter out people on vacation from their regular spot
-        const activeRegulars = session.personIds.filter(pid => {
-            const person = people.find(p => p.id === pid);
-            return person && !isPersonOnVacation(person, now);
-        });
+        const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
+        const vacationCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
         
-        // The total number of people attending today is the sum of active regulars and one-time attendees.
-        const enrolledCount = activeRegulars.length + oneTimeAttendees.length;
+        const enrolledCount = (fixedEnrolledPeople.length - vacationCount) + oneTimeAttendeesCount;
 
         return {
           ...session,
@@ -563,3 +559,4 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
