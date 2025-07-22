@@ -29,7 +29,7 @@ import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -271,25 +271,43 @@ function SchedulePageContent() {
   const sessionsWithDetails = useMemo(() => {
     if (!isMounted) return [];
     
-    // For the general schedule view, the enrollment count is just the length of personIds.
-    // Daily variations (vacations, one-time attendees) are handled on the main page.
+    const today = startOfDay(new Date());
+    const todayStr = format(today, 'yyyy-MM-dd');
+
     return filteredSessions.map(session => {
-        const enrolledCount = session.personIds.length;
+        const space = spaces.find(s => s.id === session.spaceId);
+        const capacity = space?.capacity || 0;
+        
+        const attendanceRecordForToday = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        const oneTimeAttendeesCount = attendanceRecordForToday?.oneTimeAttendees?.length || 0;
+        
+        const fixedEnrolledCount = session.personIds.length;
+        const vacationCount = session.personIds.filter(pid => {
+            const person = people.find(p => p.id === pid);
+            return person && isPersonOnVacation(person, today);
+        }).length;
+        
+        const dailyEnrolledCount = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
+        
         const waitlistCount = session.waitlist?.length || 0;
 
-        // People on vacation are not relevant for this general count
-        const peopleOnVacationToday = session.personIds
-            .map(pid => people.find(p => p.id === pid))
-            .filter((p): p is Person => !!p && isPersonOnVacation(p, new Date()));
-
+        // Calculate available spots
+        const fixedSpotsAvailable = capacity - fixedEnrolledCount;
+        const temporarySpotsAvailable = vacationCount - oneTimeAttendeesCount;
+        
         return {
             ...session,
-            enrolledCount,
+            dailyEnrolledCount,
+            fixedEnrolledCount,
             waitlistCount,
-            peopleOnVacationToday, // Kept for consistency, though not used in count
+            vacationCount,
+            availableSpots: {
+                fixed: fixedSpotsAvailable > 0 ? fixedSpotsAvailable : 0,
+                temporary: temporarySpotsAvailable > 0 ? temporarySpotsAvailable : 0,
+            }
         };
     });
-  }, [filteredSessions, people, isPersonOnVacation, isMounted]);
+  }, [filteredSessions, people, isPersonOnVacation, attendance, spaces, isMounted]);
 
 
   const handleExportSchedule = () => {
@@ -582,11 +600,9 @@ function SchedulePageContent() {
                       sessionsWithDetails.map((session) => {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
-                      const { enrolledCount, waitlistCount, peopleOnVacationToday } = session;
+                      const { dailyEnrolledCount, fixedEnrolledCount, waitlistCount, vacationCount } = session;
 
-                      const availableSpots = capacity - enrolledCount;
-                      const sessionTitle = `${actividad?.name || 'Sesión'}`;
-                      const isFull = availableSpots <= 0;
+                      const isFullForFixed = fixedEnrolledCount >= capacity;
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
@@ -596,20 +612,31 @@ function SchedulePageContent() {
                           key={session.id} 
                           className={cn(
                             "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden",
-                            recoveryMode && !isFull && "border-primary/40 hover:border-primary"
+                            recoveryMode && session.availableSpots.temporary > 0 && "border-primary/40 hover:border-primary"
                           )}
                         >
                           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
                              <div className="flex flex-col gap-2">
-                                <CardTitle className="text-lg font-bold text-primary">{sessionTitle}</CardTitle>
+                                <CardTitle className="text-lg font-bold text-primary">{actividad?.name || 'Sesión'}</CardTitle>
                                 {level && (
                                     <Badge variant="outline" className="font-semibold w-fit flex items-center gap-1.5"><Signal className="h-3 w-3" />{level.name}</Badge>
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <div className={cn("flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-white shadow-sm", isFull ? 'bg-red-500': 'bg-green-500')}>
-                                {isFull ? 'LLENO' : `${availableSpots} LUGARES`}
-                              </div>
+                               {vacationCount > 0 && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger>
+                                        <div className="flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-bold text-white shadow-sm bg-blue-500">
+                                            <Plane className="h-3 w-3" />
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{vacationCount} persona(s) de vacaciones hoy.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                               )}
                               <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0 -mr-2 text-slate-600 dark:text-slate-300">
@@ -626,7 +653,7 @@ function SchedulePageContent() {
                                           <Send className="mr-2 h-4 w-4" />
                                           Notificar Asistentes
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={isFull}>
+                                      <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary === 0}>
                                         <CalendarDays className="mr-2 h-4 w-4" /> Inscripción de Recupero
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
@@ -661,7 +688,7 @@ function SchedulePageContent() {
                                     >
                                     <Users className="h-4 w-4" />
                                     <span>
-                                        {enrolledCount}/{capacity} inscriptos
+                                        {dailyEnrolledCount}/{capacity} hoy
                                     </span>
                                     {waitlistCount > 0 && (
                                         <Badge variant="outline" className="border-amber-500 text-amber-600 dark:border-amber-700 dark:text-amber-400 bg-amber-500/10 text-xs">
@@ -669,43 +696,20 @@ function SchedulePageContent() {
                                         </Badge>
                                     )}
                                   </div>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <div className="flex items-center">
-                                          {peopleOnVacationToday.length > 0 && (
-                                            <span className="flex items-center gap-1 text-blue-500">
-                                              <Plane className="h-4 w-4" />
-                                            </span>
-                                          )}
-                                        </div>
-                                      </TooltipTrigger>
-                                      {peopleOnVacationToday.length > 0 && (
-                                        <TooltipContent>
-                                          <div className="text-sm">
-                                            <p className="font-semibold mb-1">En vacaciones hoy:</p>
-                                            <ul className="list-disc pl-4">
-                                                {peopleOnVacationToday.map(p => <li key={p.id}>{p.name}</li>)}
-                                            </ul>
-                                          </div>
-                                        </TooltipContent>
-                                      )}
-                                    </Tooltip>
-                                  </TooltipProvider>
                                </div>
                               <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
                                 <div
-                                  className={cn("h-2 rounded-full", isFull ? "bg-pink-500" : "bg-green-500")}
-                                  style={{ width: `${capacity > 0 ? (enrolledCount / capacity) * 100 : 0}%` }}
+                                  className={cn("h-2 rounded-full", dailyEnrolledCount >= capacity ? "bg-pink-500" : "bg-green-500")}
+                                  style={{ width: `${capacity > 0 ? (dailyEnrolledCount / capacity) * 100 : 0}%` }}
                                 />
                               </div>
                             </div>
                           </CardContent>
                           <CardFooter className="grid grid-cols-1 gap-4 p-4 mt-auto border-t border-slate-100 dark:border-zinc-700/80">
                             {recoveryMode ? (
-                                <Button className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={isFull}>
+                                <Button className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary === 0}>
                                     <CalendarClock className="mr-2 h-4 w-4" />
-                                    Recuperar Aquí
+                                    Recuperar Aquí ({session.availableSpots.temporary} cupos)
                                 </Button>
                             ) : (
                                <div className="grid grid-cols-3 gap-2">
@@ -724,11 +728,11 @@ function SchedulePageContent() {
                                       </TooltipContent>
                                     </Tooltip>
                                   </TooltipProvider>
-                                  <Button className="w-full font-bold col-span-2" onClick={() => setSessionToManage(session)} disabled={isFull}>
+                                  <Button className="w-full font-bold col-span-2" onClick={() => setSessionToManage(session)} disabled={isFullForFixed}>
                                     <Users className="mr-2 h-4 w-4" />
                                     Inscripción Fija
                                   </Button>
-                                  <Button variant="secondary" className="w-full font-bold col-span-3" onClick={() => setSessionForWaitlist(session)} disabled={!isFull}>
+                                  <Button variant="secondary" className="w-full font-bold col-span-3" onClick={() => setSessionForWaitlist(session)} disabled={!isFullForFixed}>
                                     <ListPlus className="mr-2 h-4 w-4" />
                                     Anotar en Espera
                                   </Button>
@@ -789,8 +793,8 @@ function SchedulePageContent() {
                                 sessionsWithDetails.map(session => {
                                     const { specialist, actividad, space, level } = getSessionDetails(session);
                                     const capacity = space?.capacity || 0;
-                                    const { enrolledCount } = session;
-                                    const isFull = enrolledCount >= capacity;
+                                    const { dailyEnrolledCount } = session;
+                                    const isFullForFixed = session.fixedEnrolledCount >= capacity;
                                     const isAttendanceAllowed = isAttendanceAllowedForSession(session);
 
                                     return (
@@ -806,8 +810,8 @@ function SchedulePageContent() {
                                             <TableCell>{specialist?.name || 'N/A'}</TableCell>
                                             <TableCell>{space?.name || 'N/A'}</TableCell>
                                             <TableCell>
-                                                <Badge variant={enrolledCount >= capacity ? 'destructive' : 'secondary'}>
-                                                    {enrolledCount} / {capacity}
+                                                <Badge variant={dailyEnrolledCount >= capacity ? 'destructive' : 'secondary'}>
+                                                    {dailyEnrolledCount} / {capacity}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell className="text-right">
@@ -819,10 +823,10 @@ function SchedulePageContent() {
                                                         <DropdownMenuItem onSelect={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed}>
                                                           <ClipboardCheck className="mr-2 h-4 w-4" />Asistencia
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={isFull}>
+                                                        <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={isFullForFixed}>
                                                           <Users className="mr-2 h-4 w-4" />Inscripción Fija
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={isFull}>
+                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary === 0}>
                                                           <CalendarDays className="mr-2 h-4 w-4" />Inscripción Recupero
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
@@ -832,7 +836,7 @@ function SchedulePageContent() {
                                                         <DropdownMenuItem onSelect={() => setSessionToNotify(session)}>
                                                             <Send className="mr-2 h-4 w-4" />Notificar
                                                         </DropdownMenuItem>
-                                                        {isFull && (
+                                                        {isFullForFixed && (
                                                             <>
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem onSelect={() => setSessionForWaitlist(session)}>
@@ -908,6 +912,7 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
 
 
