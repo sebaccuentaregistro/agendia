@@ -531,6 +531,7 @@ function DashboardPageContent() {
          <EnrolledStudentsSheet 
             session={selectedSessionForStudents}
             onClose={() => setSelectedSessionForStudents(null)}
+            rosterType={'daily'}
           />
       )}
       {sessionForAttendance && (
@@ -563,6 +564,7 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
 
 
