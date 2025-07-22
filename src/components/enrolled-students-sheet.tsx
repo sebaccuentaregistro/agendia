@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Session, Person } from '@/types';
-import { format, nextDay, Day, startOfDay } from 'date-fns';
+import { format, nextDay, Day, startOfDay, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -40,9 +40,9 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
     setIsMounted(true);
   }, []);
 
-  const { enrolledPeople, sessionDetails, title, description } = useMemo(() => {
+  const { enrolledPeople, sessionDetails, title, description, debugInfo } = useMemo(() => {
     if (!isMounted || !session) {
-      return { enrolledPeople: [], sessionDetails: {}, title: '', description: '' };
+      return { enrolledPeople: [], sessionDetails: {}, title: '', description: '', debugInfo: {} };
     }
     
     const dayMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
@@ -58,6 +58,7 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
     let attendees: EnrolledPerson[] = [];
     let rosterTitle = '';
     let rosterDescription = '';
+    let debugData: any = {};
 
     if (rosterType === 'fixed') {
         rosterTitle = 'Inscriptos Fijos';
@@ -82,10 +83,24 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
         const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
 
         const allAttendeesMap = new Map<string, EnrolledPerson>();
+        
         activeFixedPeople.forEach(p => allAttendeesMap.set(p.id, {...p, enrollmentStatus: 'Fijo'}));
-        oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, {...p, enrollmentStatus: 'Recupero'}));
+        
+        oneTimeAttendees.forEach(p => allAttendeesMap.set(p.id, {
+            ...p, 
+            enrollmentStatus: 'Recupero',
+            displayDate: format(parse(attendanceRecord!.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy')
+        }));
         
         attendees = Array.from(allAttendeesMap.values());
+        
+        debugData = {
+          usedDate: sessionDateStr,
+          foundFixed: activeFixedPeople.length,
+          foundOneTime: oneTimeAttendees.length,
+          oneTimeNames: oneTimeAttendees.map(p => p.name),
+          totalInList: attendees.length
+        };
     }
 
     return { 
@@ -93,6 +108,7 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
         sessionDetails: { specialist, actividad, space, count: attendees.length },
         title: rosterTitle,
         description: rosterDescription,
+        debugInfo: debugData
     };
   }, [isMounted, session, rosterType, people, attendance, isPersonOnVacation, specialists, actividades, spaces]);
 
@@ -128,6 +144,16 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
             Total: {count || 0} persona(s).
           </SheetDescription>
         </SheetHeader>
+
+        {/* --- DEBUG PANEL --- */}
+        <Card className="mt-4 p-2 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500/50">
+          <p className="text-xs font-bold text-yellow-700 dark:text-yellow-300">PANEL DE DEBUG (Temporal)</p>
+          <pre className="text-[10px] text-yellow-800 dark:text-yellow-200 whitespace-pre-wrap break-all">
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
+        </Card>
+        {/* --- END DEBUG PANEL --- */}
+
         <ScrollArea className="mt-4 space-y-4 h-[calc(100%-10rem)] pr-4">
           {enrolledPeople.length > 0 ? (
             enrolledPeople.map(person => (
@@ -143,7 +169,7 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
                             person.enrollmentStatus === 'Fijo' && "bg-primary/80",
                             person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white"
                         )}>
-                            {person.enrollmentStatus}
+                            {person.enrollmentStatus} {person.displayDate}
                         </Badge>
                      </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
