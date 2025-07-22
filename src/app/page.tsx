@@ -138,18 +138,6 @@ function DashboardPageContent() {
     const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
     const overdueCount = overduePeople.length;
     
-    const topDebtors = overduePeople.map(person => {
-        const tariff = tariffs.find(t => t.id === person.tariffId);
-        const statusInfo = getStudentPaymentStatus(person, now);
-        return { ...person, debt: tariff?.price || 0, daysOverdue: statusInfo.daysOverdue || 0 };
-    }).sort((a, b) => b.debt - a.debt).slice(0, 5);
-
-    const totalDebt = overduePeople.reduce((acc, person) => {
-        const tariff = tariffs.find(t => t.id === person.tariffId);
-        const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
-        return acc + debtAmount;
-    }, 0);
-
     const onVacationCount = people.filter(p => isPersonOnVacation(p, now)).length;
 
     const balances: Record<string, number> = {};
@@ -163,6 +151,12 @@ function DashboardPageContent() {
     const potentialIncome = people.reduce((acc, person) => {
         const tariff = tariffs.find(t => t.id === person.tariffId);
         return acc + (tariff?.price || 0);
+    }, 0);
+
+    const totalDebt = overduePeople.reduce((acc, person) => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
+        return acc + debtAmount;
     }, 0);
     
     const collectionPercentage = potentialIncome > 0 ? (revenueMonth / potentialIncome) * 100 : 0;
@@ -211,13 +205,20 @@ function DashboardPageContent() {
 
         if (hasSpot && hasWaitlist) {
           const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
-          const waitlistDetails = session.waitlist.map(entry => {
-            if (typeof entry === 'string') {
-              const person = people.find(p => p.id === entry);
-              return person ? { ...person, isProspect: false } : null;
-            }
-            return { ...entry, isProspect: true };
-          }).filter(p => p !== null);
+          const waitlistDetails = (session.waitlist || [])
+            .map(entry => {
+                if (typeof entry === 'string') {
+                    const person = people.find(p => p.id === entry);
+                    return person ? { ...person, isProspect: false as const } : null;
+                }
+                return { ...entry, isProspect: true as const };
+            })
+            .filter((p): p is NonNullable<typeof p> => p !== null)
+            .sort((a, b) => {
+                // `false` (alumnos) se trata como 0, `true` (prospectos) como 1.
+                // Esto ordena a los alumnos existentes primero.
+                return (a.isProspect ? 1 : 0) - (b.isProspect ? 1 : 0);
+            });
           
           const virtualNotification: AppNotification = {
             id: `virtual-${session.id}`,
@@ -226,7 +227,7 @@ function DashboardPageContent() {
             createdAt: now
           };
 
-          return { notification: virtualNotification, session, actividadName, waitlist: waitlistDetails as (Person | WaitlistProspect)[] };
+          return { notification: virtualNotification, session, actividadName, waitlist: waitlistDetails };
         }
         return null;
       }).filter((o): o is NonNullable<typeof o> => !!o);
