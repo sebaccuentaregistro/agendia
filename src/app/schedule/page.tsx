@@ -285,7 +285,7 @@ function SchedulePageContent() {
           .filter(p => isPersonOnVacation(p, today))
           .map(p => p.name);
 
-        const debugInfo = `DEBUG: Fijos(${activeFixedPeople.length}) - Vac(${vacationCount}) + Rec(${recoveryCount}) = ${dailyOccupancy}`;
+        const debugInfo = `DEBUG: Fijos(${activeFixedPeople.length}) - Vac(${vacationCount}) + Rec(${recoveryCount}) = ${dailyOccupancy} | Recuperos: [${recoveryNames.join(', ')}]`;
 
         return { dailyOccupancy, recoveryNames, onVacationNames, debugInfo };
     }, [session, people, isPersonOnVacation, attendance, today]);
@@ -405,8 +405,8 @@ function SchedulePageContent() {
                         </TooltipProvider>
                     ) : (
                         <div className="grid grid-cols-2 gap-2 w-full">
-                           <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>Fija - {enrolledCount}</Button>
-                           <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Recupero</Button>
+                           <Button variant="outline" size="sm" onClick={() => setSessionForEnrollment(session)}>{`Fija - ${enrolledCount}`}</Button>
+                           <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>{`Recupero`}</Button>
                         </div>
                     )}
                 </div>
@@ -700,6 +700,7 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
+
 
 
 
