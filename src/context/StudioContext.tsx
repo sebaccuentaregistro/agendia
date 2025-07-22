@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction } from '@/lib/firestore-actions';
+import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -41,7 +41,8 @@ interface StudioContextType {
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
     addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
-    removeVacationPeriod: (personId: string, vacationId: string) => void;
+    removeVacationPeriod: (personId: string, vacationId: string, force?: boolean) => void;
+    removeOneTimeAttendee: (sessionId: string, personId: string, date: string) => Promise<void>;
     addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
     addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
     addToWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
@@ -401,7 +402,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId'}]);
     
     const addLevel = (level: Omit<Level, 'id'>) => addGenericEntity('levels', level, "Nivel creado.", "Error al crear el nivel.");
-    const updateLevel = (level: Level) => updateGenericEntity('levels', level, "Nivel actualizado.", "Error al actualizar el nivel.");
+    const updateLevel = (level: Level) => updateGenericEntity('levels', level, "Nivel actualizado.", "Error al actualizar la nivel.");
     const deleteLevel = (id: string) => deleteGenericEntityWithUsageCheck('levels', id, "Nivel eliminado.", "Error al eliminar el nivel.", [
         {collection: 'sessions', field: 'levelId'}, {collection: 'people', field: 'levelId'}
     ]);
@@ -448,13 +449,29 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const removeVacationPeriod = (personId: string, vacationId: string) => {
+    const removeVacationPeriod = (personId: string, vacationId: string, force = false) => {
         const person = (data.people as Person[]).find((p: Person) => p.id === personId);
         if (!person) return;
-        handleAction(
+        if (force) {
+            return handleAction(
+                removeVacationPeriodAction(doc(collectionRefs!.people, personId), person, vacationId),
+                'Período de vacaciones eliminado.',
+                'Error al eliminar vacaciones.'
+            );
+        }
+        // This is now handled by the VacationDialog, but left as a safe fallback
+        return handleAction(
             removeVacationPeriodAction(doc(collectionRefs!.people, personId), person, vacationId),
             'Período de vacaciones eliminado.',
             'Error al eliminar vacaciones.'
+        );
+    };
+
+    const removeOneTimeAttendee = (sessionId: string, personId: string, date: string) => {
+        return handleAction(
+            removeOneTimeAttendeeAction(collectionRefs!.attendance, sessionId, personId, date),
+            'Asistente de recupero eliminado.',
+            'Error al eliminar el recupero.'
         );
     };
 
@@ -597,6 +614,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             isPersonOnVacation,
             addVacationPeriod,
             removeVacationPeriod,
+            removeOneTimeAttendee,
             addJustifiedAbsence,
             addOneTimeAttendee,
             addToWaitlist,

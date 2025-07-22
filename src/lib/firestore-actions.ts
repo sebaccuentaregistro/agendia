@@ -5,7 +5,7 @@
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
 import { db } from './firebase';
-import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval } from 'date-fns';
+import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval, addDays, isAfter } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -475,23 +475,12 @@ export const addOneTimeAttendeeAction = async (
     }
 
     return runTransaction(db, async (transaction) => {
-        // Now perform transactional reads
-        const freshSessionSnap = await transaction.get(sessionRef);
-        if (!freshSessionSnap.exists()) {
-            throw new Error("La sesión no existe.");
-        }
-
-        let currentData: Partial<SessionAttendance> = {};
-        if (attendanceDocExists) {
-            const existingDoc = await transaction.get(attendanceDocRef);
-            currentData = existingDoc.data() || {};
-        }
-
         // --- All reads are done. Perform writes. ---
 
         // 1. Update attendance
-        const oneTimeAttendees = Array.from(new Set([...(currentData.oneTimeAttendees || []), personId]));
-        const presentIds = Array.from(new Set([...(currentData.presentIds || []), personId]));
+        const currentData = attendanceDocExists ? (await transaction.get(attendanceDocRef)).data() : {};
+        const oneTimeAttendees = Array.from(new Set([...(currentData?.oneTimeAttendees || []), personId]));
+        const presentIds = Array.from(new Set([...(currentData?.presentIds || []), personId]));
 
         if (attendanceDocExists) {
             transaction.update(attendanceDocRef, { oneTimeAttendees, presentIds });
@@ -505,13 +494,6 @@ export const addOneTimeAttendeeAction = async (
                 justifiedAbsenceIds: [],
             };
             transaction.set(attendanceDocRef, newAttendanceData);
-        }
-
-        // 2. Update waitlist if necessary
-        const sessionData = freshSessionSnap.data() as Session;
-        if (sessionData.waitlist?.some(entry => typeof entry === 'string' && entry === personId)) {
-            const updatedWaitlist = sessionData.waitlist.filter(entry => entry !== personId);
-            transaction.update(sessionRef, { waitlist: updatedWaitlist });
         }
     });
 };
@@ -530,6 +512,28 @@ export const removeVacationPeriodAction = async (personDocRef: any, person: Pers
     return updateEntity(personDocRef, { vacationPeriods: updatedVacations });
 };
 
+export const removeOneTimeAttendeeAction = async (attendanceRef: CollectionReference, sessionId: string, personId: string, date: string) => {
+    const q = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', date));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+        console.warn("No attendance record found to remove one-time attendee from.");
+        return;
+    }
+
+    const docRef = querySnapshot.docs[0].ref;
+    const data = querySnapshot.docs[0].data() as SessionAttendance;
+
+    const updatedOneTimeAttendees = (data.oneTimeAttendees || []).filter(id => id !== personId);
+    const updatedPresentIds = (data.presentIds || []).filter(id => id !== personId);
+
+    return updateDoc(docRef, { 
+        oneTimeAttendees: updatedOneTimeAttendees,
+        presentIds: updatedPresentIds,
+    });
+};
+
+
 export const findVacationConflicts = async (person: Person, sessions: Session[], attendance: SessionAttendance[], people: Person[], newVacationPeriods: VacationPeriod[]) => {
     const originalPeriods = person.vacationPeriods || [];
     const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
@@ -537,7 +541,7 @@ export const findVacationConflicts = async (person: Person, sessions: Session[],
 
     const findPeriodById = (id: string, periods: VacationPeriod[]) => periods.find(p => p.id === id);
 
-    const conflicts = [];
+    const conflicts: { date: string; attendeeName: string; sessionId: string, attendeeId: string }[] = [];
 
     // Find deleted or shortened periods
     for (const originalPeriod of originalPeriods) {
@@ -562,7 +566,7 @@ export const findVacationConflicts = async (person: Person, sessions: Session[],
                 personSessionIds.has(att.sessionId) &&
                 att.oneTimeAttendees &&
                 att.oneTimeAttendees.length > 0 &&
-                isWithinInterval(parse(att.date, 'yyyy-MM-dd', new Date()), { start: reactivatedStart, end: reactivatedEnd })
+                isWithinInterval(parse(att.date, 'yyyy-MM-dd', new Date()), { start: reactivatedStart!, end: reactivatedEnd! })
             );
 
             for (const record of conflictingAttendance) {
@@ -571,6 +575,8 @@ export const findVacationConflicts = async (person: Person, sessions: Session[],
                     conflicts.push({
                         date: record.date,
                         attendeeName: attendee?.name || 'Desconocido',
+                        attendeeId: attendeeId,
+                        sessionId: record.sessionId,
                     });
                 }
             }
