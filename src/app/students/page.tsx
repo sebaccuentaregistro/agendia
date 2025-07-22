@@ -586,7 +586,7 @@ function StudentsPageContent() {
                                     tariffs={tariffs}
                                     allPayments={payments}
                                     recoveryCredits={recoveryDetails[person.id] || []}
-                                    onDeactivated={() => setActiveTab('inactive')}
+                                    onDeactivated={() => {}}
                                     onManageVacations={setPersonForVacation}
                                     onEdit={handleEditClick}
                                     onViewHistory={setPersonForHistory}
