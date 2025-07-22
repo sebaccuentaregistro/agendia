@@ -11,8 +11,9 @@ import { useStudio } from '@/context/StudioContext';
 import { useState } from 'react';
 import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from './welcome-dialog';
+import { Badge } from './ui/badge';
 
-type UnifiedWaitlistItem = Person & { isProspect: false } | WaitlistProspect & { isProspect: true };
+type UnifiedWaitlistItem = (Person & { isProspect: false }) | (WaitlistProspect & { isProspect: true });
 
 type Opportunity = {
   notification: AppNotification;
@@ -97,8 +98,10 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
                                  return (
                                     <div key={index} className="flex justify-between items-center text-sm bg-background/50 p-2 rounded-md">
                                         <div className="flex items-center gap-2">
-                                            <User className="h-4 w-4 text-muted-foreground"/>
                                             <p className="font-semibold">{person.name}</p>
+                                            <Badge variant={isProspect ? 'outline' : 'secondary'}>
+                                              {isProspect ? 'Nuevo' : 'Alumno'}
+                                            </Badge>
                                         </div>
                                         <Button 
                                             size="sm" 
