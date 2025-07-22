@@ -265,26 +265,26 @@ function SchedulePageContent() {
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
 
     const { dailyOccupancy, recoveryCount, onVacationCount } = useMemo(() => {
-      const todayStr = format(today, 'yyyy-MM-dd');
-      
-      const fixedEnrolledPeople = session.personIds
-          .map(pid => people.find(p => p.id === pid))
-          .filter((p): p is Person => !!p);
+        const todayStr = format(today, 'yyyy-MM-dd');
+        
+        const fixedEnrolledPeople = session.personIds
+            .map(pid => people.find(p => p.id === pid))
+            .filter((p): p is Person => !!p);
 
-      const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
-      const onVacationCount = fixedEnrolledPeople.length - activeFixedPeople.length;
-      
-      const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-      
-      const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
-        .map(id => people.find(p => p.id === id))
-        .filter((p): p is Person => !!p);
+        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
+        const onVacationCount = fixedEnrolledPeople.length - activeFixedPeople.length;
+        
+        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        
+        const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
+            .map(id => people.find(p => p.id === id))
+            .filter((p): p is Person => !!p);
 
-      const recoveryCount = validOneTimeAttendees.length;
+        const recoveryCount = validOneTimeAttendees.length;
 
-      const dailyOccupancy = activeFixedPeople.length + recoveryCount;
-      
-      return { dailyOccupancy, recoveryCount, onVacationCount };
+        const dailyOccupancy = activeFixedPeople.length + recoveryCount;
+        
+        return { dailyOccupancy, recoveryCount, onVacationCount };
     }, [session, people, isPersonOnVacation, attendance, today]);
     
     const waitlistDetails = useMemo(() => {
@@ -384,39 +384,35 @@ function SchedulePageContent() {
                        )
                     )}
                 </div>
-                <div className="grid grid-cols-2 gap-2 w-full">
+                 <div className="grid grid-cols-2 gap-2 w-full">
                     {isToday ? (
+                        <TooltipProvider delayDuration={100}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <span className="w-full col-span-2" tabIndex={0}>
+                                        <Button variant="secondary" size="sm" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed} className="w-full">
+                                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
+                                        </Button>
+                                    </span>
+                                </TooltipTrigger>
+                                <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    ) : null}
+
+                    {!isFull && (
                         <>
-                            <TooltipProvider delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <span className="w-full col-span-2" tabIndex={0}>
-                                            <Button variant="secondary" size="sm" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed} className="w-full">
-                                                <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
-                                            </Button>
-                                        </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                            {!isFull && (
-                                <>
-                                    <Button variant="secondary" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
-                                    <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
-                                </>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                           <Button variant="secondary" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
-                           <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
+                            <Button variant="secondary" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
                         </>
                     )}
                 </div>
-                 <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full" onClick={() => setSessionForWaitlist(session)}>
-                    <ListPlus className="mr-2 h-4 w-4" />
-                    {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
-                </Button>
+                {isFull && (
+                    <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full" onClick={() => setSessionForWaitlist(session)}>
+                        <ListPlus className="mr-2 h-4 w-4" />
+                        {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
+                    </Button>
+                )}
             </CardFooter>
         </Card>
     );
