@@ -264,7 +264,7 @@ function SchedulePageContent() {
 
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
 
-    const { dailyOccupancy, recoveryNames, onVacationNames } = useMemo(() => {
+    const { dailyOccupancy, recoveryNames, onVacationNames, debugInfo } = useMemo(() => {
         const todayStr = format(today, 'yyyy-MM-dd');
         
         const fixedEnrolledPeople = session.personIds
@@ -272,6 +272,7 @@ function SchedulePageContent() {
             .filter((p): p is Person => !!p);
 
         const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
+        const vacationCount = fixedEnrolledPeople.length - activeFixedPeople.length;
         
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
         const oneTimeAttendees = attendanceRecord?.oneTimeAttendees || [];
@@ -284,7 +285,9 @@ function SchedulePageContent() {
           .filter(p => isPersonOnVacation(p, today))
           .map(p => p.name);
 
-        return { dailyOccupancy, recoveryNames, onVacationNames };
+        const debugInfo = `DEBUG: Fijos(${activeFixedPeople.length}) - Vac(${vacationCount}) + Rec(${recoveryCount}) = ${dailyOccupancy}`;
+
+        return { dailyOccupancy, recoveryNames, onVacationNames, debugInfo };
     }, [session, people, isPersonOnVacation, attendance, today]);
     
      const waitlistDetails = useMemo(() => {
@@ -366,6 +369,7 @@ function SchedulePageContent() {
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
+                {isToday && <div className="text-xs text-red-500 font-mono bg-red-500/10 p-1 rounded">{debugInfo}</div>}
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
@@ -696,6 +700,7 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
+
 
 
 
