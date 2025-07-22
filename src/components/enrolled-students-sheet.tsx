@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -9,6 +10,7 @@ import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Session, Person } from '@/types';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Plane } from 'lucide-react';
@@ -17,6 +19,7 @@ type EnrollmentStatus = 'Fijo' | 'Recupero' | 'Vacaciones';
 
 type EnrolledPerson = Person & {
     enrollmentStatus: EnrollmentStatus;
+    displayDate?: string;
 };
 
 export function EnrolledStudentsSheet({ session, onClose }: { session: Session; onClose: () => void }) {
@@ -33,6 +36,7 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
     }
     const today = new Date();
     const todayStr = format(today, 'yyyy-MM-dd');
+    const todayDisplay = format(today, 'dd/MM');
     
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
@@ -58,7 +62,7 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
         if (!processedIds.has(personId)) {
             const person = people.find(p => p.id === personId);
             if (person) {
-                allAttendees.push({ ...person, enrollmentStatus: 'Recupero' });
+                allAttendees.push({ ...person, enrollmentStatus: 'Recupero', displayDate: todayDisplay });
             }
         }
     });
@@ -109,7 +113,7 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
                             person.enrollmentStatus === 'Vacaciones' && "border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-500/10"
                         )}>
                             {person.enrollmentStatus === 'Vacaciones' && <Plane className="h-3 w-3 mr-1" />}
-                            {person.enrollmentStatus}
+                            {person.enrollmentStatus} {person.displayDate && `(${person.displayDate})`}
                         </Badge>
                      </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
