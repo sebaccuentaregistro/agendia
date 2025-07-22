@@ -55,8 +55,11 @@ const formatTime = (time: string) => {
     return time;
 };
 
+type UnifiedWaitlistItem = (Person & { isProspect: false; entry: WaitlistEntry; }) | ({ isProspect: true; entry: WaitlistEntry; } & WaitlistEntry);
+
+
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading, isPersonOnVacation, attendance } = useStudio();
+  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading, isPersonOnVacation, attendance, removeFromWaitlist } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
@@ -67,6 +70,7 @@ function SchedulePageContent() {
   const [sessionForPuntual, setSessionForPuntual] = useState<Session | null>(null);
   const [sessionToNotify, setSessionToNotify] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
+  const [entryToRemoveFromWaitlist, setEntryToRemoveFromWaitlist] = useState<{session: Session, entry: WaitlistEntry, name: string} | null>(null);
   const [filters, setFilters] = useState({
     specialistId: 'all',
     actividadId: 'all',
@@ -289,17 +293,18 @@ function SchedulePageContent() {
         
         const dailyEnrolledCount = (fixedEnrolledCount - vacationCount) + oneTimeAttendeesCount;
         
-        const waitlistCount = session.waitlist?.length || 0;
-        const waitlistDetails = (session.waitlist || [])
+        const waitlistDetails: UnifiedWaitlistItem[] = (session.waitlist || [])
             .map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
-                    return person ? { ...person, isProspect: false as const } : null;
+                    return person ? { ...person, isProspect: false, entry } : null;
                 }
-                return { ...entry, isProspect: true as const };
+                return { ...entry, isProspect: true, entry };
             })
             .filter((p): p is NonNullable<typeof p> => p !== null);
 
+        const waitlistCount = waitlistDetails.length;
+        
         const fixedSpotsAvailable = Math.max(0, capacity - fixedEnrolledCount);
         const temporarySpotsAvailable = Math.max(0, vacationCount - oneTimeAttendeesCount);
         const totalAvailableForRecovery = fixedSpotsAvailable + temporarySpotsAvailable;
@@ -706,7 +711,21 @@ function SchedulePageContent() {
                                {waitlistDetails.length > 0 && (
                                 <div className="pt-2 text-xs text-muted-foreground">
                                     <span className="font-semibold">En espera: </span>
-                                    {waitlistDetails.map(p => p.name).join(', ')}
+                                     <div className="space-y-1 mt-1">
+                                        {waitlistDetails.map((p, index) => (
+                                            <div key={index} className="flex items-center justify-between gap-2">
+                                                <span>{p.name}</span>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-5 w-5 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                    onClick={() => setEntryToRemoveFromWaitlist({session, entry: p.entry, name: p.name})}
+                                                >
+                                                    <Trash2 className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
                                )}
                             </div>
@@ -727,12 +746,12 @@ function SchedulePageContent() {
                                     </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
-                                <div className="grid grid-cols-2 gap-2 w-full">
+                                 <div className="grid grid-cols-2 gap-2 w-full">
                                     <Button className="w-full font-bold" onClick={() => setSessionToManage(session)} disabled={availableSpots.fixed <= 0}>
                                         <Users className="mr-2 h-4 w-4" />
                                         Fija ({availableSpots.fixed})
                                     </Button>
-                                     <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.total <= 0}>
+                                    <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.total <= 0}>
                                         <CalendarClock className="mr-2 h-4 w-4" />
                                         Recupero ({availableSpots.total})
                                     </Button>
@@ -899,6 +918,28 @@ function SchedulePageContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      <AlertDialog open={!!entryToRemoveFromWaitlist} onOpenChange={(open) => !open && setEntryToRemoveFromWaitlist(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Eliminación</AlertDialogTitle>
+                <AlertDialogDescriptionAlert>
+                    ¿Estás seguro de que quieres quitar a <span className="font-bold">{entryToRemoveFromWaitlist?.name}</span> de la lista de espera?
+                </AlertDialogDescriptionAlert>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>No, cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={() => {
+                    if (entryToRemoveFromWaitlist) {
+                        removeFromWaitlist(entryToRemoveFromWaitlist.session.id, entryToRemoveFromWaitlist.entry);
+                        setEntryToRemoveFromWaitlist(null);
+                    }
+                }} className="bg-destructive hover:bg-destructive/90">
+                    Sí, quitar
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {sessionToManage && <EnrollPeopleDialog session={sessionToManage} onClose={() => setSessionToManage(null)} />}
       {sessionForPuntual && <OneTimeAttendeeDialog session={sessionForPuntual} preselectedPersonId={personIdForRecovery} onClose={() => setSessionForPuntual(null)} />}
@@ -917,5 +958,6 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
 
