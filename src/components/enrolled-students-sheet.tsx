@@ -10,6 +10,7 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Session, Person } from '@/types';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 type EnrolledPerson = Person & {
     enrollmentStatus: 'Fijo' | 'Recupero';
@@ -33,6 +34,7 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
     const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
     
+    // Filter out people on vacation from their regular spot
     const regularIds = new Set(session.personIds.filter(pid => {
         const person = people.find(p => p.id === pid);
         return person && !isPersonOnVacation(person, today);
@@ -78,9 +80,18 @@ export function EnrolledStudentsSheet({ session, onClose }: { session: Session; 
           {enrolledPeople.length > 0 ? (
             enrolledPeople.map(person => (
               <Card key={person.id} className="p-3 bg-card/80 border">
-                <div className="flex items-center gap-4">
-                  <div>
-                    <p className="font-semibold text-foreground">{person.name}</p>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-1">
+                     <div className="flex items-center gap-2 flex-wrap">
+                        <p className="font-semibold text-foreground">{person.name}</p>
+                        <Badge variant={person.enrollmentStatus === 'Fijo' ? 'default' : 'secondary'} className={cn(
+                            "text-xs",
+                            person.enrollmentStatus === 'Fijo' && "bg-primary/80",
+                            person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white"
+                        )}>
+                            {person.enrollmentStatus}
+                        </Badge>
+                     </div>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <span>{person.phone}</span>
                        <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
