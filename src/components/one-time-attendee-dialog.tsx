@@ -38,13 +38,6 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
         date: undefined,
     }
   });
-  
-  useEffect(() => {
-    if (preselectedPersonId) {
-      form.setValue('personId', preselectedPersonId, { shouldValidate: true });
-      form.trigger('personId');
-    }
-  }, [preselectedPersonId, form]);
 
   const selectedDate = form.watch('date');
 
@@ -53,30 +46,8 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
   }), []);
 
   const sessionDayNumber = dayMap[session.dayOfWeek];
-
-  const debugData = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true, eligiblePeople: [], debug: {} };
-    
-    const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
-    const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
-
-    const vacationingPeople = session.personIds
-        .map(pid => people.find(p => p.id === pid))
-        .filter((p): p is NonNullable<typeof p> => !!p && isPersonOnVacation(p, selectedDate));
-    
-    const fixedEnrolledCount = session.personIds.length;
-    const currentOccupation = (fixedEnrolledCount - vacationingPeople.length) + oneTimeIds.length;
-    const isFull = currentOccupation >= capacity;
-    
-    let occupationMessage = '';
-    if (isFull) {
-        occupationMessage = 'No hay cupos disponibles para esta fecha.';
-    } else {
-        const availableSpots = capacity - currentOccupation;
-        occupationMessage = `Hay ${availableSpots} cupo(s) disponible(s).`;
-    }
-
+  
+  const eligiblePeople = useMemo(() => {
     const balances: Record<string, number> = {};
     people.forEach(p => (balances[p.id] = 0));
     attendance.forEach(record => {
@@ -84,34 +55,66 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
       (record.oneTimeAttendees || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
     });
     
-    const eligiblePeopleList = people
-      .filter(person => (balances[person.id] > 0 || person.id === preselectedPersonId))
+    return people
+      .filter(person => (balances[person.id] > 0))
       .sort((a, b) => a.name.localeCompare(b.name));
+  }, [people, attendance]);
+
+  const { occupationMessage, isFull } = useMemo(() => {
+    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true };
+    
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
+    const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
+
+    const vacationingPeopleCount = session.personIds
+        .filter(pid => {
+            const person = people.find(p => p.id === pid);
+            return person && isPersonOnVacation(person, selectedDate)
+        }).length;
+    
+    const fixedEnrolledCount = session.personIds.length;
+    const currentOccupation = (fixedEnrolledCount - vacationingPeopleCount) + oneTimeIds.length;
+    const isClassFull = currentOccupation >= capacity;
+    
+    let message = '';
+    if (isClassFull) {
+        message = 'No hay cupos disponibles para esta fecha.';
+    } else {
+        const availableSpots = capacity - currentOccupation;
+        message = `Hay ${availableSpots} cupo(s) disponible(s).`;
+    }
 
     return {
-        occupationMessage,
-        isFull,
-        eligiblePeople: eligiblePeopleList,
-        debug: {
-            selectedDate: selectedDate.toISOString(),
-            fixedEnrolled: fixedEnrolledCount,
-            onVacation: vacationingPeople.length,
-            oneTimeAttendees: oneTimeIds.length,
-            calculatedOccupation: currentOccupation,
-            capacity: capacity,
-            isFull: isFull,
-            eligibleCount: eligiblePeopleList.length
-        }
+        occupationMessage: message,
+        isFull: isClassFull
     }
-  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity, preselectedPersonId]);
+  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
-  const { occupationMessage, isFull, eligiblePeople, debug } = debugData;
+  
+  useEffect(() => {
+    if (preselectedPersonId) {
+      form.setValue('personId', preselectedPersonId, { shouldValidate: true });
+      form.trigger('personId');
+    }
+  }, [preselectedPersonId, form]);
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
     addOneTimeAttendee(session.id, values.personId, values.date);
     onClose();
   }
   
+  const preselectedPersonData = preselectedPersonId ? people.find(p => p.id === preselectedPersonId) : null;
+  const finalEligiblePeople = useMemo(() => {
+    if (!preselectedPersonData) return eligiblePeople;
+    const list = [...eligiblePeople];
+    if (!list.some(p => p.id === preselectedPersonData.id)) {
+        list.unshift(preselectedPersonData);
+    }
+    return list;
+  }, [eligiblePeople, preselectedPersonData]);
+
+
   return (
     <Dialog open onOpenChange={onClose}>
         <DialogContent>
@@ -188,12 +191,12 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {eligiblePeople.map(person => (
+                                        {finalEligiblePeople.map(person => (
                                             <SelectItem key={person.id} value={person.id}>
                                               {person.name}
                                             </SelectItem>
                                         ))}
-                                        {eligiblePeople.length === 0 && (
+                                        {finalEligiblePeople.length === 0 && (
                                             <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
                                     </SelectContent>
@@ -203,20 +206,6 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                             </FormItem>
                         )}
                     />
-                     {/* DEBUG PANEL */}
-                    <div className="p-2 border rounded-md bg-zinc-800 text-zinc-300 text-xs font-mono mt-4">
-                        <pre>
-                            DEBUG INFO:<br/>
-                            {JSON.stringify({
-                                isValid: form.formState.isValid,
-                                errors: form.formState.errors,
-                                values: form.getValues(),
-                                isFull,
-                                eligiblePeopleCount: eligiblePeople.length,
-                                ...debug,
-                            }, null, 2)}
-                        </pre>
-                    </div>
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
@@ -228,3 +217,4 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     </Dialog>
   );
 }
+
