@@ -306,8 +306,7 @@ function SchedulePageContent() {
         const waitlistCount = waitlistDetails.length;
         
         const fixedSpotsAvailable = Math.max(0, capacity - fixedEnrolledCount);
-        const temporarySpotsAvailable = Math.max(0, vacationCount);
-        const totalAvailableForRecovery = fixedSpotsAvailable + temporarySpotsAvailable;
+        const temporarySpotsAvailableForRecovery = vacationCount;
         
         return {
             ...session,
@@ -318,8 +317,7 @@ function SchedulePageContent() {
             vacationCount,
             availableSpots: {
                 fixed: fixedSpotsAvailable,
-                temporary: temporarySpotsAvailable,
-                total: totalAvailableForRecovery,
+                temporary: temporarySpotsAvailableForRecovery,
             }
         };
     });
@@ -628,7 +626,7 @@ function SchedulePageContent() {
                           className={cn(
                             "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden",
                             isFixedFull && "border-pink-500/30",
-                            recoveryMode && availableSpots.total > 0 && "border-primary/40 hover:border-primary"
+                            recoveryMode && availableSpots.temporary > 0 && "border-primary/40 hover:border-primary"
                           )}
                         >
                           <CardHeader className="flex flex-row items-center justify-between p-4 pb-2">
@@ -694,19 +692,19 @@ function SchedulePageContent() {
                               </div>
                             </div>
                             <div className="space-y-1">
-                               <div
-                                  className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
-                                  onClick={() => setSessionForRoster(session)}
+                                <div
+                                    className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
+                                    onClick={() => setSessionForRoster(session)}
                                 >
                                     <span className={cn("font-semibold", isFixedFull ? "text-pink-600" : "text-foreground")}>Inscriptos Fijos: {fixedEnrolledCount}/{capacity}</span>
-                                    <span className="font-semibold text-foreground">Hoy: {dailyEnrolledCount}/{capacity}</span>
-                               </div>
-                              <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
-                                <div
-                                  className={cn("h-2 rounded-full", dailyEnrolledCount >= capacity ? "bg-pink-500" : "bg-green-500")}
-                                  style={{ width: `${capacity > 0 ? (dailyEnrolledCount / capacity) * 100 : 0}%` }}
-                                />
-                              </div>
+                                    <span className="font-semibold text-foreground">Ocupación Hoy: {dailyEnrolledCount}/{capacity}</span>
+                                </div>
+                                <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
+                                    <div
+                                    className={cn("h-2 rounded-full", dailyEnrolledCount >= capacity ? "bg-pink-500" : "bg-green-500")}
+                                    style={{ width: `${capacity > 0 ? (dailyEnrolledCount / capacity) * 100 : 0}%` }}
+                                    />
+                                </div>
                                {waitlistDetails.length > 0 && (
                                 <div className="pt-2 text-xs text-muted-foreground">
                                     <span className="font-semibold">En espera: </span>
@@ -749,8 +747,8 @@ function SchedulePageContent() {
                                     <Button className="w-full font-bold" onClick={() => setSessionToManage(session)} disabled={availableSpots.fixed <= 0}>
                                         Fija ({availableSpots.fixed})
                                     </Button>
-                                    <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.total <= 0}>
-                                        Recupero ({availableSpots.total})
+                                    <Button variant="secondary" className="w-full font-bold" onClick={() => setSessionForPuntual(session)} disabled={availableSpots.temporary <= 0}>
+                                        Recupero ({availableSpots.temporary})
                                     </Button>
                                 </div>
                                 {isFixedFull && (
@@ -847,7 +845,7 @@ function SchedulePageContent() {
                                                         <DropdownMenuItem onSelect={() => setSessionToManage(session)} disabled={session.availableSpots.fixed <= 0}>
                                                           <Users className="mr-2 h-4 w-4" />Inscripción Fija
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.total <= 0}>
+                                                        <DropdownMenuItem onSelect={() => setSessionForPuntual(session)} disabled={session.availableSpots.temporary <= 0}>
                                                           <CalendarDays className="mr-2 h-4 w-4" />Inscripción Recupero
                                                         </DropdownMenuItem>
                                                         <DropdownMenuSeparator />
@@ -955,9 +953,3 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
-
-
-
-
-
-

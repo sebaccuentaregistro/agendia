@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -55,11 +56,12 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
         return person && isPersonOnVacation(person, selectedDate);
     }).length;
 
-    const currentEnrollment = session.personIds.length - regularIdsOnVacation + oneTimeIds.length;
-    
+    // A spot for recovery is ONLY available if someone is on vacation.
+    const availableRecoverySpots = regularIdsOnVacation - oneTimeIds.length;
+
     return {
-      occupationMessage: `Ocupación para el ${format(selectedDate, 'dd/MM/yy')}: ${currentEnrollment}/${capacity}`,
-      isFull: currentEnrollment >= capacity,
+      occupationMessage: `Cupos de recupero para el ${format(selectedDate, 'dd/MM/yy')}: ${availableRecoverySpots > 0 ? availableRecoverySpots : 0}`,
+      isFull: availableRecoverySpots <= 0,
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
@@ -171,7 +173,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                     </SelectContent>
                                 </Select>
                                 {!selectedDate && <p className="text-xs text-muted-foreground">Debes seleccionar una fecha para habilitar esta lista.</p>}
-                                {isFull && <p className="text-xs text-destructive">La clase está llena para la fecha seleccionada.</p>}
+                                {isFull && <p className="text-xs text-destructive">No hay cupos de recupero para la fecha seleccionada.</p>}
                                 <FormMessage />
                             </FormItem>
                         )}
