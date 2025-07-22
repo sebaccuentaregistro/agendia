@@ -12,11 +12,13 @@ import { useState } from 'react';
 import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from './welcome-dialog';
 
+type UnifiedWaitlistItem = Person & { isProspect: false } | WaitlistProspect & { isProspect: true };
+
 type Opportunity = {
   notification: AppNotification;
   session: Session;
   actividadName: string;
-  waitlist: (Person | WaitlistProspect)[];
+  waitlist: UnifiedWaitlistItem[];
 };
 
 type SummaryItem = {

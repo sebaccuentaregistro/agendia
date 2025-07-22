@@ -97,7 +97,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, topDebtors: [], paymentReminders: [], totalWaitlistCount: 0, waitlistOpportunities: [], waitlistSummary: [], revenueToday: 0, revenueWeek: 0, revenueMonth: 0 };
+      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, paymentReminders: [], totalWaitlistCount: 0, waitlistOpportunities: [], waitlistSummary: [], revenueToday: 0, revenueWeek: 0, revenueMonth: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -212,9 +212,12 @@ function DashboardPageContent() {
         if (hasSpot && hasWaitlist) {
           const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
           const waitlistDetails = session.waitlist.map(entry => {
-            if (typeof entry === 'string') return people.find(p => p.id === entry);
-            return entry;
-          }).filter((p): p is Person | WaitlistProspect => !!p);
+            if (typeof entry === 'string') {
+              const person = people.find(p => p.id === entry);
+              return person ? { ...person, isProspect: false } : null;
+            }
+            return { ...entry, isProspect: true };
+          }).filter(p => p !== null);
           
           const virtualNotification: AppNotification = {
             id: `virtual-${session.id}`,
@@ -223,7 +226,7 @@ function DashboardPageContent() {
             createdAt: now
           };
 
-          return { notification: virtualNotification, session, actividadName, waitlist: waitlistDetails };
+          return { notification: virtualNotification, session, actividadName, waitlist: waitlistDetails as (Person | WaitlistProspect)[] };
         }
         return null;
       }).filter((o): o is NonNullable<typeof o> => !!o);
@@ -248,7 +251,6 @@ function DashboardPageContent() {
       potentialIncome,
       totalDebt,
       collectionPercentage,
-      topDebtors,
       paymentReminders,
       totalWaitlistCount,
       waitlistOpportunities,
@@ -268,7 +270,6 @@ function DashboardPageContent() {
     potentialIncome,
     totalDebt,
     collectionPercentage,
-    topDebtors,
     paymentReminders,
     totalWaitlistCount,
     waitlistOpportunities,
@@ -506,7 +507,6 @@ function DashboardPageContent() {
         <div className="space-y-8">
             <PaymentReminders 
                 reminders={paymentReminders} 
-                topDebtors={topDebtors}
                 onSendReminder={setPaymentReminderInfo}
                 onSendAll={() => setIsMassReminderOpen(true)}
             />
