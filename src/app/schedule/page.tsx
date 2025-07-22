@@ -617,7 +617,7 @@ function SchedulePageContent() {
                       const { specialist, actividad, space, level } = getSessionDetails(session);
                       const capacity = space?.capacity || 0;
                       const { dailyEnrolledCount, vacationCount, waitlistDetails, availableSpots, fixedEnrolledCount } = session;
-                      const hasOpenings = availableSpots.fixed > 0 || availableSpots.total > 0;
+                      const isFixedFull = fixedEnrolledCount >= capacity;
                       
                       const isAttendanceAllowed = isAttendanceAllowedForSession(session);
                       const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes o en días pasados.";
@@ -627,6 +627,7 @@ function SchedulePageContent() {
                           key={session.id} 
                           className={cn(
                             "flex flex-col bg-white dark:bg-zinc-800 rounded-2xl shadow-lg border-2 border-slate-200/60 dark:border-zinc-700/60 overflow-hidden",
+                            isFixedFull && "border-pink-500/30",
                             recoveryMode && availableSpots.total > 0 && "border-primary/40 hover:border-primary"
                           )}
                         >
@@ -697,10 +698,8 @@ function SchedulePageContent() {
                                   className="flex items-center justify-between text-sm text-slate-600 dark:text-slate-400 cursor-pointer hover:underline"
                                   onClick={() => setSessionForRoster(session)}
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <Users className="h-4 w-4" />
-                                        <span>{dailyEnrolledCount}/{capacity} hoy</span>
-                                    </div>
+                                    <span className={cn("font-semibold", isFixedFull ? "text-pink-600" : "text-foreground")}>Inscriptos Fijos: {fixedEnrolledCount}/{capacity}</span>
+                                    <span className="font-semibold text-foreground">Hoy: {dailyEnrolledCount}/{capacity}</span>
                                </div>
                               <div className="w-full bg-slate-200 rounded-full h-2 dark:bg-zinc-700">
                                 <div
@@ -754,7 +753,7 @@ function SchedulePageContent() {
                                         Recupero ({availableSpots.total})
                                     </Button>
                                 </div>
-                                {!hasOpenings && (
+                                {isFixedFull && (
                                      <Button variant="outline" className="w-full" onClick={() => setSessionForWaitlist(session)}>
                                         <ListPlus className="mr-2 h-4 w-4" />
                                         Anotar en Espera
@@ -956,6 +955,7 @@ export default function SchedulePage() {
     </Suspense>
   );
 }
+
 
 
 
