@@ -67,7 +67,7 @@ interface StudioContextType {
     deleteOperator: (operatorId: string) => void;
     updateOverdueStatuses: () => Promise<number>;
     triggerWaitlistCheck: (sessionId: string) => void;
-    enrollFromWaitlist: (notificationId: string, sessionId: string, personToEnroll: Person) => Promise<void>;
+    enrollFromWaitlist: (sessionId: string, personToEnroll: Person) => Promise<void>;
     enrollProspectFromWaitlist: (sessionId: string, prospect: WaitlistProspect, personId: string) => Promise<void>;
 }
 
@@ -508,7 +508,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
 
 
 
-    const enrollFromWaitlist = (notificationId: string, sessionId: string, personToEnroll: Person) => {
+    const enrollFromWaitlist = (sessionId: string, personToEnroll: Person) => {
         if (!collectionRefs) return Promise.resolve();
         const personIdToEnroll = personToEnroll.id;
 
