@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -41,6 +42,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
   useEffect(() => {
     if (preselectedPersonId) {
       form.setValue('personId', preselectedPersonId, { shouldValidate: true });
+      form.trigger('personId');
     }
   }, [preselectedPersonId, form]);
 
@@ -94,7 +96,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
       .filter(person => (balances[person.id] > 0))
       .sort((a, b) => a.name.localeCompare(b.name));
       
-    // Manually add the preselected person if they are not in the list
+    // Manually add the preselected person if they are not in the list, so they are always an option.
     if (preselectedPersonId) {
         const preselectedPerson = people.find(p => p.id === preselectedPersonId);
         if (preselectedPerson && !list.some(p => p.id === preselectedPersonId)) {
@@ -177,7 +179,10 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                             <FormItem>
                                 <FormLabel>Persona con recuperos pendientes</FormLabel>
                                 <Select 
-                                    onValueChange={field.onChange} 
+                                    onValueChange={(value) => {
+                                      field.onChange(value);
+                                      form.trigger('personId');
+                                    }}
                                     value={field.value} 
                                     disabled={!selectedDate || isFull}
                                 >
@@ -203,21 +208,6 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                         )}
                     />
 
-                    {/* --- DEBUG BOX --- */}
-                    <div className="mt-4 p-3 border-2 border-dashed border-red-500 rounded-md bg-red-500/10 text-xs">
-                        <h3 className="font-bold text-red-700 dark:text-red-300">DEBUG INFO</h3>
-                        <pre className="whitespace-pre-wrap font-mono">
-                            {JSON.stringify({
-                                isValid: form.formState.isValid,
-                                errors: form.formState.errors,
-                                values: form.watch(),
-                                isFull,
-                                eligiblePeopleCount: eligiblePeople.length,
-                            }, null, 2)}
-                        </pre>
-                    </div>
-                    {/* --- END DEBUG BOX --- */}
-
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
                         <Button type="submit" disabled={!form.formState.isValid || isFull}>Añadir Persona</Button>
@@ -228,5 +218,3 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     </Dialog>
   );
 }
-
-    
