@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -15,7 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useStudio } from '@/context/StudioContext';
 import { Session } from '@/types';
 import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -46,22 +45,24 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
 
   const sessionDayNumber = dayMap[session.dayOfWeek];
 
-  const { occupationMessage, isFull } = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: '', isFull: false };
+  const { occupationMessage, isFull, vacationingPeopleNames } = useMemo(() => {
+    if (!selectedDate) return { occupationMessage: '', isFull: false, vacationingPeopleNames: [] };
+    
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
     const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
-    const regularIdsOnVacation = session.personIds.filter(pid => {
-        const person = people.find(p => p.id === pid);
-        return person && isPersonOnVacation(person, selectedDate);
-    }).length;
 
-    // A spot for recovery is ONLY available if someone is on vacation.
-    const availableRecoverySpots = regularIdsOnVacation - oneTimeIds.length;
+    const vacationingPeople = session.personIds
+        .map(pid => people.find(p => p.id === pid))
+        .filter((p): p is NonNullable<typeof p> => !!p && isPersonOnVacation(p, selectedDate));
+    
+    const vacationingPeopleNames = vacationingPeople.map(p => p.name);
+    const availableRecoverySpots = vacationingPeople.length - oneTimeIds.length;
 
     return {
       occupationMessage: `Cupos de recupero para el ${format(selectedDate, 'dd/MM/yy')}: ${availableRecoverySpots > 0 ? availableRecoverySpots : 0}`,
       isFull: availableRecoverySpots <= 0,
+      vacationingPeopleNames,
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
@@ -140,9 +141,14 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                     </PopoverContent>
                                 </Popover>
                                 {occupationMessage && (
-                                    <p className={cn("text-sm mt-1", isFull ? "text-destructive font-semibold" : "text-muted-foreground")}>
-                                        {occupationMessage}
-                                    </p>
+                                    <div className={cn("text-sm mt-2 p-2 rounded-md", isFull ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
+                                        <p className="font-semibold">{occupationMessage}</p>
+                                        {vacationingPeopleNames.length > 0 && (
+                                            <p className="text-xs mt-1">
+                                                (Liberado por: {vacationingPeopleNames.join(', ')})
+                                            </p>
+                                        )}
+                                    </div>
                                 )}
                                 <FormMessage />
                             </FormItem>
@@ -173,7 +179,6 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                     </SelectContent>
                                 </Select>
                                 {!selectedDate && <p className="text-xs text-muted-foreground">Debes seleccionar una fecha para habilitar esta lista.</p>}
-                                {isFull && <p className="text-xs text-destructive">No hay cupos de recupero para la fecha seleccionada.</p>}
                                 <FormMessage />
                             </FormItem>
                         )}
