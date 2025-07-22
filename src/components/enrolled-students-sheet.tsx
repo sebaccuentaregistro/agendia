@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useStudio } from '@/context/StudioContext';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Session, Person } from '@/types';
-import { format } from 'date-fns';
+import { format, nextDay, Day, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -44,8 +44,13 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
     if (!isMounted || !session) {
       return { enrolledPeople: [], sessionDetails: {}, title: '', description: '' };
     }
-    const today = new Date();
-    const todayStr = format(today, 'yyyy-MM-dd');
+    
+    const dayMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
+    const today = startOfDay(new Date());
+    const sessionDayIndex = dayMap[session.dayOfWeek];
+    const sessionDate = today.getDay() === sessionDayIndex ? today : nextDay(today, sessionDayIndex);
+    const sessionDateStr = format(sessionDate, 'yyyy-MM-dd');
+
     const specialist = specialists.find((i) => i.id === session.instructorId);
     const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
@@ -63,16 +68,16 @@ export function EnrolledStudentsSheet({ session, rosterType, onClose }: Enrolled
             .map(p => ({...p, enrollmentStatus: 'Fijo'}));
 
     } else { // rosterType === 'daily'
-        rosterTitle = 'Asistentes de Hoy';
-        rosterDescription = `Personas que se espera que asistan hoy a ${actividad?.name || 'la sesión'}.`;
+        rosterTitle = `Asistentes del ${format(sessionDate, "eeee dd/MM", { locale: es })}`;
+        rosterDescription = `Personas que se espera que asistan a ${actividad?.name || 'la sesión'} en esta fecha.`;
         
         const fixedEnrolledPeople = session.personIds
             .map(pid => people.find(p => p.id === pid))
             .filter((p): p is Person => !!p);
 
-        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today));
+        const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, sessionDate));
 
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
+        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === sessionDateStr);
         const oneTimeAttendeeIds = new Set(attendanceRecord?.oneTimeAttendees || []);
         const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.has(p.id));
 
