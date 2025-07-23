@@ -27,10 +27,11 @@ import { AttendanceHistoryDialog } from './attendance-history-dialog';
 import { JustifiedAbsenceDialog } from './justified-absence-dialog';
 import { StudentFilters } from '@/components/students/student-filters';
 import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, reactivatePerson } = useStudio();
+  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, reactivatePerson } from useStudio();
   const { institute } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
