@@ -174,18 +174,16 @@ function DashboardPageContent() {
         const capacity = space?.capacity || 0;
         
         const fixedEnrolledCount = session.personIds.length;
+        const fixedSlotsAvailable = capacity - fixedEnrolledCount;
+        
         const peopleOnVacationToday = session.personIds.filter(pid => {
             const person = people.find(p => p.id === pid);
             return person && isPersonOnVacation(person, today);
         }).length;
-
-        const fixedSlotsAvailable = capacity - fixedEnrolledCount;
-        const temporarySlotsAvailable = peopleOnVacationToday;
-        const totalSlotsAvailable = fixedSlotsAvailable + temporarySlotsAvailable;
         
         const hasWaitlist = session.waitlist && session.waitlist.length > 0;
 
-        if (totalSlotsAvailable > 0 && hasWaitlist) {
+        if (fixedSlotsAvailable > 0 && hasWaitlist) {
             const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
             const waitlistDetails = (session.waitlist || [])
                 .map(entry => {
@@ -204,8 +202,8 @@ function DashboardPageContent() {
                 waitlist: waitlistDetails,
                 availableSlots: {
                     fixed: fixedSlotsAvailable,
-                    temporary: temporarySlotsAvailable,
-                    total: totalSlotsAvailable,
+                    temporary: peopleOnVacationToday,
+                    total: fixedSlotsAvailable + peopleOnVacationToday,
                 }
             };
         }
