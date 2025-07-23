@@ -49,6 +49,7 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
         if (today.getDay() === sessionDayIndex && format(today, 'HH:mm') < session.time) {
             checkDate = today;
         } else if (today.getDay() === sessionDayIndex) {
+            // If it's today but the time has passed, check for next week's occurrence
             checkDate = nextDay(today, sessionDayIndex);
         }
 
