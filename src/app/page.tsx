@@ -122,7 +122,7 @@ function DashboardPageContent() {
         const sessionDayIndex = dayIndexMap[session.dayOfWeek];
         const checkDate = nextDay(today, sessionDayIndex);
         if (today.getDay() === sessionDayIndex) {
-            checkDate.setDate(checkDate.getDate() - 7); 
+            checkDate.setDate(checkDate.getDate()); 
         }
 
         const dateStr = format(checkDate, 'yyyy-MM-dd');
@@ -134,7 +134,7 @@ function DashboardPageContent() {
 
         const dailyOccupancy = (fixedEnrolledPeople.length - vacationingCount) + oneTimeAttendeesCount;
         const availableSlotsTotal = space.capacity - dailyOccupancy;
-
+        
         if (availableSlotsTotal > 0) {
             const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
             
@@ -289,12 +289,14 @@ function DashboardPageContent() {
                 />
               </div>
               <div className="space-y-8">
-                <WaitlistOpportunities 
-                  opportunities={waitlistOpportunities} 
-                  summary={waitlistSummary} 
-                  totalCount={totalWaitlistCount}
-                  onHeaderClick={() => setIsWaitlistSheetOpen(true)}
-                />
+                {totalWaitlistCount > 0 && (
+                  <WaitlistOpportunities 
+                    opportunities={waitlistOpportunities} 
+                    summary={waitlistSummary} 
+                    totalCount={totalWaitlistCount}
+                    onHeaderClick={() => setIsWaitlistSheetOpen(true)}
+                  />
+                )}
                  <Button className="w-full flex items-center gap-2" variant="outline" onClick={() => setIsRemindersSheetOpen(true)}>
                     <Bell className="h-4 w-4" />
                     Ver todos los recordatorios
