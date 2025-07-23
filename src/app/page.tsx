@@ -4,9 +4,9 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
-import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Person, PaymentReminderInfo, WaitlistEntry } from '@/types';
@@ -26,6 +26,8 @@ import { MainCards } from '@/components/dashboard/main-cards';
 import { TodaySessions } from '@/components/dashboard/today-sessions';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
+import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
+import { MassReminderDialog } from '@/components/mass-reminder-dialog';
 import { PinDialog } from '@/components/pin-dialog';
 
 
@@ -54,8 +56,10 @@ function DashboardPageContent() {
 
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
-  const [revenuePeriod, setRevenuePeriod] = useState<'today' | 'week' | 'month'>('month');
-  
+
+  const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
+  const [isMassReminderOpen, setIsMassReminderOpen] = useState(false);
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -150,7 +154,7 @@ function DashboardPageContent() {
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
     { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
-    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: KeyRound, count: null },
+    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: ArrowRight, count: null },
   ];
   
   const advancedCards = [
@@ -221,7 +225,7 @@ function DashboardPageContent() {
                             <card.icon className="h-4 w-4" />
                         </div>
                         <CardTitle className="text-lg font-semibold text-foreground">{card.label}</CardTitle>
-                        {card.count !== null && <p className="text-2xl font-bold text-foreground">{card.count}</p>}
+                        {card.count !== null ? <p className="text-2xl font-bold text-foreground">{card.count}</p> : card.label === 'Gestión Avanzada' ? <ArrowRight className="h-6 w-6 text-foreground mt-2"/> : null}
                     </Card>
                 </Link>
             ))}
