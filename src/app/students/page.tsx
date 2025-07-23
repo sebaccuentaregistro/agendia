@@ -30,7 +30,7 @@ import { PaymentRemindersSheet } from '@/components/students/payment-reminders-s
 
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, enrollPersonInSessions, reactivatePerson } from useStudio();
+  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, reactivatePerson } = useStudio();
   const { institute } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
