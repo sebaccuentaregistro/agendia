@@ -113,14 +113,18 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
     const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes.";
     
     const progressColorClass = useMemo(() => {
-        if (utilization >= 100) return "bg-red-500";
+        if (utilization >= 100) return "bg-red-600";
         if (utilization >= 80) return "bg-yellow-500";
-        return "bg-green-500";
+        return "bg-green-600";
     }, [utilization]);
     
     const handleAction = (eventName: string, detail: any) => {
-        const event = new CustomEvent(eventName, { detail });
-        document.dispatchEvent(event);
+        if (eventName === 'view-students') {
+            onSessionClick(session);
+        } else {
+            const event = new CustomEvent(eventName, { detail });
+            document.dispatchEvent(event);
+        }
     };
 
     return (
@@ -152,10 +156,10 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                <button className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => handleAction('view-students', session)}>
+                <button className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => onSessionClick(session)}>
                     <div className="flex justify-between items-center text-xs font-semibold">
-                        <span className="text-muted-foreground">Ocupación Fija</span>
-                        <span className="text-foreground">{enrolledCount} / {spaceCapacity}</span>
+                        <span className="text-muted-foreground">Ocupación del día</span>
+                        <span className="text-foreground">{dailyOccupancy} / {spaceCapacity}</span>
                     </div>
                     <Progress value={utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </button>
@@ -231,4 +235,3 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
         </Card>
     );
 }
-
