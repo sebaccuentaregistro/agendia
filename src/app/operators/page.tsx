@@ -21,6 +21,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { PinDialog } from '@/components/pin-dialog';
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "El nombre debe tener al menos 2 caracteres." }),
@@ -28,65 +29,18 @@ const formSchema = z.object({
   role: z.enum(['admin', 'staff'], { required_error: 'Debes seleccionar un rol.' }),
 });
 
-function PinVerificationDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
-  const { validatePin, setPinVerified } = useAuth();
-  const [pin, setPin] = useState('');
-  const [error, setError] = useState('');
-  const { toast } = useToast();
-  
-  const handleVerify = async () => {
-    setError('');
-    const isValid = await validatePin(pin);
-    if (isValid) {
-      setPinVerified(true);
-      toast({ title: "Acceso concedido", description: "PIN de propietario verificado." });
-      onOpenChange(false);
-    } else {
-      setError("PIN incorrecto. Inténtalo de nuevo.");
-    }
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Verificar PIN de Propietario</DialogTitle>
-          <DialogDescription>
-            Para gestionar operadores, primero debes introducir tu PIN de 4 dígitos.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4 space-y-2">
-          <Input
-            type="password"
-            maxLength={4}
-            value={pin}
-            onChange={e => setPin(e.target.value)}
-            className="w-40 mx-auto text-center text-2xl tracking-[1rem]"
-            placeholder="----"
-          />
-          {error && <p className="text-sm text-center text-destructive">{error}</p>}
-        </div>
-        <DialogFooter>
-          <Button onClick={handleVerify}>Verificar y Desbloquear</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-
 export default function OperatorsPage() {
   const { operators, addOperator, updateOperator, deleteOperator, loading } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isPinVerificationOpen, setIsPinVerificationOpen] = useState(false);
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedOperator, setSelectedOperator] = useState<Operator | undefined>(undefined);
   const [operatorToDelete, setOperatorToDelete] = useState<Operator | null>(null);
 
   useEffect(() => {
     if (!isPinVerified) {
-      setIsPinVerificationOpen(true);
+      setIsPinDialogOpen(true);
     }
   }, [isPinVerified]);
 
@@ -203,7 +157,7 @@ export default function OperatorsPage() {
       
        {!isPinVerified && (
           <>
-            <PinVerificationDialog open={isPinVerificationOpen} onOpenChange={setIsPinVerificationOpen} />
+            <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
             <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
                 <CardHeader>
                 <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>
@@ -212,7 +166,7 @@ export default function OperatorsPage() {
                 </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Button onClick={() => setIsPinVerificationOpen(true)}>
+                    <Button onClick={() => setIsPinDialogOpen(true)}>
                         <KeyRound className="mr-2 h-4 w-4" />
                         Verificar PIN
                     </Button>

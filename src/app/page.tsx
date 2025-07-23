@@ -349,11 +349,7 @@ function DashboardPageContent() {
       
       {dashboardView === 'main' && (
         <>
-            <MainCards 
-              overdueCount={overdueCount}
-              sessionsCount={sessions.length}
-              peopleCount={people.length}
-            />
+            <MainCards />
             
             <TodaySessions
                 sessions={todaysSessions}
