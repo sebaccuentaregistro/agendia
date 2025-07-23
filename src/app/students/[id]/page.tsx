@@ -16,10 +16,10 @@ import { useAuth } from '@/context/AuthContext';
 import { PersonDialog } from '@/components/students/person-dialog';
 import { PaymentReceiptDialog, type ReceiptInfo } from '@/components/payment-receipt-dialog';
 import { EnrollmentsDialog } from '@/components/enrollments-dialog';
-import { VacationDialog } from '@/components/students/vacation-dialog';
-import { PaymentHistoryDialog } from '@/components/students/payment-history-dialog';
-import { AttendanceHistoryDialog } from '@/components/students/attendance-history-dialog';
-import { JustifiedAbsenceDialog } from '@/components/students/justified-absence-dialog';
+import { VacationDialog } from '@/app/students/vacation-dialog';
+import { PaymentHistoryDialog } from '@/app/students/payment-history-dialog';
+import { AttendanceHistoryDialog } from '@/app/students/attendance-history-dialog';
+import { JustifiedAbsenceDialog } from '@/app/students/justified-absence-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format, parse } from 'date-fns';
@@ -187,6 +187,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
               <DropdownMenuItem onSelect={() => setIsPersonDialogOpen(true)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsVacationDialogOpen(true)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsRevertAlertOpen(true)} disabled={personPaymentCount === 0}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setIsDeactivateAlertOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Desactivar Persona</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
