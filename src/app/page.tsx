@@ -6,14 +6,14 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Person, PaymentReminderInfo, WaitlistEntry } from '@/types';
+import type { Session, Person, PaymentReminderInfo, WaitlistEntry, WaitlistProspect } from '@/types';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
-import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, startOfWeek, endOfWeek, endOfDay, nextDay, Day, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
@@ -26,11 +26,11 @@ import { MainCards } from '@/components/dashboard/main-cards';
 import { TodaySessions } from '@/components/dashboard/today-sessions';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
+import { WaitlistOpportunities, type Opportunity } from '@/components/waitlist-opportunities';
 import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
 import { MassReminderDialog } from '@/components/mass-reminder-dialog';
 import { PinDialog } from '@/components/pin-dialog';
-
-
+import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
 
 
 function DashboardPageContent() {
@@ -47,6 +47,7 @@ function DashboardPageContent() {
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isUpdatingDebts, setIsUpdatingDebts] = useState(false);
   const [isWaitlistSheetOpen, setIsWaitlistSheetOpen] = useState(false);
+  const [isRemindersSheetOpen, setIsRemindersSheetOpen] = useState(false);
   const { toast } = useToast();
   
   const searchParams = useSearchParams();
@@ -76,7 +77,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0 };
+      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -107,18 +108,88 @@ function DashboardPageContent() {
     }, 0);
     
     const collectionPercentage = potentialIncome > 0 ? (revenueMonth / potentialIncome) * 100 : 0;
+    
+    // Waitlist Opportunities Logic
+    const waitlistOpportunities: Opportunity[] = [];
+    const dayIndexMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
+    
+    sessions.forEach(session => {
+        if (!session.waitlist || session.waitlist.length === 0) return;
+        
+        const space = spaces.find(s => s.id === session.spaceId);
+        if (!space) return;
+
+        const sessionDayIndex = dayIndexMap[session.dayOfWeek];
+        const checkDate = nextDay(today, sessionDayIndex);
+        if (today.getDay() === sessionDayIndex) {
+            checkDate.setDate(checkDate.getDate() - 7); 
+        }
+
+        const dateStr = format(checkDate, 'yyyy-MM-dd');
+        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
+
+        const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
+        const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, checkDate)).length;
+        const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
+
+        const dailyOccupancy = (fixedEnrolledPeople.length - vacationingCount) + oneTimeAttendeesCount;
+        const availableSlotsTotal = space.capacity - dailyOccupancy;
+
+        if (availableSlotsTotal > 0) {
+            const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
+            
+            const waitlistItems = session.waitlist.map(entry => {
+                if (typeof entry === 'string') {
+                    const person = people.find(p => p.id === entry);
+                    return person ? { ...person, isProspect: false } : null;
+                }
+                return { ...entry, isProspect: true };
+            }).filter(item => item !== null) as Opportunity['waitlist'];
+
+            if (waitlistItems.length > 0) {
+                waitlistOpportunities.push({
+                    session,
+                    actividadName: actividades.find(a => a.id === session.actividadId)?.name || 'Clase',
+                    waitlist: waitlistItems,
+                    availableSlots: {
+                        fixed: fixedAvailable,
+                        temporary: vacationingCount,
+                        total: availableSlotsTotal,
+                    }
+                });
+            }
+        }
+    });
+    
+    const waitlistSummary = sessions.reduce<{sessionId: string, className: string, count: number}[]>((acc, session) => {
+        if(session.waitlist && session.waitlist.length > 0) {
+            acc.push({
+                sessionId: session.id,
+                className: actividades.find(a => a.id === session.actividadId)?.name || 'Clase',
+                count: session.waitlist.length
+            });
+        }
+        return acc;
+    }, []);
+
+    const totalWaitlistCount = waitlistSummary.reduce((sum, item) => sum + item.count, 0);
+
 
     return {
       todaysSessions, todayName: currentTodayName,
       totalDebt, collectionPercentage,
+      waitlistOpportunities, waitlistSummary, totalWaitlistCount
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, spaces, actividades]);
 
   const {
     todaysSessions,
     todayName,
     totalDebt,
     collectionPercentage,
+    waitlistOpportunities,
+    waitlistSummary,
+    totalWaitlistCount,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -207,12 +278,29 @@ function DashboardPageContent() {
       {dashboardView === 'main' && (
         <>
             <MainCards />
-            <TodaySessions
-                sessions={todaysSessions}
-                todayName={todayName}
-                onSessionClick={setSelectedSessionForStudents}
-                onAttendanceClick={setSessionForAttendance}
-            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
+              <div className="md:col-span-2">
+                <TodaySessions
+                    sessions={todaysSessions}
+                    todayName={todayName}
+                    onSessionClick={setSelectedSessionForStudents}
+                    onAttendanceClick={setSessionForAttendance}
+                />
+              </div>
+              <div className="space-y-8">
+                <WaitlistOpportunities 
+                  opportunities={waitlistOpportunities} 
+                  summary={waitlistSummary} 
+                  totalCount={totalWaitlistCount}
+                  onHeaderClick={() => setIsWaitlistSheetOpen(true)}
+                />
+                 <Button className="w-full flex items-center gap-2" variant="outline" onClick={() => setIsRemindersSheetOpen(true)}>
+                    <Bell className="h-4 w-4" />
+                    Ver todos los recordatorios
+                </Button>
+              </div>
+            </div>
         </>
       )}
 
@@ -299,6 +387,7 @@ function DashboardPageContent() {
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
       <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
+      <PaymentRemindersSheet isOpen={isRemindersSheetOpen} onOpenChange={setIsRemindersSheetOpen} />
     </div>
   );
 }
