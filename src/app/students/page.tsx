@@ -28,6 +28,8 @@ import { JustifiedAbsenceDialog } from './justified-absence-dialog';
 import { StudentFilters } from '@/components/students/student-filters';
 import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
 function StudentsPageContent() {
