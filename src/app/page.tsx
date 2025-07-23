@@ -30,6 +30,7 @@ import { MassReminderDialog } from '@/components/mass-reminder-dialog';
 import { WaitlistOpportunities, type Opportunity } from '@/components/waitlist-opportunities';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
+import { PinDialog } from '@/components/pin-dialog';
 
 
 
@@ -105,11 +106,10 @@ function DashboardPageContent() {
 
     const paymentReminders = people
       .map(person => {
-          if (!person.lastPaymentDate) return null;
-          const statusInfo = getStudentPaymentStatus(person, now);
+          const statusInfo = getStudentPaymentStatus(person, new Date());
           
           if (statusInfo.status === 'Próximo a Vencer' && statusInfo.daysUntilDue !== undefined) {
-               return { person, dueDate: person.lastPaymentDate, daysUntilDue: statusInfo.daysUntilDue };
+               return { person, dueDate: person.lastPaymentDate || new Date(), daysUntilDue: statusInfo.daysUntilDue };
           }
           return null;
       })
