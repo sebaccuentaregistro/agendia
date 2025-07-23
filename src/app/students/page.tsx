@@ -31,7 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, reactivatePerson } from useStudio();
+  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, levels, triggerWaitlistCheck, reactivatePerson, recordPayment } = useStudio();
   const { institute } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
