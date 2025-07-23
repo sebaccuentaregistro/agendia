@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { format, startOfDay, nextDay, Day, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useSearchParams } from 'next/navigation';
-import { MoreHorizontal, User, MapPin, Signal, ClipboardCheck, ListPlus, Pencil, Send, Trash2, Plane, CalendarClock } from 'lucide-react';
+import { MoreHorizontal, User, MapPin, Signal, ClipboardCheck, ListPlus, Pencil, Send, Trash2, Plane, CalendarClock, Lock } from 'lucide-react';
 import type { Session, Person } from '@/types';
 
 interface ScheduleCardProps {
@@ -80,12 +80,10 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
     const spaceCapacity = space?.capacity ?? 0;
     
     const utilization = spaceCapacity > 0 ? (dailyOccupancy / spaceCapacity) * 100 : 0;
-    const isFull = dailyOccupancy >= spaceCapacity;
-    const isNearlyFull = utilization >= 80 && !isFull;
+    const isStructurallyFull = enrolledCount >= spaceCapacity;
     
-    const canRecover = dailyOccupancy < spaceCapacity;
     const recoveryMode = searchParams.get('recoveryMode') === 'true';
-    if (recoveryMode && !canRecover) return null;
+    if (recoveryMode && (dailyOccupancy >= spaceCapacity)) return null;
 
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const today = startOfDay(new Date());
@@ -163,7 +161,12 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                     </div>
                     <Progress value={utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </button>
-                 <div className="flex justify-center items-center gap-2 w-full text-[11px] text-muted-foreground text-center">
+                 <div className="flex justify-center items-center flex-wrap gap-2 w-full text-[11px] text-muted-foreground text-center min-h-[22px]">
+                    {isStructurallyFull && (
+                        <Badge variant="outline" className="border-amber-500/50 text-amber-600">
+                             <Lock className="h-3 w-3 mr-1"/> Cupos Fijos Llenos
+                        </Badge>
+                    )}
                     {(recoveringPeople.length > 0) && (
                         <Popover>
                             <PopoverTrigger asChild>
@@ -220,18 +223,19 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                     )}
 
                     {dailyOccupancy < spaceCapacity ? (
-                        <>
-                            {enrolledCount < spaceCapacity && (
-                                <Button variant="secondary" size="sm" onClick={() => handleAction('enroll-people', session)}>Inscripción Fija</Button>
-                            )}
-                            <Button variant="outline" size="sm" onClick={() => handleAction('one-time-attendee', session)} className={enrolledCount >= spaceCapacity ? 'col-span-2' : ''}>
-                                Inscripción Recupero
-                            </Button>
-                        </>
+                       <Button variant="outline" size="sm" onClick={() => handleAction('one-time-attendee', session)} className="col-span-2">
+                            Inscripción Recupero
+                        </Button>
                     ) : (
                        <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => handleAction('manage-waitlist', session)}>
                             <ListPlus className="mr-2 h-4 w-4" />
                             {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
+                        </Button>
+                    )}
+                    
+                    {!isStructurallyFull && (
+                         <Button variant="secondary" size="sm" onClick={() => handleAction('enroll-people', session)} className="col-span-2">
+                            Inscripción Fija
                         </Button>
                     )}
                 </div>
