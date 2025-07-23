@@ -44,15 +44,24 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
       const personTariff = tariffs.find(t => t.id === person.tariffId);
       const weeklyClassLimit = personTariff?.frequency;
       
-      const currentWeeklyClasses = allSessions.filter(s => s.personIds.includes(person.id)).length;
+      const enrolledSessions = allSessions.filter(s => s.personIds.includes(person.id));
+      const currentWeeklyClasses = enrolledSessions.length;
+
+      const enrolledActivities = Array.from(new Set(
+        enrolledSessions.map(s => {
+          const act = actividades.find(a => a.id === s.actividadId);
+          return act ? act.name : null;
+        }).filter(Boolean) as string[]
+      ));
 
       return {
         ...person,
         weeklyClassLimit,
-        currentWeeklyClasses
+        currentWeeklyClasses,
+        enrolledActivities,
       };
     }).sort((a,b) => a.name.localeCompare(b.name));
-  }, [people, tariffs, allSessions]);
+  }, [people, tariffs, allSessions, actividades]);
 
   // This list now includes all people, so we can see the "ghosts"
   const allPeopleInList = useMemo(() => {
@@ -132,7 +141,7 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                           render={({ field }) => (
                             <FormItem
                               key={person.id}
-                              className="flex flex-row items-center space-x-3 space-y-0 py-2"
+                              className="flex flex-row items-start space-x-3 space-y-0 py-2"
                             >
                               <FormControl>
                                 <Checkbox
@@ -160,6 +169,11 @@ export function EnrollPeopleDialog({ session, onClose }: EnrollPeopleDialogProps
                                     </Badge>
                                   )}
                                 </FormLabel>
+                                {person.enrolledActivities.length > 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Inscripto en: {person.enrolledActivities.join(', ')}
+                                    </p>
+                                )}
                               </div>
                             </FormItem>
                           )}
