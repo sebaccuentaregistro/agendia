@@ -18,6 +18,8 @@ import type { Session, Person } from '@/types';
 
 interface ScheduleCardProps {
     session: Session;
+    onSessionClick: (session: Session) => void;
+    onAttendanceClick: (session: Session) => void;
 }
 
 const formatTime = (time: string) => {
@@ -25,7 +27,7 @@ const formatTime = (time: string) => {
     return time;
 };
 
-export function ScheduleCard({ session }: ScheduleCardProps) {
+export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: ScheduleCardProps) {
     const { specialists, actividades, spaces, levels, people, isPersonOnVacation, attendance } = useStudio();
     
     const searchParams = useSearchParams();
@@ -107,16 +109,17 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
 
     const isAttendanceAllowed = attendanceWindowStart ? now >= attendanceWindowStart : false;
     const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes.";
-
-    const handleAction = (eventName: string, detail: any) => {
-        document.dispatchEvent(new CustomEvent(eventName, { detail }));
-    };
     
     const progressColorClass = useMemo(() => {
-        if (isFull) return "bg-red-500";
-        if (isNearlyFull) return "bg-yellow-500";
+        if (utilization >= 100) return "bg-red-500";
+        if (utilization >= 80) return "bg-yellow-500";
         return "bg-green-500";
-    }, [isFull, isNearlyFull]);
+    }, [utilization]);
+    
+    const handleAction = (eventName: string, detail: any) => {
+        const event = new CustomEvent(eventName, { detail });
+        document.dispatchEvent(event);
+    };
 
     return (
         <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
@@ -147,7 +150,7 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => handleAction('view-students', session)}>
+                <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => onSessionClick(session)}>
                     <div className="flex justify-between items-center text-xs font-semibold">
                         <span className="text-muted-foreground">Ocupación Fija</span>
                         <span className="text-foreground">{enrolledCount} / {spaceCapacity}</span>
@@ -164,7 +167,7 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <span className="w-full col-span-2" tabIndex={0}>
-                                        <Button variant="secondary" size="sm" onClick={() => handleAction('take-attendance', session)} disabled={!isAttendanceAllowed} className="w-full">
+                                        <Button variant="secondary" size="sm" onClick={() => onAttendanceClick(session)} disabled={!isAttendanceAllowed} className="w-full">
                                             <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
                                         </Button>
                                     </span>
