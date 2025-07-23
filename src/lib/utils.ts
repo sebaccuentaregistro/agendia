@@ -2,7 +2,7 @@
 
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
-import type { Person, Tariff } from "@/types";
+import type { Person, Tariff, PaymentStatusInfo } from "@/types";
 import { set, isBefore, addMonths, addDays, isAfter, differenceInDays, format, getDate, getDaysInMonth, startOfDay } from "date-fns";
 
 export function cn(...inputs: ClassValue[]) {
@@ -47,13 +47,7 @@ export function calculateNextPaymentDate(fromDate: Date, joinDate: Date | null |
   }
 }
 
-
-export type PaymentStatus = {
-  status: 'Al día' | 'Atrasado' | 'Pendiente de Pago';
-  daysOverdue?: number;
-};
-
-export function getStudentPaymentStatus(person: Person, referenceDate: Date): PaymentStatus {
+export function getStudentPaymentStatus(person: Person, referenceDate: Date): PaymentStatusInfo {
   const nextDueDate = person.lastPaymentDate;
   
   if (!nextDueDate) {
@@ -68,12 +62,16 @@ export function getStudentPaymentStatus(person: Person, referenceDate: Date): Pa
   const today = startOfDay(referenceDate);
   const dueDateAtStartOfDay = startOfDay(nextDueDate);
 
-  // A person is overdue if today is AT or AFTER the due date.
   const isOverdue = !isBefore(today, dueDateAtStartOfDay);
   
   if (isOverdue) {
     const daysOverdue = differenceInDays(today, dueDateAtStartOfDay);
-    return { status: 'Atrasado', daysOverdue: Math.max(0, daysOverdue) }; // Ensure it's not negative if paid on the same day
+    return { status: 'Atrasado', daysOverdue: Math.max(0, daysOverdue) };
+  }
+  
+  const daysUntilDue = differenceInDays(dueDateAtStartOfDay, today);
+  if (daysUntilDue <= 3) {
+      return { status: 'Próximo a Vencer', daysUntilDue };
   }
   
   return { status: 'Al día' };
