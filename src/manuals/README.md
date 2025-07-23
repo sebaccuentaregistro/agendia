@@ -1,6 +1,6 @@
 # Manual de Usuario de Agendia
 
-¡Bienvenido a la documentación oficial de  Agendia!
+¡Bienvenido a la documentación oficial de Agendia!
 
 Esta guía está diseñada para ayudarte a sacar el máximo provecho de la aplicación, desde la configuración inicial hasta la gestión avanzada de tu estudio.
 
