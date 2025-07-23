@@ -204,7 +204,7 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 w-full">
-                    {isToday ? (
+                    {isToday && (
                         <TooltipProvider delayDuration={100}>
                             <Tooltip>
                                 <TooltipTrigger asChild>
@@ -217,12 +217,16 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                                 <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
-                    ) : null}
+                    )}
 
-                    {enrolledCount < spaceCapacity ? (
+                    {dailyOccupancy < spaceCapacity ? (
                         <>
-                            <Button variant="secondary" size="sm" onClick={() => handleAction('enroll-people', session)}>Inscripción Fija</Button>
-                            <Button variant="outline" size="sm" onClick={() => handleAction('one-time-attendee', session)}>Inscripción Recupero</Button>
+                            {enrolledCount < spaceCapacity && (
+                                <Button variant="secondary" size="sm" onClick={() => handleAction('enroll-people', session)}>Inscripción Fija</Button>
+                            )}
+                            <Button variant="outline" size="sm" onClick={() => handleAction('one-time-attendee', session)} className={enrolledCount >= spaceCapacity ? 'col-span-2' : ''}>
+                                Inscripción Recupero
+                            </Button>
                         </>
                     ) : (
                        <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => handleAction('manage-waitlist', session)}>
