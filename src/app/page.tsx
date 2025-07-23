@@ -177,11 +177,6 @@ function DashboardPageContent() {
         const fixedEnrolledCount = session.personIds.length;
         const fixedSlotsAvailable = capacity - fixedEnrolledCount;
         
-        const peopleOnVacationToday = session.personIds.filter(pid => {
-            const person = people.find(p => p.id === pid);
-            return person && isPersonOnVacation(person, today);
-        }).length;
-        
         const hasWaitlist = session.waitlist && session.waitlist.length > 0;
 
         if (fixedSlotsAvailable > 0 && hasWaitlist) {
@@ -196,6 +191,11 @@ function DashboardPageContent() {
                 })
                 .filter((p): p is NonNullable<typeof p> => p !== null)
                 .sort((a, b) => (a.isProspect ? 1 : 0) - (b.isProspect ? 1 : 0));
+
+            const peopleOnVacationToday = session.personIds.filter(pid => {
+                const person = people.find(p => p.id === pid);
+                return person && isPersonOnVacation(person, today);
+            }).length;
 
             return {
                 session,
@@ -346,156 +346,134 @@ function DashboardPageContent() {
         </Button>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-8">
-          
-          {dashboardView === 'main' && (
-            <>
-                <MainCards 
-                  overdueCount={overdueCount}
-                  pendingRecoveryCount={pendingRecoveryCount}
-                  onVacationCount={onVacationCount}
-                  sessionsCount={sessions.length}
-                  peopleCount={people.length}
-                />
-                
-                <TodaySessions
-                    sessions={todaysSessions}
-                    todayName={todayName}
-                    onSessionClick={setSelectedSessionForStudents}
-                    onAttendanceClick={setSessionForAttendance}
-                />
-            </>
-          )}
+      
+      {dashboardView === 'main' && (
+        <>
+            <MainCards 
+              overdueCount={overdueCount}
+              sessionsCount={sessions.length}
+              peopleCount={people.length}
+            />
+            
+            <TodaySessions
+                sessions={todaysSessions}
+                todayName={todayName}
+                onSessionClick={setSelectedSessionForStudents}
+                onAttendanceClick={setSessionForAttendance}
+            />
+        </>
+      )}
 
-          {dashboardView === 'management' && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                {managementCards.map((item) => (
-                  <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
-                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
-                      <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                      <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                          <item.icon className="h-4 w-4" />
-                      </div>
-                      <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                      <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                    </Card>
-                  </Link>
-                ))}
-                <div onClick={() => isPinVerified ? router.push('/?view=advanced') : setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
-                    <Card id="advanced-management-card" className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 hover:border-primary/50 border-transparent h-full">
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
-                      <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                          <Lock className="h-4 w-4" />
-                      </div>
-                      <CardTitle className="text-lg font-semibold text-foreground">Gestión Avanzada</CardTitle>
-                        <div className="text-sm text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
-                        Acceder <ArrowRight className="h-3 w-3" />
-                        </div>
-                    </Card>
-                </div>
-            </div>
-          )}
-
-          {dashboardView === 'advanced' && isPinVerified && (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-                <Card className="col-span-2 sm:col-span-3 md:col-span-2 bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-purple-500/50">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-lg font-semibold text-foreground">Ingresos del Período</CardTitle>
-                        <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-                             <Button size="sm" variant={revenuePeriod === 'today' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('today')}>Hoy</Button>
-                             <Button size="sm" variant={revenuePeriod === 'week' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('week')}>Semana</Button>
-                             <Button size="sm" variant={revenuePeriod === 'month' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('month')}>Mes</Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-4xl font-bold text-foreground">
-                            {revenuePeriod === 'today' && formatPrice(revenueToday)}
-                            {revenuePeriod === 'week' && formatPrice(revenueWeek)}
-                            {revenuePeriod === 'month' && formatPrice(revenueMonth)}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                            {revenuePeriod === 'today' && `Ingresos registrados hoy, ${format(new Date(), 'dd MMMM', {locale: es})}.`}
-                            {revenuePeriod === 'week' && `Ingresos registrados en la semana actual.`}
-                            {revenuePeriod === 'month' && `Ingresos acumulados en ${format(new Date(), 'MMMM', {locale: es})}.`}
-                        </p>
-                    </CardContent>
+      {dashboardView === 'management' && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            {managementCards.map((item) => (
+              <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
+                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <item.icon className="h-4 w-4" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                  <p className="text-2xl font-bold text-foreground">{item.count}</p>
                 </Card>
-                {advancedCards.map((item) => {
-                  const colorClass = item.colorClass || 'purple';
-                  return (
-                    <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
-                        <Card className={cn(
-                            "group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent h-full",
-                            colorClass === 'purple' && "hover:border-purple-500/50",
-                            colorClass === 'red' && "hover:border-red-500/50"
-                        )}>
-                            <div className={cn(
-                                "absolute inset-0 bg-gradient-to-br to-transparent",
-                                colorClass === 'purple' && "from-purple-500/10",
-                                colorClass === 'red' && "from-red-500/10"
-                            )}></div>
-                            <div className={cn(
-                                "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                                colorClass === 'purple' && "from-purple-500/20",
-                                colorClass === 'red' && "from-red-500/20"
-                            )}></div>
-                            <div className={cn(
-                                "flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full",
-                                colorClass === 'purple' && "bg-purple-500/10 text-purple-500",
-                                colorClass === 'red' && "bg-red-500/10 text-red-500"
-                            )}>
-                                <item.icon className="h-5 w-5" />
-                            </div>
-                            <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                            <p className="text-2xl font-bold text-foreground">{item.value ?? item.count}</p>
-                        </Card>
-                    </Link>
-                  );
-                })}
-                <div
-                  onClick={!isUpdatingDebts ? handleUpdateDebts : undefined}
-                  className={cn(
-                    "transition-transform hover:-translate-y-1",
-                    isUpdatingDebts ? 'cursor-not-allowed' : 'cursor-pointer'
-                  )}
-                >
-                  <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
-                      <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
-                      <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                          <RefreshCw className={cn("h-5 w-5", isUpdatingDebts && "animate-spin")} />
-                      </div>
-                      <CardTitle className="text-lg font-semibold text-foreground">Actualizar Deudas</CardTitle>
-                      <Button asChild size="sm" className="mt-2" variant={isUpdatingDebts ? "ghost" : "default"}>
-                        <div>
-                          {isUpdatingDebts ? 'Actualizando...' : 'Ejecutar'}
-                        </div>
-                      </Button>
-                  </Card>
-                </div>
+              </Link>
+            ))}
+            <div onClick={() => isPinVerified ? router.push('/?view=advanced') : setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
+                <Card id="advanced-management-card" className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 hover:border-primary/50 border-transparent h-full">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
+                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                      <Lock className="h-4 w-4" />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-foreground">Gestión Avanzada</CardTitle>
+                    <div className="text-sm text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
+                    Acceder <ArrowRight className="h-3 w-3" />
+                    </div>
+                </Card>
             </div>
-          )}
         </div>
-        <div className="space-y-8">
-            <PaymentReminders 
-                reminders={paymentReminders} 
-                onSendReminder={setPaymentReminderInfo}
-                onSendAll={() => setIsMassReminderOpen(true)}
-            />
+      )}
 
-            <ChurnRiskAlerts people={people} attendance={attendance} sessions={sessions} />
-
-            <WaitlistOpportunities
-              opportunities={waitlistOpportunities}
-              summary={waitlistSummary}
-              totalCount={totalWaitlistCount}
-              onHeaderClick={() => setIsWaitlistSheetOpen(true)}
-            />
+      {dashboardView === 'advanced' && isPinVerified && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+            <Card className="col-span-2 sm:col-span-3 md:col-span-2 bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-purple-500/50">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg font-semibold text-foreground">Ingresos del Período</CardTitle>
+                    <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
+                         <Button size="sm" variant={revenuePeriod === 'today' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('today')}>Hoy</Button>
+                         <Button size="sm" variant={revenuePeriod === 'week' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('week')}>Semana</Button>
+                         <Button size="sm" variant={revenuePeriod === 'month' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('month')}>Mes</Button>
+                    </div>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-4xl font-bold text-foreground">
+                        {revenuePeriod === 'today' && formatPrice(revenueToday)}
+                        {revenuePeriod === 'week' && formatPrice(revenueWeek)}
+                        {revenuePeriod === 'month' && formatPrice(revenueMonth)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        {revenuePeriod === 'today' && `Ingresos registrados hoy, ${format(new Date(), 'dd MMMM', {locale: es})}.`}
+                        {revenuePeriod === 'week' && `Ingresos registrados en la semana actual.`}
+                        {revenuePeriod === 'month' && `Ingresos acumulados en ${format(new Date(), 'MMMM', {locale: es})}.`}
+                    </p>
+                </CardContent>
+            </Card>
+            {advancedCards.map((item) => {
+              const colorClass = item.colorClass || 'purple';
+              return (
+                <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
+                    <Card className={cn(
+                        "group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent h-full",
+                        colorClass === 'purple' && "hover:border-purple-500/50",
+                        colorClass === 'red' && "hover:border-red-500/50"
+                    )}>
+                        <div className={cn(
+                            "absolute inset-0 bg-gradient-to-br to-transparent",
+                            colorClass === 'purple' && "from-purple-500/10",
+                            colorClass === 'red' && "from-red-500/10"
+                        )}></div>
+                        <div className={cn(
+                            "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
+                            colorClass === 'purple' && "from-purple-500/20",
+                            colorClass === 'red' && "from-red-500/20"
+                        )}></div>
+                        <div className={cn(
+                            "flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full",
+                            colorClass === 'purple' && "bg-purple-500/10 text-purple-500",
+                            colorClass === 'red' && "bg-red-500/10 text-red-500"
+                        )}>
+                            <item.icon className="h-5 w-5" />
+                        </div>
+                        <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
+                        <p className="text-2xl font-bold text-foreground">{item.value ?? item.count}</p>
+                    </Card>
+                </Link>
+              );
+            })}
+            <div
+              onClick={!isUpdatingDebts ? handleUpdateDebts : undefined}
+              className={cn(
+                "transition-transform hover:-translate-y-1",
+                isUpdatingDebts ? 'cursor-not-allowed' : 'cursor-pointer'
+              )}
+            >
+              <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
+                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
+                  <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
+                      <RefreshCw className={cn("h-5 w-5", isUpdatingDebts && "animate-spin")} />
+                  </div>
+                  <CardTitle className="text-lg font-semibold text-foreground">Actualizar Deudas</CardTitle>
+                  <Button asChild size="sm" className="mt-2" variant={isUpdatingDebts ? "ghost" : "default"}>
+                    <div>
+                      {isUpdatingDebts ? 'Actualizando...' : 'Ejecutar'}
+                    </div>
+                  </Button>
+              </Card>
+            </div>
         </div>
-      </div>
+      )}
     
       <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
       <PaymentReminderDialog reminderInfo={paymentReminderInfo} onOpenChange={() => setPaymentReminderInfo(null)} />
