@@ -115,11 +115,11 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
     const progressColorClass = useMemo(() => {
         if (isFull) return "bg-red-500";
         if (isNearlyFull) return "bg-yellow-500";
-        return "bg-primary";
+        return "bg-green-500";
     }, [isFull, isNearlyFull]);
 
     return (
-        <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-4 border-green-500 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
+        <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
             <CardHeader className="p-4 pb-2">
                 <div className="flex items-start justify-between">
                     <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{actividad?.name}</CardTitle>
@@ -157,13 +157,6 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
                         Ocupación Hoy: {dailyOccupancy} (Rec: {recoveryCount} | Vac: {onVacationCount})
                     </p>
                 </div>
-                
-                {/* --- PANEL DE DEBUG TEMPORAL --- */}
-                <div className="w-full p-1 mt-2 text-center text-xs bg-red-900/80 text-white rounded">
-                    <p className="font-bold">DEBUG:</p>
-                    <p>dailyOccupancy: {dailyOccupancy} | utilization: {utilization.toFixed(0)}%</p>
-                </div>
-                {/* --- FIN PANEL DE DEBUG --- */}
 
                 <div className="grid grid-cols-2 gap-2 w-full">
                     {isToday ? (
