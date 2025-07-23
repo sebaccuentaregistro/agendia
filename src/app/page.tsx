@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Person, PaymentReminderInfo, WaitlistEntry } from '@/types';
@@ -239,6 +239,7 @@ function DashboardPageContent() {
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null, colorClass: "purple" },
      { id: 'activity-log', href: "/activitylog", label: "Registro Actividad", icon: ListChecks, count: null, colorClass: "purple" },
   ];
+
 
   if (!isMounted) {
     return (
