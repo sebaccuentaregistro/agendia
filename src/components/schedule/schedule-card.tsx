@@ -18,8 +18,6 @@ import type { Session, Person } from '@/types';
 
 interface ScheduleCardProps {
     session: Session;
-    onSessionClick: (session: Session) => void;
-    onAttendanceClick: (session: Session) => void;
 }
 
 const formatTime = (time: string) => {
@@ -27,7 +25,7 @@ const formatTime = (time: string) => {
     return time;
 };
 
-export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: ScheduleCardProps) {
+export function ScheduleCard({ session }: ScheduleCardProps) {
     const { specialists, actividades, spaces, levels, people, isPersonOnVacation, attendance } = useStudio();
     
     const searchParams = useSearchParams();
@@ -49,7 +47,6 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
         if (today.getDay() === sessionDayIndex && format(today, 'HH:mm') < session.time) {
             checkDate = today;
         } else if (today.getDay() === sessionDayIndex) {
-            // If it's today but the time has passed, check for next week's occurrence
             checkDate = nextDay(today, sessionDayIndex);
         }
 
@@ -92,7 +89,7 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
 
     const [now, setNow] = useState(new Date());
     useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
+        const timer = setInterval(() => setNow(new Date()), 60000);
         return () => clearInterval(timer);
     }, []);
 
@@ -111,8 +108,8 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
     const isAttendanceAllowed = attendanceWindowStart ? now >= attendanceWindowStart : false;
     const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes.";
 
-    const handleAction = (eventName: string) => {
-        document.dispatchEvent(new CustomEvent(eventName, { detail: session }));
+    const handleAction = (eventName: string, detail: any) => {
+        document.dispatchEvent(new CustomEvent(eventName, { detail }));
     };
     
     const progressColorClass = useMemo(() => {
@@ -122,7 +119,7 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
     }, [isFull, isNearlyFull]);
 
     return (
-        <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
+        <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-4 border-green-500 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
             <CardHeader className="p-4 pb-2">
                 <div className="flex items-start justify-between">
                     <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{actividad?.name}</CardTitle>
@@ -131,10 +128,10 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleAction('edit-session')}><Pencil className="mr-2 h-4 w-4" />Editar Sesión</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleAction('notify-session')}><Send className="mr-2 h-4 w-4" />Notificar Asistentes</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleAction('edit-session', session)}><Pencil className="mr-2 h-4 w-4" />Editar Sesión</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleAction('notify-session', session)}><Send className="mr-2 h-4 w-4" />Notificar Asistentes</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => handleAction('delete-session')} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar Sesión</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleAction('delete-session', session)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar Sesión</DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -150,23 +147,31 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => onSessionClick(session)}>
+                <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => handleAction('view-students', session)}>
                     <div className="flex justify-between items-center text-xs font-semibold">
                         <span className="text-muted-foreground">Ocupación Fija</span>
                         <span className="text-foreground">{enrolledCount} / {spaceCapacity}</span>
                     </div>
-                    <Progress value={(dailyOccupancy / spaceCapacity) * 100} indicatorClassName={progressColorClass} className="h-1.5" />
+                    <Progress value={utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                     <p className="text-[11px] text-muted-foreground text-center">
                         Ocupación Hoy: {dailyOccupancy} (Rec: {recoveryCount} | Vac: {onVacationCount})
                     </p>
                 </div>
+                
+                {/* --- PANEL DE DEBUG TEMPORAL --- */}
+                <div className="w-full p-1 mt-2 text-center text-xs bg-red-900/80 text-white rounded">
+                    <p className="font-bold">DEBUG:</p>
+                    <p>dailyOccupancy: {dailyOccupancy} | utilization: {utilization.toFixed(0)}%</p>
+                </div>
+                {/* --- FIN PANEL DE DEBUG --- */}
+
                 <div className="grid grid-cols-2 gap-2 w-full">
                     {isToday ? (
                         <TooltipProvider delayDuration={100}>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <span className="w-full col-span-2" tabIndex={0}>
-                                        <Button variant="secondary" size="sm" onClick={() => onAttendanceClick(session)} disabled={!isAttendanceAllowed} className="w-full">
+                                        <Button variant="secondary" size="sm" onClick={() => handleAction('take-attendance', session)} disabled={!isAttendanceAllowed} className="w-full">
                                             <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
                                         </Button>
                                     </span>
@@ -178,11 +183,11 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
 
                     {enrolledCount < spaceCapacity ? (
                         <>
-                            <Button variant="secondary" size="sm" onClick={() => handleAction('enroll-people')}>Inscripción Fija</Button>
-                            <Button variant="outline" size="sm" onClick={() => handleAction('one-time-attendee')}>Inscripción Recupero</Button>
+                            <Button variant="secondary" size="sm" onClick={() => handleAction('enroll-people', session)}>Inscripción Fija</Button>
+                            <Button variant="outline" size="sm" onClick={() => handleAction('one-time-attendee', session)}>Inscripción Recupero</Button>
                         </>
                     ) : (
-                       <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => handleAction('manage-waitlist')}>
+                       <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => handleAction('manage-waitlist', session)}>
                             <ListPlus className="mr-2 h-4 w-4" />
                             {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
                         </Button>
@@ -192,4 +197,3 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
         </Card>
     );
 }
-
