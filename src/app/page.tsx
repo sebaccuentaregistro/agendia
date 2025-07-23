@@ -126,8 +126,9 @@ function DashboardPageContent() {
           if (!person.lastPaymentDate) return null;
           const dueDate = person.lastPaymentDate;
           const daysUntilDue = differenceInDays(dueDate, today);
-          if (daysUntilDue >= 0 && daysUntilDue <= 3) {
-              return { person, dueDate, daysUntilDue };
+          
+          if (getStudentPaymentStatus(person, now).status === 'Próximo a Vencer') {
+               return { person, dueDate, daysUntilDue };
           }
           return null;
       })
