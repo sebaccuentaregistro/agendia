@@ -1,7 +1,8 @@
 
+
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -14,7 +15,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { useStudio } from '@/context/StudioContext';
 import { Session } from '@/types';
 import { cn } from '@/lib/utils';
-import { CalendarIcon, User } from 'lucide-react';
+import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -34,6 +35,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     resolver: zodResolver(oneTimeAttendeeSchema),
     defaultValues: {
         personId: preselectedPersonId || undefined,
+        date: undefined,
     }
   });
 
@@ -44,52 +46,75 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
   }), []);
 
   const sessionDayNumber = dayMap[session.dayOfWeek];
+  
+  const eligiblePeople = useMemo(() => {
+    const balances: Record<string, number> = {};
+    people.forEach(p => (balances[p.id] = 0));
+    attendance.forEach(record => {
+      (record.justifiedAbsenceIds || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]++; });
+      (record.oneTimeAttendees || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
+    });
+    
+    return people
+      .filter(person => (balances[person.id] > 0))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [people, attendance]);
 
-  const { occupationMessage, isFull, vacationingPeopleNames } = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: '', isFull: false, vacationingPeopleNames: [] };
+  const { occupationMessage, isFull } = useMemo(() => {
+    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true };
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
     const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
 
-    const vacationingPeople = session.personIds
-        .map(pid => people.find(p => p.id === pid))
-        .filter((p): p is NonNullable<typeof p> => !!p && isPersonOnVacation(p, selectedDate));
+    const vacationingPeopleCount = session.personIds
+        .filter(pid => {
+            const person = people.find(p => p.id === pid);
+            return person && isPersonOnVacation(person, selectedDate)
+        }).length;
     
-    const vacationingPeopleNames = vacationingPeople.map(p => p.name);
-    const availableRecoverySpots = vacationingPeople.length - oneTimeIds.length;
+    const fixedEnrolledCount = session.personIds.length;
+    const currentOccupation = (fixedEnrolledCount - vacationingPeopleCount) + oneTimeIds.length;
+    const isClassFull = currentOccupation >= capacity;
+    
+    let message = '';
+    if (isClassFull) {
+        message = 'No hay cupos disponibles para esta fecha.';
+    } else {
+        const availableSpots = capacity - currentOccupation;
+        message = `Hay ${availableSpots} cupo(s) disponible(s).`;
+    }
 
     return {
-      occupationMessage: `Cupos de recupero para el ${format(selectedDate, 'dd/MM/yy')}: ${availableRecoverySpots > 0 ? availableRecoverySpots : 0}`,
-      isFull: availableRecoverySpots <= 0,
-      vacationingPeopleNames,
+        occupationMessage: message,
+        isFull: isClassFull
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
-  const eligiblePeople = useMemo(() => {
-    const balances: Record<string, number> = {};
-    people.forEach(p => (balances[p.id] = 0));
-
-    attendance.forEach(record => {
-      record.justifiedAbsenceIds?.forEach(personId => {
-        if (balances[personId] !== undefined) balances[personId]++;
-      });
-      record.oneTimeAttendees?.forEach(personId => {
-        if (balances[personId] !== undefined) balances[personId]--;
-      });
-    });
-
-    return people
-      .filter(person => balances[person.id] > 0 || person.id === preselectedPersonId)
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [people, attendance, preselectedPersonId]);
-
+  
+  useEffect(() => {
+    if (preselectedPersonId) {
+      form.setValue('personId', preselectedPersonId, { shouldValidate: true });
+      form.trigger('personId');
+    }
+  }, [preselectedPersonId, form]);
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
     addOneTimeAttendee(session.id, values.personId, values.date);
     onClose();
   }
   
+  const preselectedPersonData = preselectedPersonId ? people.find(p => p.id === preselectedPersonId) : null;
+  const finalEligiblePeople = useMemo(() => {
+    if (!preselectedPersonData) return eligiblePeople;
+    const list = [...eligiblePeople];
+    if (!list.some(p => p.id === preselectedPersonData.id)) {
+        list.unshift(preselectedPersonData);
+    }
+    return list;
+  }, [eligiblePeople, preselectedPersonData]);
+
+
   return (
     <Dialog open onOpenChange={onClose}>
         <DialogContent>
@@ -143,11 +168,6 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                 {occupationMessage && (
                                     <div className={cn("text-sm mt-2 p-2 rounded-md", isFull ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
                                         <p className="font-semibold">{occupationMessage}</p>
-                                        {vacationingPeopleNames.length > 0 && (
-                                            <p className="text-xs mt-1">
-                                                (Liberado por: {vacationingPeopleNames.join(', ')})
-                                            </p>
-                                        )}
                                     </div>
                                 )}
                                 <FormMessage />
@@ -160,21 +180,24 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                         render={({ field }) => (
                             <FormItem>
                                 <FormLabel>Persona con recuperos pendientes</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDate || isFull || !!preselectedPersonId}>
+                                <Select 
+                                    onValueChange={field.onChange}
+                                    value={field.value} 
+                                    disabled={!selectedDate || isFull}
+                                >
                                     <FormControl>
                                         <SelectTrigger>
                                             <SelectValue placeholder="Selecciona una persona" />
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {eligiblePeople.length > 0 ? (
-                                          eligiblePeople.map(person => (
+                                        {finalEligiblePeople.map(person => (
                                             <SelectItem key={person.id} value={person.id}>
                                               {person.name}
                                             </SelectItem>
-                                          ))
-                                        ) : (
-                                          <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
+                                        ))}
+                                        {finalEligiblePeople.length === 0 && (
+                                            <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
                                     </SelectContent>
                                 </Select>
@@ -183,9 +206,10 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                             </FormItem>
                         )}
                     />
+
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button type="submit" disabled={isFull || !form.formState.isValid}>Añadir Asistente</Button>
+                        <Button type="submit" disabled={!form.formState.isValid || isFull}>Añadir Persona</Button>
                     </DialogFooter>
                 </form>
             </Form>
@@ -193,3 +217,4 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     </Dialog>
   );
 }
+

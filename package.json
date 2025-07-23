@@ -2,7 +2,7 @@
   "name": "agendia",
   "version": "1.0.3",
   "private": true,
-  "description": "Forcing a clean reinstall of dependencies to fix a build error.",
+  "description": "Added react-hook-form dependency to fix module not found error.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -46,6 +46,7 @@
     "react": "^18",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",
+    "react-hook-form": "^7.52.1",
     "recharts": "^2.12.7",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",

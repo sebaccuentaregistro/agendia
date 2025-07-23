@@ -163,27 +163,6 @@ function DashboardPageContent() {
 
     const todaysSessions = sessions
       .filter(session => session.dayOfWeek === currentTodayName)
-      .map(session => {
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === todayStr);
-        const oneTimeAttendeeIds = attendanceRecord?.oneTimeAttendees || [];
-        const oneTimeAttendees = people.filter(p => oneTimeAttendeeIds.includes(p.id));
-        
-        const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
-        const vacationingPeople = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today));
-        
-        const enrolledCount = (fixedEnrolledPeople.length - vacationingPeople.length) + oneTimeAttendees.length;
-
-        return {
-          ...session,
-          enrolledCount,
-          waitlistCount: session.waitlist?.length || 0,
-          dailyAttendees: {
-              fixed: fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, today)).map(p => p.name),
-              oneTime: oneTimeAttendees.map(p => p.name),
-              onVacation: vacationingPeople.map(p => p.name),
-          }
-        };
-      })
       .sort((a, b) => a.time.localeCompare(b.time));
 
     const totalWaitlistCount = sessions.reduce((acc, session) => {
@@ -322,7 +301,7 @@ function DashboardPageContent() {
      { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, count: operators.length, colorClass: "purple" },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length, colorClass: "purple" },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null, colorClass: "purple" },
-     { id: 'activity-log', href: "/activity-log", label: "Registro Actividad", icon: ListChecks, count: null, colorClass: "purple" },
+     { id: 'activity-log', href: "/activitylog", label: "Registro Actividad", icon: ListChecks, count: null, colorClass: "purple" },
   ];
 
   
@@ -383,9 +362,6 @@ function DashboardPageContent() {
                 
                 <TodaySessions
                     sessions={todaysSessions}
-                    specialists={specialists}
-                    actividades={actividades}
-                    spaces={spaces}
                     todayName={todayName}
                     onSessionClick={setSelectedSessionForStudents}
                     onAttendanceClick={setSessionForAttendance}
@@ -531,7 +507,6 @@ function DashboardPageContent() {
          <EnrolledStudentsSheet 
             session={selectedSessionForStudents}
             onClose={() => setSelectedSessionForStudents(null)}
-            rosterType={'daily'}
           />
       )}
       {sessionForAttendance && (
@@ -564,9 +539,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-
-
-
-
-

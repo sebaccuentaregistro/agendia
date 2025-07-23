@@ -3,45 +3,35 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus, ChevronDown, Pointer, AlertCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { PlusCircle, FileDown, LayoutGrid, List, CalendarDays } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import type { Person, Session, WaitlistEntry, WaitlistProspect } from '@/types';
+import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
+import type { Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn, exportToCsv } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
 import { AttendanceSheet } from '@/components/attendance-sheet';
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format, startOfDay, nextDay, Day } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Progress } from '@/components/ui/progress';
+import { ScheduleCard } from '@/components/schedule/schedule-card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertCircle } from 'lucide-react';
 
 
 const formSchema = z.object({
@@ -53,18 +43,9 @@ const formSchema = z.object({
   levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
 });
 
-const formatTime = (time: string) => {
-    if (!time || !time.includes(':')) return 'N/A';
-    return time;
-};
-
-type UnifiedWaitlistItem =
-  | (Person & { isProspect: false; entry: string })
-  | (WaitlistProspect & { isProspect: true; entry: WaitlistProspect });
-
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading, isPersonOnVacation, attendance, removeFromWaitlist } = useStudio();
+  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, loading } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
@@ -75,7 +56,6 @@ function SchedulePageContent() {
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   const [sessionForStudentsSheet, setSessionForStudentsSheet] = useState<Session | null>(null);
-  const [rosterTypeForSheet, setRosterTypeForSheet] = useState<'fixed' | 'daily'>('daily');
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -92,6 +72,49 @@ function SchedulePageContent() {
     resolver: zodResolver(formSchema),
     defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
   });
+
+  const handleEditSession = useCallback((session: Session) => {
+    setSelectedSession(session);
+    form.reset({
+      instructorId: session.instructorId,
+      actividadId: session.actividadId,
+      spaceId: session.spaceId,
+      dayOfWeek: session.dayOfWeek,
+      time: session.time,
+      levelId: session.levelId || 'none',
+    });
+    setIsDialogOpen(true);
+  }, [form]);
+  
+  const handleOpenOneTime = useCallback((session: Session) => {
+    const personId = searchParams.get('personId');
+    setPersonForOneTime(personId);
+    setSessionForOneTime(session);
+  }, [searchParams]);
+
+  useEffect(() => {
+    const handleEvent = (e: Event, handler: (detail: any) => void) => handler((e as CustomEvent).detail);
+
+    const handlers = {
+        'edit-session': (e: Event) => handleEditSession((e as CustomEvent).detail),
+        'delete-session': (e: Event) => setSessionForDelete((e as CustomEvent).detail),
+        'enroll-people': (e: Event) => setSessionForEnrollment((e as CustomEvent).detail),
+        'one-time-attendee': (e: Event) => handleOpenOneTime((e as CustomEvent).detail),
+        'manage-waitlist': (e: Event) => setSessionForWaitlist((e as CustomEvent).detail),
+        'notify-session': (e: Event) => setSessionForNotification((e as CustomEvent).detail),
+        'view-students': (e: Event) => setSessionForStudentsSheet((e as CustomEvent).detail),
+    };
+
+    Object.entries(handlers).forEach(([eventName, handler]) => {
+        document.addEventListener(eventName, handler);
+    });
+
+    return () => {
+        Object.entries(handlers).forEach(([eventName, handler]) => {
+            document.removeEventListener(eventName, handler);
+        });
+    };
+  }, [handleEditSession, handleOpenOneTime]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -139,19 +162,6 @@ function SchedulePageContent() {
     }
     setIsDialogOpen(false);
   };
-
-  const handleEdit = (session: Session) => {
-    setSelectedSession(session);
-    form.reset({
-      instructorId: session.instructorId,
-      actividadId: session.actividadId,
-      spaceId: session.spaceId,
-      dayOfWeek: session.dayOfWeek,
-      time: session.time,
-      levelId: session.levelId || 'none',
-    });
-    setIsDialogOpen(true);
-  };
   
   const handleAdd = () => {
     setSelectedSession(undefined);
@@ -171,12 +181,6 @@ function SchedulePageContent() {
       deleteSession(sessionForDelete.id);
       setSessionForDelete(null);
     }
-  };
-  
-  const handleOpenOneTime = (session: Session) => {
-    const personId = searchParams.get('personId');
-    setPersonForOneTime(personId);
-    setSessionForOneTime(session);
   };
 
   const availableSpecialists = useMemo(() => {
@@ -230,207 +234,6 @@ function SchedulePageContent() {
         capacidad: "Capacidad",
     };
     exportToCsv('horarios.csv', dataToExport, headers);
-  }
-
-  const SessionCard = ({ session }: { session: Session }) => {
-    const { specialist, actividad, space, level } = getSessionDetails(session);
-    const enrolledCount = session.personIds.length;
-    const spaceCapacity = space?.capacity ?? 0;
-    
-    const today = startOfDay(new Date());
-    const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
-    const isToday = session.dayOfWeek === dayMap[today.getDay()];
-
-    const [now, setNow] = useState(new Date());
-    useEffect(() => {
-        const timer = setInterval(() => setNow(new Date()), 60000); // Update every minute
-        return () => clearInterval(timer);
-    }, []);
-    
-    const checkDate = useMemo(() => {
-      const dayIndexMap: Record<Session['dayOfWeek'], number> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
-      const sessionDayIndex = dayIndexMap[session.dayOfWeek];
-      return nextDay(today, sessionDayIndex as Day);
-    }, [session.dayOfWeek, today]);
-
-    const sessionStartTime = useMemo(() => {
-        if (!isToday) return null;
-        const [hour, minute] = session.time.split(':').map(Number);
-        const startTime = new Date(today);
-        startTime.setHours(hour, minute, 0, 0);
-        return startTime;
-    }, [isToday, session.time, today]);
-
-    const attendanceWindowStart = useMemo(() => {
-        return sessionStartTime ? new Date(sessionStartTime.getTime() - 20 * 60 * 1000) : null;
-    }, [sessionStartTime]);
-
-    const isAttendanceAllowed = attendanceWindowStart ? now >= attendanceWindowStart : false;
-    const tooltipMessage = isAttendanceAllowed ? "Pasar Lista" : "La asistencia se habilita 20 minutos antes.";
-
-    const recoveryMode = searchParams.get('recoveryMode') === 'true';
-
-    const { dailyOccupancy, recoveryCount, onVacationCount, vacationingPeople } = useMemo(() => {
-      const dateStrToUse = format(checkDate, 'yyyy-MM-dd');
-
-      const fixedEnrolledPeople = session.personIds
-          .map(pid => people.find(p => p.id === pid))
-          .filter((p): p is Person => !!p);
-
-      const vacationing = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, checkDate));
-      const activeFixedPeople = fixedEnrolledPeople.filter(p => !isPersonOnVacation(p, checkDate));
-      
-      const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStrToUse);
-      
-      const validOneTimeAttendees = (attendanceRecord?.oneTimeAttendees || [])
-          .map(id => people.find(p => p.id === id))
-          .filter((p): p is Person => !!p);
-
-      const recoveryCount = validOneTimeAttendees.length;
-
-      const dailyOccupancy = activeFixedPeople.length + recoveryCount;
-      
-      return { dailyOccupancy, recoveryCount, onVacationCount: vacationing.length, vacationingPeople: vacationing };
-    }, [session, people, isPersonOnVacation, attendance, checkDate]);
-    
-    const waitlistDetails = useMemo(() => {
-        if (!session.waitlist) return [];
-        return (session.waitlist || [])
-            .map(entry => {
-                if (typeof entry === 'string') {
-                    const person = people.find(p => p.id === entry);
-                    if (!person) return null;
-                    return { ...person, isProspect: false as const, entry: entry as string };
-                }
-                return { ...entry, isProspect: true as const, entry: entry as WaitlistProspect };
-            })
-            .filter((p): p is UnifiedWaitlistItem => !!p);
-    }, [session.waitlist, people]);
-
-    const waitlistCount = waitlistDetails?.length || 0;
-    
-    const occupancyToday = dailyOccupancy;
-    const canRecover = occupancyToday < spaceCapacity;
-
-    if (recoveryMode && !canRecover) {
-        return null;
-    }
-
-    const utilization = spaceCapacity > 0 ? (occupancyToday / spaceCapacity) * 100 : 0;
-    const isFull = utilization >= 100;
-    const isNearlyFull = utilization >= 80 && !isFull;
-    
-    const handleOccupancyClick = () => {
-        setRosterTypeForSheet(isToday ? 'daily' : 'fixed');
-        setSessionForStudentsSheet(session);
-    };
-
-    return (
-        <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-2xl hover:-translate-y-1.5">
-            <CardHeader className="p-4 pb-2">
-                <div className="flex items-start justify-between">
-                    <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{actividad?.name}</CardTitle>
-                     <div className="flex items-center">
-                        {vacationingPeople.length > 0 && (
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-cyan-500 hover:bg-cyan-500/10">
-                                        <Plane className="h-4 w-4" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-60">
-                                    <div className="space-y-2">
-                                        <h4 className="font-medium leading-none">De Vacaciones el {format(checkDate, 'dd/MM/yy')}</h4>
-                                        <ul className="text-sm text-muted-foreground list-disc pl-4">
-                                            {vacationingPeople.map(p => (
-                                                <li key={p.id}>
-                                                    {p.name}
-                                                    <span className="text-xs block">
-                                                        (hasta {p.vacationPeriods && p.vacationPeriods.length > 0 ? format(p.vacationPeriods[p.vacationPeriods.length-1].endDate, 'dd/MM/yy') : 'N/A'})
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
-                        )}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300"><MoreHorizontal className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => handleEdit(session)}><Pencil className="mr-2 h-4 w-4" />Editar Sesión</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setSessionForNotification(session)}><Send className="mr-2 h-4 w-4" />Notificar Asistentes</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => setSessionForDelete(session)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Eliminar Sesión</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
-                </div>
-                <div className="text-sm text-slate-600 dark:text-slate-400">
-                    <p className="font-semibold">{session.dayOfWeek}, {formatTime(session.time)}</p>
-                </div>
-            </CardHeader>
-            <CardContent className="p-4 pt-2 flex-grow space-y-4">
-                <div className="space-y-1 text-sm">
-                    <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
-                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
-                    {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
-                </div>
-            </CardContent>
-            <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                 <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={handleOccupancyClick}>
-                    <div className="flex justify-between items-center text-xs font-semibold">
-                         <span className="text-muted-foreground">Ocupación Fija</span>
-                         <span className="text-foreground">
-                             {enrolledCount} / {spaceCapacity}
-                         </span>
-                    </div>
-                    <Progress
-                        value={utilization}
-                        className={cn(
-                            "h-1.5",
-                            !isFull && !isNearlyFull && "[&>div]:bg-green-500",
-                            isNearlyFull && "[&>div]:bg-yellow-500",
-                            isFull && "[&>div]:bg-red-500"
-                        )}
-                    />
-                    <p className="text-[11px] text-muted-foreground text-center">
-                        Ocupación Hoy: {dailyOccupancy} (Rec: {recoveryCount} | Vac: {onVacationCount})
-                    </p>
-                </div>
-                 <div className="grid grid-cols-2 gap-2 w-full">
-                    {isToday ? (
-                        <TooltipProvider delayDuration={100}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <span className="w-full col-span-2" tabIndex={0}>
-                                        <Button variant="secondary" size="sm" onClick={() => setSessionForAttendance(session)} disabled={!isAttendanceAllowed} className="w-full">
-                                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
-                                        </Button>
-                                    </span>
-                                </TooltipTrigger>
-                                <TooltipContent><p>{tooltipMessage}</p></TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    ) : null}
-
-                    {enrolledCount < spaceCapacity ? (
-                        <>
-                            <Button variant="secondary" size="sm" onClick={() => setSessionForEnrollment(session)}>Inscripción Fija</Button>
-                            <Button variant="outline" size="sm" onClick={() => handleOpenOneTime(session)}>Inscripción Recupero</Button>
-                        </>
-                    ) : (
-                       <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => setSessionForWaitlist(session)}>
-                            <ListPlus className="mr-2 h-4 w-4" />
-                            {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
-                        </Button>
-                    )}
-                </div>
-            </CardFooter>
-        </Card>
-    );
   }
 
   return (
@@ -517,7 +320,12 @@ function SchedulePageContent() {
               ) : filteredAndSortedSessions.length > 0 ? (
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {filteredAndSortedSessions.map((session) => (
-                    <SessionCard key={session.id} session={session} />
+                    <ScheduleCard 
+                        key={session.id} 
+                        session={session}
+                        onSessionClick={setSessionForStudentsSheet}
+                        onAttendanceClick={setSessionForAttendance}
+                    />
                   ))}
                 </div>
               ) : (
@@ -553,7 +361,7 @@ function SchedulePageContent() {
                                 const enrolledCount = session.personIds.length;
                                 const spaceCapacity = space?.capacity ?? 0;
                                 return (
-                                    <TableRow key={session.id} className="cursor-pointer" onClick={() => handleEdit(session)}>
+                                    <TableRow key={session.id} className="cursor-pointer" onClick={() => handleEditSession(session)}>
                                         <TableCell className="font-medium">{session.dayOfWeek}, {session.time}</TableCell>
                                         <TableCell>{actividad?.name}</TableCell>
                                         <TableCell>{specialist?.name}</TableCell>
@@ -578,7 +386,7 @@ function SchedulePageContent() {
                     actividades={actividades}
                     spaces={spaces}
                     levels={levels}
-                    onSessionClick={handleEdit}
+                    onSessionClick={handleEditSession}
                 />
             </TabsContent>
         </Tabs>
@@ -671,7 +479,6 @@ function SchedulePageContent() {
          <EnrolledStudentsSheet 
             session={sessionForStudentsSheet}
             onClose={() => setSessionForStudentsSheet(null)}
-            rosterType={rosterTypeForSheet}
           />
       )}
 
@@ -714,6 +521,3 @@ export default function SchedulePage() {
         </Suspense>
     )
 }
-
-
-    
