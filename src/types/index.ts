@@ -133,8 +133,9 @@ export type Payment = {
 };
 
 export type PaymentStatusInfo = {
-  status: 'Al día' | 'Atrasado' | 'Pendiente de Pago';
+  status: 'Al día' | 'Atrasado' | 'Pendiente de Pago' | 'Próximo a Vencer';
   daysOverdue?: number;
+  daysUntilDue?: number;
 };
 
 export type PaymentReminderInfo = {
