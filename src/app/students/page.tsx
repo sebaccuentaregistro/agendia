@@ -27,7 +27,7 @@ import { AttendanceHistoryDialog } from './attendance-history-dialog';
 import { JustifiedAbsenceDialog } from './justified-absence-dialog';
 import { StudentFilters } from '@/components/students/student-filters';
 import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsContent, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format, parse } from 'date-fns';
