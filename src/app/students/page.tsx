@@ -5,10 +5,10 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileDown, UserX, CalendarClock, Plane, Search, ArrowLeft, Bell } from 'lucide-react';
+import { PlusCircle, FileDown, Search, ArrowLeft, Bell } from 'lucide-react';
 import type { Person, RecoveryCredit } from '@/types';
 import { useStudio } from '@/context/StudioContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,11 +21,12 @@ import { PaymentRemindersSheet } from '@/components/students/payment-reminders-s
 import { Tabs, TabsList, TabsContent, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
+import { AlertCircle } from 'lucide-react';
 
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, sessions, reactivatePerson, loading } = useStudio();
+  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, loading, reactivatePerson } = useStudio();
   const { institute } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -71,15 +72,17 @@ function StudentsPageContent() {
     people.forEach(p => (usedRecoveryCounts[p.id] = 0));
 
     attendance.forEach(record => {
-        record.oneTimeAttendees?.forEach(personId => {
-            usedRecoveryCounts[personId] = (usedRecoveryCounts[personId] || 0) + 1;
+        (record.oneTimeAttendees || []).forEach(personId => {
+            if (usedRecoveryCounts[personId] !== undefined) {
+                usedRecoveryCounts[personId]++;
+            }
         });
         
-        record.justifiedAbsenceIds?.forEach(personId => {
+        (record.justifiedAbsenceIds || []).forEach(personId => {
             if (allRecoveryCredits[personId]) {
-                allRecoveryCredits[personId].push({
-                    className: 'Clase',
-                    date: format(new Date(record.date), 'dd/MM/yy'),
+                 allRecoveryCredits[personId].push({
+                    className: 'Clase', // Simplified for performance on this page
+                    date: format(parse(record.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy'),
                 });
             }
         });
@@ -319,3 +322,4 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
