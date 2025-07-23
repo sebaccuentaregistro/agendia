@@ -26,7 +26,7 @@ Imaginemos una clase con **Capacidad 10** y **8 alumnos fijos**.
 #### Caso 1: Alumno de Recupero
 
 *   **Situación:** La clase tiene 8/10 inscriptos. Un alumno de otra clase quiere usar un crédito para recuperar en este horario.
-*   **Acción:** Usas la opción "Inscripción Recupero" en la página de Horarios para anotarlo *solo para hoy*.
+*   **Acción:** Usas la opción "Recupero" en la tarjeta de la clase para anotarlo *solo para hoy*.
 *   **Resultado:**
     *   En `Horarios`, la clase sigue mostrando **8/10** (la estructura no cambió).
     *   En `Inicio`, la clase de hoy muestra **9/10** (los 8 fijos + 1 recupero).

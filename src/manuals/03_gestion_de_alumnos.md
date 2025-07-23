@@ -30,6 +30,7 @@ El sistema automatiza gran parte de la gestión de pagos.
 *   **Estados de Pago:**
     *   **Al día (Verde):** El pago está vigente.
     *   **Atrasado (Rojo):** La fecha de vencimiento ya pasó. El sistema te mostrará cuántos días de atraso tiene.
+    *   **Próximo a Vencer (Amarillo):** El pago vence en los próximos 3 días.
     *   **Pendiente de Pago (Azul):** Ocurre cuando se crea un alumno sin una fecha de vencimiento inicial. Se resuelve al registrar el primer pago.
 
 *   **Revertir Pago:** Si cometes un error, puedes ir al menú (⋮) y seleccionar "Volver atrás último pago" para anular el registro más reciente.
@@ -40,12 +41,12 @@ El sistema automatiza gran parte de la gestión de pagos.
 
 ### 3.3. Gestión de Horarios del Alumno
 
-*   **Inscripción a Clases:** En la tarjeta de la persona, haz clic en "Horarios". Se abrirá un panel donde podrás seleccionar todas las clases a las que asistirá de forma fija.
+*   **Inscripción a Clases:** En la tarjeta de la persona, haz clic en "Inscribir". Se abrirá un panel donde podrás seleccionar todas las clases a las que asistirá de forma fija.
     *   **Alerta de Límite de Plan:** Si el arancel de la persona tiene un límite de clases semanales, el sistema te mostrará una advertencia si intentas superar ese límite.
 
 *   **Gestión de Ausencias:**
     *   **Justificar Ausencia:** En el menú (⋮) de la persona, selecciona "Notificar Ausencia". Elige la fecha de la clase a la que faltará. Esto le generará automáticamente un **crédito de recupero**.
-    *   **Usar un Recupero:** Para usar un crédito, ve a `Horarios`, busca la clase a la que quieres que asista puntualmente y, en su menú de opciones, selecciona "Inscripción de Recupero".
+    *   **Usar un Recupero:** En la tarjeta de la persona, haz clic en el botón "Recuperar" para ver los horarios disponibles y usar su crédito.
 
 *   **Gestión de Vacaciones:** En el menú (⋮), puedes definir períodos de vacaciones. Durante esas fechas, el alumno no aparecerá en las listas de asistencia y se liberará su cupo temporalmente.
 
