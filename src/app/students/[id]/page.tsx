@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, MoreVertical, CalendarClock, Plane, Calendar as CalendarIcon, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Signal, DollarSign, ArrowLeft } from 'lucide-react';
+import { Pencil, Trash2, MoreVertical, CalendarClock, Plane, Calendar as CalendarIcon, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Signal, DollarSign, ArrowLeft, UserX } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Person, Payment, Session, Actividad, Specialist, Space, RecoveryCredit, Level, Tariff } from '@/types';
 import { useStudio } from '@/context/StudioContext';
@@ -16,10 +16,10 @@ import { useAuth } from '@/context/AuthContext';
 import { PersonDialog } from '@/components/students/person-dialog';
 import { PaymentReceiptDialog, type ReceiptInfo } from '@/components/payment-receipt-dialog';
 import { EnrollmentsDialog } from '@/components/enrollments-dialog';
-import { VacationDialog } from '../vacation-dialog';
-import { PaymentHistoryDialog } from '../payment-history-dialog';
-import { AttendanceHistoryDialog } from '../attendance-history-dialog';
-import { JustifiedAbsenceDialog } from '../justified-absence-dialog';
+import { VacationDialog } from '@/components/students/vacation-dialog';
+import { PaymentHistoryDialog } from '@/components/students/payment-history-dialog';
+import { AttendanceHistoryDialog } from '@/components/students/attendance-history-dialog';
+import { JustifiedAbsenceDialog } from '@/components/students/justified-absence-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { format, parse } from 'date-fns';
@@ -29,6 +29,7 @@ import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 function StudentDetailContent({ params }: { params: { id: string } }) {
   const router = useRouter();
@@ -247,11 +248,11 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
        
        {/* Dialogs */}
        <PersonDialog person={person} onOpenChange={setIsPersonDialogOpen} open={isPersonDialogOpen} />
-       <EnrollmentsDialog person={person} onClose={() => setIsEnrollmentDialogOpen(false)} />
-       <JustifiedAbsenceDialog person={person} onClose={() => setIsJustifyAbsenceOpen(false)} />
-       <VacationDialog person={person} onClose={() => setIsVacationDialogOpen(false)} />
-       <PaymentHistoryDialog person={person} payments={payments} tariffs={tariffs} onClose={() => setIsPaymentHistoryOpen(false)} />
-       <AttendanceHistoryDialog person={person} sessions={sessions} actividades={actividades} attendance={attendance} onClose={() => setIsAttendanceHistoryOpen(false)} />
+       {isEnrollmentDialogOpen && <EnrollmentsDialog person={person} onClose={() => setIsEnrollmentDialogOpen(false)} />}
+       {isJustifyAbsenceOpen && <JustifiedAbsenceDialog person={person} onClose={() => setIsJustifyAbsenceOpen(false)} />}
+       {isVacationDialogOpen && <VacationDialog person={person} onClose={() => setIsVacationDialogOpen(false)} />}
+       {isPaymentHistoryOpen && <PaymentHistoryDialog person={person} payments={payments} tariffs={tariffs} onClose={() => setIsPaymentHistoryOpen(false)} />}
+       {isAttendanceHistoryOpen && <AttendanceHistoryDialog person={person} sessions={sessions} actividades={actividades} attendance={attendance} onClose={() => setIsAttendanceHistoryOpen(false)} />}
        <PaymentReceiptDialog receiptInfo={receiptInfo} onOpenChange={() => setReceiptInfo(null)} />
 
         {/* Alerts */}

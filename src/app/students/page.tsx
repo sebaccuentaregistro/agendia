@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle, FileDown, Search, ArrowLeft, Bell } from 'lucide-react';
 import type { Person, RecoveryCredit } from '@/types';
 import { useStudio } from '@/context/StudioContext';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -322,4 +322,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
