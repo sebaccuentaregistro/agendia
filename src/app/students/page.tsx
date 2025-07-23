@@ -5,36 +5,15 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft, Signal, Send, DollarSign } from 'lucide-react';
+import { Pencil, PlusCircle, Trash2, MoreVertical, Search, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft, Signal, Send, DollarSign, Bell } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo, RecoveryCredit, Level, Tariff } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
 import { getStudentPaymentStatus, exportToCsv, calculateNextPaymentDate } from '@/lib/utils';
-import { cn } from '@/lib/utils';
-import { Badge } from '@/components/ui/badge';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format, isAfter, subMonths, parse } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Alert, AlertTitle, AlertDescription as AlertDescriptionComponent } from '@/components/ui/alert';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { PersonDialog } from '@/components/students/person-dialog';
@@ -44,204 +23,14 @@ import { PersonCard } from './person-card';
 import { EnrollmentsDialog } from '@/components/enrollments-dialog';
 import { VacationDialog } from './vacation-dialog';
 import { PaymentHistoryDialog } from './payment-history-dialog';
+import { AttendanceHistoryDialog } from './attendance-history-dialog';
+import { JustifiedAbsenceDialog } from './justified-absence-dialog';
+import { StudentFilters } from '@/components/students/student-filters';
+import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
 
-function AttendanceHistoryDialog({ person, sessions, actividades, attendance, onClose }: { person: Person | null; sessions: Session[]; actividades: Actividad[]; attendance: SessionAttendance[]; onClose: () => void; }) {
-    if (!person) return null;
-
-    const eventHistory = useMemo(() => {
-        let history: { date: Date; type: string; description: string; }[] = [];
-
-        // Process attendance records
-        attendance.forEach(record => {
-            const session = sessions.find(s => s.id === record.sessionId);
-            const actividad = session ? actividades.find(a => a.id === session.actividadId) : null;
-            const description = actividad ? actividad.name : 'Clase';
-            const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
-
-            if (record.presentIds?.includes(person.id)) {
-                history.push({ date: recordDate, type: 'presente', description });
-            }
-            if (record.absentIds?.includes(person.id)) {
-                history.push({ date: recordDate, type: 'ausente', description });
-            }
-            if (record.justifiedAbsenceIds?.includes(person.id)) {
-                history.push({ date: recordDate, type: 'a recuperar', description });
-            }
-            if (record.oneTimeAttendees?.includes(person.id)) {
-                history.push({ date: recordDate, type: 'recupero', description });
-            }
-        });
-
-        // Process vacation periods
-        person.vacationPeriods?.forEach(vac => {
-            if (vac.startDate && vac.endDate) {
-                 history.push({
-                    date: vac.startDate,
-                    type: 'vacaciones',
-                    description: `Inicio de vacaciones hasta ${format(vac.endDate, 'dd/MM/yy')}`
-                });
-            }
-        });
-
-        // Sort all events by date, descending
-        return history.sort((a, b) => b.date.getTime() - a.date.getTime());
-
-    }, [person, attendance, sessions, actividades]);
-
-    const getBadgeVariant = (type: string): "default" | "secondary" | "destructive" | "outline" => {
-        switch(type) {
-            case 'presente': return 'secondary'; // Greenish in theme
-            case 'recupero': return 'default'; // Primary color
-            case 'a recuperar': return 'outline'; // Yellowish/Orange
-            case 'ausente': return 'destructive';
-            case 'vacaciones': return 'outline'; // Purplish
-            default: return 'secondary';
-        }
-    };
-
-    const getBadgeIcon = (type: string) => {
-        switch(type) {
-            case 'presente': return <Check className="h-3 w-3" />;
-            case 'recupero': return <ClipboardList className="h-3 w-3" />;
-            case 'a recuperar': return <CalendarClock className="h-3 w-3" />;
-            case 'ausente': return <X className="h-3 w-3" />;
-            case 'vacaciones': return <Plane className="h-3 w-3" />;
-            default: return <Circle className="h-3 w-3" />;
-        }
-    };
-    
-    const getBadgeClass = (type: string) => {
-        switch (type) {
-            case 'presente': return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700';
-            case 'recupero': return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700';
-            case 'a recuperar': return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700';
-            case 'vacaciones': return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/50 dark:text-purple-300 dark:border-purple-700';
-            default: return '';
-        }
-    };
-
-    return (
-        <Dialog open={!!person} onOpenChange={onClose}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Historial de Asistencia: {person.name}</DialogTitle>
-                    <DialogDescription>
-                        Registro de todas las actividades, ausencias y recuperos.
-                    </DialogDescription>
-                </DialogHeader>
-                <ScrollArea className="h-96 my-4">
-                    {eventHistory.length > 0 ? (
-                        <div className="space-y-4 pr-4">
-                            {eventHistory.map((event, index) => (
-                                <div key={index} className="flex items-center gap-4">
-                                    <div className="text-center w-16 flex-shrink-0">
-                                        <p className="font-bold text-sm text-foreground">{format(event.date, 'dd MMM', { locale: es })}</p>
-                                        <p className="text-xs text-muted-foreground">{format(event.date, 'yyyy')}</p>
-                                    </div>
-                                    <div className="flex-grow space-y-1">
-                                       <Badge variant={getBadgeVariant(event.type)} className={cn("capitalize", getBadgeClass(event.type))}>
-                                           {getBadgeIcon(event.type)}
-                                           {event.type}
-                                       </Badge>
-                                       <p className="text-sm text-muted-foreground">{event.description}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-center h-full">
-                            <p className="text-muted-foreground text-center">No hay historial de asistencia para esta persona.</p>
-                        </div>
-                    )}
-                </ScrollArea>
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Cerrar</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-
-function JustifiedAbsenceDialog({ person, onClose }: { person: Person | null; onClose: () => void }) {
-    if (!person) return null;
-    
-    const { sessions, addJustifiedAbsence, attendance } = useStudio();
-    const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-    const [isSubmitting, setIsSubmitting] = useState(false);
-
-    const personSessions = useMemo(() => {
-        return sessions.filter(s => s.personIds.includes(person?.id || ''));
-    }, [sessions, person]);
-
-    const dayMap: { [key in Session['dayOfWeek']]: number } = useMemo(() => ({
-        'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6,
-    }), []);
-    
-    const allowedDaysOfWeek = useMemo(() => {
-        return Array.from(new Set(personSessions.map(s => dayMap[s.dayOfWeek])));
-    }, [personSessions, dayMap]);
-
-    const sessionOnSelectedDate = selectedDate ? personSessions.find(s => dayMap[s.dayOfWeek] === selectedDate.getDay()) : null;
-
-    const isDateAlreadyJustified = useMemo(() => {
-        if (!selectedDate || !sessionOnSelectedDate) return false;
-        const dateStr = format(selectedDate, 'yyyy-MM-dd');
-        const attendanceRecord = attendance.find(a => a.sessionId === sessionOnSelectedDate.id && a.date === dateStr);
-        return attendanceRecord?.justifiedAbsenceIds?.includes(person.id) || false;
-    }, [selectedDate, sessionOnSelectedDate, attendance, person.id]);
-
-    const handleDayClick = (day: Date, modifiers: any) => {
-        if (modifiers.disabled) return;
-        setSelectedDate(day);
-    };
-    
-    const handleSubmit = async () => {
-        if (!selectedDate || !sessionOnSelectedDate || isDateAlreadyJustified) return;
-        setIsSubmitting(true);
-        try {
-            await addJustifiedAbsence(person.id, sessionOnSelectedDate.id, selectedDate);
-            onClose();
-        } catch (error) {
-            console.error("Error justifying absence:", error);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-    
-    return (
-        <Dialog open={!!person} onOpenChange={onClose}>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Notificar Ausencia: {person.name}</DialogTitle>
-                    <DialogDescription>
-                        Selecciona una fecha de clase para notificar una ausencia y generar un crédito de recupero. Solo se pueden seleccionar los días en los que la persona tiene clases asignadas.
-                    </DialogDescription>
-                </DialogHeader>
-                <div className="flex flex-col items-center gap-4">
-                     <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onDayClick={handleDayClick}
-                        disabled={(date) => !allowedDaysOfWeek.includes(date.getDay())}
-                        footer={selectedDate ? <p className="text-sm text-center pt-2">Fecha seleccionada: {format(selectedDate, "PPP", { locale: es })}.</p> : <p className="text-sm text-center pt-2">Por favor, selecciona una fecha.</p>}
-                        className="rounded-md border"
-                    />
-                    {isDateAlreadyJustified && (
-                        <p className="text-sm font-semibold text-destructive">Esta ausencia ya fue justificada previamente.</p>
-                    )}
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Cancelar</Button>
-                    <Button onClick={handleSubmit} disabled={!selectedDate || !sessionOnSelectedDate || isSubmitting || isDateAlreadyJustified}>Confirmar Ausencia</Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
-}
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, enrollPersonInSessions, reactivatePerson } = useStudio();
+  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, payments, loading, sessions, actividades, specialists, spaces, recordPayment, levels, triggerWaitlistCheck, enrollPersonInSessions, reactivatePerson } from useStudio();
   const { institute } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<Person | undefined>(undefined);
@@ -267,6 +56,7 @@ function StudentsPageContent() {
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
   const [receiptInfo, setReceiptInfo] = useState<ReceiptInfo | null>(null);
   const [isPaymentAlertOpen, setIsPaymentAlertOpen] = useState(false);
+  const [isRemindersSheetOpen, setIsRemindersSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -438,24 +228,6 @@ function StudentsPageContent() {
   };
 
 
-  const formatPrice = (price: number) => {
-      return new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency: 'ARS',
-        minimumFractionDigits: 0,
-      }).format(price);
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-      switch (status) {
-          case 'Al día': return "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300";
-          case 'Atrasado': return "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300";
-          case 'Pendiente de Pago': return "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300";
-          default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/50 dark:text-gray-300";
-      }
-  };
-
-
   if (!isMounted) {
     return (
         <div className="space-y-8">
@@ -496,6 +268,7 @@ function StudentsPageContent() {
       )}
       <PageHeader title="Personas">
         <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setIsRemindersSheetOpen(true)}><Bell className="mr-2 h-4 w-4" />Recordatorios</Button>
             <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Exportar</Button>
             <Button onClick={handleAddClick} disabled={isLimitReached}>
                 <PlusCircle className="mr-2 h-4 w-4" />Añadir Persona
@@ -507,9 +280,9 @@ function StudentsPageContent() {
         <Alert variant="destructive" className="border-yellow-500/50 text-yellow-700 dark:text-yellow-400 [&>svg]:text-yellow-600 bg-yellow-50 dark:bg-yellow-900/20">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Límite de Alumnos Alcanzado</AlertTitle>
-            <AlertDescriptionComponent>
+            <AlertDescription>
                 Has alcanzado el límite de {institute?.studentLimit} alumnos para tu plan actual. Para añadir más, por favor contacta a soporte para ampliar tu plan.
-            </AlertDescriptionComponent>
+            </AlertDescription>
         </Alert>
       )}
 
@@ -519,54 +292,16 @@ function StudentsPageContent() {
                 <TabsTrigger value="inactive">Inactivos ({inactivePeople.length})</TabsTrigger>
             </TabsList>
             <TabsContent value="active" className="mt-6">
-                <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                    <div className="relative flex-grow">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input 
-                                placeholder="Buscar activos por nombre o teléfono..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
-                            />
-                        </div>
-                        <div className="flex gap-2 flex-col sm:flex-row">
-                            <Select value={actividadFilter} onValueChange={setActividadFilter}>
-                                <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                                    <SelectValue placeholder="Actividad" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Actividad</SelectItem>
-                                    {actividades.map(a => (
-                                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
-                                <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                                    <SelectValue placeholder="Especialista" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Especialista</SelectItem>
-                                    {specialists.map(s => (
-                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <Select value={spaceFilter} onValueChange={setSpaceFilter}>
-                                <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-                                    <SelectValue placeholder="Espacio" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">Espacio</SelectItem>
-                                    {spaces.map(s => (
-                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                </Card>
+                <StudentFilters
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  actividadFilter={actividadFilter}
+                  setActividadFilter={setActividadFilter}
+                  specialistFilter={specialistFilter}
+                  setSpecialistFilter={setSpecialistFilter}
+                  spaceFilter={spaceFilter}
+                  setSpaceFilter={setSpaceFilter}
+                />
                 <div className="mt-8">
                     {loading ? (
                         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
@@ -718,7 +453,8 @@ function StudentsPageContent() {
               </AlertDialogFooter>
           </AlertDialogContent>
       </AlertDialog>
-
+      
+      <PaymentRemindersSheet isOpen={isRemindersSheetOpen} onOpenChange={setIsRemindersSheetOpen} />
 
     </div>
   );

@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Person, PaymentReminderInfo, WaitlistEntry } from '@/types';
@@ -24,10 +24,6 @@ import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from '@/components/welcome-dialog';
 import { MainCards } from '@/components/dashboard/main-cards';
 import { TodaySessions } from '@/components/dashboard/today-sessions';
-import { PaymentReminders } from '@/components/payment-reminders';
-import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
-import { MassReminderDialog } from '@/components/mass-reminder-dialog';
-import { WaitlistOpportunities, type Opportunity } from '@/components/waitlist-opportunities';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
 import { PinDialog } from '@/components/pin-dialog';
@@ -47,8 +43,6 @@ function DashboardPageContent() {
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
-  const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
-  const [isMassReminderOpen, setIsMassReminderOpen] = useState(false);
   const [isUpdatingDebts, setIsUpdatingDebts] = useState(false);
   const [isWaitlistSheetOpen, setIsWaitlistSheetOpen] = useState(false);
   const { toast } = useToast();
@@ -78,7 +72,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { todaysSessions: [], todayName: '', paymentReminders: [], waitlistOpportunities: [], totalWaitlistCount: 0, waitlistSummary: [], potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, revenueToday: 0, revenueWeek: 0, revenueMonth: 0  };
+      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -87,76 +81,14 @@ function DashboardPageContent() {
     
     const startOfCurrentMonth = startOfMonth(now);
     const endOfCurrentMonth = endOfMonth(now);
-    const startOfCurrentWeek = startOfWeek(now, { weekStartsOn: 1 });
-    const endOfCurrentWeek = endOfWeek(now, { weekStartsOn: 1 });
 
-    const getRevenueForPeriod = (start: Date, end: Date) => {
-        return payments
-            .filter(p => p.date && isWithinInterval(p.date, { start, end }))
+    const revenueMonth = payments
+            .filter(p => p.date && isWithinInterval(p.date, { start: startOfCurrentMonth, end: endOfCurrentMonth }))
             .reduce((acc, p) => acc + p.amount, 0);
-    };
-
-    const revenueMonth = getRevenueForPeriod(startOfCurrentMonth, endOfCurrentMonth);
-    const revenueWeek = getRevenueForPeriod(startOfCurrentWeek, endOfCurrentWeek);
-    const revenueToday = getRevenueForPeriod(today, endOfDay(today));
     
     const todaysSessions = sessions
       .filter(session => session.dayOfWeek === currentTodayName)
       .sort((a, b) => a.time.localeCompare(b.time));
-
-    const paymentReminders = people
-      .map(person => {
-          const statusInfo = getStudentPaymentStatus(person, new Date());
-          
-          if (statusInfo.status === 'Próximo a Vencer' && statusInfo.daysUntilDue !== undefined) {
-               return { person, dueDate: person.lastPaymentDate || new Date(), daysUntilDue: statusInfo.daysUntilDue };
-          }
-          return null;
-      })
-      .filter((p): p is PaymentReminderInfo => p !== null)
-      .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
-
-    const waitlistOpportunities: Opportunity[] = sessions.map(session => {
-        const space = spaces.find(s => s.id === session.spaceId);
-        const capacity = space?.capacity || 0;
-        
-        const fixedEnrolledCount = session.personIds.length;
-        const fixedSlotsAvailable = capacity - fixedEnrolledCount;
-        
-        const hasWaitlist = session.waitlist && session.waitlist.length > 0;
-
-        if (fixedSlotsAvailable > 0 && hasWaitlist) {
-            const actividadName = actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
-            const waitlistDetails = (session.waitlist || [])
-                .map(entry => {
-                    if (typeof entry === 'string') {
-                        const person = people.find(p => p.id === entry);
-                        return person ? { ...person, isProspect: false as const } : null;
-                    }
-                    return { ...entry, isProspect: true as const };
-                })
-                .filter((p): p is NonNullable<typeof p> => p !== null)
-                .sort((a, b) => (a.isProspect ? 1 : 0) - (b.isProspect ? 1 : 0));
-
-            return {
-                session,
-                actividadName,
-                waitlist: waitlistDetails,
-                availableSlots: { fixed: fixedSlotsAvailable, temporary: 0, total: fixedSlotsAvailable }
-            };
-        }
-        return null;
-    }).filter((o): o is NonNullable<typeof o> => !!o);
-    
-    const waitlistSummary = sessions
-        .filter(s => s.waitlist && s.waitlist.length > 0)
-        .map(s => ({
-            sessionId: s.id,
-            className: actividades.find(a => a.id === s.actividadId)?.name || 'Clase',
-            count: s.waitlist.length
-        }));
-
-    const totalWaitlistCount = waitlistSummary.reduce((sum, item) => sum + item.count, 0);
     
     const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
     const potentialIncome = people.reduce((acc, person) => {
@@ -173,26 +105,16 @@ function DashboardPageContent() {
     const collectionPercentage = potentialIncome > 0 ? (revenueMonth / potentialIncome) * 100 : 0;
 
     return {
-      todaysSessions, todayName: currentTodayName, paymentReminders,
-      waitlistOpportunities, totalWaitlistCount, waitlistSummary,
-      potentialIncome, totalDebt, collectionPercentage,
-      revenueToday, revenueWeek, revenueMonth,
+      todaysSessions, todayName: currentTodayName,
+      totalDebt, collectionPercentage,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments]);
 
   const {
     todaysSessions,
     todayName,
-    paymentReminders,
-    waitlistOpportunities,
-    totalWaitlistCount,
-    waitlistSummary,
-    potentialIncome,
     totalDebt,
     collectionPercentage,
-    revenueToday,
-    revenueWeek,
-    revenueMonth,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -228,7 +150,7 @@ function DashboardPageContent() {
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
     { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
-    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: ArrowRight, count: null },
+    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: KeyRound, count: null },
   ];
   
   const advancedCards = [
@@ -281,24 +203,6 @@ function DashboardPageContent() {
       {dashboardView === 'main' && (
         <>
             <MainCards />
-            
-            {(paymentReminders.length > 0 || people.some(p => p.outstandingPayments && p.outstandingPayments > 0)) && (
-                <PaymentReminders 
-                    reminders={paymentReminders}
-                    onSendReminder={setPaymentReminderInfo}
-                    onSendAll={() => setIsMassReminderOpen(true)}
-                />
-            )}
-            
-            {(waitlistOpportunities.length > 0 || totalWaitlistCount > 0) && (
-                <WaitlistOpportunities 
-                    opportunities={waitlistOpportunities}
-                    summary={waitlistSummary}
-                    totalCount={totalWaitlistCount}
-                    onHeaderClick={() => setIsWaitlistSheetOpen(true)}
-                />
-            )}
-
             <TodaySessions
                 sessions={todaysSessions}
                 todayName={todayName}
@@ -366,9 +270,6 @@ function DashboardPageContent() {
         )}
     
       <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
-      <PaymentReminderDialog reminderInfo={paymentReminderInfo} onOpenChange={() => setPaymentReminderInfo(null)} />
-      {isMassReminderOpen && <MassReminderDialog reminders={paymentReminders} onOpenChange={setIsMassReminderOpen} />}
-
 
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
