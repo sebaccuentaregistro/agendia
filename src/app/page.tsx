@@ -301,7 +301,7 @@ function DashboardPageContent() {
      { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, count: operators.length, colorClass: "purple" },
      { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length, colorClass: "purple" },
      { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null, colorClass: "purple" },
-     { id: 'activity-log', href: "/activity-log", label: "Registro Actividad", icon: ListChecks, count: null, colorClass: "purple" },
+     { id: 'activity-log', href: "/activitylog", label: "Registro Actividad", icon: ListChecks, count: null, colorClass: "purple" },
   ];
 
   
@@ -539,6 +539,7 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
 
 
 
