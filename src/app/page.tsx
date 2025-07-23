@@ -2,54 +2,34 @@
 
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
-import { Card, CardTitle, CardContent, CardHeader, CardDescription as CardDescriptionComponent } from '@/components/ui/card';
+import { Card, CardHeader, CardContent, CardTitle } from '@/components/ui/card';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { Calendar, Users, ClipboardList, Star, Warehouse, AlertTriangle, User as UserIcon, DoorOpen, LineChart, CheckCircle2, ClipboardCheck, Plane, CalendarClock, Info, Settings, ArrowLeft, DollarSign, Signal, TrendingUp, Lock, ArrowRight, Banknote, Percent, Landmark, FileText, KeyRound, ListChecks, Bell, Send, RefreshCw, Loader2, UserX, ListPlus, XCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Institute, Person, PaymentReminderInfo, Tariff, NewPersonData, SessionAttendance, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getStudentPaymentStatus, calculateNextPaymentDate } from '@/lib/utils';
-import { cn } from '@/lib/utils';
-import { WhatsAppIcon } from '@/components/whatsapp-icon';
+import type { Session, Person, PaymentReminderInfo, WaitlistEntry } from '@/types';
+import { getStudentPaymentStatus } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, parse, isAfter, subDays, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, differenceInDays, startOfDay, startOfWeek, endOfWeek, endOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { OnboardingTutorial } from '@/components/onboarding-tutorial';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import { PersonDialog } from '@/components/students/person-dialog';
-import { doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { deleteEntity } from '@/lib/firestore-actions';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle as AlertTitleComponent } from '@/components/ui/alert';
 import { WelcomeDialog } from '@/components/welcome-dialog';
-import { WaitlistSheet } from '@/components/waitlist-sheet';
-import { WaitlistOpportunities } from '@/components/waitlist-opportunities';
-import { PinDialog } from '@/components/pin-dialog';
-import { ChurnRiskAlerts } from '@/components/churn-risk-alerts';
-import { PaymentReminders } from '@/components/payment-reminders';
-import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
-import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
-import { MassReminderDialog } from '@/components/mass-reminder-dialog';
 import { MainCards } from '@/components/dashboard/main-cards';
 import { TodaySessions } from '@/components/dashboard/today-sessions';
+import { PaymentReminders } from '@/components/payment-reminders';
+import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
+import { MassReminderDialog } from '@/components/mass-reminder-dialog';
+import { WaitlistOpportunities, type Opportunity } from '@/components/waitlist-opportunities';
+import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
+import { WaitlistSheet } from '@/components/waitlist-sheet';
 
 
 
@@ -57,8 +37,8 @@ import { TodaySessions } from '@/components/dashboard/today-sessions';
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators, notifications,
-    updateOverdueStatuses, addPerson,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
+    updateOverdueStatuses,
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
   
@@ -97,13 +77,12 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { overdueCount: 0, onVacationCount: 0, pendingRecoveryCount: 0, todaysSessions: [], todayName: '', hasOverdue: false, hasOnVacation: false, hasPendingRecovery: false, potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, paymentReminders: [], totalWaitlistCount: 0, waitlistOpportunities: [], waitlistSummary: [], revenueToday: 0, revenueWeek: 0, revenueMonth: 0 };
+      return { todaysSessions: [], todayName: '', paymentReminders: [], waitlistOpportunities: [], totalWaitlistCount: 0, waitlistSummary: [], potentialIncome: 0, totalDebt: 0, collectionPercentage: 0, revenueToday: 0, revenueWeek: 0, revenueMonth: 0  };
     }
     const now = new Date();
     const today = startOfDay(now);
     const dayMap: { [key: number]: Session['dayOfWeek'] } = { 0: 'Domingo', 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes', 6: 'Sábado' };
     const currentTodayName = dayMap[now.getDay()];
-    const todayStr = format(now, 'yyyy-MM-dd');
     
     const startOfCurrentMonth = startOfMonth(now);
     const endOfCurrentMonth = endOfMonth(now);
@@ -119,58 +98,25 @@ function DashboardPageContent() {
     const revenueMonth = getRevenueForPeriod(startOfCurrentMonth, endOfCurrentMonth);
     const revenueWeek = getRevenueForPeriod(startOfCurrentWeek, endOfCurrentWeek);
     const revenueToday = getRevenueForPeriod(today, endOfDay(today));
-
+    
+    const todaysSessions = sessions
+      .filter(session => session.dayOfWeek === currentTodayName)
+      .sort((a, b) => a.time.localeCompare(b.time));
 
     const paymentReminders = people
       .map(person => {
           if (!person.lastPaymentDate) return null;
-          const dueDate = person.lastPaymentDate;
-          const daysUntilDue = differenceInDays(dueDate, today);
+          const statusInfo = getStudentPaymentStatus(person, now);
           
-          if (getStudentPaymentStatus(person, now).status === 'Próximo a Vencer') {
-               return { person, dueDate, daysUntilDue };
+          if (statusInfo.status === 'Próximo a Vencer' && statusInfo.daysUntilDue !== undefined) {
+               return { person, dueDate: person.lastPaymentDate, daysUntilDue: statusInfo.daysUntilDue };
           }
           return null;
       })
       .filter((p): p is PaymentReminderInfo => p !== null)
       .sort((a, b) => a.daysUntilDue - b.daysUntilDue);
 
-
-    const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
-    const overdueCount = overduePeople.length;
-    
-    const onVacationCount = people.filter(p => isPersonOnVacation(p, now)).length;
-
-    const balances: Record<string, number> = {};
-    people.forEach(p => (balances[p.id] = 0));
-    attendance.forEach(record => {
-      record.justifiedAbsenceIds?.forEach(personId => { if (balances[personId] !== undefined) balances[personId]++; });
-      record.oneTimeAttendees?.forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
-    });
-    const pendingRecoveryCount = Object.values(balances).filter(balance => balance > 0).length;
-    
-    const potentialIncome = people.reduce((acc, person) => {
-        const tariff = tariffs.find(t => t.id === person.tariffId);
-        return acc + (tariff?.price || 0);
-    }, 0);
-
-    const totalDebt = overduePeople.reduce((acc, person) => {
-        const tariff = tariffs.find(t => t.id === person.tariffId);
-        const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
-        return acc + debtAmount;
-    }, 0);
-    
-    const collectionPercentage = potentialIncome > 0 ? (revenueMonth / potentialIncome) * 100 : 0;
-
-    const todaysSessions = sessions
-      .filter(session => session.dayOfWeek === currentTodayName)
-      .sort((a, b) => a.time.localeCompare(b.time));
-
-    const totalWaitlistCount = sessions.reduce((acc, session) => {
-        return acc + (session.waitlist?.length || 0);
-    }, 0);
-    
-    const waitlistOpportunities = sessions.map(session => {
+    const waitlistOpportunities: Opportunity[] = sessions.map(session => {
         const space = spaces.find(s => s.id === session.spaceId);
         const capacity = space?.capacity || 0;
         
@@ -192,25 +138,16 @@ function DashboardPageContent() {
                 .filter((p): p is NonNullable<typeof p> => p !== null)
                 .sort((a, b) => (a.isProspect ? 1 : 0) - (b.isProspect ? 1 : 0));
 
-            const peopleOnVacationToday = session.personIds.filter(pid => {
-                const person = people.find(p => p.id === pid);
-                return person && isPersonOnVacation(person, today);
-            }).length;
-
             return {
                 session,
                 actividadName,
                 waitlist: waitlistDetails,
-                availableSlots: {
-                    fixed: fixedSlotsAvailable,
-                    temporary: peopleOnVacationToday,
-                    total: fixedSlotsAvailable + peopleOnVacationToday,
-                }
+                availableSlots: { fixed: fixedSlotsAvailable, temporary: 0, total: fixedSlotsAvailable }
             };
         }
         return null;
     }).filter((o): o is NonNullable<typeof o> => !!o);
-
+    
     const waitlistSummary = sessions
         .filter(s => s.waitlist && s.waitlist.length > 0)
         .map(s => ({
@@ -219,41 +156,40 @@ function DashboardPageContent() {
             count: s.waitlist.length
         }));
 
+    const totalWaitlistCount = waitlistSummary.reduce((sum, item) => sum + item.count, 0);
+    
+    const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
+    const potentialIncome = people.reduce((acc, person) => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        return acc + (tariff?.price || 0);
+    }, 0);
+
+    const totalDebt = overduePeople.reduce((acc, person) => {
+        const tariff = tariffs.find(t => t.id === person.tariffId);
+        const debtAmount = (tariff?.price || 0) * (person.outstandingPayments || 1);
+        return acc + debtAmount;
+    }, 0);
+    
+    const collectionPercentage = potentialIncome > 0 ? (revenueMonth / potentialIncome) * 100 : 0;
+
     return {
-      overdueCount,
-      onVacationCount,
-      pendingRecoveryCount,
-      todaysSessions,
-      todayName: currentTodayName,
-      hasOverdue: overdueCount > 0,
-      hasOnVacation: onVacationCount > 0,
-      hasPendingRecovery: pendingRecoveryCount > 0,
-      potentialIncome,
-      totalDebt,
-      collectionPercentage,
-      paymentReminders,
-      totalWaitlistCount,
-      waitlistOpportunities,
-      waitlistSummary,
-      revenueToday,
-      revenueWeek,
-      revenueMonth,
+      todaysSessions, todayName: currentTodayName, paymentReminders,
+      waitlistOpportunities, totalWaitlistCount, waitlistSummary,
+      potentialIncome, totalDebt, collectionPercentage,
+      revenueToday, revenueWeek, revenueMonth,
     };
-  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces, notifications]);
+  }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, actividades, spaces]);
 
   const {
-    overdueCount,
-    onVacationCount,
-    pendingRecoveryCount,
     todaysSessions,
     todayName,
+    paymentReminders,
+    waitlistOpportunities,
+    totalWaitlistCount,
+    waitlistSummary,
     potentialIncome,
     totalDebt,
     collectionPercentage,
-    paymentReminders,
-    totalWaitlistCount,
-    waitlistOpportunities,
-    waitlistSummary,
     revenueToday,
     revenueWeek,
     revenueMonth,
@@ -292,6 +228,7 @@ function DashboardPageContent() {
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
     { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
+    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: ArrowRight, count: null },
   ];
   
   const advancedCards = [
@@ -303,7 +240,6 @@ function DashboardPageContent() {
      { id: 'activity-log', href: "/activitylog", label: "Registro Actividad", icon: ListChecks, count: null, colorClass: "purple" },
   ];
 
-  
   if (!isMounted) {
     return (
       <div className="space-y-8">
@@ -332,13 +268,7 @@ function DashboardPageContent() {
       {dashboardView !== 'main' && (
         <Button 
           variant="outline" 
-          onClick={() => {
-            if (dashboardView === 'advanced') {
-              router.push('/?view=management');
-            } else {
-              router.push('/');
-            }
-          }} 
+          onClick={() => router.push(dashboardView === 'advanced' ? '/?view=management' : '/')} 
           className="mb-4"
         >
             <ArrowLeft className="mr-2 h-4 w-4" /> 
@@ -351,6 +281,23 @@ function DashboardPageContent() {
         <>
             <MainCards />
             
+            {(paymentReminders.length > 0 || people.some(p => p.outstandingPayments && p.outstandingPayments > 0)) && (
+                <PaymentReminders 
+                    reminders={paymentReminders}
+                    onSendReminder={setPaymentReminderInfo}
+                    onSendAll={() => setIsMassReminderOpen(true)}
+                />
+            )}
+            
+            {(waitlistOpportunities.length > 0 || totalWaitlistCount > 0) && (
+                <WaitlistOpportunities 
+                    opportunities={waitlistOpportunities}
+                    summary={waitlistSummary}
+                    totalCount={totalWaitlistCount}
+                    onHeaderClick={() => setIsWaitlistSheetOpen(true)}
+                />
+            )}
+
             <TodaySessions
                 sessions={todaysSessions}
                 todayName={todayName}
@@ -361,115 +308,61 @@ function DashboardPageContent() {
       )}
 
       {dashboardView === 'management' && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            {managementCards.map((item) => (
-              <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
-                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50 h-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                      <item.icon className="h-4 w-4" />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                  <p className="text-2xl font-bold text-foreground">{item.count}</p>
-                </Card>
-              </Link>
+         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            {managementCards.map((card) => (
+                <Link key={card.id} href={card.href}>
+                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                        <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                            <card.icon className="h-4 w-4" />
+                        </div>
+                        <CardTitle className="text-lg font-semibold text-foreground">{card.label}</CardTitle>
+                        {card.count !== null && <p className="text-2xl font-bold text-foreground">{card.count}</p>}
+                    </Card>
+                </Link>
             ))}
-            <div onClick={() => isPinVerified ? router.push('/?view=advanced') : setIsPinDialogOpen(true)} className="transition-transform hover:-translate-y-1 cursor-pointer">
-                <Card id="advanced-management-card" className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 hover:border-primary/50 border-transparent h-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
-                  <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                      <Lock className="h-4 w-4" />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-foreground">Gestión Avanzada</CardTitle>
-                    <div className="text-sm text-purple-600 dark:text-purple-400 mt-1 flex items-center gap-1">
-                    Acceder <ArrowRight className="h-3 w-3" />
-                    </div>
-                </Card>
-            </div>
         </div>
       )}
 
       {dashboardView === 'advanced' && isPinVerified && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            <Card className="col-span-2 sm:col-span-3 md:col-span-2 bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-purple-500/50">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-lg font-semibold text-foreground">Ingresos del Período</CardTitle>
-                    <div className="flex items-center gap-1 rounded-lg bg-muted p-1">
-                         <Button size="sm" variant={revenuePeriod === 'today' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('today')}>Hoy</Button>
-                         <Button size="sm" variant={revenuePeriod === 'week' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('week')}>Semana</Button>
-                         <Button size="sm" variant={revenuePeriod === 'month' ? 'secondary' : 'ghost'} className="h-7 px-2" onClick={() => setRevenuePeriod('month')}>Mes</Button>
-                    </div>
-                </CardHeader>
-                <CardContent>
-                    <p className="text-4xl font-bold text-foreground">
-                        {revenuePeriod === 'today' && formatPrice(revenueToday)}
-                        {revenuePeriod === 'week' && formatPrice(revenueWeek)}
-                        {revenuePeriod === 'month' && formatPrice(revenueMonth)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                        {revenuePeriod === 'today' && `Ingresos registrados hoy, ${format(new Date(), 'dd MMMM', {locale: es})}.`}
-                        {revenuePeriod === 'week' && `Ingresos registrados en la semana actual.`}
-                        {revenuePeriod === 'month' && `Ingresos acumulados en ${format(new Date(), 'MMMM', {locale: es})}.`}
-                    </p>
-                </CardContent>
-            </Card>
-            {advancedCards.map((item) => {
-              const colorClass = item.colorClass || 'purple';
-              return (
-                <Link key={item.id} href={item.href || '#'} className="transition-transform hover:-translate-y-1">
-                    <Card className={cn(
-                        "group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent h-full",
-                        colorClass === 'purple' && "hover:border-purple-500/50",
-                        colorClass === 'red' && "hover:border-red-500/50"
-                    )}>
-                        <div className={cn(
-                            "absolute inset-0 bg-gradient-to-br to-transparent",
-                            colorClass === 'purple' && "from-purple-500/10",
-                            colorClass === 'red' && "from-red-500/10"
-                        )}></div>
-                        <div className={cn(
-                            "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                            colorClass === 'purple' && "from-purple-500/20",
-                            colorClass === 'red' && "from-red-500/20"
-                        )}></div>
-                        <div className={cn(
-                            "flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full",
-                            colorClass === 'purple' && "bg-purple-500/10 text-purple-500",
-                            colorClass === 'red' && "bg-red-500/10 text-red-500"
-                        )}>
-                            <item.icon className="h-5 w-5" />
-                        </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                        <p className="text-2xl font-bold text-foreground">{item.value ?? item.count}</p>
-                    </Card>
-                </Link>
-              );
-            })}
-            <div
-              onClick={!isUpdatingDebts ? handleUpdateDebts : undefined}
-              className={cn(
-                "transition-transform hover:-translate-y-1",
-                isUpdatingDebts ? 'cursor-not-allowed' : 'cursor-pointer'
-              )}
-            >
-              <Card className="group relative flex flex-col items-center justify-center p-4 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-purple-500/50 h-full">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent"></div>
-                  <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-purple-500/20 to-transparent"></div>
-                  <div className="flex h-10 w-10 mb-2 flex-shrink-0 items-center justify-center rounded-full bg-purple-500/10 text-purple-500">
-                      <RefreshCw className={cn("h-5 w-5", isUpdatingDebts && "animate-spin")} />
-                  </div>
-                  <CardTitle className="text-lg font-semibold text-foreground">Actualizar Deudas</CardTitle>
-                  <Button asChild size="sm" className="mt-2" variant={isUpdatingDebts ? "ghost" : "default"}>
-                    <div>
-                      {isUpdatingDebts ? 'Actualizando...' : 'Ejecutar'}
-                    </div>
-                  </Button>
-              </Card>
+        <div className="space-y-8">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                {advancedCards.map((card) => (
+                    <Link key={card.id} href={card.href}>
+                        <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
+                            <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <card.icon className="h-4 w-4" />
+                            </div>
+                            <CardTitle className="text-lg font-semibold text-foreground">{card.label}</CardTitle>
+                             {card.value ? 
+                                <p className="text-2xl font-bold text-foreground">{card.value}</p> :
+                                card.count !== null && <p className="text-2xl font-bold text-foreground">{card.count}</p>
+                             }
+                        </Card>
+                    </Link>
+                ))}
+            </div>
+            <div className="flex justify-end">
+                <Button onClick={handleUpdateDebts} disabled={isUpdatingDebts}>
+                    {isUpdatingDebts && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Actualizar Deudas
+                </Button>
             </div>
         </div>
       )}
+
+       {dashboardView === 'advanced' && !isPinVerified && (
+           <Card className="flex flex-col items-center justify-center p-12 text-center">
+                <CardHeader>
+                    <CardTitle>Acceso Restringido</CardTitle>
+                    <CardContent>
+                        <p className="mb-4">Necesitas tu PIN de propietario para acceder a esta sección.</p>
+                        <Button onClick={() => setIsPinDialogOpen(true)}>
+                            Verificar PIN
+                        </Button>
+                    </CardContent>
+                </CardHeader>
+           </Card>
+        )}
     
       <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
       <PaymentReminderDialog reminderInfo={paymentReminderInfo} onOpenChange={() => setPaymentReminderInfo(null)} />
