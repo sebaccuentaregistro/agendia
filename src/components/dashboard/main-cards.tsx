@@ -81,7 +81,9 @@ export function MainCards({
                     <Settings className="h-4 w-4" />
                 </div>
                 <CardTitle className="text-lg font-semibold text-foreground">Gestión</CardTitle>
-                <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
+                <div className="text-sm text-primary mt-1 flex items-center gap-1">
+                    Acceder <ArrowRight className="h-3 w-3" />
+                </div>
             </Card>
             </Link>
         </div>

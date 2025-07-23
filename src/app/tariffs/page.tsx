@@ -39,7 +39,6 @@ export default function TariffsPage() {
   const [tariffToDelete, setTariffToDelete] = useState<Tariff | null>(null);
 
   const searchParams = useSearchParams();
-  const fromManagement = searchParams.get('view') === 'management';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -119,16 +118,14 @@ export default function TariffsPage() {
 
   return (
     <div className="space-y-8">
-      {fromManagement && (
-          <div className="flex justify-start">
+      <div className="flex justify-start">
             <Button variant="outline" asChild>
                 <Link href="/?view=management">
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Volver a Gestión
                 </Link>
             </Button>
-        </div>
-      )}
+      </div>
       <PageHeader title="Aranceles">
         {isPinVerified && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
