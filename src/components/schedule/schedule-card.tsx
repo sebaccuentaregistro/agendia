@@ -222,22 +222,35 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                         </TooltipProvider>
                     )}
 
-                    {dailyOccupancy < spaceCapacity ? (
-                       <Button variant="outline" size="sm" onClick={() => handleAction('one-time-attendee', session)} className="col-span-2">
-                            Inscripción Recupero
-                        </Button>
-                    ) : (
-                       <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => handleAction('manage-waitlist', session)}>
+                    {!isStructurallyFull && (
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => handleAction('one-time-attendee', session)}>
+                                Recupero
+                            </Button>
+                             <Button variant="default" size="sm" onClick={() => handleAction('enroll-people', session)}>
+                                Inscripción Fija
+                            </Button>
+                        </>
+                    )}
+
+                    {isStructurallyFull && dailyOccupancy < spaceCapacity && (
+                        <>
+                           <Button variant="default" size="sm" onClick={() => handleAction('one-time-attendee', session)}>
+                                Inscripción Recupero
+                            </Button>
+                           <Button variant="outline" size="sm" onClick={() => handleAction('manage-waitlist', session)}>
+                                <ListPlus className="mr-2 h-4 w-4" /> Lista Espera
+                            </Button>
+                        </>
+                    )}
+                    
+                    {isStructurallyFull && dailyOccupancy >= spaceCapacity && (
+                        <Button variant={waitlistCount > 0 ? "destructive" : "link"} size="sm" className="w-full col-span-2" onClick={() => handleAction('manage-waitlist', session)}>
                             <ListPlus className="mr-2 h-4 w-4" />
                             {waitlistCount > 0 ? `Lista de Espera (${waitlistCount})` : "Anotar en Espera"}
                         </Button>
                     )}
-                    
-                    {!isStructurallyFull && (
-                         <Button variant="secondary" size="sm" onClick={() => handleAction('enroll-people', session)} className="col-span-2">
-                            Inscripción Fija
-                        </Button>
-                    )}
+
                 </div>
             </CardFooter>
         </Card>
