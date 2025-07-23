@@ -6,14 +6,16 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
-import { format, startOfDay, nextDay, Day } from 'date-fns';
+import { format, startOfDay, nextDay, Day, parse } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { useSearchParams } from 'next/navigation';
-import { MoreHorizontal, User, MapPin, Signal, ClipboardCheck, ListPlus, Pencil, Send, Trash2 } from 'lucide-react';
+import { MoreHorizontal, User, MapPin, Signal, ClipboardCheck, ListPlus, Pencil, Send, Trash2, Plane, CalendarClock } from 'lucide-react';
 import type { Session, Person } from '@/types';
 
 interface ScheduleCardProps {
@@ -40,7 +42,7 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
         return { specialist, actividad, space, level };
     }, [session, specialists, actividades, spaces, levels]);
 
-    const { dailyOccupancy, recoveryCount, onVacationCount } = useMemo(() => {
+    const { dailyOccupancy, recoveringPeople, vacationingPeople } = useMemo(() => {
         const today = startOfDay(new Date());
         const dayIndexMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
         const sessionDayIndex = dayIndexMap[session.dayOfWeek];
@@ -68,8 +70,8 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
 
         return {
             dailyOccupancy: activeFixedPeople.length + validOneTimeAttendees.length,
-            recoveryCount: validOneTimeAttendees.length,
-            onVacationCount: vacationing.length,
+            recoveringPeople: validOneTimeAttendees,
+            vacationingPeople: vacationing,
         };
     }, [session, people, isPersonOnVacation, attendance]);
     
@@ -150,15 +152,51 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                <div className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => onSessionClick(session)}>
+                <button className="w-full px-2 pt-1 space-y-1 cursor-pointer" onClick={() => handleAction('view-students', session)}>
                     <div className="flex justify-between items-center text-xs font-semibold">
                         <span className="text-muted-foreground">Ocupación Fija</span>
                         <span className="text-foreground">{enrolledCount} / {spaceCapacity}</span>
                     </div>
                     <Progress value={utilization} indicatorClassName={progressColorClass} className="h-1.5" />
-                    <p className="text-[11px] text-muted-foreground text-center">
-                        Ocupación Hoy: {dailyOccupancy} (Rec: {recoveryCount} | Vac: {onVacationCount})
-                    </p>
+                </button>
+                 <div className="flex justify-center items-center gap-2 w-full text-[11px] text-muted-foreground text-center">
+                    {(recoveringPeople.length > 0) && (
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                                    <CalendarClock className="h-3 w-3 mr-1"/> {recoveringPeople.length} Recupero(s)
+                                </Badge>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-56 p-2">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">Recuperos de Hoy</h4>
+                                    {recoveringPeople.map(p => <div key={p.id} className="text-xs">{p.name}</div>)}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    )}
+                     {(vacationingPeople.length > 0) && (
+                         <Popover>
+                            <PopoverTrigger asChild>
+                                <Badge variant="outline" className="cursor-pointer hover:bg-accent">
+                                    <Plane className="h-3 w-3 mr-1"/> {vacationingPeople.length} Vacaciones
+                                </Badge>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-2">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">Personas de Vacaciones</h4>
+                                    {vacationingPeople.map(p => (
+                                        <div key={p.id} className="text-xs">
+                                            {p.name}
+                                             <span className="text-muted-foreground ml-1">
+                                                ({p.vacationPeriods?.map(v => `${format(v.startDate, 'dd/MM')} al ${format(v.endDate, 'dd/MM')}`).join(', ')})
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 w-full">
@@ -193,3 +231,4 @@ export function ScheduleCard({ session, onSessionClick, onAttendanceClick }: Sch
         </Card>
     );
 }
+

@@ -4,45 +4,34 @@
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { PlusCircle, Trash2, Pencil, Users, FileDown, Clock, User, MapPin, UserPlus, LayoutGrid, CalendarDays, ClipboardCheck, CalendarIcon, Send, Star, MoreHorizontal, UserX, Signal, DoorOpen, List, Plane, CalendarClock, ListPlus, ChevronDown, Pointer, AlertCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { PlusCircle, FileDown, LayoutGrid, List, CalendarDays } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import type { Person, Session, WaitlistEntry, WaitlistProspect } from '@/types';
+import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
+import type { Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn, exportToCsv } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
 import { AttendanceSheet } from '@/components/attendance-sheet';
-import { Tooltip, TooltipProvider, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { format, startOfDay, nextDay, Day } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Progress } from '@/components/ui/progress';
 import { ScheduleCard } from '@/components/schedule/schedule-card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { AlertCircle } from 'lucide-react';
 
 
 const formSchema = z.object({
@@ -54,13 +43,9 @@ const formSchema = z.object({
   levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
 });
 
-type UnifiedWaitlistItem =
-  | (Person & { isProspect: false; entry: string })
-  | (WaitlistProspect & { isProspect: true; entry: WaitlistProspect });
-
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, people, loading } = useStudio();
+  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, loading } = useStudio();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
@@ -88,35 +73,48 @@ function SchedulePageContent() {
     defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
   });
 
-  const handleActionWithSession = (eventName: string) => (session: Session) => {
-    const event = new CustomEvent(eventName, { detail: session });
-    document.dispatchEvent(event);
-  };
+  const handleEditSession = useCallback((session: Session) => {
+    setSelectedSession(session);
+    form.reset({
+      instructorId: session.instructorId,
+      actividadId: session.actividadId,
+      spaceId: session.spaceId,
+      dayOfWeek: session.dayOfWeek,
+      time: session.time,
+      levelId: session.levelId || 'none',
+    });
+    setIsDialogOpen(true);
+  }, [form]);
+  
+  const handleOpenOneTime = useCallback((session: Session) => {
+    const personId = searchParams.get('personId');
+    setPersonForOneTime(personId);
+    setSessionForOneTime(session);
+  }, [searchParams]);
 
   useEffect(() => {
-    const handleEdit = (e: Event) => handleEditSession((e as CustomEvent).detail);
-    const handleDelete = (e: Event) => setSessionForDelete((e as CustomEvent).detail);
-    const handleEnroll = (e: Event) => setSessionForEnrollment((e as CustomEvent).detail);
-    const handleOneTime = (e: Event) => handleOpenOneTime((e as CustomEvent).detail);
-    const handleWaitlist = (e: Event) => setSessionForWaitlist((e as CustomEvent).detail);
-    const handleNotify = (e: Event) => setSessionForNotification((e as CustomEvent).detail);
-    
-    document.addEventListener('edit-session', handleEdit);
-    document.addEventListener('delete-session', handleDelete);
-    document.addEventListener('enroll-people', handleEnroll);
-    document.addEventListener('one-time-attendee', handleOneTime);
-    document.addEventListener('manage-waitlist', handleWaitlist);
-    document.addEventListener('notify-session', handleNotify);
+    const handleEvent = (e: Event, handler: (detail: any) => void) => handler((e as CustomEvent).detail);
+
+    const handlers = {
+        'edit-session': (e: Event) => handleEditSession((e as CustomEvent).detail),
+        'delete-session': (e: Event) => setSessionForDelete((e as CustomEvent).detail),
+        'enroll-people': (e: Event) => setSessionForEnrollment((e as CustomEvent).detail),
+        'one-time-attendee': (e: Event) => handleOpenOneTime((e as CustomEvent).detail),
+        'manage-waitlist': (e: Event) => setSessionForWaitlist((e as CustomEvent).detail),
+        'notify-session': (e: Event) => setSessionForNotification((e as CustomEvent).detail),
+        'view-students': (e: Event) => setSessionForStudentsSheet((e as CustomEvent).detail),
+    };
+
+    Object.entries(handlers).forEach(([eventName, handler]) => {
+        document.addEventListener(eventName, handler);
+    });
 
     return () => {
-        document.removeEventListener('edit-session', handleEdit);
-        document.removeEventListener('delete-session', handleDelete);
-        document.removeEventListener('enroll-people', handleEnroll);
-        document.removeEventListener('one-time-attendee', handleOneTime);
-        document.removeEventListener('manage-waitlist', handleWaitlist);
-        document.removeEventListener('notify-session', handleNotify);
+        Object.entries(handlers).forEach(([eventName, handler]) => {
+            document.removeEventListener(eventName, handler);
+        });
     };
-  }, []);
+  }, [handleEditSession, handleOpenOneTime]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -164,19 +162,6 @@ function SchedulePageContent() {
     }
     setIsDialogOpen(false);
   };
-
-  const handleEditSession = (session: Session) => {
-    setSelectedSession(session);
-    form.reset({
-      instructorId: session.instructorId,
-      actividadId: session.actividadId,
-      spaceId: session.spaceId,
-      dayOfWeek: session.dayOfWeek,
-      time: session.time,
-      levelId: session.levelId || 'none',
-    });
-    setIsDialogOpen(true);
-  };
   
   const handleAdd = () => {
     setSelectedSession(undefined);
@@ -196,12 +181,6 @@ function SchedulePageContent() {
       deleteSession(sessionForDelete.id);
       setSessionForDelete(null);
     }
-  };
-  
-  const handleOpenOneTime = (session: Session) => {
-    const personId = searchParams.get('personId');
-    setPersonForOneTime(personId);
-    setSessionForOneTime(session);
   };
 
   const availableSpecialists = useMemo(() => {
