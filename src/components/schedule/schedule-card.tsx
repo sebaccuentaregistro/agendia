@@ -78,6 +78,7 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
     };
     
     const isDailyView = view === 'daily';
+    
     const stats = isDailyView ? dailyStats : structuralStats;
     const progressColorClass = getProgressColorClass(stats.utilization);
     const isFixedFull = structuralStats.enrolledCount >= structuralStats.capacity;
