@@ -136,6 +136,24 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                         {dailyStats.vacationingCount > 0 && <p>- {dailyStats.vacationingCount} de vacaciones</p>}
                     </div>
                 )}
+                
+                <div className="mt-2 p-2 border border-dashed border-red-500 rounded-md text-xs">
+                    <p className="font-bold text-red-500">DEBUG INFO</p>
+                    <pre className="text-red-500 whitespace-pre-wrap text-[10px] leading-tight">
+                        {JSON.stringify({
+                            IS_DAILY_FULL: isDailyFull,
+                            daily_enrolled: dailyStats.enrolledCount,
+                            daily_capacity: dailyStats.capacity,
+                            vacationing: dailyStats.vacationingCount,
+                            one_time: dailyStats.oneTimeAttendeesCount,
+                            "---": "---",
+                            IS_FIXED_FULL: isFixedFull,
+                            fixed_enrolled: structuralStats.enrolledCount,
+                            fixed_capacity: structuralStats.capacity,
+                        }, null, 2)}
+                    </pre>
+                </div>
+
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div className="w-full px-2 pt-1 space-y-1">
@@ -145,27 +163,14 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     </div>
                     <Progress value={stats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
-                {isDailyView ? (
-                    // --- Daily View Footer (Inicio) ---
-                     <div className="w-full grid grid-cols-2 gap-2 p-1">
-                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
-                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
-                        </Button>
-                        <Button size="sm" onClick={() => handleAction('take-attendance', { session })} disabled={!isAttendanceEnabled}>
-                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
-                        </Button>
-                    </div>
-                ) : (
-                    // --- Structural View Footer (Horarios) ---
-                    <div className="w-full grid grid-cols-2 gap-2 p-1">
-                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
-                            <UserPlus className="mr-2 h-4 w-4" /> Inscripción
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
-                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
-                        </Button>
-                    </div>
-                )}
+                <div className="w-full grid grid-cols-2 gap-2 p-1">
+                    <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
+                        <UserPlus className="mr-2 h-4 w-4" /> Inscripción
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                        <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                    </Button>
+                </div>
             </CardFooter>
         </Card>
     );
