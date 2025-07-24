@@ -2,15 +2,13 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetFooter,
-  SheetClose,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -28,13 +26,16 @@ import { Label } from '../ui/label';
 interface PaymentRemindersSheetProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
+  initialFocus?: 'overdue' | 'upcoming' | null;
 }
 
-export function PaymentRemindersSheet({ isOpen, onOpenChange }: PaymentRemindersSheetProps) {
+export function PaymentRemindersSheet({ isOpen, onOpenChange, initialFocus }: PaymentRemindersSheetProps) {
   const { people, tariffs } = useStudio();
   const { institute } = useAuth();
   const { toast } = useToast();
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const overdueRef = useRef<HTMLDivElement>(null);
+  const upcomingRef = useRef<HTMLDivElement>(null);
 
   const { overduePeople, upcomingReminders } = useMemo(() => {
     const overdue = people.filter(p => getStudentPaymentStatus(p, new Date()).status === 'Atrasado');
@@ -58,6 +59,16 @@ export function PaymentRemindersSheet({ isOpen, onOpenChange }: PaymentReminders
 
     return { overduePeople: debtors, upcomingReminders: upcoming };
   }, [people, tariffs]);
+  
+  useEffect(() => {
+    if (isOpen && initialFocus) {
+      setTimeout(() => {
+        const refToScroll = initialFocus === 'overdue' ? overdueRef : upcomingRef;
+        refToScroll.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 100);
+    }
+  }, [isOpen, initialFocus]);
+
 
   const generateMessage = (person: Person, isOverdue: boolean) => {
     if (isOverdue) {
@@ -80,8 +91,8 @@ export function PaymentRemindersSheet({ isOpen, onOpenChange }: PaymentReminders
   const getWhatsAppLink = (phone: string, text: string) => `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(text)}`;
   const formatPrice = (price: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(price);
   
-  const renderList = (title: string, peopleList: (Person & { debt?: number, daysOverdue?: number })[], isOverdue = false) => (
-    <div>
+  const renderList = (title: string, peopleList: (Person & { debt?: number, daysOverdue?: number })[], isOverdue = false, ref: React.RefObject<HTMLDivElement>) => (
+    <div ref={ref}>
         <h4 className={`font-semibold text-sm flex items-center gap-2 mb-2 ${isOverdue ? 'text-destructive' : 'text-blue-600 dark:text-blue-400'}`}>
             {isOverdue ? <DollarSign className="h-4 w-4"/> : <Bell className="h-4 w-4"/>}
             {title} ({peopleList.length})
@@ -123,8 +134,8 @@ export function PaymentRemindersSheet({ isOpen, onOpenChange }: PaymentReminders
         </SheetHeader>
         <ScrollArea className="flex-grow my-4">
             <div className="pr-4 space-y-6">
-                {renderList("Deudores", overduePeople, true)}
-                {renderList("Vencimientos Próximos", upcomingReminders.map(r => r.person))}
+                {renderList("Deudores", overduePeople, true, overdueRef)}
+                {renderList("Vencimientos Próximos", upcomingReminders.map(r => r.person), false, upcomingRef)}
             </div>
         </ScrollArea>
         {selectedPerson && (

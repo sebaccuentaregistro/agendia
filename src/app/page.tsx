@@ -44,6 +44,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
+
 
 const sessionFormSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -70,6 +72,7 @@ function DashboardPageContent() {
   const [isUpdatingDebts, setIsUpdatingDebts] = useState(false);
   const [isWaitlistSheetOpen, setIsWaitlistSheetOpen] = useState(false);
   const [isRemindersSheetOpen, setIsRemindersSheetOpen] = useState(false);
+  const [remindersInitialFocus, setRemindersInitialFocus] = useState<'overdue' | 'upcoming' | null>(null);
   const { toast } = useToast();
   
   const searchParams = useSearchParams();
@@ -185,7 +188,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], hasPaymentAlerts: false };
+      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], overdueCount: 0, upcomingCount: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -203,12 +206,15 @@ function DashboardPageContent() {
       .filter(session => session.dayOfWeek === currentTodayName)
       .sort((a, b) => a.time.localeCompare(b.time));
     
-    let hasPaymentAlerts = false;
+    let overdueCount = 0;
+    let upcomingCount = 0;
+
     for (const p of people) {
       const status = getStudentPaymentStatus(p, now).status;
-      if (status === 'Atrasado' || status === 'Próximo a Vencer') {
-        hasPaymentAlerts = true;
-        break;
+      if (status === 'Atrasado') {
+        overdueCount++;
+      } else if (status === 'Próximo a Vencer') {
+        upcomingCount++;
       }
     }
 
@@ -238,7 +244,6 @@ function DashboardPageContent() {
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
         const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
 
-        // An opportunity only exists if there is a permanent spot available.
         if (fixedAvailable > 0) {
             const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
             const temporaryAvailable = vacationingCount;
@@ -308,7 +313,7 @@ function DashboardPageContent() {
       totalDebt, collectionPercentage,
       waitlistOpportunities, waitlistSummary, totalWaitlistCount,
       churnRiskPeople,
-      hasPaymentAlerts,
+      overdueCount, upcomingCount,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, spaces, actividades]);
 
@@ -321,7 +326,8 @@ function DashboardPageContent() {
     waitlistSummary,
     totalWaitlistCount,
     churnRiskPeople,
-    hasPaymentAlerts,
+    overdueCount,
+    upcomingCount,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -432,17 +438,36 @@ function DashboardPageContent() {
                     onHeaderClick={() => setIsWaitlistSheetOpen(true)}
                   />
                 )}
-                 <Button 
-                    className={cn(
-                        "w-full flex items-center gap-2",
-                        hasPaymentAlerts && "border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive animate-pulse"
-                    )} 
-                    variant="outline" 
-                    onClick={() => setIsRemindersSheetOpen(true)}
-                  >
-                    <Bell className="h-4 w-4" />
-                    Ver todos los recordatorios
-                </Button>
+                <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-blue-500/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <Bell className="h-5 w-5 text-blue-500" />
+                      Recordatorios de Pago
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="grid grid-cols-2 gap-2">
+                     <Button 
+                        variant="outline"
+                        onClick={() => {
+                          setRemindersInitialFocus('overdue');
+                          setIsRemindersSheetOpen(true);
+                        }}
+                      >
+                        Deudores
+                        {overdueCount > 0 && <Badge variant="destructive" className="ml-2">{overdueCount}</Badge>}
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => {
+                          setRemindersInitialFocus('upcoming');
+                          setIsRemindersSheetOpen(true);
+                        }}
+                      >
+                        Próximos
+                        {upcomingCount > 0 && <Badge variant="secondary" className="ml-2">{upcomingCount}</Badge>}
+                      </Button>
+                  </CardContent>
+                </Card>
               </div>
             </div>
         </>
@@ -631,7 +656,11 @@ function DashboardPageContent() {
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
       <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
-      <PaymentRemindersSheet isOpen={isRemindersSheetOpen} onOpenChange={setIsRemindersSheetOpen} />
+      <PaymentRemindersSheet 
+        isOpen={isRemindersSheetOpen} 
+        onOpenChange={setIsRemindersSheetOpen} 
+        initialFocus={remindersInitialFocus}
+      />
     </div>
   );
 }
