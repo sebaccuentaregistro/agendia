@@ -2,7 +2,7 @@
   "name": "agendia",
   "version": "1.0.3",
   "private": true,
-  "description": "Added react-hook-form dependency to fix module not found error.",
+  "description": "Forcing dependency refresh to fix build error.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
