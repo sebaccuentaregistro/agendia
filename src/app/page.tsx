@@ -1,11 +1,10 @@
 
-
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Person, PaymentReminderInfo, WaitlistEntry, WaitlistProspect } from '@/types';
@@ -39,6 +38,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
@@ -56,7 +56,7 @@ function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses, addSession, updateSession,
+    updateOverdueStatuses, addSession, updateSession, deleteSession
   } = useStudio();
   const { institute, isPinVerified, setPinVerified } = useAuth();
   
@@ -87,6 +87,7 @@ function DashboardPageContent() {
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
   const [selectedSessionForEdit, setSelectedSessionForEdit] = useState<Session | null>(null);
+  const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   
   const sessionForm = useForm<z.infer<typeof sessionFormSchema>>({
     resolver: zodResolver(sessionFormSchema),
@@ -130,6 +131,9 @@ function DashboardPageContent() {
                 });
                 setIsSessionDialogOpen(true);
                 break;
+            case 'delete-session':
+                setSessionForDelete(session);
+                break;
         }
     };
     document.addEventListener('schedule-card-action', handleAction);
@@ -150,6 +154,13 @@ function DashboardPageContent() {
       addSession(sessionData);
     }
     setIsSessionDialogOpen(false);
+  };
+
+  const handleDeleteSession = () => {
+    if (sessionForDelete) {
+      deleteSession(sessionForDelete.id);
+      setSessionForDelete(null);
+    }
   };
   
   const availableSpecialists = useMemo(() => {
@@ -519,6 +530,19 @@ function DashboardPageContent() {
               </Form>
           </DialogContent>
       </Dialog>
+      
+      <AlertDialog open={!!sessionForDelete} onOpenChange={() => setSessionForDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
+            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente la sesión. Si hay personas inscriptas, no podrás eliminarla.</AlertDialogDescriptionAlert>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSession} className="bg-destructive hover:bg-destructive/90">Sí, eliminar sesión</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
@@ -581,3 +605,5 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
