@@ -213,8 +213,6 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setIsPersonDialogOpen(true)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setIsVacationDialogOpen(true)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => setIsJustifyAbsenceOpen(true)}><UserX className="mr-2 h-4 w-4"/>Notificar Ausencia</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsRevertAlertOpen(true)} disabled={personPaymentCount === 0}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setIsDeactivateAlertOpen(true)} className="text-destructive focus:text-destructive"><UserX className="mr-2 h-4 w-4" />Desactivar Persona</DropdownMenuItem>
@@ -304,6 +302,10 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                             </div>
                         </ScrollArea>
                     </CardContent>
+                     <CardFooter className="grid grid-cols-2 gap-2">
+                        <Button variant="outline" size="sm" onClick={() => setIsVacationDialogOpen(true)}><Plane className="mr-2 h-4 w-4" />Vacaciones</Button>
+                        <Button variant="outline" size="sm" onClick={() => setIsJustifyAbsenceOpen(true)}><UserX className="mr-2 h-4 w-4" />Justificar Ausencia</Button>
+                    </CardFooter>
                 </Card>
 
                  <Card>
