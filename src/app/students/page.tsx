@@ -5,10 +5,10 @@
 import React, { useState, useMemo, useEffect, Suspense, Fragment } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileDown, Search, Bell, UserX, AlertCircle, Clock, CheckCircle } from 'lucide-react';
-import type { Person, RecoveryCredit, PaymentStatusInfo } from '@/types';
+import { PlusCircle, FileDown, Search, Bell, UserX, AlertCircle, Clock, CheckCircle, ChevronDown } from 'lucide-react';
+import type { Person, PaymentReminderInfo } from '@/types';
 import { useStudio } from '@/context/StudioContext';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,19 +16,21 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from '@/components/welcome-dialog';
-import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
+import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
+import { PaymentReceiptDialog, type ReceiptInfo } from '@/components/payment-receipt-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsList, TabsContent, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { es } from 'date-fns/locale';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, loading, reactivatePerson } = useStudio();
+  const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson, recordPayment } = useStudio();
   const { institute, isLimitReached, setPeopleCount } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,7 +43,11 @@ function StudentsPageContent() {
   const [activeTab, setActiveTab] = useState(initialTab);
 
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
-  const [isRemindersSheetOpen, setIsRemindersSheetOpen] = useState(false);
+  const [personForReminder, setPersonForReminder] = useState<PaymentReminderInfo | null>(null);
+  const [personForPayment, setPersonForPayment] = useState<Person | null>(null);
+  const [isPaymentAlertOpen, setIsPaymentAlertOpen] = useState(false);
+  const [receiptInfo, setReceiptInfo] = useState<ReceiptInfo | null>(null);
+  
   const [isMounted, setIsMounted] = useState(false);
   
   useEffect(() => {
@@ -131,7 +137,7 @@ function StudentsPageContent() {
         color = 'warning';
     }
     
-    return { text, color, price: tariff?.price, debt: totalDebt };
+    return { text, color, price: tariff?.price, debt: totalDebt, status: statusInfo.status };
   };
   
   const formatPrice = (price: number) => {
@@ -142,43 +148,110 @@ function StudentsPageContent() {
       }).format(price);
   };
   
-  const renderGroup = (title: string, groupPeople: Person[], icon: React.ElementType) => {
+  const handleRecordPaymentClick = (person: Person) => {
+    const status = getStudentPaymentStatus(person, new Date()).status;
+    if (status === 'Al día' && (person.outstandingPayments || 0) === 0) {
+        setPersonForPayment(person);
+        setIsPaymentAlertOpen(true);
+    } else {
+        recordPayment(person.id).then(() => handleSuccessfulPayment(person));
+    }
+  };
+
+  const confirmRecordPayment = () => {
+    if (personForPayment) {
+        recordPayment(personForPayment.id).then(() => handleSuccessfulPayment(personForPayment));
+    }
+    setIsPaymentAlertOpen(false);
+    setPersonForPayment(null);
+  };
+
+  const handleSuccessfulPayment = (person: Person) => {
+    if (!person || !institute) return;
+    const tariff = tariffs.find(t => t.id === person.tariffId);
+    if (!tariff) return;
+    
+    const newDueDate = person.lastPaymentDate ? calculateNextPaymentDate(person.lastPaymentDate, person.joinDate, tariff) : null;
+    setReceiptInfo({
+      personName: person.name, personPhone: person.phone, tariffName: tariff.name,
+      tariffPrice: tariff.price, nextDueDate: newDueDate, instituteName: institute.name,
+    });
+  };
+  
+  const handleRemindClick = (person: Person) => {
+    const statusInfo = getStudentPaymentStatus(person, new Date());
+    if (statusInfo.status === 'Próximo a Vencer' && person.lastPaymentDate) {
+        setPersonForReminder({
+            person: person,
+            dueDate: person.lastPaymentDate,
+            daysUntilDue: statusInfo.daysUntilDue || 0
+        });
+    }
+  };
+
+  const renderGroup = (title: string, groupPeople: Person[], icon: React.ElementType, isCollapsible?: boolean) => {
       const Icon = icon;
-      return (
-        <div key={title}>
-          <div className="flex items-center gap-2 mb-4 mt-8">
-            <Icon className="h-5 w-5 text-muted-foreground"/>
-            <h2 className="text-lg font-semibold">{title} ({groupPeople.length})</h2>
-          </div>
+      
+      const content = (
+         <>
           {groupPeople.length > 0 ? (
             <div className="space-y-3">
               {groupPeople.map((person) => {
-                const status = getStatusInfo(person, new Date());
+                const { status, color, price, debt } = getStatusInfo(person, new Date());
                 return (
-                 <Link href={`/students/${person.id}`} key={person.id} className="block">
-                    <Card className="hover:bg-muted/50 transition-colors">
-                      <CardContent className="p-3 flex items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="font-semibold text-foreground">{person.name}</p>
-                          <p className="text-sm text-muted-foreground">{person.phone}</p>
-                        </div>
-                        <div className="text-right">
-                           <Badge variant="outline" className={cn({
-                              'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700': status.color === 'destructive',
-                              'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700': status.color === 'warning',
-                              'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700': status.color === 'success'
-                           })}>{status.text}</Badge>
-                           <p className="font-bold text-lg mt-1">{formatPrice(status.price || 0)}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </Link>
+                 <Card key={person.id} className="hover:bg-muted/50 transition-colors">
+                  <div className="p-3 flex items-center justify-between gap-4">
+                    <Link href={`/students/${person.id}`} className="flex-1">
+                      <p className="font-semibold text-foreground">{person.name}</p>
+                      <p className="text-sm text-muted-foreground">{person.phone}</p>
+                    </Link>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                         <Badge variant="outline" className={cn({
+                            'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700': color === 'destructive',
+                            'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700': color === 'warning',
+                            'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700': color === 'success'
+                         })}>{status}</Badge>
+                         <p className="font-bold text-lg mt-1">{formatPrice(status === 'Atrasado' ? debt : price || 0)}</p>
+                      </div>
+                       {status === 'Atrasado' && <Button size="sm" onClick={() => handleRecordPaymentClick(person)}>Cobrar</Button>}
+                       {status === 'Próximo a Vencer' && <Button size="sm" variant="outline" onClick={() => handleRemindClick(person)}>Recordar</Button>}
+                    </div>
+                  </div>
+                </Card>
                 );
               })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">No hay personas en esta categoría.</p>
           )}
+         </>
+      );
+      
+      if (isCollapsible) {
+        return (
+            <Collapsible defaultOpen={false}>
+                <CollapsibleTrigger className="w-full flex justify-between items-center group">
+                    <div className="flex items-center gap-2 mb-4 mt-8">
+                        <Icon className="h-5 w-5 text-muted-foreground"/>
+                        <h2 className="text-lg font-semibold">{title} ({groupPeople.length})</h2>
+                    </div>
+                     <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                    {content}
+                </CollapsibleContent>
+            </Collapsible>
+        )
+      }
+
+      return (
+        <div key={title}>
+            <div className="flex items-center gap-2 mb-4 mt-8">
+                <Icon className="h-5 w-5 text-muted-foreground"/>
+                <h2 className="text-lg font-semibold">{title} ({groupPeople.length})</h2>
+            </div>
+            {content}
         </div>
       )
   }
@@ -206,7 +279,6 @@ function StudentsPageContent() {
     <div className="space-y-8">
       <PageHeader title="Personas">
         <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsRemindersSheetOpen(true)}><Bell className="mr-2 h-4 w-4" /></Button>
             <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" /></Button>
             <Button onClick={handleAddClick} disabled={isLimitReached}>
                 <PlusCircle className="mr-2 h-4 w-4" />Añadir
@@ -252,7 +324,7 @@ function StudentsPageContent() {
                     <>
                       {renderGroup('Atrasados', groupedPeople.overdue, UserX)}
                       {renderGroup('Próximos a Vencer', groupedPeople.upcoming, Clock)}
-                      {renderGroup('Al Día', groupedPeople.onTime, CheckCircle)}
+                      {renderGroup('Al Día', groupedPeople.onTime, CheckCircle, true)}
                     </>
                 )}
             </TabsContent>
@@ -305,7 +377,15 @@ function StudentsPageContent() {
         isLimitReached={isLimitReached}
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
-      <PaymentRemindersSheet isOpen={isRemindersSheetOpen} onOpenChange={setIsRemindersSheetOpen} />
+      <PaymentReminderDialog reminderInfo={personForReminder} onOpenChange={() => setPersonForReminder(null)} />
+      <PaymentReceiptDialog receiptInfo={receiptInfo} onOpenChange={() => setReceiptInfo(null)} />
+
+       <AlertDialog open={isPaymentAlertOpen} onOpenChange={setIsPaymentAlertOpen}>
+            <AlertDialogContent>
+                <AlertDialogHeader><AlertDialogTitle>¿Registrar Pago Adicional?</AlertDialogTitle><AlertDialogDescription>Este alumno ya tiene su cuota al día. Si continúas, se registrará un pago por adelantado y su próxima fecha de vencimiento se extenderá. ¿Estás seguro?</AlertDialogDescription></AlertDialogHeader>
+                <AlertDialogFooter><AlertDialogCancel onClick={() => { setIsPaymentAlertOpen(false); setPersonForPayment(null); }}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmRecordPayment}>Sí, registrar pago</AlertDialogAction></AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
 
     </div>
   );
@@ -319,3 +399,4 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
