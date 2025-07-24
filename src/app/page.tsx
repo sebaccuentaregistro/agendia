@@ -25,6 +25,7 @@ import { TodaySessions } from '@/components/dashboard/today-sessions';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
 import { WaitlistOpportunities, type Opportunity } from '@/components/waitlist-opportunities';
+import { ChurnRiskAlerts } from '@/components/churn-risk-alerts';
 import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
 import { MassReminderDialog } from '@/components/mass-reminder-dialog';
 import { PinDialog } from '@/components/pin-dialog';
@@ -392,6 +393,11 @@ function DashboardPageContent() {
                 />
               </div>
               <div className="space-y-8">
+                <ChurnRiskAlerts
+                    people={people}
+                    attendance={attendance}
+                    sessions={sessions}
+                />
                 {totalWaitlistCount > 0 && (
                   <WaitlistOpportunities 
                     opportunities={waitlistOpportunities} 
@@ -605,5 +611,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-    
