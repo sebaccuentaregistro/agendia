@@ -27,7 +27,6 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { Separator } from '@/components/ui/separator';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 function StudentsPageContent() {
   const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson, recordPayment } = useStudio();
@@ -189,35 +188,36 @@ function StudentsPageContent() {
     }
   };
 
-  const renderGroup = (title: string, groupPeople: Person[], icon: React.ElementType, isCollapsible?: boolean) => {
+  const renderGroup = (title: string, groupPeople: Person[], icon: React.ElementType) => {
       const Icon = icon;
-      
-      const content = (
-         <>
+      return (
+        <div key={title}>
+            <div className="flex items-center gap-2 mb-4 mt-8">
+                <Icon className="h-5 w-5 text-muted-foreground"/>
+                <h2 className="text-lg font-semibold">{title} ({groupPeople.length})</h2>
+            </div>
           {groupPeople.length > 0 ? (
             <div className="space-y-3">
               {groupPeople.map((person) => {
                 const { status, color, price, debt } = getStatusInfo(person, new Date());
                 return (
                  <Card key={person.id} className="hover:bg-muted/50 transition-colors">
-                  <div className="p-3 flex items-center justify-between gap-4">
-                    <Link href={`/students/${person.id}`} className="flex-1">
-                      <p className="font-semibold text-foreground">{person.name}</p>
-                      <p className="text-sm text-muted-foreground">{person.phone}</p>
-                    </Link>
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                         <Badge variant="outline" className={cn({
-                            'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700': color === 'destructive',
-                            'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700': color === 'warning',
-                            'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700': color === 'success'
-                         })}>{status}</Badge>
-                         <p className="font-bold text-lg mt-1">{formatPrice(status === 'Atrasado' ? debt : price || 0)}</p>
+                    <Link href={`/students/${person.id}`}>
+                      <div className="p-3 flex items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <p className="font-semibold text-foreground">{person.name}</p>
+                          <p className="text-sm text-muted-foreground">{person.phone}</p>
+                        </div>
+                        <div className="text-right">
+                           <Badge variant="outline" className={cn({
+                              'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700': color === 'destructive',
+                              'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700': color === 'warning',
+                              'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700': color === 'success'
+                           })}>{status}</Badge>
+                           <p className="font-bold text-lg mt-1">{formatPrice(status === 'Atrasado' ? debt : price || 0)}</p>
+                        </div>
                       </div>
-                       {status === 'Atrasado' && <Button size="sm" onClick={() => handleRecordPaymentClick(person)}>Cobrar</Button>}
-                       {status === 'Próximo a Vencer' && <Button size="sm" variant="outline" onClick={() => handleRemindClick(person)}>Recordar</Button>}
-                    </div>
-                  </div>
+                    </Link>
                 </Card>
                 );
               })}
@@ -225,33 +225,6 @@ function StudentsPageContent() {
           ) : (
             <p className="text-sm text-muted-foreground text-center py-4">No hay personas en esta categoría.</p>
           )}
-         </>
-      );
-      
-      if (isCollapsible) {
-        return (
-            <Collapsible defaultOpen={false}>
-                <CollapsibleTrigger className="w-full flex justify-between items-center group">
-                    <div className="flex items-center gap-2 mb-4 mt-8">
-                        <Icon className="h-5 w-5 text-muted-foreground"/>
-                        <h2 className="text-lg font-semibold">{title} ({groupPeople.length})</h2>
-                    </div>
-                     <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                    {content}
-                </CollapsibleContent>
-            </Collapsible>
-        )
-      }
-
-      return (
-        <div key={title}>
-            <div className="flex items-center gap-2 mb-4 mt-8">
-                <Icon className="h-5 w-5 text-muted-foreground"/>
-                <h2 className="text-lg font-semibold">{title} ({groupPeople.length})</h2>
-            </div>
-            {content}
         </div>
       )
   }
@@ -324,7 +297,7 @@ function StudentsPageContent() {
                     <>
                       {renderGroup('Atrasados', groupedPeople.overdue, UserX)}
                       {renderGroup('Próximos a Vencer', groupedPeople.upcoming, Clock)}
-                      {renderGroup('Al Día', groupedPeople.onTime, CheckCircle, true)}
+                      {renderGroup('Al Día', groupedPeople.onTime, CheckCircle)}
                     </>
                 )}
             </TabsContent>
@@ -399,4 +372,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
