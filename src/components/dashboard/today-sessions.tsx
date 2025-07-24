@@ -12,8 +12,6 @@ import { useStudio } from '@/context/StudioContext';
 interface TodaySessionsProps {
   sessions: Session[];
   todayName: string;
-  onSessionClick: (session: Session) => void;
-  onAttendanceClick: (session: Session) => void;
 }
 
 const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
@@ -26,14 +24,11 @@ const getTimeOfDay = (time: string): 'Mañana' | 'Tarde' | 'Noche' => {
 
 export function TodaySessions({
   sessions,
-  todayName,
-  onSessionClick,
-  onAttendanceClick,
+  todayName
 }: TodaySessionsProps) {
-  const { specialists, actividades, spaces } = useStudio();
+  const { specialists, actividades } = useStudio();
   const [filters, setFilters] = useState({
     actividadId: 'all',
-    spaceId: 'all',
     specialistId: 'all',
     timeOfDay: 'all',
   });
@@ -47,7 +42,6 @@ export function TodaySessions({
         const sessionTimeOfDay = getTimeOfDay(session.time);
         return (
             (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
-            (filters.spaceId === 'all' || session.spaceId === filters.spaceId) &&
             (filters.specialistId === 'all' || session.instructorId === filters.specialistId) &&
             (filters.timeOfDay === 'all' || sessionTimeOfDay === filters.timeOfDay)
         );
@@ -100,8 +94,7 @@ export function TodaySessions({
                     <ScheduleCard 
                         key={session.id} 
                         session={session} 
-                        onAttendanceClick={onAttendanceClick}
-                        onSessionClick={onSessionClick}
+                        view="daily"
                     />
                   ))}
                 </div>

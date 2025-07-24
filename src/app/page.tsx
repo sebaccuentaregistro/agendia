@@ -5,7 +5,6 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
@@ -31,6 +30,10 @@ import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
 import { MassReminderDialog } from '@/components/mass-reminder-dialog';
 import { PinDialog } from '@/components/pin-dialog';
 import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
+import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
+import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
+import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
+import { WaitlistDialog } from '@/components/waitlist-dialog';
 
 
 function DashboardPageContent() {
@@ -60,9 +63,46 @@ function DashboardPageContent() {
 
   const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
   const [isMassReminderOpen, setIsMassReminderOpen] = useState(false);
+  
+  // States for dialogs triggered from ScheduleCard
+  const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
+  const [sessionForOneTime, setSessionForOneTime] = useState<Session | null>(null);
+  const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
+  const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
+
 
   useEffect(() => {
     setIsMounted(true);
+    
+    // Event listener setup
+    const handleAction = (e: Event) => {
+        const { action, session, personId } = (e as CustomEvent).detail;
+        switch (action) {
+            case 'view-students':
+                setSelectedSessionForStudents(session);
+                break;
+            case 'take-attendance':
+                setSessionForAttendance(session);
+                break;
+            case 'enroll-fixed':
+                setSessionForEnrollment(session);
+                break;
+            case 'enroll-recovery':
+                setSessionForOneTime(session);
+                break;
+            case 'notify-attendees':
+                setSessionForNotification(session);
+                break;
+            case 'add-to-waitlist':
+                setSessionForWaitlist(session);
+                break;
+        }
+    };
+    document.addEventListener('schedule-card-action', handleAction);
+    return () => {
+        document.removeEventListener('schedule-card-action', handleAction);
+    };
+
   }, []);
 
   const handleUpdateDebts = async () => {
@@ -284,8 +324,6 @@ function DashboardPageContent() {
                 <TodaySessions
                     sessions={todaysSessions}
                     todayName={todayName}
-                    onSessionClick={setSelectedSessionForStudents}
-                    onAttendanceClick={setSessionForAttendance}
                 />
               </div>
               <div className="space-y-8">
@@ -375,6 +413,30 @@ function DashboardPageContent() {
         <AttendanceSheet
           session={sessionForAttendance}
           onClose={() => setSessionForAttendance(null)}
+        />
+      )}
+      {sessionForEnrollment && (
+        <EnrollPeopleDialog 
+            session={sessionForEnrollment}
+            onClose={() => setSessionForEnrollment(null)}
+        />
+      )}
+      {sessionForOneTime && (
+        <OneTimeAttendeeDialog 
+            session={sessionForOneTime}
+            onClose={() => setSessionForOneTime(null)}
+        />
+      )}
+       {sessionForNotification && (
+        <NotifyAttendeesDialog 
+            session={sessionForNotification}
+            onClose={() => setSessionForNotification(null)}
+        />
+      )}
+      {sessionForWaitlist && (
+        <WaitlistDialog 
+            session={sessionForWaitlist}
+            onClose={() => setSessionForWaitlist(null)}
         />
       )}
       <PersonDialog
