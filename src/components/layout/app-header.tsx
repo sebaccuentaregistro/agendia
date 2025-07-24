@@ -100,24 +100,6 @@ export function AppHeader() {
                  <Separator orientation="vertical" className="h-6 hidden sm:block" />
             </>
         )}
-        <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="default" size="icon">
-                <PlusCircle className="h-5 w-5" />
-                <span className="sr-only">Añadir</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Acciones Rápidas</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onSelect={() => openSessionDialog(null)}>
-                    Nuevo Horario
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={openPersonDialog}>
-                    Nueva Persona
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-        </DropdownMenu>
         {isSuperAdmin && (
              <Link
                 href="/superadmin"
