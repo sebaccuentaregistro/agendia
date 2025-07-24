@@ -10,27 +10,6 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config, { isServer, dev }) => {
-    // Generate service worker only for production build and on the client side.
-    if (!isServer && !dev) {
-      const { InjectManifest } = require('workbox-webpack-plugin');
-      config.plugins.push(
-        new InjectManifest({
-          swSrc: './src/lib/sw-prod.js', // Point to a production-specific service worker source
-          swDest: 'sw.js',
-          exclude: [
-            /\.map$/, 
-            /manifest\.json$/, 
-            /^(?:.*\/){3}middleware-manifest\.js$/,
-            /_buildManifest\.js$/, 
-            /_ssgManifest\.js$/,
-            /\.DS_Store$/,
-          ],
-        })
-      );
-    }
-    return config;
-  },
   experimental: {
     missingSuspenseWithCSRBailout: false,
   },
