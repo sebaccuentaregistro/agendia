@@ -59,8 +59,8 @@ function SchedulePageContent() {
     resolver: zodResolver(formSchema),
     defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
   });
-
-  const handleEditSession = useCallback((session: Session) => {
+  
+  const handleEditSession = (session: Session) => {
     setSelectedSession(session);
     form.reset({
       instructorId: session.instructorId,
@@ -71,21 +71,11 @@ function SchedulePageContent() {
       levelId: session.levelId || 'none',
     });
     setIsDialogOpen(true);
-  }, [form]);
+  };
   
-  
-  useEffect(() => {
-    const handleEdit = (e: Event) => handleEditSession((e as CustomEvent).detail);
-    const handleDelete = (e: Event) => setSessionForDelete((e as CustomEvent).detail);
-
-    document.addEventListener('edit-session', handleEdit);
-    document.addEventListener('delete-session', handleDelete);
-
-    return () => {
-        document.removeEventListener('edit-session', handleEdit);
-        document.removeEventListener('delete-session', handleDelete);
-    };
-  }, [handleEditSession]);
+  const handleDeleteSession = (session: Session) => {
+    setSessionForDelete(session);
+  };
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -288,6 +278,8 @@ function SchedulePageContent() {
                     <ScheduleCard 
                         key={session.id} 
                         session={session}
+                        onEdit={handleEditSession}
+                        onDelete={handleDeleteSession}
                     />
                   ))}
                 </div>

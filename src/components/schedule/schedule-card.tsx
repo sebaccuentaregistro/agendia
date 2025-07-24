@@ -16,6 +16,8 @@ import { format, isBefore, isAfter, parse, startOfDay, addMinutes, subMinutes } 
 interface ScheduleCardProps {
     session: Session;
     view?: 'structural' | 'daily';
+    onEdit?: (session: Session) => void;
+    onDelete?: (session: Session) => void;
 }
 
 const formatTime = (time: string) => {
@@ -23,7 +25,7 @@ const formatTime = (time: string) => {
     return time;
 };
 
-export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps) {
+export function ScheduleCard({ session, view = 'structural', onEdit, onDelete }: ScheduleCardProps) {
     const { specialists, actividades, spaces, levels, attendance, isPersonOnVacation, people } = useStudio();
     
     const { specialist, actividad, space, level, dailyStats, structuralStats } = useMemo(() => {
@@ -74,6 +76,17 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
     };
 
     const handleAction = (action: string, detail: any) => {
+        // Structural actions are handled via props
+        if (action === 'edit-session' && onEdit) {
+            onEdit(detail.session);
+            return;
+        }
+        if (action === 'delete-session' && onDelete) {
+            onDelete(detail.session);
+            return;
+        }
+
+        // Daily actions are dispatched as events for the main page to handle
         const event = new CustomEvent('schedule-card-action', { detail: { action, ...detail } });
         document.dispatchEvent(event);
     };
