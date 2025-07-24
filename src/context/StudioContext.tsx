@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction, removePersonFromSessionAction } from '@/lib/firestore-actions';
+import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction, removePersonFromSessionAction, cancelSessionForDayAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -39,6 +39,7 @@ interface StudioContextType {
     recordPayment: (personId: string) => Promise<void>;
     revertLastPayment: (personId: string) => void;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
+    cancelSessionForDay: (session: Session, date: Date, grantRecoveryCredits: boolean) => Promise<void>;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
     addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
     removeVacationPeriod: (personId: string, vacationId: string, force?: boolean) => void;
@@ -442,6 +443,32 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       );
     }
     
+    const cancelSessionForDay = async (session: Session, date: Date, grantRecoveryCredits: boolean) => {
+      if (!collectionRefs || !activeOperator) return;
+
+      const enrolledPeopleIds = session.personIds.filter(pid => {
+        const person = people.find(p => p.id === pid);
+        return person && !isPersonOnVacation(person, date);
+      });
+
+      const activityName = data.actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
+
+      await withOperator(
+        (operator) => cancelSessionForDayAction(
+          collectionRefs.attendance,
+          session.id,
+          date,
+          enrolledPeopleIds,
+          grantRecoveryCredits,
+          collectionRefs.audit_logs,
+          operator,
+          activityName
+        ),
+        `La sesión de ${activityName} ha sido cancelada para hoy.`,
+        'Error al cancelar la sesión.'
+      );
+    };
+
     const isPersonOnVacation = useCallback((person: Person, date: Date) => {
         if (!person.vacationPeriods) return false;
         return person.vacationPeriods.some(period => {
@@ -622,6 +649,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             deleteSession,
             enrollPeopleInClass,
             saveAttendance,
+            cancelSessionForDay,
             isPersonOnVacation,
             addVacationPeriod,
             removeVacationPeriod,

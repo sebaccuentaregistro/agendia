@@ -161,6 +161,7 @@ export type SessionAttendance = {
   absentIds: string[];
   justifiedAbsenceIds?: string[];
   oneTimeAttendees?: string[]; // People added just for this day for a specific reason (e.g., recovery)
+  status?: 'active' | 'cancelled'; // NEW
 };
 
 export type AppNotification = {

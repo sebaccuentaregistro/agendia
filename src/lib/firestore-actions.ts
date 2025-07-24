@@ -428,7 +428,7 @@ export const saveAttendanceAction = async (
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
     const snap = await getDocs(attendanceQuery);
     
-    const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
+    const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds, status: 'active' };
     let docRef;
 
     if (snap.empty) {
@@ -446,6 +446,56 @@ export const saveAttendanceAction = async (
     for (const personId of absentIds) {
         await checkForChurnRisk(personId, allPersonSessions, allAttendance, notificationsRef);
     }
+};
+
+export const cancelSessionForDayAction = async (
+  attendanceRef: CollectionReference,
+  sessionId: string,
+  date: Date,
+  enrolledPeopleIds: string[],
+  grantRecoveryCredits: boolean,
+  auditLogRef: CollectionReference,
+  operator: Operator,
+  activityName: string
+) => {
+  const dateStr = formatDate(date, 'yyyy-MM-dd');
+  const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+  const snap = await getDocs(attendanceQuery);
+
+  const newRecord: Partial<SessionAttendance> = {
+    sessionId,
+    date: dateStr,
+    status: 'cancelled',
+    presentIds: [],
+    absentIds: [],
+  };
+
+  if (grantRecoveryCredits) {
+    newRecord.justifiedAbsenceIds = enrolledPeopleIds;
+  }
+
+  let docRef;
+  if (snap.empty) {
+    docRef = doc(attendanceRef);
+  } else {
+    docRef = snap.docs[0].ref;
+  }
+
+  const batch = writeBatch(db);
+  batch.set(docRef, newRecord, { merge: true });
+  
+  batch.set(doc(auditLogRef), {
+    operatorId: operator.id,
+    operatorName: operator.name,
+    action: 'CANCELAR_SESION',
+    entityType: 'clase',
+    entityId: sessionId,
+    entityName: `Clase de ${activityName}`,
+    timestamp: new Date(),
+    details: { date: dateStr, grantedCredits: grantRecoveryCredits }
+  } as Omit<AuditLog, 'id'>);
+
+  await batch.commit();
 };
 
 export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {

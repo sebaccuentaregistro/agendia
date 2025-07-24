@@ -30,6 +30,7 @@ import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
+import { CancelSessionDialog } from '@/components/cancel-session-dialog';
 import { Badge } from '@/components/ui/badge';
 import { MainCards } from '@/components/dashboard/main-cards';
 import { useShell } from '@/context/ShellContext';
@@ -65,6 +66,7 @@ function DashboardPageContent() {
   const [sessionForOneTime, setSessionForOneTime] = useState<Session | null>(null);
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
+  const [sessionForCancellation, setSessionForCancellation] = useState<Session | null>(null);
   
   useEffect(() => {
     setIsMounted(true);
@@ -89,6 +91,9 @@ function DashboardPageContent() {
                 break;
             case 'add-to-waitlist':
                 setSessionForWaitlist(session);
+                break;
+            case 'cancel-session':
+                setSessionForCancellation(session);
                 break;
             case 'edit-session':
                 openSessionDialog(session);
@@ -521,6 +526,12 @@ function DashboardPageContent() {
         <WaitlistDialog 
             session={sessionForWaitlist}
             onClose={() => setSessionForWaitlist(null)}
+        />
+      )}
+       {sessionForCancellation && (
+        <CancelSessionDialog
+            session={sessionForCancellation}
+            onClose={() => setSessionForCancellation(null)}
         />
       )}
       <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
