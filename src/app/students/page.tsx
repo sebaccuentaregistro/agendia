@@ -1,12 +1,11 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense, Fragment } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileDown, Search, Bell, UserX, AlertCircle, Clock, CheckCircle, ChevronDown } from 'lucide-react';
-import type { Person, PaymentReminderInfo } from '@/types';
+import { PlusCircle, FileDown, Search, AlertCircle, Clock, CheckCircle, ChevronDown, UserX } from 'lucide-react';
+import type { Person, PaymentReminderInfo, Tariff, SessionAttendance } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
@@ -16,20 +15,15 @@ import Link from 'next/link';
 import { useAuth } from '@/context/AuthContext';
 import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from '@/components/welcome-dialog';
-import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
-import { PaymentReceiptDialog, type ReceiptInfo } from '@/components/payment-receipt-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Tabs, TabsList, TabsContent, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { Separator } from '@/components/ui/separator';
+import { PersonCard } from '@/components/students/person-card';
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson, recordPayment } = useStudio();
+  const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson } = useStudio();
   const { institute, isLimitReached, setPeopleCount } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,10 +36,6 @@ function StudentsPageContent() {
   const [activeTab, setActiveTab] = useState(initialTab);
 
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
-  const [personForReminder, setPersonForReminder] = useState<PaymentReminderInfo | null>(null);
-  const [personForPayment, setPersonForPayment] = useState<Person | null>(null);
-  const [isPaymentAlertOpen, setIsPaymentAlertOpen] = useState(false);
-  const [receiptInfo, setReceiptInfo] = useState<ReceiptInfo | null>(null);
   
   const [isMounted, setIsMounted] = useState(false);
   
@@ -67,8 +57,8 @@ function StudentsPageContent() {
     }
   }, [searchParams]);
 
-  const { groupedPeople, filteredInactivePeople } = useMemo(() => {
-    if (!isMounted) return { groupedPeople: { overdue: [], upcoming: [], onTime: [] }, filteredInactivePeople: [] };
+  const { groupedPeople, filteredInactivePeople, recoveryCreditsMap } = useMemo(() => {
+    if (!isMounted) return { groupedPeople: { overdue: [], upcoming: [], onTime: [] }, filteredInactivePeople: [], recoveryCreditsMap: {} };
     
     const now = new Date();
     const term = searchTerm.toLowerCase();
@@ -76,6 +66,18 @@ function StudentsPageContent() {
     const overdue: Person[] = [];
     const upcoming: Person[] = [];
     const onTime: Person[] = [];
+    
+    const tempRecoveryCreditsMap: Record<string, number> = {};
+
+    people.forEach(person => {
+        let credits = 0;
+        let used = 0;
+        attendance.forEach((record: SessionAttendance) => {
+            if (record.justifiedAbsenceIds?.includes(person.id)) credits++;
+            if (record.oneTimeAttendees?.includes(person.id)) used++;
+        });
+        tempRecoveryCreditsMap[person.id] = Math.max(0, credits - used);
+    });
 
     people
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
@@ -94,8 +96,8 @@ function StudentsPageContent() {
         .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
         .sort((a,b) => (a.inactiveDate && b.inactiveDate) ? b.inactiveDate.getTime() - a.inactiveDate.getTime() : a.name.localeCompare(b.name));
       
-    return { groupedPeople: { overdue, upcoming, onTime }, filteredInactivePeople: finalFilteredInactivePeople };
-  }, [people, inactivePeople, searchTerm, isMounted]);
+    return { groupedPeople: { overdue, upcoming, onTime }, filteredInactivePeople: finalFilteredInactivePeople, recoveryCreditsMap: tempRecoveryCreditsMap };
+  }, [people, inactivePeople, searchTerm, isMounted, attendance]);
 
    const handleExport = () => {
     const dataToExport = people.map(p => ({
@@ -121,73 +123,6 @@ function StudentsPageContent() {
     setIsPersonDialogOpen(true);
   }
   
-   const getStatusInfo = (person: Person, now: Date) => {
-    const statusInfo = getStudentPaymentStatus(person, now);
-    const tariff = tariffs.find(t => t.id === person.tariffId);
-    const totalDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
-    let text = statusInfo.status;
-    let color: "destructive" | "warning" | "success" = "success";
-    
-    if (statusInfo.status === 'Atrasado') {
-        text = `Atrasado (${statusInfo.daysOverdue}d)`;
-        color = 'destructive';
-    } else if (statusInfo.status === 'Próximo a Vencer') {
-        text = statusInfo.daysUntilDue === 0 ? 'Vence Hoy' : `Vence en ${statusInfo.daysUntilDue}d`;
-        color = 'warning';
-    }
-    
-    return { text, color, price: tariff?.price, debt: totalDebt, status: statusInfo.status };
-  };
-  
-  const formatPrice = (price: number) => {
-      return new Intl.NumberFormat('es-AR', {
-        style: 'currency',
-        currency: 'ARS',
-        minimumFractionDigits: 0,
-      }).format(price);
-  };
-  
-  const handleRecordPaymentClick = (person: Person) => {
-    const status = getStudentPaymentStatus(person, new Date()).status;
-    if (status === 'Al día' && (person.outstandingPayments || 0) === 0) {
-        setPersonForPayment(person);
-        setIsPaymentAlertOpen(true);
-    } else {
-        recordPayment(person.id).then(() => handleSuccessfulPayment(person));
-    }
-  };
-
-  const confirmRecordPayment = () => {
-    if (personForPayment) {
-        recordPayment(personForPayment.id).then(() => handleSuccessfulPayment(personForPayment));
-    }
-    setIsPaymentAlertOpen(false);
-    setPersonForPayment(null);
-  };
-
-  const handleSuccessfulPayment = (person: Person) => {
-    if (!person || !institute) return;
-    const tariff = tariffs.find(t => t.id === person.tariffId);
-    if (!tariff) return;
-    
-    const newDueDate = person.lastPaymentDate ? calculateNextPaymentDate(person.lastPaymentDate, person.joinDate, tariff) : null;
-    setReceiptInfo({
-      personName: person.name, personPhone: person.phone, tariffName: tariff.name,
-      tariffPrice: tariff.price, nextDueDate: newDueDate, instituteName: institute.name,
-    });
-  };
-  
-  const handleRemindClick = (person: Person) => {
-    const statusInfo = getStudentPaymentStatus(person, new Date());
-    if (statusInfo.status === 'Próximo a Vencer' && person.lastPaymentDate) {
-        setPersonForReminder({
-            person: person,
-            dueDate: person.lastPaymentDate,
-            daysUntilDue: statusInfo.daysUntilDue || 0
-        });
-    }
-  };
-
   const renderGroup = (title: string, groupPeople: Person[], icon: React.ElementType) => {
       const Icon = icon;
       return (
@@ -197,28 +132,17 @@ function StudentsPageContent() {
                 <h2 className="text-lg font-semibold">{title} ({groupPeople.length})</h2>
             </div>
           {groupPeople.length > 0 ? (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {groupPeople.map((person) => {
-                const { status, color, price, debt } = getStatusInfo(person, new Date());
+                const tariff = tariffs.find(t => t.id === person.tariffId);
+                const recoveryCreditsCount = recoveryCreditsMap[person.id] || 0;
                 return (
-                 <Card key={person.id} className="hover:bg-muted/50 transition-colors">
-                    <Link href={`/students/${person.id}`}>
-                      <div className="p-3 flex items-center justify-between gap-4">
-                        <div className="flex-1">
-                          <p className="font-semibold text-foreground">{person.name}</p>
-                          <p className="text-sm text-muted-foreground">{person.phone}</p>
-                        </div>
-                        <div className="text-right">
-                           <Badge variant="outline" className={cn({
-                              'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700': color === 'destructive',
-                              'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700': color === 'warning',
-                              'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700': color === 'success'
-                           })}>{status}</Badge>
-                           <p className="font-bold text-lg mt-1">{formatPrice(status === 'Atrasado' ? debt : price || 0)}</p>
-                        </div>
-                      </div>
-                    </Link>
-                </Card>
+                 <PersonCard
+                    key={person.id}
+                    person={person}
+                    tariff={tariff}
+                    recoveryCreditsCount={recoveryCreditsCount}
+                  />
                 );
               })}
             </div>
@@ -350,16 +274,6 @@ function StudentsPageContent() {
         isLimitReached={isLimitReached}
       />
       <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
-      <PaymentReminderDialog reminderInfo={personForReminder} onOpenChange={() => setPersonForReminder(null)} />
-      <PaymentReceiptDialog receiptInfo={receiptInfo} onOpenChange={() => setReceiptInfo(null)} />
-
-       <AlertDialog open={isPaymentAlertOpen} onOpenChange={setIsPaymentAlertOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader><AlertDialogTitle>¿Registrar Pago Adicional?</AlertDialogTitle><AlertDialogDescription>Este alumno ya tiene su cuota al día. Si continúas, se registrará un pago por adelantado y su próxima fecha de vencimiento se extenderá. ¿Estás seguro?</AlertDialogDescription></AlertDialogHeader>
-                <AlertDialogFooter><AlertDialogCancel onClick={() => { setIsPaymentAlertOpen(false); setPersonForPayment(null); }}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmRecordPayment}>Sí, registrar pago</AlertDialogAction></AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
-
     </div>
   );
 }
@@ -372,3 +286,5 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
+    
