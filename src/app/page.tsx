@@ -33,6 +33,7 @@ import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { Badge } from '@/components/ui/badge';
 import { MainCards } from '@/components/dashboard/main-cards';
 import { useShell } from '@/context/ShellContext';
+import { cn } from '@/lib/utils';
 
 
 function DashboardPageContent() {
@@ -405,7 +406,7 @@ function DashboardPageContent() {
                         }}
                       >
                         Próximos Vencimientos
-                        {upcomingCount > 0 && <Badge variant="secondary" className="ml-2">{upcomingCount}</Badge>}
+                        {upcomingCount > 0 && <Badge variant="secondary" className="ml-2 bg-yellow-400/80 text-yellow-900 hover:bg-yellow-400">{upcomingCount}</Badge>}
                       </Button>
                   </CardContent>
                 </Card>
