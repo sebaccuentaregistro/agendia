@@ -96,7 +96,12 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
         const space = spaces.find(sp => sp.id === s.spaceId);
         return { ...s, actividadName: actividad?.name || 'Clase', specialistName: specialist?.name || 'N/A', spaceName: space?.name || 'N/A' };
       })
-      .sort((a, b) => a.dayOfWeek.localeCompare(b.dayOfWeek) || a.time.localeCompare(b.time));
+      .sort((a, b) => {
+         const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+         const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
+         if (dayComparison !== 0) return dayComparison;
+         return a.time.localeCompare(b.time);
+      });
 
     return { 
       tariff, 
@@ -148,22 +153,26 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     setIsDeactivateAlertOpen(false);
     router.push('/students');
   };
-
+  
+  const getStatusBadgeClass = (status: typeof paymentStatusInfo.status) => {
+    switch (status) {
+        case 'Al día': return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700";
+        case 'Atrasado': return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700";
+        case 'Próximo a Vencer': return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700";
+        case 'Pendiente de Pago': return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700";
+        default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
+    }
+  };
+  
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
-  if (loading || !person) {
+  if (loading || !person || !paymentStatusInfo) {
     return (
       <div className="space-y-8">
         <Skeleton className="h-10 w-1/4" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 space-y-8">
-            <Skeleton className="h-48 w-full" />
-            <Skeleton className="h-64 w-full" />
-          </div>
-          <div className="space-y-8">
-            <Skeleton className="h-32 w-full" />
-            <Skeleton className="h-48 w-full" />
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-80 w-full" />
         </div>
       </div>
     );
@@ -171,12 +180,24 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
   return (
     <div className="space-y-8">
-      <PageHeader title={person.name}>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex-1">
+            <div className="flex items-center gap-4">
+                <h1 className="text-2xl font-bold tracking-tight text-foreground">{person.name}</h1>
+                 <Badge variant="outline" className={cn("capitalize", getStatusBadgeClass(paymentStatusInfo.status))}>
+                    {paymentStatusInfo.status}
+                </Badge>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+              <WhatsAppIcon className="h-4 w-4 text-green-600"/>
+              <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer" className="hover:underline">{person.phone}</a>
+            </div>
+        </div>
         <div className="flex items-center gap-2">
-           <Button variant="outline" asChild>
+            <Button variant="outline" asChild>
                 <Link href="/students">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Volver a Personas
+                    Volver
                 </Link>
             </Button>
           <DropdownMenu>
@@ -192,53 +213,100 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-      </PageHeader>
+      </div>
 
-       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="md:col-span-2 space-y-8">
-                {/* Payment Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Estado Financiero</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {/* Content here */}
-                    </CardContent>
-                    <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <Button onClick={handleRecordPaymentClick}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago</Button>
-                        <Button variant="outline" onClick={() => setIsPaymentHistoryOpen(true)}><History className="mr-2 h-4 w-4"/>Ver Historial</Button>
-                    </CardFooter>
-                </Card>
-                 {/* Enrollment Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Inscripciones</CardTitle>
-                        <CardDescription>Clases a las que asiste de forma regular.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {/* Content here */}
-                    </CardContent>
-                    <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <Button variant="default" onClick={() => setIsEnrollmentDialogOpen(true)}><ClipboardList className="mr-2 h-4 w-4"/>Administrar Inscripciones</Button>
-                        <Button variant="secondary" onClick={() => setIsJustifyAbsenceOpen(true)}><UserX className="mr-2 h-4 w-4"/>Notificar Ausencia</Button>
-                    </CardFooter>
-                </Card>
-            </div>
-            <div className="space-y-8">
-                {/* Info Card */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Información Personal</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                         <div className="flex items-center gap-2 text-sm">
-                            <WhatsAppIcon className="h-5 w-5 text-green-600"/>
-                            <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer" className="hover:underline">{person.phone}</a>
+
+       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+            <Card className="w-full">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <DollarSign className="h-5 w-5 text-primary"/>
+                        Estado Financiero
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex justify-between items-center bg-muted/50 p-4 rounded-lg">
+                        <div>
+                            <p className="text-sm font-medium text-muted-foreground">Arancel</p>
+                            <p className="text-lg font-semibold">{tariff?.name}</p>
                         </div>
-                        {person.joinDate && <p className="text-sm flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground"/> Se unió el {format(person.joinDate, 'dd/MM/yyyy')}</p>}
-                        {level && <p className="text-sm flex items-center gap-2"><Signal className="h-4 w-4 text-muted-foreground"/> Nivel: {level.name}</p>}
+                        <p className="text-2xl font-bold">{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(tariff?.price || 0)}</p>
+                    </div>
+                     {paymentStatusInfo.status === 'Atrasado' ? (
+                        <div className="text-center text-destructive p-3 rounded-lg bg-destructive/10">
+                            <p className="font-bold">Deuda Total: {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(totalDebt)}</p>
+                            <p className="text-xs">({paymentStatusInfo.daysOverdue} días de atraso)</p>
+                        </div>
+                    ) : (
+                        <div className="text-sm text-muted-foreground">
+                            Próximo vencimiento: {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd MMMM, yyyy', { locale: es }) : 'Pendiente de primer pago'}
+                        </div>
+                    )}
+                </CardContent>
+                <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <Button onClick={handleRecordPaymentClick}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago</Button>
+                    <Button variant="outline" onClick={() => setIsPaymentHistoryOpen(true)}><History className="mr-2 h-4 w-4"/>Ver Historial</Button>
+                </CardFooter>
+            </Card>
+            <div className="space-y-8">
+                <Card className="w-full">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                             <ClipboardList className="h-5 w-5 text-primary"/>
+                             Actividad y Horarios
+                        </CardTitle>
+                        {recoveryCredits && recoveryCredits.length > 0 && (
+                             <CardDescription className="flex items-center gap-1.5 text-amber-600 font-semibold pt-2">
+                                <CalendarClock className="h-4 w-4"/>
+                                Tiene {recoveryCredits.length} clase(s) para recuperar.
+                            </CardDescription>
+                        )}
+                    </CardHeader>
+                    <CardContent>
+                       <ScrollArea className="h-40">
+                           <div className="space-y-2 pr-4">
+                            {personSessions.length > 0 ? (
+                                personSessions.map(session => (
+                                    <div key={session.id} className="text-sm p-2 rounded-md bg-muted/50">
+                                        <div className="flex justify-between items-start">
+                                          <p className="font-bold text-foreground">{session.actividadName}</p>
+                                          <p className="font-semibold text-xs">{session.dayOfWeek}, {session.time}</p>
+                                        </div>
+                                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                          <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
+                                          <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{session.spaceName}</span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center text-muted-foreground text-sm py-8">
+                                    Sin horarios fijos asignados.
+                                </div>
+                            )}
+                            </div>
+                        </ScrollArea>
+                    </CardContent>
+                    <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                         <Button variant="default" onClick={() => setIsEnrollmentDialogOpen(true)}><ClipboardList className="mr-2 h-4 w-4"/>Administrar Inscripciones</Button>
+                         <Button variant="secondary" onClick={() => setIsJustifyAbsenceOpen(true)}><UserX className="mr-2 h-4 w-4"/>Notificar Ausencia</Button>
+                    </CardFooter>
+                </Card>
+
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                             <FileText className="h-5 w-5 text-primary"/>
+                             Información Adicional
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                        {person.joinDate && <p className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground"/> Se unió el {format(person.joinDate, 'dd MMMM, yyyy', { locale: es })}</p>}
+                        {level && <p className="flex items-center gap-2"><Signal className="h-4 w-4 text-muted-foreground"/> Nivel: {level.name}</p>}
                         {person.healthInfo && <div className="text-sm"><p className="font-semibold flex items-center gap-2"><Heart className="h-4 w-4 text-muted-foreground"/>Info de Salud</p><p className="text-muted-foreground pl-6">{person.healthInfo}</p></div>}
                         {person.notes && <div className="text-sm"><p className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground"/>Notas</p><p className="text-muted-foreground pl-6">{person.notes}</p></div>}
+                         {!person.joinDate && !level && !person.healthInfo && !person.notes && (
+                            <p className="text-muted-foreground text-center py-4">No hay información adicional.</p>
+                         )}
                     </CardContent>
                     <CardFooter>
                          <Button variant="outline" className="w-full" onClick={() => setIsAttendanceHistoryOpen(true)}><History className="mr-2 h-4 w-4"/>Historial de Asistencia</Button>
@@ -286,3 +354,5 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
     </Suspense>
   )
 }
+
+    
