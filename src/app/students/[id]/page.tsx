@@ -29,6 +29,12 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
+type SessionWithDetails = Session & {
+    actividadName: string;
+    specialistName: string;
+    spaceName: string;
+};
+
 function StudentDetailContent({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { 
@@ -51,7 +57,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   
   const [receiptInfo, setReceiptInfo] = useState<ReceiptInfo | null>(null);
   const { institute } = useAuth();
-  const [sessionToUnenroll, setSessionToUnenroll] = useState<Session | null>(null);
+  const [sessionToUnenroll, setSessionToUnenroll] = useState<SessionWithDetails | null>(null);
 
 
   useEffect(() => {
@@ -184,6 +190,9 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
       </div>
     );
   }
+
+  const sessionToUnenrollName = sessionToUnenroll ? actividades.find(a => a.id === sessionToUnenroll.actividadId)?.name : '';
+
 
   return (
     <div className="space-y-8">
@@ -349,7 +358,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
         </AlertDialog>
         <AlertDialog open={!!sessionToUnenroll} onOpenChange={() => setSessionToUnenroll(null)}>
             <AlertDialogContent>
-                <AlertDialogHeader><AlertDialogTitle>¿Desinscribir de la clase?</AlertDialogTitle><AlertDialogDescription>Estás a punto de desinscribir a {person.name} de la clase de {sessionToUnenroll?.actividadName}. ¿Estás seguro?</AlertDialogDescription></AlertDialogHeader>
+                <AlertDialogHeader><AlertDialogTitle>¿Desinscribir de la clase?</AlertDialogTitle><AlertDialogDescription>Estás a punto de desinscribir a {person.name} de la clase de {sessionToUnenrollName}. ¿Estás seguro?</AlertDialogDescription></AlertDialogHeader>
                 <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleUnenroll}>Sí, desinscribir</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
