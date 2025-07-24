@@ -66,12 +66,8 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                             <div className="flex items-center gap-2">
                                {onVacation && (
                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Plane className="h-4 w-4 text-muted-foreground"/>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>De vacaciones</p>
-                                    </TooltipContent>
+                                    <TooltipTrigger><Plane className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
+                                    <TooltipContent><p>De vacaciones</p></TooltipContent>
                                  </Tooltip>
                                )}
                                {recoveryCreditsCount > 0 && (
