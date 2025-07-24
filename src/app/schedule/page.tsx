@@ -27,6 +27,7 @@ import { ScheduleCard } from '@/components/schedule/schedule-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertCircle } from 'lucide-react';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
+import { WaitlistDialog } from '@/components/waitlist-dialog';
 
 
 const formSchema = z.object({
@@ -45,6 +46,7 @@ function SchedulePageContent() {
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
+  const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -83,6 +85,9 @@ function SchedulePageContent() {
                 break;
             case 'enroll-fixed':
                 setSessionForEnrollment(session);
+                break;
+            case 'add-to-waitlist':
+                setSessionForWaitlist(session);
                 break;
         }
     };
@@ -331,7 +336,7 @@ function SchedulePageContent() {
                                 const enrolledCount = session.personIds.length;
                                 const spaceCapacity = space?.capacity ?? 0;
                                 return (
-                                    <TableRow key={session.id} className="cursor-pointer" onClick={() => setIsDialogOpen(true)}>
+                                    <TableRow key={session.id} onClick={() => setIsDialogOpen(true)}>
                                         <TableCell className="font-medium">{session.dayOfWeek}, {session.time}</TableCell>
                                         <TableCell>{actividad?.name}</TableCell>
                                         <TableCell>{specialist?.name}</TableCell>
@@ -445,6 +450,12 @@ function SchedulePageContent() {
         <EnrollPeopleDialog 
           session={sessionForEnrollment}
           onClose={() => setSessionForEnrollment(null)}
+        />
+      )}
+      {sessionForWaitlist && (
+        <WaitlistDialog 
+          session={sessionForWaitlist}
+          onClose={() => setSessionForWaitlist(null)}
         />
       )}
     </div>
