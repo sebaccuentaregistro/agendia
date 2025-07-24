@@ -43,6 +43,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 const sessionFormSchema = z.object({
   instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
@@ -184,7 +185,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [] };
+      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], hasPaymentAlerts: false };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -202,6 +203,15 @@ function DashboardPageContent() {
       .filter(session => session.dayOfWeek === currentTodayName)
       .sort((a, b) => a.time.localeCompare(b.time));
     
+    let hasPaymentAlerts = false;
+    for (const p of people) {
+      const status = getStudentPaymentStatus(p, now).status;
+      if (status === 'Atrasado' || status === 'Próximo a Vencer') {
+        hasPaymentAlerts = true;
+        break;
+      }
+    }
+
     const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
     const potentialIncome = people.reduce((acc, person) => {
         const tariff = tariffs.find(t => t.id === person.tariffId);
@@ -310,6 +320,7 @@ function DashboardPageContent() {
       totalDebt, collectionPercentage,
       waitlistOpportunities, waitlistSummary, totalWaitlistCount,
       churnRiskPeople,
+      hasPaymentAlerts,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, spaces, actividades]);
 
@@ -322,6 +333,7 @@ function DashboardPageContent() {
     waitlistSummary,
     totalWaitlistCount,
     churnRiskPeople,
+    hasPaymentAlerts,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -432,7 +444,14 @@ function DashboardPageContent() {
                     onHeaderClick={() => setIsWaitlistSheetOpen(true)}
                   />
                 )}
-                 <Button className="w-full flex items-center gap-2" variant="outline" onClick={() => setIsRemindersSheetOpen(true)}>
+                 <Button 
+                    className={cn(
+                        "w-full flex items-center gap-2",
+                        hasPaymentAlerts && "border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive animate-pulse"
+                    )} 
+                    variant="outline" 
+                    onClick={() => setIsRemindersSheetOpen(true)}
+                  >
                     <Bell className="h-4 w-4" />
                     Ver todos los recordatorios
                 </Button>
