@@ -28,6 +28,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { AlertCircle } from 'lucide-react';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
+import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 
 
 const formSchema = z.object({
@@ -47,6 +48,7 @@ function SchedulePageContent() {
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
+  const [sessionForRecovery, setSessionForRecovery] = useState<Session | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -85,6 +87,9 @@ function SchedulePageContent() {
                 break;
             case 'enroll-fixed':
                 setSessionForEnrollment(session);
+                break;
+            case 'enroll-recovery':
+                setSessionForRecovery(session);
                 break;
             case 'add-to-waitlist':
                 setSessionForWaitlist(session);
@@ -450,6 +455,12 @@ function SchedulePageContent() {
         <EnrollPeopleDialog 
           session={sessionForEnrollment}
           onClose={() => setSessionForEnrollment(null)}
+        />
+      )}
+       {sessionForRecovery && (
+        <OneTimeAttendeeDialog 
+            session={sessionForRecovery}
+            onClose={() => setSessionForRecovery(null)}
         />
       )}
       {sessionForWaitlist && (

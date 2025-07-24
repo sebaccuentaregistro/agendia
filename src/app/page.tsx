@@ -170,7 +170,7 @@ function DashboardPageContent() {
     const actividadId = sessionForm.watch('actividadId');
     if (!actividadId) return specialists;
     return specialists.filter(s => s.actividadIds.includes(actividadId));
-  }, [specialists, sessionForm.watch('actividadId')]);
+  }, [specialists, sessionForm]);
 
 
   const handleUpdateDebts = async () => {
