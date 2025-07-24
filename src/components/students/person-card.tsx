@@ -2,7 +2,6 @@
 
 'use client';
 
-import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useStudio } from '@/context/StudioContext';
@@ -59,44 +58,49 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
     
     return (
         <Link href={`/students/${person.id}`} className="block">
-            <Card className="flex flex-col h-full rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary">
-                <CardHeader className="p-4">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-bold truncate">{person.name}</CardTitle>
+            <Card className="flex flex-col h-full rounded-2xl shadow-lg border-border/20 bg-card transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary">
+                <CardHeader className="p-4 flex-grow">
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                            <CardTitle className="text-lg font-bold truncate">{person.name}</CardTitle>
+                            <CardDescription className="text-xs">{person.phone}</CardDescription>
+                        </div>
                         <TooltipProvider>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                {onVacation && (
                                  <Tooltip>
-                                    <TooltipTrigger><Plane className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
+                                     <TooltipTrigger asChild>
+                                        <div className="h-4 w-4 text-muted-foreground"><Plane className="h-4 w-4"/></div>
+                                    </TooltipTrigger>
                                     <TooltipContent><p>De vacaciones</p></TooltipContent>
                                  </Tooltip>
                                )}
                                {recoveryCreditsCount > 0 && (
                                 <Tooltip>
-                                    <TooltipTrigger><CalendarClock className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
-                                    <TooltipContent><p>{recoveryCreditsCount} recupero(s) pendiente(s)</p></TooltipContent>
+                                    <TooltipTrigger asChild>
+                                        <div className="h-4 w-4 text-muted-foreground"><CalendarClock className="h-4 w-4"/></div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{recoveryCreditsCount} recupero(s) pendiente(s)</p>
+                                    </TooltipContent>
                                 </Tooltip>
                                )}
                             </div>
                         </TooltipProvider>
                     </div>
-                    <CardDescription className="text-xs">{person.phone}</CardDescription>
                 </CardHeader>
-
-                <CardContent className="p-4 pt-0 flex-grow">
-                     <Badge variant="outline" className={cn("font-semibold text-xs", getStatusBadgeClass())}>
+                
+                 <CardFooter className="p-4 pt-0 flex justify-between items-end">
+                    <Badge variant="outline" className={cn("font-semibold text-xs", getStatusBadgeClass())}>
                         {renderPaymentStatus(paymentStatusInfo)}
                     </Badge>
-                </CardContent>
-                
-                 <CardFooter className="p-4 pt-0 text-right">
                      {paymentStatusInfo.status === 'Atrasado' && totalDebt > 0 ? (
-                        <div className="text-right w-full">
+                        <div className="text-right">
                             <p className="text-xs text-destructive">Deuda Total</p>
                             <p className="text-lg font-bold text-destructive">{formatPrice(totalDebt)}</p>
                         </div>
                     ) : (
-                         tariff && <p className="text-lg w-full font-bold text-foreground">{formatPrice(tariff.price)}</p>
+                         tariff && <p className="text-lg font-bold text-foreground">{formatPrice(tariff.price)}</p>
                     )}
                 </CardFooter>
             </Card>

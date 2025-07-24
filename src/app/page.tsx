@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Person, PaymentReminderInfo, WaitlistEntry, WaitlistProspect } from '@/types';
@@ -170,7 +170,7 @@ function DashboardPageContent() {
     const actividadId = sessionForm.watch('actividadId');
     if (!actividadId) return specialists;
     return specialists.filter(s => s.actividadIds.includes(actividadId));
-  }, [specialists, sessionForm.watch('actividadId')]);
+  }, [specialists, sessionForm]);
 
 
   const handleUpdateDebts = async () => {
@@ -228,7 +228,6 @@ function DashboardPageContent() {
     
     // Waitlist Opportunities Logic
     const waitlistOpportunities: Opportunity[] = [];
-    const dayIndexMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
     
     sessions.forEach(session => {
         if (!session.waitlist || session.waitlist.length === 0) return;
@@ -236,25 +235,14 @@ function DashboardPageContent() {
         const space = spaces.find(s => s.id === session.spaceId);
         if (!space) return;
 
-        const sessionDayIndex = dayIndexMap[session.dayOfWeek];
-        const checkDate = nextDay(today, sessionDayIndex);
-        if (today.getDay() === sessionDayIndex) {
-            checkDate.setDate(checkDate.getDate()); 
-        }
-
-        const dateStr = format(checkDate, 'yyyy-MM-dd');
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
-
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
-        const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, checkDate)).length;
-        const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
+        const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
 
-        const dailyOccupancy = (fixedEnrolledPeople.length - vacationingCount) + oneTimeAttendeesCount;
-        const availableSlotsTotal = space.capacity - dailyOccupancy;
-        
-        if (availableSlotsTotal > 0) {
-            const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
-            
+        // An opportunity only exists if there is a permanent spot available.
+        if (fixedAvailable > 0) {
+            const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
+            const temporaryAvailable = vacationingCount;
+
             const waitlistItems = session.waitlist.map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
@@ -270,8 +258,8 @@ function DashboardPageContent() {
                     waitlist: waitlistItems,
                     availableSlots: {
                         fixed: fixedAvailable,
-                        temporary: vacationingCount,
-                        total: availableSlotsTotal,
+                        temporary: temporaryAvailable,
+                        total: fixedAvailable + temporaryAvailable,
                     }
                 });
             }

@@ -2,7 +2,7 @@
   "name": "agendia",
   "version": "1.0.3",
   "private": true,
-  "description": "Added react-hook-form dependency to fix module not found error.",
+  "description": "Forcing a dependency refresh to fix a build error. Attempt 2.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -59,8 +59,6 @@
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5",
-    "webpack": "^5.92.1",
-    "workbox-webpack-plugin": "^7.1.0"
+    "typescript": "^5"
   }
 }
