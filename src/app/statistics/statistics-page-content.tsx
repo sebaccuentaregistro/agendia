@@ -35,25 +35,16 @@ export default function StatisticsPageContent() {
 
   const chartData = useMemo(() => {
     if (!isMounted) return {
-      sessionPopularityByTime: [],
       monthlyNewMembers: [],
       monthlyDeactivations: [],
       monthlyRevenue: [],
       retentionData: { threeMonths: { rate: 0, total: 0, active: 0, label: '' }, sixMonths: { rate: 0, total: 0, active: 0, label: '' } },
-      activityPopularity: [],
       activityRevenue: [],
       attendanceMetrics: { totalAttendances: 0, totalClasses: 0, averageAttendance: '0.0' },
     };
     
     const now = new Date();
     const allPeople = [...people, ...inactivePeople];
-
-    const sessionPopularityByTime = sessions.reduce<Record<string, number>>((acc, session) => {
-      const time = session.time;
-      if (!acc[time]) acc[time] = 0;
-      acc[time] += session.personIds.length;
-      return acc;
-    }, {});
 
     const monthLabels = Array.from({ length: 12 }).map((_, i) => format(startOfMonth(subMonths(now, i)), 'yyyy-MM')).reverse();
     
@@ -127,18 +118,6 @@ export default function StatisticsPageContent() {
         },
       };
     })();
-
-    const activityPopularity = (() => {
-      const popularity: Record<string, number> = sessions.reduce((acc, session) => {
-        const actividadId = session.actividadId;
-        acc[actividadId] = (acc[actividadId] || 0) + session.personIds.length;
-        return acc;
-      }, {} as Record<string, number>);
-      return Object.entries(popularity).map(([actividadId, count]) => ({
-        name: actividades.find(a => a.id === actividadId)?.name || 'Desconocido',
-        value: count,
-      })).filter(item => item.value > 0).sort((a, b) => b.value - a.value);
-    })();
     
     const activityRevenue = (() => {
         const revenueByActivity: Record<string, number> = {};
@@ -196,12 +175,10 @@ export default function StatisticsPageContent() {
     })();
 
     return {
-      sessionPopularityByTime: Object.entries(sessionPopularityByTime).map(([time, people]) => ({ time, personas: people })).sort((a, b) => a.time.localeCompare(b.time)),
       monthlyNewMembers,
       monthlyDeactivations,
       monthlyRevenue,
       retentionData,
-      activityPopularity,
       activityRevenue,
       attendanceMetrics,
     };
@@ -216,28 +193,14 @@ export default function StatisticsPageContent() {
       bajas: { label: "Bajas", color: "hsl(var(--chart-5))" },
       ingresos: { label: "Ingresos", color: "hsl(var(--chart-3))" },
     };
-    chartData.activityPopularity.forEach((activity, index) => {
-      config[activity.name] = {
-        label: activity.name,
+    chartData.activityRevenue.forEach((activity, index) => {
+      config[activity.actividad] = {
+        label: activity.actividad,
         color: `hsl(var(--chart-${(index % 5) + 1}))`,
       };
     });
     return config;
-  }, [chartData.activityPopularity]);
-
-  const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }: any) => {
-    const RADIAN = Math.PI / 180;
-    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    if (percent < 0.05) return null;
-    return (
-      <text x={x} y={y} className="text-[11px] font-semibold fill-background" textAnchor="middle" dominantBaseline="central">
-        <tspan x={x} dy="-0.5em">{name}</tspan>
-        <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(0)}%)`}</tspan>
-      </text>
-    );
-  };
+  }, [chartData.activityRevenue]);
   
   if (!isMounted || studioLoading || authLoading) {
     return (
@@ -440,27 +403,10 @@ export default function StatisticsPageContent() {
             )}
           </CardContent>
         </Card>
-
-        <Card className="lg:col-span-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border border-white/20">
-          <CardHeader><CardTitle className="text-slate-800 dark:text-slate-100">Popularidad de Actividades</CardTitle></CardHeader>
-          <CardContent>
-            {chartData.activityPopularity.length > 0 ? (
-              <ChartContainer config={chartConfig} className="h-[350px] w-full">
-                <PieChart>
-                  <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                  <Pie data={chartData.activityPopularity} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} labelLine={false} label={renderCustomizedLabel} stroke="hsl(var(--border))" strokeWidth={2}>
-                    {chartData.activityPopularity.map((entry) => (<Cell key={`cell-${entry.name}`} fill={chartConfig[entry.name]?.color || '#ccc'} />))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
-            ) : (
-              <div className="flex h-[300px] w-full items-center justify-center text-center text-slate-500 dark:text-slate-400">
-                <p>No hay datos de inscripciones para mostrar el gráfico.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
 }
+
+
+    
