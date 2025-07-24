@@ -127,20 +127,18 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     <p className="font-semibold">{session.dayOfWeek}, {formatTime(session.time)}</p>
                 </div>
             </CardHeader>
-            <CardContent className="p-4 pt-2 flex-grow space-y-4">
+            <CardContent className="p-4 pt-2 flex-grow space-y-3">
+                 {isCancelledToday && (
+                    <div className="flex items-center justify-center gap-2 rounded-lg bg-destructive/10 p-2 text-center text-sm font-semibold text-destructive">
+                        <XCircle className="h-4 w-4" />
+                        <span>Cancelada Hoy</span>
+                    </div>
+                )}
                  <div className="space-y-1 text-sm">
                     <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
                     {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
                 </div>
-                 {isCancelledToday && (
-                    <Alert variant="destructive" className="p-2 text-center">
-                        <XCircle className="h-4 w-4" />
-                        <AlertDescription className="font-semibold">
-                            Clase Cancelada Hoy
-                        </AlertDescription>
-                    </Alert>
-                )}
             </CardContent>
              <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div 
