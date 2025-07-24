@@ -475,25 +475,16 @@ function DashboardPageContent() {
                       Recordatorios de Pago
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-2">
-                     <Button 
-                        variant="outline"
-                        onClick={() => {
-                          setRemindersInitialFocus('overdue');
-                          setIsRemindersSheetOpen(true);
-                        }}
-                      >
-                        Deudores
-                        {overdueCount > 0 && <Badge variant="destructive" className="ml-2">{overdueCount}</Badge>}
-                      </Button>
+                  <CardContent>
                       <Button 
                         variant="outline"
+                        className="w-full"
                         onClick={() => {
                           setRemindersInitialFocus('upcoming');
                           setIsRemindersSheetOpen(true);
                         }}
                       >
-                        Próximos
+                        Próximos Vencimientos
                         {upcomingCount > 0 && <Badge variant="secondary" className="ml-2">{upcomingCount}</Badge>}
                       </Button>
                   </CardContent>
