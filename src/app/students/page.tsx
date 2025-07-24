@@ -244,7 +244,6 @@ function StudentsPageContent() {
                                     person={person}
                                     tariff={tariffs.find(t => t.id === person.tariffId)}
                                     recoveryCreditsCount={(recoveryDetails[person.id] || []).length}
-                                    hasNotes={!!person.notes || !!person.healthInfo}
                                 />
                             ))}
                         </div>

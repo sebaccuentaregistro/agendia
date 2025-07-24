@@ -2,7 +2,7 @@
   "name": "agendia",
   "version": "1.0.3",
   "private": true,
-  "description": "Forcing a dependency refresh to fix a build error.",
+  "description": "Forcing a dependency refresh to fix a build error. Attempt 2.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

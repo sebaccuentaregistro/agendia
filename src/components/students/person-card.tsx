@@ -8,7 +8,7 @@ import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { CalendarClock, Plane, FileText } from 'lucide-react';
+import { CalendarClock, Plane } from 'lucide-react';
 import type { Person, Tariff, PaymentStatusInfo } from '@/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -17,10 +17,9 @@ interface PersonCardProps {
     person: Person;
     tariff?: Tariff;
     recoveryCreditsCount: number;
-    hasNotes: boolean;
 }
 
-export function PersonCard({ person, tariff, recoveryCreditsCount, hasNotes }: PersonCardProps) {
+export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardProps) {
     const { isPersonOnVacation } = useStudio();
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     const onVacation = isPersonOnVacation(person, new Date());
@@ -68,14 +67,6 @@ export function PersonCard({ person, tariff, recoveryCreditsCount, hasNotes }: P
                         </div>
                         <TooltipProvider>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                               {hasNotes && (
-                                 <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <div className="h-4 w-4 text-muted-foreground"><FileText className="h-4 w-4"/></div>
-                                    </TooltipTrigger>
-                                    <TooltipContent><p>Tiene notas o info de salud</p></TooltipContent>
-                                 </Tooltip>
-                               )}
                                {onVacation && (
                                  <Tooltip>
                                      <TooltipTrigger asChild>
