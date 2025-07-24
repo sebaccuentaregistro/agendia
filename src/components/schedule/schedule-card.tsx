@@ -76,6 +76,13 @@ export function ScheduleCard({ session, view = 'structural', onEdit, onDelete }:
     };
 
     const handleAction = (action: string, detail: any) => {
+        // This is a daily view action, dispatch an event for the main page to handle
+        if (view === 'daily') {
+            const event = new CustomEvent('schedule-card-action', { detail: { action, ...detail } });
+            document.dispatchEvent(event);
+            return;
+        }
+
         // Structural actions are handled via props
         if (action === 'edit-session' && onEdit) {
             onEdit(detail.session);
@@ -85,8 +92,7 @@ export function ScheduleCard({ session, view = 'structural', onEdit, onDelete }:
             onDelete(detail.session);
             return;
         }
-
-        // Daily actions are dispatched as events for the main page to handle
+         // Fallback to dispatching event if props are not provided, for flexibility
         const event = new CustomEvent('schedule-card-action', { detail: { action, ...detail } });
         document.dispatchEvent(event);
     };
@@ -94,7 +100,7 @@ export function ScheduleCard({ session, view = 'structural', onEdit, onDelete }:
     const isDailyView = view === 'daily';
     const stats = isDailyView ? dailyStats : structuralStats;
     const progressColorClass = getProgressColorClass(stats.utilization);
-    const isFull = stats.enrolledCount >= stats.capacity;
+    const isFixedFull = structuralStats.enrolledCount >= structuralStats.capacity;
     
     const isAttendanceEnabled = useMemo(() => {
         if (!isDailyView) return false;
@@ -118,7 +124,7 @@ export function ScheduleCard({ session, view = 'structural', onEdit, onDelete }:
                            <DropdownMenuItem onSelect={() => handleAction('enroll-fixed', { session })}>
                              <Users className="mr-2 h-4 w-4" />Inscripción Fija
                            </DropdownMenuItem>
-                           <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })}>
+                           <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })} disabled={!isFixedFull}>
                              <ListPlus className="mr-2 h-4 w-4" />Añadir a Lista de Espera
                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -162,7 +168,7 @@ export function ScheduleCard({ session, view = 'structural', onEdit, onDelete }:
                 </div>
                 {isDailyView && (
                     <div className="w-full grid grid-cols-2 gap-2 p-1">
-                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isFull}>
+                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={dailyStats.enrolledCount >= dailyStats.capacity}>
                             <CalendarClock className="mr-2 h-4 w-4" /> Recupero
                         </Button>
                         <Button size="sm" onClick={() => handleAction('take-attendance', { session })} disabled={!isAttendanceEnabled}>
