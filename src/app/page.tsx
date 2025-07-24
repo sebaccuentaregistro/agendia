@@ -242,7 +242,8 @@ function DashboardPageContent() {
 
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
         const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
-
+        
+        // Only show as an opportunity if there's a permanent spot available
         if (fixedAvailable > 0) {
             const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
             const temporaryAvailable = vacationingCount;
@@ -357,12 +358,12 @@ function DashboardPageContent() {
   };
   
   const managementCards = [
-    { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
-    { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
-    { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
-    { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
-    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
-    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: ArrowRight, count: null },
+    { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length, description: "Gestiona instructores y sus actividades." },
+    { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length, description: "Define los tipos de clases que ofreces." },
+    { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length, description: "Administra las salas y sus capacidades." },
+    { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length, description: "Organiza clases y alumnos por nivel." },
+    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length, description: "Configura tus planes de precios." },
+    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: ArrowRight, count: null, description: "Controla finanzas, operadores y más." },
   ];
   
   const advancedCards = [
@@ -427,14 +428,6 @@ function DashboardPageContent() {
                       people={churnRiskPeople}
                   />
                 )}
-                {totalWaitlistCount > 0 && (
-                  <WaitlistOpportunities 
-                    opportunities={waitlistOpportunities} 
-                    summary={waitlistSummary} 
-                    totalCount={totalWaitlistCount}
-                    onHeaderClick={() => setIsWaitlistSheetOpen(true)}
-                  />
-                )}
                 <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-blue-500/20">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-foreground">
@@ -465,21 +458,34 @@ function DashboardPageContent() {
                       </Button>
                   </CardContent>
                 </Card>
+                {totalWaitlistCount > 0 && (
+                  <WaitlistOpportunities 
+                    opportunities={waitlistOpportunities} 
+                    summary={waitlistSummary} 
+                    totalCount={totalWaitlistCount}
+                    onHeaderClick={() => setIsWaitlistSheetOpen(true)}
+                  />
+                )}
               </div>
             </div>
         </>
       )}
 
       {dashboardView === 'management' && (
-         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
             {managementCards.map((card) => (
                 <Link key={card.id} href={card.href}>
-                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                        <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <card.icon className="h-4 w-4" />
+                    <Card className="group relative flex flex-col p-4 bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-primary/50">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <card.icon className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1">
+                                <CardTitle className="text-base font-semibold text-foreground">{card.label}</CardTitle>
+                                {card.count !== null && <p className="text-2xl font-bold text-foreground">{card.count}</p>}
+                            </div>
                         </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">{card.label}</CardTitle>
-                        {card.count !== null ? <p className="text-2xl font-bold text-foreground">{card.count}</p> : card.label === 'Gestión Avanzada' ? <ArrowRight className="h-6 w-6 text-foreground mt-2"/> : null}
+                        <p className="text-xs text-muted-foreground mt-2">{card.description}</p>
                     </Card>
                 </Link>
             ))}
