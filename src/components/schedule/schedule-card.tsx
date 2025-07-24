@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -107,12 +106,10 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                             <DropdownMenuItem onSelect={() => handleAction('notify-attendees', { session })}>
                                 <Bell className="mr-2 h-4 w-4" />Notificar Asistentes
                             </DropdownMenuItem>
-                            {isDailyView && (
-                                <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session })} disabled={isCancelledToday}>
-                                    <XCircle className="mr-2 h-4 w-4 text-destructive" />
-                                    <span className="text-destructive">Cancelar solo por hoy</span>
-                                </DropdownMenuItem>
-                            )}
+                            <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session, date: new Date() })} disabled={isCancelledToday}>
+                                <XCircle className="mr-2 h-4 w-4 text-destructive" />
+                                <span className="text-destructive">Cancelar solo por hoy</span>
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => handleAction('edit-session', { session })}>
                                 <Pencil className="mr-2 h-4 w-4" />Editar Sesión

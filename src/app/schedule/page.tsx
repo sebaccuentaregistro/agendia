@@ -53,7 +53,7 @@ function SchedulePageContent() {
   
   useEffect(() => {
     const handleAction = (e: Event) => {
-        const { action, session } = (e as CustomEvent).detail;
+        const { action, session, date } = (e as CustomEvent).detail;
         switch (action) {
             case 'edit-session':
                 openSessionDialog(session);
@@ -72,6 +72,9 @@ function SchedulePageContent() {
                 break;
             case 'view-students':
                 setSessionForStudents(session);
+                break;
+            case 'cancel-session':
+                setSessionForCancellation({ session, date });
                 break;
         }
     };
@@ -254,8 +257,8 @@ function SchedulePageContent() {
                   {filteredAndSortedSessions.map((session) => (
                     <ScheduleCard 
                         key={session.id} 
-                        session={session}
-                        view="structural"
+                        session={session} 
+                        view="daily"
                     />
                   ))}
                 </div>
