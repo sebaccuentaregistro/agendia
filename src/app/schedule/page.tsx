@@ -29,6 +29,7 @@ import { AlertCircle } from 'lucide-react';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
+import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 
 
 const formSchema = z.object({
@@ -49,6 +50,7 @@ function SchedulePageContent() {
   const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [sessionForRecovery, setSessionForRecovery] = useState<Session | null>(null);
+  const [sessionForStudents, setSessionForStudents] = useState<Session | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -93,6 +95,9 @@ function SchedulePageContent() {
                 break;
             case 'add-to-waitlist':
                 setSessionForWaitlist(session);
+                break;
+            case 'view-students':
+                setSessionForStudents(session);
                 break;
         }
     };
@@ -468,6 +473,12 @@ function SchedulePageContent() {
           session={sessionForWaitlist}
           onClose={() => setSessionForWaitlist(null)}
         />
+      )}
+      {sessionForStudents && (
+         <EnrolledStudentsSheet 
+            session={sessionForStudents}
+            onClose={() => setSessionForStudents(null)}
+          />
       )}
     </div>
   );

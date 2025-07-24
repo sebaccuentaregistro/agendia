@@ -126,15 +126,25 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
-                <div className="w-full px-2 pt-1 space-y-1">
+                <div 
+                  className="w-full px-2 pt-1 space-y-1 cursor-pointer"
+                  onClick={() => handleAction('view-students', { session })}
+                  role="button"
+                  aria-label="Ver asistentes de la sesión"
+                  tabIndex={0}
+                >
                     <div className="flex justify-between items-center text-xs font-semibold">
-                        <span className="text-muted-foreground">{isDailyView ? 'Ocupación de Hoy' : 'Ocupación Fija'}</span>
+                        <span className="text-muted-foreground">{isDailyView ? 'Ocupación de Hoy' : 'Ocupación de Hoy'}</span>
                         <span className="text-foreground">{`${displayStats.enrolledCount} / ${displayStats.capacity}`}</span>
                     </div>
                     <Progress value={displayStats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
                 { (dailyStats.vacationingCount > 0 || dailyStats.oneTimeAttendeesCount > 0) &&
-                    <div className="text-xs text-muted-foreground px-2 w-full">
+                    <div 
+                      className="text-xs text-muted-foreground px-2 w-full cursor-pointer"
+                      onClick={() => handleAction('view-students', { session })}
+                      role="button"
+                    >
                         {dailyStats.oneTimeAttendeesCount > 0 && <p>+ {dailyStats.oneTimeAttendeesCount} recupero(s)</p>}
                         {dailyStats.vacationingCount > 0 && <p>- {dailyStats.vacationingCount} de vacaciones</p>}
                     </div>
