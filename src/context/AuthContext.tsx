@@ -1,11 +1,12 @@
 
+
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, writeBatch, updateDoc } from 'firebase/firestore';
-import type { LoginCredentials, SignupCredentials, UserProfile, Institute, Operator } from '@/types';
+import type { LoginCredentials, SignupCredentials, UserProfile, Institute, Operator, Person, Session } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
 
 const PIN_VERIFIED_KEY = 'agendia-pin-verified';
@@ -27,6 +28,8 @@ type AuthContextType = {
   validatePin: (pin: string) => Promise<boolean>;
   setupOwnerPin: (data: { ownerPin: string; recoveryEmail: string }) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
+  isLimitReached: boolean;
+  setPeopleCount: (count: number) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,6 +46,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [activeOperator, _setActiveOperator] = useState<Operator | null>(null);
     const router = useRouter();
     const pathname = usePathname();
+
+    // Student limit state
+    const [peopleCount, setPeopleCount] = useState(0);
+    const isLimitReached = useMemo(() => {
+        if (!institute) return false;
+        const limit = institute?.studentLimit;
+        return (limit !== null && limit !== undefined) ? peopleCount >= limit : false;
+    }, [peopleCount, institute]);
+
 
     const fetchInstituteData = useCallback(async (instituteId: string) => {
         const instituteDocRef = doc(db, 'institutes', instituteId);
@@ -128,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setLoading(true); // Start loading when auth state changes
+            setLoading(true);
             if (user) {
                 setUser(user);
                 await fetchUserData(user);
@@ -136,8 +148,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(null);
                 setUserProfile(null);
                 setInstitute(null);
-                setPinVerified(false); // Clear pin status on logout
-                setActiveOperator(null); // Clear active operator on logout
+                setPinVerified(false);
+                setActiveOperator(null);
             }
             setLoading(false);
         });
@@ -167,7 +179,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = async ({ email, password }: LoginCredentials) => {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         if (userCredential.user) {
-            // Force refetch of user data upon login
             await fetchUserData(userCredential.user);
         }
     };
@@ -185,6 +196,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: new Date(),
             ownerPin: ownerPin,
             recoveryEmail: recoveryEmail,
+            studentLimit: 50, // Default limit
+            planType: 'esencial'
         });
 
         const userRef = doc(db, 'users', newUser.uid);
@@ -242,6 +255,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         validatePin,
         setupOwnerPin,
         sendPasswordReset,
+        isLimitReached,
+        setPeopleCount,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,8 +1,10 @@
+
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Info, LogOut, DollarSign, User, Shield, Landmark, Users } from 'lucide-react';
+import { Heart, Info, LogOut, DollarSign, User, Shield, Landmark, Users, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
@@ -11,6 +13,8 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import type { Session } from '@/types';
+import { useShell } from '@/context/ShellContext';
 
 const navItems = [
   { href: "/", label: "Inicio" },
@@ -19,10 +23,12 @@ const navItems = [
   { href: "/tariffs", label: "Aranceles" },
 ];
 
+
 export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial, people } = useStudio();
   const { logout, activeOperator, logoutOperator, userProfile, institute } = useAuth();
+  const { openPersonDialog, openSessionDialog } = useShell();
   const router = useRouter();
 
   const handleFullLogout = async () => {
@@ -90,21 +96,24 @@ export function AppHeader() {
                  <Separator orientation="vertical" className="h-6 hidden sm:block" />
             </>
         )}
-        {pathname === '/' && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={openTutorial} className="text-slate-600 dark:text-slate-300 hover:bg-white/20 dark:hover:bg-white/10">
-                  <Info className="h-5 w-5" />
-                  <span className="sr-only">Mostrar tutorial</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Mostrar tutorial de bienvenida</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="default" size="icon">
+                <PlusCircle className="h-5 w-5" />
+                <span className="sr-only">Añadir</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuLabel>Acciones Rápidas</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => openSessionDialog(null)}>
+                    Nuevo Horario
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={openPersonDialog}>
+                    Nueva Persona
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
         {isSuperAdmin && (
              <Link
                 href="/superadmin"

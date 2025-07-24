@@ -8,7 +8,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Person, PaymentReminderInfo, WaitlistEntry, WaitlistProspect } from '@/types';
+import type { Session, Person, PaymentReminderInfo, WaitlistEntry, WaitlistProspect, RecoveryCredit } from '@/types';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
@@ -19,49 +19,30 @@ import { OnboardingTutorial } from '@/components/onboarding-tutorial';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { PersonDialog } from '@/components/students/person-dialog';
-import { WelcomeDialog } from '@/components/welcome-dialog';
-import { MainCards } from '@/components/dashboard/main-cards';
 import { TodaySessions } from '@/components/dashboard/today-sessions';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
 import { WaitlistOpportunities, type Opportunity } from '@/components/waitlist-opportunities';
 import { ChurnRiskAlerts } from '@/components/churn-risk-alerts';
-import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
-import { MassReminderDialog } from '@/components/mass-reminder-dialog';
 import { PinDialog } from '@/components/pin-dialog';
 import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
-
-const sessionFormSchema = z.object({
-  instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
-  actividadId: z.string().min(1, { message: 'Debes seleccionar una actividad.' }),
-  spaceId: z.string().min(1, { message: 'Debes seleccionar un espacio.' }),
-  dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
-  time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
-  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
-});
+import { Badge } from '@/components/ui/badge';
+import { MainCards } from '@/components/dashboard/main-cards';
+import { useShell } from '@/context/ShellContext';
 
 
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses, addSession, updateSession, deleteSession
+    updateOverdueStatuses
   } = useStudio();
-  const { institute, isPinVerified, setPinVerified } = useAuth();
+  const { isPinVerified, setPinVerified } = useAuth();
+  const { openSessionDialog } = useShell();
   
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
@@ -70,34 +51,20 @@ function DashboardPageContent() {
   const [isUpdatingDebts, setIsUpdatingDebts] = useState(false);
   const [isWaitlistSheetOpen, setIsWaitlistSheetOpen] = useState(false);
   const [isRemindersSheetOpen, setIsRemindersSheetOpen] = useState(false);
+  const [remindersInitialFocus, setRemindersInitialFocus] = useState<'overdue' | 'upcoming' | null>(null);
   const { toast } = useToast();
   
   const searchParams = useSearchParams();
   const router = useRouter();
   
   const dashboardView = searchParams.get('view') || 'main';
-
-  const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
-  const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
-
-  const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
-  const [isMassReminderOpen, setIsMassReminderOpen] = useState(false);
   
   // States for dialogs triggered from ScheduleCard
   const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
   const [sessionForOneTime, setSessionForOneTime] = useState<Session | null>(null);
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
-  const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
-  const [selectedSessionForEdit, setSelectedSessionForEdit] = useState<Session | null>(null);
-  const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   
-  const sessionForm = useForm<z.infer<typeof sessionFormSchema>>({
-    resolver: zodResolver(sessionFormSchema),
-    defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
-  });
-
-
   useEffect(() => {
     setIsMounted(true);
     
@@ -123,19 +90,7 @@ function DashboardPageContent() {
                 setSessionForWaitlist(session);
                 break;
             case 'edit-session':
-                setSelectedSessionForEdit(session);
-                sessionForm.reset({
-                    instructorId: session.instructorId,
-                    actividadId: session.actividadId,
-                    spaceId: session.spaceId,
-                    dayOfWeek: session.dayOfWeek,
-                    time: session.time,
-                    levelId: session.levelId || 'none',
-                });
-                setIsSessionDialogOpen(true);
-                break;
-            case 'delete-session':
-                setSessionForDelete(session);
+                openSessionDialog(session);
                 break;
         }
     };
@@ -144,33 +99,7 @@ function DashboardPageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [sessionForm]);
-  
-  const onSessionSubmit = (values: z.infer<typeof sessionFormSchema>) => {
-    const sessionData = {
-        ...values,
-        levelId: values.levelId === 'none' ? undefined : values.levelId,
-    };
-    if (selectedSessionForEdit) {
-      updateSession({ ...selectedSessionForEdit, ...sessionData });
-    } else {
-      addSession(sessionData);
-    }
-    setIsSessionDialogOpen(false);
-  };
-
-  const handleDeleteSession = () => {
-    if (sessionForDelete) {
-      deleteSession(sessionForDelete.id);
-      setSessionForDelete(null);
-    }
-  };
-  
-  const availableSpecialists = useMemo(() => {
-    const actividadId = sessionForm.watch('actividadId');
-    if (!actividadId) return specialists;
-    return specialists.filter(s => s.actividadIds.includes(actividadId));
-  }, [specialists, sessionForm]);
+  }, [openSessionDialog]);
 
 
   const handleUpdateDebts = async () => {
@@ -185,7 +114,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], hasPaymentAlerts: false };
+      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], overdueCount: 0, upcomingCount: 0, recoveryCount: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -203,12 +132,47 @@ function DashboardPageContent() {
       .filter(session => session.dayOfWeek === currentTodayName)
       .sort((a, b) => a.time.localeCompare(b.time));
     
-    let hasPaymentAlerts = false;
+    let overdueCount = 0;
+    let upcomingCount = 0;
+    let recoveryPeople = new Set();
+
+    const allRecoveryCredits: Record<string, RecoveryCredit[]> = {};
+    people.forEach(p => (allRecoveryCredits[p.id] = []));
+    
+    let usedRecoveryCounts: Record<string, number> = {};
+    people.forEach(p => (usedRecoveryCounts[p.id] = 0));
+
+    attendance.forEach(record => {
+        (record.oneTimeAttendees || []).forEach(personId => {
+            if (usedRecoveryCounts[personId] !== undefined) {
+                usedRecoveryCounts[personId]++;
+            }
+        });
+        
+        (record.justifiedAbsenceIds || []).forEach(personId => {
+            if (allRecoveryCredits[personId]) {
+                 allRecoveryCredits[personId].push({
+                    className: 'Clase', // Simplified for performance on this page
+                    date: format(parse(record.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy'),
+                });
+            }
+        });
+    });
+    
+    Object.keys(allRecoveryCredits).forEach(personId => {
+        const usedCount = usedRecoveryCounts[personId] || 0;
+        if (allRecoveryCredits[personId].length > usedCount) {
+            recoveryPeople.add(personId);
+        }
+    });
+
+
     for (const p of people) {
       const status = getStudentPaymentStatus(p, now).status;
-      if (status === 'Atrasado' || status === 'Próximo a Vencer') {
-        hasPaymentAlerts = true;
-        break;
+      if (status === 'Atrasado') {
+        overdueCount++;
+      } else if (status === 'Próximo a Vencer') {
+        upcomingCount++;
       }
     }
 
@@ -237,8 +201,8 @@ function DashboardPageContent() {
 
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
         const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
-
-        // An opportunity only exists if there is a permanent spot available.
+        
+        // Only show as an opportunity if there's a permanent spot available
         if (fixedAvailable > 0) {
             const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
             const temporaryAvailable = vacationingCount;
@@ -308,7 +272,8 @@ function DashboardPageContent() {
       totalDebt, collectionPercentage,
       waitlistOpportunities, waitlistSummary, totalWaitlistCount,
       churnRiskPeople,
-      hasPaymentAlerts,
+      overdueCount, upcomingCount,
+      recoveryCount: recoveryPeople.size,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, spaces, actividades]);
 
@@ -321,15 +286,11 @@ function DashboardPageContent() {
     waitlistSummary,
     totalWaitlistCount,
     churnRiskPeople,
-    hasPaymentAlerts,
+    overdueCount,
+    upcomingCount,
+    recoveryCount,
   } = clientSideData;
   
-  const isLimitReached = useMemo(() => {
-    if (!institute) return false;
-    const limit = institute?.studentLimit;
-    return (limit !== null && limit !== undefined) ? people.length >= limit : false;
-  }, [people.length, institute]);
-
 
   useEffect(() => {
     if (!isMounted) return;
@@ -352,12 +313,12 @@ function DashboardPageContent() {
   };
   
   const managementCards = [
-    { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length },
-    { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length },
-    { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length },
-    { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length },
-    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length },
-    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: ArrowRight, count: null },
+    { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length, description: "Gestiona instructores y sus actividades." },
+    { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length, description: "Define los tipos de clases que ofreces." },
+    { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length, description: "Administra las salas y sus capacidades." },
+    { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length, description: "Organiza clases y alumnos por nivel." },
+    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length, description: "Configura tus planes de precios." },
+    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: ArrowRight, count: null, description: "Controla finanzas, operadores y más." },
   ];
   
   const advancedCards = [
@@ -409,8 +370,11 @@ function DashboardPageContent() {
       
       {dashboardView === 'main' && (
         <>
-            <MainCards />
-            
+            <MainCards 
+              activePeopleCount={people.length}
+              overdueCount={overdueCount}
+              recoveryCount={recoveryCount}
+            />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
               <div className="md:col-span-2">
                 <TodaySessions
@@ -424,6 +388,27 @@ function DashboardPageContent() {
                       people={churnRiskPeople}
                   />
                 )}
+                <Card className="bg-card/80 backdrop-blur-lg rounded-2xl shadow-lg border-blue-500/20">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-foreground">
+                      <Bell className="h-5 w-5 text-blue-500" />
+                      Recordatorios de Pago
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                      <Button 
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          setRemindersInitialFocus('upcoming');
+                          setIsRemindersSheetOpen(true);
+                        }}
+                      >
+                        Próximos Vencimientos
+                        {upcomingCount > 0 && <Badge variant="secondary" className="ml-2">{upcomingCount}</Badge>}
+                      </Button>
+                  </CardContent>
+                </Card>
                 {totalWaitlistCount > 0 && (
                   <WaitlistOpportunities 
                     opportunities={waitlistOpportunities} 
@@ -432,32 +417,26 @@ function DashboardPageContent() {
                     onHeaderClick={() => setIsWaitlistSheetOpen(true)}
                   />
                 )}
-                 <Button 
-                    className={cn(
-                        "w-full flex items-center gap-2",
-                        hasPaymentAlerts && "border-destructive text-destructive hover:bg-destructive/10 hover:text-destructive animate-pulse"
-                    )} 
-                    variant="outline" 
-                    onClick={() => setIsRemindersSheetOpen(true)}
-                  >
-                    <Bell className="h-4 w-4" />
-                    Ver todos los recordatorios
-                </Button>
               </div>
             </div>
         </>
       )}
 
       {dashboardView === 'management' && (
-         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
             {managementCards.map((card) => (
                 <Link key={card.id} href={card.href}>
-                    <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                        <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                            <card.icon className="h-4 w-4" />
+                    <Card className="group relative flex flex-col p-4 bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-primary/50">
+                        <div className="flex items-center gap-4">
+                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <card.icon className="h-5 w-5" />
+                            </div>
+                            <div className="flex-1">
+                                <CardTitle className="text-base font-semibold text-foreground">{card.label}</CardTitle>
+                                {card.count !== null && <p className="text-2xl font-bold text-foreground">{card.count}</p>}
+                            </div>
                         </div>
-                        <CardTitle className="text-lg font-semibold text-foreground">{card.label}</CardTitle>
-                        {card.count !== null ? <p className="text-2xl font-bold text-foreground">{card.count}</p> : card.label === 'Gestión Avanzada' ? <ArrowRight className="h-6 w-6 text-foreground mt-2"/> : null}
+                        <p className="text-xs text-muted-foreground mt-2">{card.description}</p>
                     </Card>
                 </Link>
             ))}
@@ -506,83 +485,7 @@ function DashboardPageContent() {
         )}
     
       <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
-       <Dialog open={isSessionDialogOpen} onOpenChange={setIsSessionDialogOpen}>
-          <DialogContent>
-              <DialogHeader><DialogTitle>{selectedSessionForEdit ? 'Editar Sesión' : 'Nueva Sesión'}</DialogTitle></DialogHeader>
-              <Form {...sessionForm}>
-                <form onSubmit={sessionForm.handleSubmit(onSessionSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={sessionForm.control} name="actividadId" render={({ field }) => (
-                      <FormItem><FormLabel>Actividad</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                    <FormField control={sessionForm.control} name="instructorId" render={({ field }) => (
-                      <FormItem><FormLabel>Especialista</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{availableSpecialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                  </div>
-                  <FormField control={sessionForm.control} name="spaceId" render={({ field }) => (
-                      <FormItem><FormLabel>Espacio</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name} (Cap: {s.capacity})</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={sessionForm.control} name="dayOfWeek" render={({ field }) => (
-                      <FormItem><FormLabel>Día de la semana</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                            <SelectContent>{['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                    <FormField control={sessionForm.control} name="time" render={({ field }) => (
-                        <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                  </div>
-                   <FormField control={sessionForm.control} name="levelId" render={({ field }) => (
-                      <FormItem><FormLabel>Nivel (Opcional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Sin nivel" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="none">Sin nivel</SelectItem>
-                                {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                  <DialogFooter>
-                      <Button variant="outline" type="button" onClick={() => setIsSessionDialogOpen(false)}>Cancelar</Button>
-                      <Button type="submit">Guardar Cambios</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-          </DialogContent>
-      </Dialog>
       
-      <AlertDialog open={!!sessionForDelete} onOpenChange={() => setSessionForDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente la sesión. Si hay personas inscriptas, no podrás eliminarla.</AlertDialogDescriptionAlert>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSession} className="bg-destructive hover:bg-destructive/90">Sí, eliminar sesión</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
             session={selectedSessionForStudents}
@@ -619,19 +522,12 @@ function DashboardPageContent() {
             onClose={() => setSessionForWaitlist(null)}
         />
       )}
-      <PersonDialog
-        open={isPersonDialogOpen}
-        onOpenChange={setIsPersonDialogOpen}
-        onPersonCreated={(person) => {
-          if (person.tariffId) {
-            setPersonForWelcome(person);
-          }
-        }}
-        isLimitReached={isLimitReached}
-      />
-      <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
       <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
-      <PaymentRemindersSheet isOpen={isRemindersSheetOpen} onOpenChange={setIsRemindersSheetOpen} />
+      <PaymentRemindersSheet 
+        isOpen={isRemindersSheetOpen} 
+        onOpenChange={setIsRemindersSheetOpen} 
+        initialFocus={remindersInitialFocus}
+      />
     </div>
   );
 }

@@ -2,35 +2,74 @@
 
 'use client';
 
+import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { StudioProvider } from '@/context/StudioContext';
-import { useAuth } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 import { OperatorLoginScreen } from './operator-login-screen';
 import { cn } from '@/lib/utils';
 import { Heart } from 'lucide-react';
+import { PersonDialog } from '@/components/students/person-dialog';
+import { WelcomeDialog } from '@/components/welcome-dialog';
+import { SessionDialog } from '@/components/schedule/session-dialog';
+import type { Person, Session } from '@/types';
+import { ShellProvider } from '@/context/ShellContext';
 
 function ShellContent({ children }: { children: ReactNode }) {
-    const { activeOperator } = useAuth();
+    const { activeOperator, setPeopleCount } = useAuth();
+
+    // Global Dialog State
+    const [isPersonDialogGloballyOpen, setIsPersonDialogGloballyOpen] = useState(false);
+    const [isSessionDialogGloballyOpen, setIsSessionDialogGloballyOpen] = useState(false);
+    const [sessionToEdit, setSessionToEdit] = useState<Session | null>(null);
+    const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
+
+    const openPersonDialog = () => setIsPersonDialogGloballyOpen(true);
+    const openSessionDialog = (session: Session | null) => {
+        setSessionToEdit(session);
+        setIsSessionDialogGloballyOpen(true);
+    };
+
     const pathname = usePathname();
     const isOperatorsPage = pathname === '/operators';
     const isSuperAdminPage = pathname.startsWith('/superadmin');
 
-    // Allow access to operators page and superadmin page without an active operator selected
     if (!activeOperator && !isOperatorsPage && !isSuperAdminPage) {
         return <OperatorLoginScreen />;
     }
 
     return (
+      <ShellProvider openPersonDialog={openPersonDialog} openSessionDialog={openSessionDialog}>
         <div className="flex min-h-screen w-full flex-col">
             <AppHeader />
             <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
                 {children}
             </main>
             <MobileBottomNav />
+            
+             <PersonDialog
+                open={isPersonDialogGloballyOpen}
+                onOpenChange={setIsPersonDialogGloballyOpen}
+                onPersonCreated={(person) => {
+                  if (person.tariffId) {
+                    setPersonForWelcome(person);
+                  }
+                }}
+            />
+            <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
+            <SessionDialog
+              isOpen={isSessionDialogGloballyOpen}
+              onClose={() => {
+                setIsSessionDialogGloballyOpen(false);
+                setSessionToEdit(null);
+              }}
+              session={sessionToEdit}
+            />
         </div>
+      </ShellProvider>
     );
 }
 

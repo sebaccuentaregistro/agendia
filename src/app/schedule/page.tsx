@@ -5,19 +5,14 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, FileDown, LayoutGrid, List, CalendarDays, UserPlus } from 'lucide-react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
 import type { Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn, exportToCsv } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,22 +25,13 @@ import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
-
-
-const formSchema = z.object({
-  instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
-  actividadId: z.string().min(1, { message: 'Debes seleccionar una actividad.' }),
-  spaceId: z.string().min(1, { message: 'Debes seleccionar un espacio.' }),
-  dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
-  time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
-  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
-});
+import { useShell } from '@/context/ShellContext';
 
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, addSession, updateSession, deleteSession, levels, loading } = useStudio();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
+  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading } = useStudio();
+  const { openSessionDialog } = useShell();
+  
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
@@ -63,26 +49,12 @@ function SchedulePageContent() {
     spaceId: searchParams.get('spaceId') || 'all',
   });
   
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
-  });
-
   useEffect(() => {
     const handleAction = (e: Event) => {
         const { action, session } = (e as CustomEvent).detail;
         switch (action) {
             case 'edit-session':
-                setSelectedSession(session);
-                form.reset({
-                    instructorId: session.instructorId,
-                    actividadId: session.actividadId,
-                    spaceId: session.spaceId,
-                    dayOfWeek: session.dayOfWeek,
-                    time: session.time,
-                    levelId: session.levelId || 'none',
-                });
-                setIsDialogOpen(true);
+                openSessionDialog(session);
                 break;
             case 'delete-session':
                 setSessionForDelete(session);
@@ -106,7 +78,7 @@ function SchedulePageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [form]);
+  }, [openSessionDialog]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -136,30 +108,8 @@ function SchedulePageContent() {
     return { specialist, actividad, space, level };
   };
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    const sessionData = {
-        ...values,
-        levelId: values.levelId === 'none' ? undefined : values.levelId,
-    };
-    if (selectedSession) {
-      updateSession({ ...selectedSession, ...sessionData });
-    } else {
-      addSession(sessionData);
-    }
-    setIsDialogOpen(false);
-  };
-  
   const handleAdd = () => {
-    setSelectedSession(undefined);
-    form.reset({
-        instructorId: '',
-        actividadId: '',
-        spaceId: '',
-        dayOfWeek: 'Lunes',
-        time: '',
-        levelId: 'none'
-    });
-    setIsDialogOpen(true);
+    openSessionDialog(null);
   };
   
   const handleDelete = () => {
@@ -168,12 +118,6 @@ function SchedulePageContent() {
       setSessionForDelete(null);
     }
   };
-
-  const availableSpecialists = useMemo(() => {
-    const actividadId = form.watch('actividadId');
-    if (!actividadId) return specialists;
-    return specialists.filter(s => s.actividadIds.includes(actividadId));
-  }, [specialists, form.watch('actividadId')]);
 
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
@@ -346,7 +290,7 @@ function SchedulePageContent() {
                                 const enrolledCount = session.personIds.length;
                                 const spaceCapacity = space?.capacity ?? 0;
                                 return (
-                                    <TableRow key={session.id} onClick={() => setIsDialogOpen(true)}>
+                                    <TableRow key={session.id} onClick={() => openSessionDialog(session)} className="cursor-pointer">
                                         <TableCell className="font-medium">{session.dayOfWeek}, {session.time}</TableCell>
                                         <TableCell>{actividad?.name}</TableCell>
                                         <TableCell>{specialist?.name}</TableCell>
@@ -372,77 +316,12 @@ function SchedulePageContent() {
                     spaces={spaces}
                     levels={levels}
                     onSessionClick={(session) => {
-                        setSelectedSession(session);
-                        setIsDialogOpen(true);
+                        openSessionDialog(session);
                     }}
                 />
             </TabsContent>
         </Tabs>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-              <DialogHeader><DialogTitle>{selectedSession ? 'Editar Sesión' : 'Nueva Sesión'}</DialogTitle></DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="actividadId" render={({ field }) => (
-                      <FormItem><FormLabel>Actividad</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                    <FormField control={form.control} name="instructorId" render={({ field }) => (
-                      <FormItem><FormLabel>Especialista</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{availableSpecialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                  </div>
-                  <FormField control={form.control} name="spaceId" render={({ field }) => (
-                      <FormItem><FormLabel>Espacio</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name} (Cap: {s.capacity})</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="dayOfWeek" render={({ field }) => (
-                      <FormItem><FormLabel>Día de la semana</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                            <SelectContent>{['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                    <FormField control={form.control} name="time" render={({ field }) => (
-                        <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                  </div>
-                   <FormField control={form.control} name="levelId" render={({ field }) => (
-                      <FormItem><FormLabel>Nivel (Opcional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Sin nivel" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="none">Sin nivel</SelectItem>
-                                {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                  <DialogFooter>
-                      <Button variant="outline" type="button" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
-                      <Button type="submit">Guardar Cambios</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-          </DialogContent>
-      </Dialog>
-      
       <AlertDialog open={!!sessionForDelete} onOpenChange={() => setSessionForDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
