@@ -6,7 +6,7 @@ import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, MoreVertical, CalendarClock, Plane, Calendar as CalendarIcon, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Signal, DollarSign, ArrowLeft, UserX, PlusCircle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Person, Session, Actividad, Specialist, Space, RecoveryCredit, Level, Tariff } from '@/types';
+import { Person, Session, Actividad, Specialist, Space, RecoveryCredit, Level, Tariff, PaymentStatusInfo } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { getStudentPaymentStatus, calculateNextPaymentDate } from '@/lib/utils';
@@ -161,7 +161,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     setSessionToUnenroll(null);
   };
   
-  const getStatusBadgeClass = (status: typeof paymentStatusInfo.status) => {
+  const getStatusBadgeClass = (status: PaymentStatusInfo['status']) => {
     switch (status) {
         case 'Al día': return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700";
         case 'Atrasado': return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700";
