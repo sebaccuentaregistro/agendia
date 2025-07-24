@@ -38,7 +38,6 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
         const spaceCapacity = structuralData.space?.capacity ?? 0;
         const structuralUtilization = spaceCapacity > 0 ? (enrolledCount / spaceCapacity) * 100 : 0;
         
-        // Daily stats calculation
         const today = startOfDay(new Date());
         const dateStr = format(today, 'yyyy-MM-dd');
         const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
@@ -82,6 +81,7 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
     const stats = isDailyView ? dailyStats : structuralStats;
     const progressColorClass = getProgressColorClass(stats.utilization);
     const isFixedFull = structuralStats.enrolledCount >= structuralStats.capacity;
+    const isDailyFull = dailyStats.enrolledCount >= dailyStats.capacity;
     
     const isAttendanceEnabled = useMemo(() => {
         if (!isDailyView) return false;
@@ -144,19 +144,17 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     </div>
                     <Progress value={stats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
-                <div className="w-full grid grid-cols-1 gap-2 p-1">
+                <div className="w-full grid grid-cols-2 gap-2 p-1">
+                     <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
+                        <UserPlus className="mr-2 h-4 w-4" /> Inscripción
+                    </Button>
                     {isDailyView ? (
-                        <div className="grid grid-cols-2 gap-2">
-                             <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={dailyStats.enrolledCount >= dailyStats.capacity}>
-                                <CalendarClock className="mr-2 h-4 w-4" /> Recupero
-                            </Button>
-                            <Button size="sm" onClick={() => handleAction('take-attendance', { session })} disabled={!isAttendanceEnabled}>
-                                <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
-                            </Button>
-                        </div>
+                        <Button size="sm" onClick={() => handleAction('take-attendance', { session })} disabled={!isAttendanceEnabled}>
+                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
+                        </Button>
                     ) : (
-                         <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
-                            <UserPlus className="mr-2 h-4 w-4" /> Inscripción Fija
+                         <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
                         </Button>
                     )}
                 </div>
