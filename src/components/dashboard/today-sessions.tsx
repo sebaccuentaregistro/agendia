@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { Session, Specialist, Actividad, Space } from '@/types';
 import { ScheduleCard } from '@/components/schedule/schedule-card';
 import { useStudio } from '@/context/StudioContext';
+import { cn } from '@/lib/utils';
 
 interface TodaySessionsProps {
   sessions: Session[];
@@ -49,13 +50,13 @@ export function TodaySessions({
   }, [sessions, filters]);
 
   return (
-    <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10 mt-8">
+    <Card className="flex flex-col bg-background/50 backdrop-blur-md rounded-2xl shadow-2xl border-2 border-white/10">
         <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg text-foreground">Sesiones de Hoy - {todayName}</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
                 <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
+                <SelectTrigger className={cn("w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.specialistId !== 'all' })}>
                     <SelectValue placeholder="Especialista" />
                 </SelectTrigger>
                 <SelectContent>
@@ -64,7 +65,7 @@ export function TodaySessions({
                 </SelectContent>
                 </Select>
                 <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
+                <SelectTrigger className={cn("w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.actividadId !== 'all' })}>
                     <SelectValue placeholder="Actividad" />
                 </SelectTrigger>
                 <SelectContent>
@@ -73,7 +74,7 @@ export function TodaySessions({
                 </SelectContent>
                 </Select>
                  <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                <SelectTrigger className="w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl">
+                <SelectTrigger className={cn("w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.timeOfDay !== 'all' })}>
                     <SelectValue placeholder="Horario" />
                 </SelectTrigger>
                 <SelectContent>
