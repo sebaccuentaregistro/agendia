@@ -2,7 +2,7 @@
 
 'use client';
 
-import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback, useMemo } from 'react';
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, writeBatch, updateDoc } from 'firebase/firestore';
