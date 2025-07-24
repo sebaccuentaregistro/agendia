@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
@@ -183,7 +184,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0 };
+      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [] };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -280,11 +281,35 @@ function DashboardPageContent() {
 
     const totalWaitlistCount = waitlistSummary.reduce((sum, item) => sum + item.count, 0);
 
+    const churnRiskPeople: Person[] = [];
+    for (const person of people) {
+      const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
+      if (personSessionIds.size === 0) continue;
+
+      const relevantAttendance = attendance
+        .filter(a => personSessionIds.has(a.sessionId))
+        .sort((a, b) => b.date.localeCompare(a.date));
+
+      let consecutiveAbsences = 0;
+      for (let i = 0; i < Math.min(relevantAttendance.length, 5); i++) {
+        const record = relevantAttendance[i];
+        if (record.absentIds?.includes(person.id)) {
+          consecutiveAbsences++;
+        } else if (record.presentIds?.includes(person.id) || record.justifiedAbsenceIds?.includes(person.id)) {
+          break;
+        }
+      }
+      if (consecutiveAbsences >= 3) {
+        churnRiskPeople.push(person);
+      }
+    }
+
 
     return {
       todaysSessions, todayName: currentTodayName,
       totalDebt, collectionPercentage,
-      waitlistOpportunities, waitlistSummary, totalWaitlistCount
+      waitlistOpportunities, waitlistSummary, totalWaitlistCount,
+      churnRiskPeople,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, spaces, actividades]);
 
@@ -296,6 +321,7 @@ function DashboardPageContent() {
     waitlistOpportunities,
     waitlistSummary,
     totalWaitlistCount,
+    churnRiskPeople,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -393,11 +419,11 @@ function DashboardPageContent() {
                 />
               </div>
               <div className="space-y-8">
-                <ChurnRiskAlerts
-                    people={people}
-                    attendance={attendance}
-                    sessions={sessions}
-                />
+                {churnRiskPeople.length > 0 && (
+                  <ChurnRiskAlerts
+                      people={churnRiskPeople}
+                  />
+                )}
                 {totalWaitlistCount > 0 && (
                   <WaitlistOpportunities 
                     opportunities={waitlistOpportunities} 
@@ -496,7 +522,7 @@ function DashboardPageContent() {
                       </FormItem>
                     )}/>
                   </div>
-                  <FormField control={sessionForm.control} name="spaceId" render={({ field }) => (
+                  <FormField control={form.control} name="spaceId" render={({ field }) => (
                       <FormItem><FormLabel>Espacio</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
@@ -517,7 +543,7 @@ function DashboardPageContent() {
                         <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                   </div>
-                   <FormField control={sessionForm.control} name="levelId" render={({ field }) => (
+                   <FormField control={form.control} name="levelId" render={({ field }) => (
                       <FormItem><FormLabel>Nivel (Opcional)</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Sin nivel" /></SelectTrigger></FormControl>
