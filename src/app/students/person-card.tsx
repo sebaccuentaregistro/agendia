@@ -11,6 +11,8 @@ import { cn } from '@/lib/utils';
 import Link from 'next/link';
 import { CalendarClock, Plane } from 'lucide-react';
 import type { Person, Tariff, PaymentStatusInfo } from '@/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
 
 interface PersonCardProps {
     person: Person;
@@ -61,10 +63,22 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                 <CardHeader className="p-4">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-lg font-bold truncate">{person.name}</CardTitle>
-                        <div className="flex items-center gap-2">
-                           {onVacation && <Plane className="h-4 w-4 text-muted-foreground" title="De vacaciones"/>}
-                           {recoveryCreditsCount > 0 && <CalendarClock className="h-4 w-4 text-muted-foreground" title={`${recoveryCreditsCount} recuperos pendientes`} />}
-                        </div>
+                        <TooltipProvider>
+                            <div className="flex items-center gap-2">
+                               {onVacation && (
+                                 <Tooltip>
+                                    <TooltipTrigger><Plane className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
+                                    <TooltipContent><p>De vacaciones</p></TooltipContent>
+                                 </Tooltip>
+                               )}
+                               {recoveryCreditsCount > 0 && (
+                                <Tooltip>
+                                    <TooltipTrigger><CalendarClock className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
+                                    <TooltipContent><p>{recoveryCreditsCount} recupero(s) pendiente(s)</p></TooltipContent>
+                                </Tooltip>
+                               )}
+                            </div>
+                        </TooltipProvider>
                     </div>
                     <CardDescription className="text-xs">{person.phone}</CardDescription>
                 </CardHeader>
