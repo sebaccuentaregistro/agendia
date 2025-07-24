@@ -101,7 +101,6 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
                         
                         <div className="mb-2 text-xs font-semibold text-primary-darker dark:text-primary-lighter space-y-1">
                            {availableSlots.fixed > 0 && <div>- {availableSlots.fixed} Cupo(s) Fijo(s) Disponible(s)</div>}
-                           {availableSlots.temporary > 0 && <div>- {availableSlots.temporary} Cupo(s) Temporal(es) (por vacaciones)</div>}
                         </div>
 
                         <div className="space-y-2">
@@ -126,6 +125,7 @@ export function WaitlistOpportunities({ opportunities, summary, totalCount, onHe
                                                 }
                                             }}
                                             disabled={!canEnrollFixed}
+                                            title={!canEnrollFixed ? 'No hay cupos fijos disponibles en esta clase' : 'Inscribir a esta persona'}
                                         >
                                             Inscribir
                                         </Button>

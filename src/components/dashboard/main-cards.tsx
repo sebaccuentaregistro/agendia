@@ -4,139 +4,86 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Card, CardTitle } from '@/components/ui/card';
+import { Card, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, CheckCircle2, CalendarClock, Plane, Calendar, Users, Settings, Lock, ArrowRight } from 'lucide-react';
-import type { Session, Person } from '@/types';
+import { Calendar, Users, Settings } from 'lucide-react';
+import { useStudio } from '@/context/StudioContext';
+import { useMemo } from 'react';
+import { getStudentPaymentStatus } from '@/lib/utils';
 
-interface MainCardsProps {
-    overdueCount: number;
-    pendingRecoveryCount: number;
-    onVacationCount: number;
-    sessionsCount: number;
-    peopleCount: number;
-}
-
-const mainCards = [
-  { href: "/schedule", label: "Horarios", icon: Calendar, data: 'sessionsCount' },
-  { href: "/students", label: "Personas", icon: Users, data: 'peopleCount' },
-];
-
-export function MainCards({
-    overdueCount,
-    pendingRecoveryCount,
-    onVacationCount,
-    sessionsCount,
-    peopleCount,
-}: MainCardsProps) {
+export function MainCards() {
+    const { sessions, people, attendance, isPersonOnVacation } = useStudio();
     const router = useRouter();
 
-    const counts = {
-        sessionsCount,
-        peopleCount
-    };
+    const stats = useMemo(() => {
+        const now = new Date();
+        const overdueCount = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado').length;
+        
+        const balances: Record<string, number> = {};
+        people.forEach(p => (balances[p.id] = 0));
+        attendance.forEach(record => {
+          (record.justifiedAbsenceIds || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]++; });
+          (record.oneTimeAttendees || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
+        });
+        const pendingRecoveryCount = Object.values(balances).filter(balance => balance > 0).length;
+
+        const vacationingPeople = people.filter(p => isPersonOnVacation(p, now)).length;
+
+        return {
+            overdueCount,
+            pendingRecoveryCount,
+            vacationingPeople
+        };
+    }, [people, attendance, isPersonOnVacation]);
+
+    const cards = [
+        { href: "/schedule", label: "Horarios", icon: Calendar, count: sessions.length },
+        { href: "/students", label: "Personas", icon: Users, count: people.length },
+        { href: "/?view=management", label: "Gestión", icon: Settings, count: null },
+    ];
 
     return (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-            <Link href="/students?filter=overdue" className="transition-transform hover:-translate-y-1">
-                <Card className={cn(
-                    "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                    overdueCount > 0 ? "hover:border-red-500/50" : "hover:border-green-500/50"
-                )}>
-                <div className={cn(
-                    "absolute inset-0 bg-gradient-to-br to-transparent",
-                    overdueCount > 0 ? "from-red-500/10" : "from-green-500/10"
-                )}></div>
-                <div className={cn(
-                    "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                    overdueCount > 0 ? "from-red-500/20" : "from-green-500/20"
-                )}></div>
-                <div className={cn(
-                    "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                    overdueCount > 0 ? "bg-red-500/10 text-red-500" : "bg-green-500/10 text-green-500"
-                )}>
-                    {overdueCount > 0 ? <AlertTriangle className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}
-                </div>
-                <CardTitle className="text-lg font-semibold text-foreground">
-                    Atrasados
-                </CardTitle>
-                <p className="text-2xl font-bold text-foreground">{overdueCount}</p>
-                </Card>
-            </Link>
-            <Link href="/students?filter=pending-recovery" className="transition-transform hover:-translate-y-1">
-                <Card className={cn(
-                    "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                    pendingRecoveryCount > 0 ? "hover:border-yellow-500/50" : "hover:border-primary/50"
-                )}>
-                <div className={cn(
-                    "absolute inset-0 bg-gradient-to-br to-transparent",
-                    pendingRecoveryCount > 0 ? "from-yellow-500/10" : "from-primary/10"
-                )}></div>
-                <div className={cn(
-                    "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                    pendingRecoveryCount > 0 ? "from-yellow-500/20" : "from-primary/20"
-                )}></div>
-                <div className={cn(
-                    "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                    pendingRecoveryCount > 0 ? "bg-yellow-500/10 text-yellow-500" : "bg-primary/10 text-primary"
-                )}>
-                    <CalendarClock className="h-4 w-4" />
-                </div>
-                <CardTitle className="text-lg font-semibold text-foreground">
-                    Recuperos
-                </CardTitle>
-                <p className="text-2xl font-bold text-foreground">{pendingRecoveryCount}</p>
-                </Card>
-            </Link>
-            <Link href="/students?filter=on-vacation" className="transition-transform hover:-translate-y-1">
-                <Card className={cn(
-                    "group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent",
-                    onVacationCount > 0 ? "hover:border-cyan-500/50" : "hover:border-primary/50"
-                )}>
-                <div className={cn(
-                    "absolute inset-0 bg-gradient-to-br to-transparent",
-                    onVacationCount > 0 ? "from-cyan-500/10" : "from-primary/10"
-                )}></div>
-                <div className={cn(
-                    "absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t to-transparent",
-                    onVacationCount > 0 ? "from-cyan-500/20" : "from-primary/20"
-                )}></div>
-                <div className={cn(
-                    "flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full",
-                    onVacationCount > 0 ? "bg-cyan-500/10 text-cyan-500" : "bg-primary/10 text-primary"
-                )}>
-                    <Plane className="h-4 w-4" />
-                </div>
-                <CardTitle className="text-lg font-semibold text-foreground">
-                    Vacaciones
-                </CardTitle>
-                <p className="text-2xl font-bold text-foreground">{onVacationCount}</p>
-                </Card>
-            </Link>
-            {mainCards.map((item) => (
-            <Link key={item.href} href={item.href} className="transition-transform hover:-translate-y-1">
-                <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <item.icon className="h-4 w-4" />
-                </div>
-                <CardTitle className="text-lg font-semibold text-foreground">{item.label}</CardTitle>
-                <p className="text-2xl font-bold text-foreground">{counts[item.data as keyof typeof counts]}</p>
-                </Card>
-            </Link>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {cards.map(card => (
+                 <Link key={card.label} href={card.href} className="transition-transform hover:-translate-y-1">
+                    <Card className="group relative flex flex-col justify-between p-4 text-left bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-video overflow-hidden border-2 border-transparent hover:border-primary/50">
+                        <CardTitle className="text-xl font-semibold text-foreground flex items-center gap-2">
+                             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                <card.icon className="h-4 w-4" />
+                            </div>
+                            {card.label}
+                        </CardTitle>
+                        
+                        <div className="flex flex-col items-start">
+                            {card.count !== null && (
+                                <p className="text-4xl font-bold text-foreground">{card.count}</p>
+                            )}
+
+                            {card.label === 'Personas' && (
+                                <div className="mt-2 flex flex-wrap gap-2">
+                                    {stats.overdueCount > 0 && (
+                                        <Link href="/students?filter=overdue" onClick={(e) => e.stopPropagation()}>
+                                            <Badge variant="destructive">{stats.overdueCount} Deudor(es)</Badge>
+                                        </Link>
+                                    )}
+                                    {stats.pendingRecoveryCount > 0 && (
+                                        <Link href="/students?filter=pending-recovery" onClick={(e) => e.stopPropagation()}>
+                                            <Badge variant="secondary">{stats.pendingRecoveryCount} Recupero(s)</Badge>
+                                        </Link>
+                                    )}
+                                    {stats.vacationingPeople > 0 && (
+                                         <Link href="/students?filter=on-vacation" onClick={(e) => e.stopPropagation()}>
+                                            <Badge variant="outline">{stats.vacationingPeople} Vacaciones</Badge>
+                                        </Link>
+                                    )}
+                                </div>
+                            )}
+                            {card.label === 'Gestión' && <CardDescription className="text-sm text-muted-foreground">Aranceles, Actividades y más.</CardDescription>}
+                        </div>
+                    </Card>
+                </Link>
             ))}
-            <Link href="/?view=management" className="transition-transform hover:-translate-y-1">
-            <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent"></div>
-                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-primary/20 to-transparent"></div>
-                <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <Settings className="h-4 w-4" />
-                </div>
-                <CardTitle className="text-lg font-semibold text-foreground">Gestión</CardTitle>
-                <p className="text-2xl font-bold text-transparent select-none" aria-hidden="true">&nbsp;</p>
-            </Card>
-            </Link>
         </div>
     )
 }

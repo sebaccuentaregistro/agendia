@@ -22,16 +22,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PageHeader } from '@/components/page-header';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScheduleCalendarView } from '@/components/schedule-calendar-view';
-import { AttendanceSheet } from '@/components/attendance-sheet';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
-import { WaitlistDialog } from '@/components/waitlist-dialog';
-import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
-import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
-import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { ScheduleCard } from '@/components/schedule/schedule-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertCircle } from 'lucide-react';
+import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
+import { WaitlistDialog } from '@/components/waitlist-dialog';
 
 
 const formSchema = z.object({
@@ -50,12 +46,7 @@ function SchedulePageContent() {
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
-  const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
-  const [sessionForOneTime, setSessionForOneTime] = useState<Session | null>(null);
-  const [personForOneTime, setPersonForOneTime] = useState<string | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
-  const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
-  const [sessionForStudentsSheet, setSessionForStudentsSheet] = useState<Session | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -73,60 +64,45 @@ function SchedulePageContent() {
     defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
   });
 
-  const handleEditSession = useCallback((session: Session) => {
-    setSelectedSession(session);
-    form.reset({
-      instructorId: session.instructorId,
-      actividadId: session.actividadId,
-      spaceId: session.spaceId,
-      dayOfWeek: session.dayOfWeek,
-      time: session.time,
-      levelId: session.levelId || 'none',
-    });
-    setIsDialogOpen(true);
-  }, [form]);
-  
-  const handleOpenOneTime = useCallback((session: Session) => {
-    const personId = searchParams.get('personId');
-    setPersonForOneTime(personId);
-    setSessionForOneTime(session);
-  }, [searchParams]);
-
   useEffect(() => {
-    const handleEvent = (e: Event, handler: (detail: any) => void) => handler((e as CustomEvent).detail);
-
-    const handlers = {
-        'edit-session': (e: Event) => handleEditSession((e as CustomEvent).detail),
-        'delete-session': (e: Event) => setSessionForDelete((e as CustomEvent).detail),
-        'enroll-people': (e: Event) => setSessionForEnrollment((e as CustomEvent).detail),
-        'one-time-attendee': (e: Event) => handleOpenOneTime((e as CustomEvent).detail),
-        'manage-waitlist': (e: Event) => setSessionForWaitlist((e as CustomEvent).detail),
-        'notify-session': (e: Event) => setSessionForNotification((e as CustomEvent).detail),
-        'view-students': (e: Event) => setSessionForStudentsSheet((e as CustomEvent).detail),
+    const handleAction = (e: Event) => {
+        const { action, session } = (e as CustomEvent).detail;
+        switch (action) {
+            case 'edit-session':
+                setSelectedSession(session);
+                form.reset({
+                    instructorId: session.instructorId,
+                    actividadId: session.actividadId,
+                    spaceId: session.spaceId,
+                    dayOfWeek: session.dayOfWeek,
+                    time: session.time,
+                    levelId: session.levelId || 'none',
+                });
+                setIsDialogOpen(true);
+                break;
+            case 'delete-session':
+                setSessionForDelete(session);
+                break;
+            case 'enroll-fixed':
+                setSessionForEnrollment(session);
+                break;
+            case 'add-to-waitlist':
+                setSessionForWaitlist(session);
+                break;
+        }
     };
-
-    Object.entries(handlers).forEach(([eventName, handler]) => {
-        document.addEventListener(eventName, handler);
-    });
-
+    document.addEventListener('schedule-card-action', handleAction);
     return () => {
-        Object.entries(handlers).forEach(([eventName, handler]) => {
-            document.removeEventListener(eventName, handler);
-        });
+        document.removeEventListener('schedule-card-action', handleAction);
     };
-  }, [handleEditSession, handleOpenOneTime]);
+
+  }, [form]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     
-    const recoveryMode = searchParams.get('recoveryMode') === 'true';
-    const personId = searchParams.get('personId');
-
     return sessions
         .filter(session => {
-            if (recoveryMode && personId) {
-                 if (session.personIds.includes(personId)) return false; // Hide classes the person is already in
-            }
             return (
                 (filters.day === 'all' || session.dayOfWeek === filters.day) &&
                 (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
@@ -314,17 +290,16 @@ function SchedulePageContent() {
             </div>
             <TabsContent value="cards">
               {loading ? (
-                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {[...Array(6)].map((_, i) => <Skeleton key={i} className="h-64 w-full rounded-2xl" />)}
+                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-56 w-full rounded-2xl" />)}
                  </div>
               ) : filteredAndSortedSessions.length > 0 ? (
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {filteredAndSortedSessions.map((session) => (
                     <ScheduleCard 
                         key={session.id} 
                         session={session}
-                        onSessionClick={setSessionForStudentsSheet}
-                        onAttendanceClick={setSessionForAttendance}
+                        view="structural"
                     />
                   ))}
                 </div>
@@ -361,7 +336,7 @@ function SchedulePageContent() {
                                 const enrolledCount = session.personIds.length;
                                 const spaceCapacity = space?.capacity ?? 0;
                                 return (
-                                    <TableRow key={session.id} className="cursor-pointer" onClick={() => handleEditSession(session)}>
+                                    <TableRow key={session.id} onClick={() => setIsDialogOpen(true)}>
                                         <TableCell className="font-medium">{session.dayOfWeek}, {session.time}</TableCell>
                                         <TableCell>{actividad?.name}</TableCell>
                                         <TableCell>{specialist?.name}</TableCell>
@@ -386,7 +361,10 @@ function SchedulePageContent() {
                     actividades={actividades}
                     spaces={spaces}
                     levels={levels}
-                    onSessionClick={handleEditSession}
+                    onSessionClick={(session) => {
+                        setSelectedSession(session);
+                        setIsDialogOpen(true);
+                    }}
                 />
             </TabsContent>
         </Tabs>
@@ -467,48 +445,19 @@ function SchedulePageContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
+      
       {sessionForEnrollment && (
-        <EnrollPeopleDialog
+        <EnrollPeopleDialog 
           session={sessionForEnrollment}
           onClose={() => setSessionForEnrollment(null)}
         />
       )}
-      
-      {sessionForStudentsSheet && (
-         <EnrolledStudentsSheet 
-            session={sessionForStudentsSheet}
-            onClose={() => setSessionForStudentsSheet(null)}
-          />
-      )}
-
-      {sessionForAttendance && (
-        <AttendanceSheet session={sessionForAttendance} onClose={() => setSessionForAttendance(null)} />
-      )}
-      
-      {sessionForOneTime && (
-        <OneTimeAttendeeDialog 
-            session={sessionForOneTime}
-            preselectedPersonId={personForOneTime}
-            onClose={() => {
-                setSessionForOneTime(null);
-                setPersonForOneTime(null);
-                 // If in recovery mode, redirect back to students page
-                if (searchParams.get('recoveryMode') === 'true') {
-                    router.push('/students');
-                }
-            }}
+      {sessionForWaitlist && (
+        <WaitlistDialog 
+          session={sessionForWaitlist}
+          onClose={() => setSessionForWaitlist(null)}
         />
       )}
-      
-      {sessionForWaitlist && (
-        <WaitlistDialog session={sessionForWaitlist} onClose={() => setSessionForWaitlist(null)} />
-      )}
-      
-      {sessionForNotification && (
-        <NotifyAttendeesDialog session={sessionForNotification} onClose={() => setSessionForNotification(null)} />
-      )}
-
     </div>
   );
 }

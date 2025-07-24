@@ -31,7 +31,8 @@ export function PaymentReminders({ reminders, onSendReminder, onSendAll }: Payme
 
     const formatDaysUntilDue = (days: number) => {
         if (days === 0) return 'Hoy';
-        return `en ${formatDistanceToNowStrict(new Date(new Date().getTime() + days * 24 * 60 * 60 * 1000), { locale: es, unit: 'day', roundingMethod: 'ceil' })}`;
+        if (days === 1) return 'Mañana';
+        return `en ${days} días`;
     };
     
     const formatPrice = (price: number) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(price);
