@@ -4,7 +4,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, Info, LogOut, DollarSign, User, Shield, Landmark, Users, PlusCircle } from 'lucide-react';
+import { Heart, Info, LogOut, DollarSign, User, Shield, Landmark, Users, PlusCircle, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ const navItems = [
   { href: "/", label: "Inicio" },
   { href: "/schedule", label: "Horarios" },
   { href: "/students", label: "Personas" },
-  { href: "/tariffs", label: "Aranceles" },
+  { href: "/?view=management", label: "Gestión" },
 ];
 
 
@@ -58,18 +58,22 @@ export function AppHeader() {
             </div>
         </Link>
         <nav className="hidden items-center gap-1 md:flex">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
-                  pathname === item.href ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
+            {navItems.map((item) => {
+              const isActive = (item.href === pathname && item.href !== '/') || (item.href === '/' && pathname === '/');
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                    isActive ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                  )}
+                >
+                  {item.label === 'Gestión' && <Settings className="h-4 w-4" />}
+                  {item.label}
+                </Link>
+              );
+            })}
         </nav>
       </div>
 
