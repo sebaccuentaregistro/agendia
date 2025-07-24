@@ -6,7 +6,7 @@ import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, FileDown, Search, ArrowLeft, Bell, LayoutGrid, List } from 'lucide-react';
-import type { Person, RecoveryCredit } from '@/types';
+import type { Person, RecoveryCredit, PaymentStatusInfo } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { getStudentPaymentStatus, exportToCsv } from '@/lib/utils';
@@ -375,5 +375,7 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
+    
 
     
