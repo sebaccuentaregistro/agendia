@@ -31,10 +31,6 @@ const nextConfig = {
     }
     return config;
   },
-  compiler: {
-    // Evita que Next.js intente generar una ruta para el favicon
-    missingJsFutureWebpack: true,
-  },
   experimental: {
     missingSuspenseWithCSRBailout: false,
   },
