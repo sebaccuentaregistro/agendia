@@ -26,6 +26,7 @@ import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { useShell } from '@/context/ShellContext';
+import { CancelSessionDialog } from '@/components/cancel-session-dialog';
 
 
 function SchedulePageContent() {
@@ -37,6 +38,7 @@ function SchedulePageContent() {
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [sessionForRecovery, setSessionForRecovery] = useState<Session | null>(null);
   const [sessionForStudents, setSessionForStudents] = useState<Session | null>(null);
+  const [sessionForCancellation, setSessionForCancellation] = useState<{session: Session, date: Date} | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -315,8 +317,11 @@ function SchedulePageContent() {
                     actividades={actividades}
                     spaces={spaces}
                     levels={levels}
-                    onSessionClick={(session) => {
+                    onSessionClick={(session, date) => {
                         openSessionDialog(session);
+                    }}
+                    onCancelClick={(session, date) => {
+                        setSessionForCancellation({session, date});
                     }}
                 />
             </TabsContent>
@@ -358,6 +363,13 @@ function SchedulePageContent() {
             session={sessionForStudents}
             onClose={() => setSessionForStudents(null)}
           />
+      )}
+       {sessionForCancellation && (
+        <CancelSessionDialog
+            session={sessionForCancellation.session}
+            date={sessionForCancellation.date}
+            onClose={() => setSessionForCancellation(null)}
+        />
       )}
     </div>
   );

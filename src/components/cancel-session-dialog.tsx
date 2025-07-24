@@ -14,6 +14,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Session } from '@/types';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const cancelSessionSchema = z.object({
   grantRecoveryCredits: z.boolean().default(true).optional(),
@@ -21,10 +22,11 @@ const cancelSessionSchema = z.object({
 
 interface CancelSessionDialogProps {
   session: Session | null;
+  date: Date | null; // <-- Now accepts a date
   onClose: () => void;
 }
 
-export function CancelSessionDialog({ session, onClose }: CancelSessionDialogProps) {
+export function CancelSessionDialog({ session, date, onClose }: CancelSessionDialogProps) {
   const { cancelSessionForDay, actividades } = useStudio();
   const [loading, setLoading] = useState(false);
 
@@ -34,18 +36,18 @@ export function CancelSessionDialog({ session, onClose }: CancelSessionDialogPro
   });
 
   const onSubmit = async (values: z.infer<typeof cancelSessionSchema>) => {
-    if (session) {
+    if (session && date) {
       setLoading(true);
-      await cancelSessionForDay(session, new Date(), !!values.grantRecoveryCredits);
+      await cancelSessionForDay(session, date, !!values.grantRecoveryCredits);
       setLoading(false);
       onClose();
     }
   };
   
-  if (!session) return null;
+  if (!session || !date) return null;
 
   const actividad = actividades.find(a => a.id === session.actividadId);
-  const todayStr = format(new Date(), 'dd/MM/yyyy');
+  const dateStr = format(date, "eeee, dd 'de' MMMM", { locale: es });
 
   return (
     <Dialog open={!!session} onOpenChange={onClose}>
@@ -53,12 +55,12 @@ export function CancelSessionDialog({ session, onClose }: CancelSessionDialogPro
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><AlertTriangle className="text-destructive"/>Cancelar Sesión</DialogTitle>
           <DialogDescription>
-            Estás a punto de cancelar la clase de <strong>{actividad?.name}</strong> del día de hoy, <strong>{todayStr}</strong>.
+            Estás a punto de cancelar la clase de <strong>{actividad?.name}</strong> del día <strong>{dateStr}</strong>.
           </DialogDescription>
         </DialogHeader>
         <Alert>
           <AlertDescription>
-            Esta acción no puede deshacerse. La sesión se marcará como cancelada y no se registrará asistencia.
+            Esta acción no puede deshacerse. La sesión se marcará como cancelada para esa fecha y no se registrará asistencia.
           </AlertDescription>
         </Alert>
         <Form {...form}>
@@ -79,7 +81,7 @@ export function CancelSessionDialog({ session, onClose }: CancelSessionDialogPro
                       Otorgar crédito de recupero a los asistentes
                     </FormLabel>
                     <p className="text-xs text-muted-foreground">
-                      Marcando esto, todos los inscriptos recibirán un crédito para recuperar esta clase.
+                      Marcando esto, todos los inscriptos para esa fecha recibirán un crédito para recuperar la clase.
                     </p>
                   </div>
                 </FormItem>
