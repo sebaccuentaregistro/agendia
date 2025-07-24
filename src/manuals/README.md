@@ -2,7 +2,7 @@
 
 ¡Bienvenido a la documentación oficial de Agendia!
 
-Esta guía está diseñada para ayudarte a sacar el máximo provecho de la aplicación, desde la configuración inicial  hasta la gestión avanzada de tu estudio.
+Esta guía está diseñada para ayudarte a sacar el máximo provecho de la aplicación, desde la configuración inicial hasta la gestión avanzada de tu estudio.
 
 Hemos dividido los manuales en módulos para que puedas consultar la información que necesites de forma rápida y sencilla.
 
