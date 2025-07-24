@@ -7,13 +7,13 @@ import { useRouter } from 'next/navigation';
 import { Card, CardTitle, CardContent, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { Calendar, Users, Settings } from 'lucide-react';
+import { Calendar, Users, Settings, DollarSign, Star, Warehouse } from 'lucide-react';
 import { useStudio } from '@/context/StudioContext';
 import { useMemo } from 'react';
 import { getStudentPaymentStatus } from '@/lib/utils';
 
 export function MainCards() {
-    const { sessions, people, attendance, isPersonOnVacation } = useStudio();
+    const { sessions, people, attendance, isPersonOnVacation, tariffs, actividades, spaces } = useStudio();
     const router = useRouter();
 
     const stats = useMemo(() => {
@@ -79,7 +79,16 @@ export function MainCards() {
                                     )}
                                 </div>
                             )}
-                            {card.label === 'Gestión' && <CardDescription className="text-sm text-muted-foreground">Aranceles, Actividades y más.</CardDescription>}
+                            {card.label === 'Gestión' && (
+                                <div className="space-y-2">
+                                    <CardDescription className="text-sm text-muted-foreground">Configura los pilares de tu estudio.</CardDescription>
+                                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs font-medium text-muted-foreground">
+                                        <span className="flex items-center gap-1.5"><DollarSign className="h-3 w-3"/>{tariffs.length} Aranceles</span>
+                                        <span className="flex items-center gap-1.5"><Star className="h-3 w-3"/>{actividades.length} Actividades</span>
+                                        <span className="flex items-center gap-1.5"><Warehouse className="h-3 w-3"/>{spaces.length} Espacios</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </Card>
                 </Link>
