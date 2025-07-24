@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileDown, Search, ArrowLeft, Bell } from 'lucide-react';
+import { PlusCircle, FileDown, Search, ArrowLeft, Bell, LayoutGrid, List } from 'lucide-react';
 import type { Person, RecoveryCredit } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -23,6 +23,9 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format, parse } from 'date-fns';
 import { AlertCircle } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 
 
 function StudentsPageContent() {
@@ -37,6 +40,7 @@ function StudentsPageContent() {
   const statusFilterFromUrl = searchParams.get('filter') || 'all';
   const initialTab = statusFilterFromUrl === 'inactive' ? 'inactive' : 'active';
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [view, setView] = useState('cards');
 
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
   const [isRemindersSheetOpen, setIsRemindersSheetOpen] = useState(false);
@@ -140,6 +144,16 @@ function StudentsPageContent() {
   const handleAddClick = () => {
     setIsPersonDialogOpen(true);
   }
+  
+  const getStatusBadgeClass = (status: PaymentStatusInfo['status']) => {
+    switch (status) {
+        case 'Al día': return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700";
+        case 'Atrasado': return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700";
+        case 'Próximo a Vencer': return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700";
+        case 'Pendiente de Pago': return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700";
+        default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
+    }
+  };
 
   if (!isMounted) {
     return (
@@ -193,70 +207,109 @@ function StudentsPageContent() {
       )}
 
        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="active">Activos ({people.length})</TabsTrigger>
-                <TabsTrigger value="inactive">Inactivos ({inactivePeople.length})</TabsTrigger>
-            </TabsList>
-            <TabsContent value="active" className="mt-6">
-                <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
+            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+                <TabsList className="grid w-full grid-cols-2 sm:w-auto">
+                    <TabsTrigger value="active">Activos ({people.length})</TabsTrigger>
+                    <TabsTrigger value="inactive">Inactivos ({inactivePeople.length})</TabsTrigger>
+                </TabsList>
+                 <div className="flex items-center gap-4 w-full sm:w-auto">
                     <div className="relative flex-grow">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
-                            placeholder="Buscar por nombre o teléfono..."
+                            placeholder="Buscar..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
+                            className="pl-10 w-full bg-background border-border shadow-sm rounded-xl"
                         />
                     </div>
-                </Card>
-                <div className="mt-8">
-                    {loading ? (
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
-                        </div>
-                    ) : filteredPeople.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {filteredPeople.map((person) => (
-                                <PersonCard 
-                                    key={person.id} 
-                                    person={person}
-                                    tariff={tariffs.find(t => t.id === person.tariffId)}
-                                    recoveryCreditsCount={(recoveryDetails[person.id] || []).length}
-                                />
-                            ))}
-                        </div>
-                        ) : (
-                        <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
-                            <CardHeader>
-                            <CardTitle>{searchTerm || statusFilterFromUrl !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
-                            <CardDescription>
-                                {searchTerm || statusFilterFromUrl !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
-                            </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                            {!(searchTerm || statusFilterFromUrl !== 'all') && (
-                                <Button onClick={handleAddClick} disabled={isLimitReached}>
-                                    <PlusCircle className="mr-2 h-4 w-4" />
-                                    Añadir Persona
-                                </Button>
-                            )}
-                            </CardContent>
-                        </Card>
-                        )}
+                    <Tabs value={view} onValueChange={setView} className="hidden sm:block">
+                        <TabsList className="grid grid-cols-2">
+                          <TabsTrigger value="cards"><LayoutGrid className="h-4 w-4"/></TabsTrigger>
+                          <TabsTrigger value="list"><List className="h-4 w-4"/></TabsTrigger>
+                        </TabsList>
+                    </Tabs>
                 </div>
+            </div>
+            <TabsContent value="active" className="mt-6">
+                <Tabs defaultValue={view} className="w-full">
+                    <TabsContent value="cards">
+                       {loading ? (
+                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
+                            </div>
+                        ) : filteredPeople.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                                {filteredPeople.map((person) => (
+                                    <PersonCard 
+                                        key={person.id} 
+                                        person={person}
+                                        tariff={tariffs.find(t => t.id === person.tariffId)}
+                                        recoveryCreditsCount={(recoveryDetails[person.id] || []).length}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                                <CardHeader>
+                                    <CardTitle>{searchTerm || statusFilterFromUrl !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+                                    <CardDescription>
+                                        {searchTerm || statusFilterFromUrl !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    {!(searchTerm || statusFilterFromUrl !== 'all') && (
+                                        <Button onClick={handleAddClick} disabled={isLimitReached}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            Añadir Persona
+                                        </Button>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+                    </TabsContent>
+                    <TabsContent value="list">
+                        <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Nombre</TableHead>
+                                        <TableHead>Teléfono</TableHead>
+                                        <TableHead>Arancel</TableHead>
+                                        <TableHead>Estado de Pago</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                {filteredPeople.length > 0 ? (
+                                   filteredPeople.map(person => {
+                                       const tariff = tariffs.find(t => t.id === person.tariffId);
+                                       const paymentStatus = getStudentPaymentStatus(person, new Date());
+                                       return (
+                                        <TableRow key={person.id} onClick={() => router.push(`/students/${person.id}`)} className="cursor-pointer">
+                                            <TableCell className="font-medium">{person.name}</TableCell>
+                                            <TableCell>{person.phone}</TableCell>
+                                            <TableCell>{tariff?.name || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={cn(getStatusBadgeClass(paymentStatus.status))}>
+                                                    {paymentStatus.status}
+                                                </Badge>
+                                            </TableCell>
+                                        </TableRow>
+                                       )
+                                   })
+                                ) : (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="h-24 text-center">
+                                            No se encontraron personas con los filtros actuales.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                                </TableBody>
+                            </Table>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
             </TabsContent>
              <TabsContent value="inactive" className="mt-6">
-                <Card className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-4">
-                    <div className="relative flex-grow">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                            placeholder="Buscar inactivos por nombre o teléfono..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 w-full bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl"
-                        />
-                    </div>
-                </Card>
                 <div className="mt-8">
                     {loading ? (
                          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
@@ -322,3 +375,5 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
+    
