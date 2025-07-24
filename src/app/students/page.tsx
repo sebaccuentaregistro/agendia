@@ -30,7 +30,7 @@ import { cn } from '@/lib/utils';
 
 function StudentsPageContent() {
   const { people, inactivePeople, tariffs, isPersonOnVacation, attendance, loading, reactivatePerson } = useStudio();
-  const { institute } = useAuth();
+  const { institute, isLimitReached, setPeopleCount } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -45,6 +45,10 @@ function StudentsPageContent() {
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
   const [isRemindersSheetOpen, setIsRemindersSheetOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  
+  useEffect(() => {
+    setPeopleCount(people.length);
+  }, [people, setPeopleCount]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -60,12 +64,9 @@ function StudentsPageContent() {
     }
   }, [searchParams]);
 
-  const { recoveryDetails, filteredPeople, filteredInactivePeople, isLimitReached } = useMemo(() => {
-    if (!isMounted) return { recoveryDetails: {}, filteredPeople: [], filteredInactivePeople: [], isLimitReached: false };
+  const { recoveryDetails, filteredPeople, filteredInactivePeople } = useMemo(() => {
+    if (!isMounted) return { recoveryDetails: {}, filteredPeople: [], filteredInactivePeople: [] };
     
-    const limit = institute?.studentLimit;
-    const isLimitReached = (limit !== null && limit !== undefined) ? people.length >= limit : false;
-
     const now = new Date();
     const term = searchTerm.toLowerCase();
 
@@ -118,8 +119,8 @@ function StudentsPageContent() {
         .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
         .sort((a,b) => (a.inactiveDate && b.inactiveDate) ? b.inactiveDate.getTime() - a.inactiveDate.getTime() : a.name.localeCompare(b.name));
       
-    return { recoveryDetails: allRecoveryCredits, filteredPeople: finalFilteredPeople, filteredInactivePeople: finalFilteredInactivePeople, isLimitReached };
-  }, [people, inactivePeople, searchTerm, statusFilterFromUrl, attendance, isMounted, isPersonOnVacation, institute]);
+    return { recoveryDetails: allRecoveryCredits, filteredPeople: finalFilteredPeople, filteredInactivePeople: finalFilteredInactivePeople };
+  }, [people, inactivePeople, searchTerm, statusFilterFromUrl, attendance, isMounted, isPersonOnVacation]);
 
    const handleExport = () => {
     const dataToExport = filteredPeople.map(p => ({
@@ -188,10 +189,10 @@ function StudentsPageContent() {
       )}
       <PageHeader title="Personas">
         <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setIsRemindersSheetOpen(true)}><Bell className="mr-2 h-4 w-4" />Recordatorios</Button>
-            <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" />Exportar</Button>
+            <Button variant="outline" onClick={() => setIsRemindersSheetOpen(true)}><Bell className="mr-2 h-4 w-4" /></Button>
+            <Button variant="outline" onClick={handleExport}><FileDown className="mr-2 h-4 w-4" /></Button>
             <Button onClick={handleAddClick} disabled={isLimitReached}>
-                <PlusCircle className="mr-2 h-4 w-4" />Añadir Persona
+                <PlusCircle className="mr-2 h-4 w-4" />Añadir
             </Button>
         </div>
       </PageHeader>
@@ -207,12 +208,12 @@ function StudentsPageContent() {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
                 <TabsList className="grid w-full grid-cols-2 sm:w-auto">
                     <TabsTrigger value="active">Activos ({people.length})</TabsTrigger>
                     <TabsTrigger value="inactive">Inactivos ({inactivePeople.length})</TabsTrigger>
                 </TabsList>
-                 <div className="flex items-center gap-4 w-full sm:w-auto">
+                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     <div className="relative flex-grow">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                         <Input 
