@@ -129,7 +129,7 @@ function StudentsPageContent() {
         <div key={title}>
             <div className="flex items-center gap-2 mb-4 mt-8">
                 <Icon className="h-5 w-5 text-muted-foreground"/>
-                <h2 className="text-lg font-semibold">{title} ({groupPeople.length})</h2>
+                <h2 className="text-lg font-semibold">{title}: {groupPeople.length}</h2>
             </div>
           {groupPeople.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -286,5 +286,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
-    
