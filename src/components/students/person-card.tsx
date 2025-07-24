@@ -8,7 +8,7 @@ import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { CalendarClock, Plane } from 'lucide-react';
+import { CalendarClock, Plane, FileText } from 'lucide-react';
 import type { Person, Tariff, PaymentStatusInfo } from '@/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -17,9 +17,10 @@ interface PersonCardProps {
     person: Person;
     tariff?: Tariff;
     recoveryCreditsCount: number;
+    hasNotes: boolean;
 }
 
-export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardProps) {
+export function PersonCard({ person, tariff, recoveryCreditsCount, hasNotes }: PersonCardProps) {
     const { isPersonOnVacation } = useStudio();
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     const onVacation = isPersonOnVacation(person, new Date());
@@ -64,6 +65,12 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                         <CardTitle className="text-lg font-bold truncate">{person.name}</CardTitle>
                         <TooltipProvider>
                             <div className="flex items-center gap-2">
+                               {hasNotes && (
+                                 <Tooltip>
+                                    <TooltipTrigger><FileText className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
+                                    <TooltipContent><p>Tiene notas</p></TooltipContent>
+                                 </Tooltip>
+                               )}
                                {onVacation && (
                                  <Tooltip>
                                     <TooltipTrigger><Plane className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
@@ -72,7 +79,7 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                                )}
                                {recoveryCreditsCount > 0 && (
                                 <Tooltip>
-                                    <TooltipTrigger asChild>
+                                    <TooltipTrigger>
                                         <CalendarClock className="h-4 w-4 text-muted-foreground"/>
                                     </TooltipTrigger>
                                     <TooltipContent>
