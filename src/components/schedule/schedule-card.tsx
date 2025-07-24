@@ -102,9 +102,6 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                           <DropdownMenuItem onSelect={() => handleAction('enroll-fixed', { session })}>
-                             <UserPlus className="mr-2 h-4 w-4" />Inscripción Fija
-                           </DropdownMenuItem>
                            <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })} disabled={!isFixedFull}>
                              <ListPlus className="mr-2 h-4 w-4" />Añadir a Lista de Espera
                            </DropdownMenuItem>
@@ -147,16 +144,20 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     </div>
                     <Progress value={stats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
-                {isDailyView && (
-                    <div className="w-full grid grid-cols-2 gap-2 p-1">
-                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={dailyStats.enrolledCount >= dailyStats.capacity}>
-                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
-                        </Button>
+                <div className="w-full grid grid-cols-2 gap-2 p-1">
+                     <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })}>
+                        <UserPlus className="mr-2 h-4 w-4" /> Inscripción Fija
+                    </Button>
+                    {isDailyView ? (
                         <Button size="sm" onClick={() => handleAction('take-attendance', { session })} disabled={!isAttendanceEnabled}>
                             <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
                         </Button>
-                    </div>
-                )}
+                    ) : (
+                         <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={dailyStats.enrolledCount >= dailyStats.capacity}>
+                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                        </Button>
+                    )}
+                </div>
             </CardFooter>
         </Card>
     );
