@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, UserPlus, XCircle } from 'lucide-react';
 import type { Session, Person, SessionAttendance } from '@/types';
 import { format, isAfter, startOfDay, subMinutes, isToday } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface ScheduleCardProps {
     session: Session;
@@ -90,59 +91,58 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
     const progressColorClass = getProgressColorClass(displayStats.utilization);
     
     return (
-        <Card className={cn("flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1", isCancelledToday && "opacity-60 bg-muted/50")}>
+        <Card className={cn("flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1", isCancelledToday && "border-destructive/30")}>
             <CardHeader className="p-4 pb-2">
                 <div className="flex items-start justify-between">
                     <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{actividad?.name}</CardTitle>
-                    {!isCancelledToday && (
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreHorizontal className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })} disabled={!isFixedFull}>
-                                <ListPlus className="mr-2 h-4 w-4" />Añadir a Lista de Espera
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreHorizontal className="h-4 w-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })} disabled={isFixedFull}>
+                            <ListPlus className="mr-2 h-4 w-4" />Añadir a Lista de Espera
+                        </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => handleAction('notify-attendees', { session })}>
+                                <Bell className="mr-2 h-4 w-4" />Notificar Asistentes
                             </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => handleAction('notify-attendees', { session })}>
-                                    <Bell className="mr-2 h-4 w-4" />Notificar Asistentes
+                            {isDailyView && (
+                                <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session })} disabled={isCancelledToday}>
+                                    <XCircle className="mr-2 h-4 w-4 text-destructive" />
+                                    <span className="text-destructive">Cancelar solo por hoy</span>
                                 </DropdownMenuItem>
-                                {isDailyView && (
-                                    <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session })}>
-                                        <XCircle className="mr-2 h-4 w-4 text-destructive" />
-                                        <span className="text-destructive">Cancelar solo por hoy</span>
-                                    </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => handleAction('edit-session', { session })}>
-                                    <Pencil className="mr-2 h-4 w-4" />Editar Sesión
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => handleAction('delete-session', { session })} className="text-destructive focus:text-destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" />Eliminar Sesión
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    )}
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onSelect={() => handleAction('edit-session', { session })}>
+                                <Pencil className="mr-2 h-4 w-4" />Editar Sesión
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleAction('delete-session', { session })} className="text-destructive focus:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />Eliminar Sesión
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <div className="text-sm text-slate-600 dark:text-slate-400">
                     <p className="font-semibold">{session.dayOfWeek}, {formatTime(session.time)}</p>
                 </div>
             </CardHeader>
             <CardContent className="p-4 pt-2 flex-grow space-y-4">
-                {isCancelledToday ? (
-                     <div className="flex flex-col items-center justify-center h-full text-center text-destructive">
-                        <XCircle className="h-8 w-8 mb-2" />
-                        <p className="font-bold">Clase Cancelada Hoy</p>
-                    </div>
-                ) : (
-                    <div className="space-y-1 text-sm">
-                        <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
-                        <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
-                        {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
-                    </div>
+                 <div className="space-y-1 text-sm">
+                    <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
+                    <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
+                    {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
+                </div>
+                 {isCancelledToday && (
+                    <Alert variant="destructive" className="p-2 text-center">
+                        <XCircle className="h-4 w-4" />
+                        <AlertDescription className="font-semibold">
+                            Clase Cancelada Hoy
+                        </AlertDescription>
+                    </Alert>
                 )}
             </CardContent>
-             <CardFooter className={cn("flex flex-col gap-2 border-t border-white/20 p-2 mt-auto", isCancelledToday && "hidden")}>
+             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div 
                   className="w-full px-2 pt-1 space-y-1 cursor-pointer"
                   onClick={() => handleAction('view-students', { session })}
@@ -168,10 +168,10 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                 }
                 {isDailyView ? (
                     <div className="w-full grid grid-cols-2 gap-2 p-1">
-                         <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('take-attendance', { session })}>
+                         <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('take-attendance', { session })} disabled={isCancelledToday}>
                             <ClipboardCheck className="mr-1.5 h-4 w-4" /> Asistencia
                         </Button>
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull || isCancelledToday}>
                             <CalendarClock className="mr-1.5 h-4 w-4" /> Recupero
                         </Button>
                     </div>
