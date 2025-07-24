@@ -102,7 +102,7 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                           <DropdownMenuItem onSelect={() => handleAction('enroll-fixed', { session })}>
+                           <DropdownMenuItem onSelect={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
                              <Users className="mr-2 h-4 w-4" />Inscripción Fija
                            </DropdownMenuItem>
                            <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })} disabled={!isFixedFull}>
