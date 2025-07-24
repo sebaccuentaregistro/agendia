@@ -2,6 +2,7 @@
 
 'use client';
 
+import React, { useState } from 'react';
 import type { ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
@@ -11,14 +12,28 @@ import { usePathname } from 'next/navigation';
 import { OperatorLoginScreen } from './operator-login-screen';
 import { cn } from '@/lib/utils';
 import { Heart } from 'lucide-react';
+import { PersonDialog } from '@/components/students/person-dialog';
+import { WelcomeDialog } from '@/components/welcome-dialog';
+import { SessionDialog } from '@/components/schedule/session-dialog';
+import type { Person, Session } from '@/types';
 
 function ShellContent({ children }: { children: ReactNode }) {
-    const { activeOperator } = useAuth();
+    const { 
+        activeOperator, 
+        isPersonDialogGloballyOpen,
+        setIsPersonDialogGloballyOpen,
+        isSessionDialogGloballyOpen,
+        setIsSessionDialogGloballyOpen,
+        personForWelcome,
+        setPersonForWelcome,
+        sessionToEdit,
+        setSessionToEdit,
+        isLimitReached,
+    } = useAuth();
     const pathname = usePathname();
     const isOperatorsPage = pathname === '/operators';
     const isSuperAdminPage = pathname.startsWith('/superadmin');
 
-    // Allow access to operators page and superadmin page without an active operator selected
     if (!activeOperator && !isOperatorsPage && !isSuperAdminPage) {
         return <OperatorLoginScreen />;
     }
@@ -30,6 +45,26 @@ function ShellContent({ children }: { children: ReactNode }) {
                 {children}
             </main>
             <MobileBottomNav />
+            
+             <PersonDialog
+                open={isPersonDialogGloballyOpen}
+                onOpenChange={setIsPersonDialogGloballyOpen}
+                onPersonCreated={(person) => {
+                  if (person.tariffId) {
+                    setPersonForWelcome(person);
+                  }
+                }}
+                isLimitReached={isLimitReached}
+            />
+            <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
+            <SessionDialog
+              isOpen={isSessionDialogGloballyOpen}
+              onClose={() => {
+                setIsSessionDialogGloballyOpen(false);
+                setSessionToEdit(null);
+              }}
+              session={sessionToEdit}
+            />
         </div>
     );
 }

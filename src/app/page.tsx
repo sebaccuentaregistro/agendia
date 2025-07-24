@@ -19,51 +19,28 @@ import { OnboardingTutorial } from '@/components/onboarding-tutorial';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { PersonDialog } from '@/components/students/person-dialog';
-import { WelcomeDialog } from '@/components/welcome-dialog';
 import { TodaySessions } from '@/components/dashboard/today-sessions';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
 import { WaitlistOpportunities, type Opportunity } from '@/components/waitlist-opportunities';
 import { ChurnRiskAlerts } from '@/components/churn-risk-alerts';
-import { PaymentReminderDialog } from '@/components/payment-reminder-dialog';
-import { MassReminderDialog } from '@/components/mass-reminder-dialog';
 import { PinDialog } from '@/components/pin-dialog';
 import { PaymentRemindersSheet } from '@/components/students/payment-reminders-sheet';
 import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogFooter, DialogTitle } from '@/components/ui/dialog';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { MainCards } from '@/components/dashboard/main-cards';
-
-
-const sessionFormSchema = z.object({
-  instructorId: z.string().min(1, { message: 'Debes seleccionar un especialista.' }),
-  actividadId: z.string().min(1, { message: 'Debes seleccionar una actividad.' }),
-  spaceId: z.string().min(1, { message: 'Debes seleccionar un espacio.' }),
-  dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
-  time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
-  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
-});
 
 
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses, addSession, updateSession, deleteSession
+    updateOverdueStatuses
   } = useStudio();
-  const { institute, isPinVerified, setPinVerified } = useAuth();
+  const { isPinVerified, setPinVerified, openSessionDialog } = useAuth();
   
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
@@ -79,28 +56,13 @@ function DashboardPageContent() {
   const router = useRouter();
   
   const dashboardView = searchParams.get('view') || 'main';
-
-  const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
-  const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
-
-  const [paymentReminderInfo, setPaymentReminderInfo] = useState<PaymentReminderInfo | null>(null);
-  const [isMassReminderOpen, setIsMassReminderOpen] = useState(false);
   
   // States for dialogs triggered from ScheduleCard
   const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
   const [sessionForOneTime, setSessionForOneTime] = useState<Session | null>(null);
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
-  const [isSessionDialogOpen, setIsSessionDialogOpen] = useState(false);
-  const [selectedSessionForEdit, setSelectedSessionForEdit] = useState<Session | null>(null);
-  const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   
-  const sessionForm = useForm<z.infer<typeof sessionFormSchema>>({
-    resolver: zodResolver(sessionFormSchema),
-    defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
-  });
-
-
   useEffect(() => {
     setIsMounted(true);
     
@@ -126,19 +88,7 @@ function DashboardPageContent() {
                 setSessionForWaitlist(session);
                 break;
             case 'edit-session':
-                setSelectedSessionForEdit(session);
-                sessionForm.reset({
-                    instructorId: session.instructorId,
-                    actividadId: session.actividadId,
-                    spaceId: session.spaceId,
-                    dayOfWeek: session.dayOfWeek,
-                    time: session.time,
-                    levelId: session.levelId || 'none',
-                });
-                setIsSessionDialogOpen(true);
-                break;
-            case 'delete-session':
-                setSessionForDelete(session);
+                openSessionDialog(session);
                 break;
         }
     };
@@ -147,33 +97,7 @@ function DashboardPageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [sessionForm]);
-  
-  const onSessionSubmit = (values: z.infer<typeof sessionFormSchema>) => {
-    const sessionData = {
-        ...values,
-        levelId: values.levelId === 'none' ? undefined : values.levelId,
-    };
-    if (selectedSessionForEdit) {
-      updateSession({ ...selectedSessionForEdit, ...sessionData });
-    } else {
-      addSession(sessionData);
-    }
-    setIsSessionDialogOpen(false);
-  };
-
-  const handleDeleteSession = () => {
-    if (sessionForDelete) {
-      deleteSession(sessionForDelete.id);
-      setSessionForDelete(null);
-    }
-  };
-  
-  const availableSpecialists = useMemo(() => {
-    const actividadId = sessionForm.watch('actividadId');
-    if (!actividadId) return specialists;
-    return specialists.filter(s => s.actividadIds.includes(actividadId));
-  }, [specialists, sessionForm]);
+  }, [openSessionDialog]);
 
 
   const handleUpdateDebts = async () => {
@@ -365,12 +289,6 @@ function DashboardPageContent() {
     recoveryCount,
   } = clientSideData;
   
-  const isLimitReached = useMemo(() => {
-    if (!institute) return false;
-    const limit = institute?.studentLimit;
-    return (limit !== null && limit !== undefined) ? people.length >= limit : false;
-  }, [people.length, institute]);
-
 
   useEffect(() => {
     if (!isMounted) return;
@@ -565,83 +483,7 @@ function DashboardPageContent() {
         )}
     
       <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
-       <Dialog open={isSessionDialogOpen} onOpenChange={setIsSessionDialogOpen}>
-          <DialogContent>
-              <DialogHeader><DialogTitle>{selectedSessionForEdit ? 'Editar Sesión' : 'Nueva Sesión'}</DialogTitle></DialogHeader>
-              <Form {...sessionForm}>
-                <form onSubmit={sessionForm.handleSubmit(onSessionSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={sessionForm.control} name="actividadId" render={({ field }) => (
-                      <FormItem><FormLabel>Actividad</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{actividades.map(a => <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                    <FormField control={sessionForm.control} name="instructorId" render={({ field }) => (
-                      <FormItem><FormLabel>Especialista</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{availableSpecialists.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                  </div>
-                  <FormField control={sessionForm.control} name="spaceId" render={({ field }) => (
-                      <FormItem><FormLabel>Espacio</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                            <SelectContent>{spaces.map(s => <SelectItem key={s.id} value={s.id}>{s.name} (Cap: {s.capacity})</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={sessionForm.control} name="dayOfWeek" render={({ field }) => (
-                      <FormItem><FormLabel>Día de la semana</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
-                            <SelectContent>{['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}</SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                    <FormField control={sessionForm.control} name="time" render={({ field }) => (
-                        <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                  </div>
-                   <FormField control={sessionForm.control} name="levelId" render={({ field }) => (
-                      <FormItem><FormLabel>Nivel (Opcional)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Sin nivel" /></SelectTrigger></FormControl>
-                            <SelectContent>
-                                <SelectItem value="none">Sin nivel</SelectItem>
-                                {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select><FormMessage />
-                      </FormItem>
-                    )}/>
-                  <DialogFooter>
-                      <Button variant="outline" type="button" onClick={() => setIsSessionDialogOpen(false)}>Cancelar</Button>
-                      <Button type="submit">Guardar Cambios</Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-          </DialogContent>
-      </Dialog>
       
-      <AlertDialog open={!!sessionForDelete} onOpenChange={() => setSessionForDelete(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
-            <AlertDialogDescriptionAlert>Esta acción no se puede deshacer. Esto eliminará permanentemente la sesión. Si hay personas inscriptas, no podrás eliminarla.</AlertDialogDescriptionAlert>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteSession} className="bg-destructive hover:bg-destructive/90">Sí, eliminar sesión</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
             session={selectedSessionForStudents}
@@ -678,17 +520,6 @@ function DashboardPageContent() {
             onClose={() => setSessionForWaitlist(null)}
         />
       )}
-      <PersonDialog
-        open={isPersonDialogOpen}
-        onOpenChange={setIsPersonDialogOpen}
-        onPersonCreated={(person) => {
-          if (person.tariffId) {
-            setPersonForWelcome(person);
-          }
-        }}
-        isLimitReached={isLimitReached}
-      />
-      <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
       <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
       <PaymentRemindersSheet 
         isOpen={isRemindersSheetOpen} 

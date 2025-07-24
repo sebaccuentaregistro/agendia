@@ -24,7 +24,7 @@ const oneTimeAttendeeSchema = z.object({
     date: z.date({ required_error: 'Debes seleccionar una fecha.' }),
 });
 
-export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }: { session: Session; preselectedPersonId?: string | null; onClose: () => void }) {
+export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
   const { people, addOneTimeAttendee, actividades, attendance, spaces, isPersonOnVacation } = useStudio();
   const actividad = actividades.find(a => a.id === session.actividadId);
   const space = spaces.find(s => s.id === session.spaceId);
@@ -34,7 +34,7 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
     resolver: zodResolver(oneTimeAttendeeSchema),
     defaultValues: {
-        personId: preselectedPersonId || undefined,
+        personId: undefined,
         date: undefined,
     }
   });
@@ -91,30 +91,11 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
 
-  
-  useEffect(() => {
-    if (preselectedPersonId) {
-      form.setValue('personId', preselectedPersonId, { shouldValidate: true });
-      form.trigger('personId');
-    }
-  }, [preselectedPersonId, form]);
-
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
     addOneTimeAttendee(session.id, values.personId, values.date);
     onClose();
   }
   
-  const preselectedPersonData = preselectedPersonId ? people.find(p => p.id === preselectedPersonId) : null;
-  const finalEligiblePeople = useMemo(() => {
-    if (!preselectedPersonData) return eligiblePeople;
-    const list = [...eligiblePeople];
-    if (!list.some(p => p.id === preselectedPersonData.id)) {
-        list.unshift(preselectedPersonData);
-    }
-    return list;
-  }, [eligiblePeople, preselectedPersonData]);
-
-
   return (
     <Dialog open onOpenChange={onClose}>
         <DialogContent>
@@ -191,12 +172,12 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
                                         </SelectTrigger>
                                     </FormControl>
                                     <SelectContent>
-                                        {finalEligiblePeople.map(person => (
+                                        {eligiblePeople.map(person => (
                                             <SelectItem key={person.id} value={person.id}>
                                               {person.name}
                                             </SelectItem>
                                         ))}
-                                        {finalEligiblePeople.length === 0 && (
+                                        {eligiblePeople.length === 0 && (
                                             <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
                                     </SelectContent>
@@ -217,4 +198,3 @@ export function OneTimeAttendeeDialog({ session, preselectedPersonId, onClose }:
     </Dialog>
   );
 }
-

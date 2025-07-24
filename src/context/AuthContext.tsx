@@ -1,12 +1,14 @@
 
+
 'use client';
 
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, type User } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, collection, writeBatch, updateDoc } from 'firebase/firestore';
-import type { LoginCredentials, SignupCredentials, UserProfile, Institute, Operator } from '@/types';
+import type { LoginCredentials, SignupCredentials, UserProfile, Institute, Operator, Person, Session } from '@/types';
 import { usePathname, useRouter } from 'next/navigation';
+import { useStudio } from './StudioContext';
 
 const PIN_VERIFIED_KEY = 'agendia-pin-verified';
 const ACTIVE_OPERATOR_KEY = 'agendia-active-operator';
@@ -27,6 +29,19 @@ type AuthContextType = {
   validatePin: (pin: string) => Promise<boolean>;
   setupOwnerPin: (data: { ownerPin: string; recoveryEmail: string }) => Promise<void>;
   sendPasswordReset: (email: string) => Promise<void>;
+
+  // Global Dialog State
+  isPersonDialogGloballyOpen: boolean;
+  setIsPersonDialogGloballyOpen: (open: boolean) => void;
+  openPersonDialog: () => void;
+  isSessionDialogGloballyOpen: boolean;
+  setIsSessionDialogGloballyOpen: (open: boolean) => void;
+  openSessionDialog: (session: Session | null) => void;
+  sessionToEdit: Session | null;
+  setSessionToEdit: (session: Session | null) => void;
+  personForWelcome: Person | null;
+  setPersonForWelcome: (person: Person | null) => void;
+  isLimitReached: boolean;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,7 +49,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const protectedRoutes = ['/', '/schedule', '/students', '/instructors', '/specializations', '/spaces', '/levels', '/tariffs', '/statistics', '/payments', '/operators'];
 const authRoutes = ['/login'];
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+function AuthProviderInner({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
     const [institute, setInstitute] = useState<Institute | null>(null);
@@ -43,6 +58,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [activeOperator, _setActiveOperator] = useState<Operator | null>(null);
     const router = useRouter();
     const pathname = usePathname();
+    const studio = useStudio(); // Can be null if not wrapped
+
+    // Global Dialog State
+    const [isPersonDialogGloballyOpen, setIsPersonDialogGloballyOpen] = useState(false);
+    const [isSessionDialogGloballyOpen, setIsSessionDialogGloballyOpen] = useState(false);
+    const [sessionToEdit, setSessionToEdit] = useState<Session | null>(null);
+    const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
+
+    const isLimitReached = useMemo(() => {
+        if (!institute || !studio) return false;
+        const limit = institute?.studentLimit;
+        return (limit !== null && limit !== undefined) ? studio.people.length >= limit : false;
+    }, [studio, institute]);
+
+
+    const openPersonDialog = () => setIsPersonDialogGloballyOpen(true);
+    const openSessionDialog = (session: Session | null) => {
+        setSessionToEdit(session);
+        setIsSessionDialogGloballyOpen(true);
+    };
 
     const fetchInstituteData = useCallback(async (instituteId: string) => {
         const instituteDocRef = doc(db, 'institutes', instituteId);
@@ -128,7 +163,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setLoading(true); // Start loading when auth state changes
+            setLoading(true);
             if (user) {
                 setUser(user);
                 await fetchUserData(user);
@@ -136,8 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser(null);
                 setUserProfile(null);
                 setInstitute(null);
-                setPinVerified(false); // Clear pin status on logout
-                setActiveOperator(null); // Clear active operator on logout
+                setPinVerified(false);
+                setActiveOperator(null);
             }
             setLoading(false);
         });
@@ -167,7 +202,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const login = async ({ email, password }: LoginCredentials) => {
         const userCredential = await signInWithEmailAndPassword(auth, email, password);
         if (userCredential.user) {
-            // Force refetch of user data upon login
             await fetchUserData(userCredential.user);
         }
     };
@@ -185,6 +219,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             createdAt: new Date(),
             ownerPin: ownerPin,
             recoveryEmail: recoveryEmail,
+            studentLimit: 50, // Default limit
+            planType: 'esencial'
         });
 
         const userRef = doc(db, 'users', newUser.uid);
@@ -242,9 +278,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         validatePin,
         setupOwnerPin,
         sendPasswordReset,
+        isPersonDialogGloballyOpen,
+        setIsPersonDialogGloballyOpen,
+        openPersonDialog,
+        isSessionDialogGloballyOpen,
+        setIsSessionDialogGloballyOpen,
+        openSessionDialog,
+        sessionToEdit,
+        setSessionToEdit,
+        personForWelcome,
+        setPersonForWelcome,
+        isLimitReached,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  // Wrap with StudioProvider so we can access its context inside AuthProviderInner
+  return (
+    <StudioProvider>
+      <AuthProviderInner>{children}</AuthProviderInner>
+    </StudioProvider>
+  )
 }
 
 export function useAuth() {
