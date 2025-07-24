@@ -145,7 +145,7 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     <Progress value={stats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
                 <div className="w-full grid grid-cols-2 gap-2 p-1">
-                     <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })}>
+                     <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
                         <UserPlus className="mr-2 h-4 w-4" /> Inscripción Fija
                     </Button>
                     {isDailyView ? (
