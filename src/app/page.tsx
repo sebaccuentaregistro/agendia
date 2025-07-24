@@ -522,7 +522,7 @@ function DashboardPageContent() {
                       </FormItem>
                     )}/>
                   </div>
-                  <FormField control={form.control} name="spaceId" render={({ field }) => (
+                  <FormField control={sessionForm.control} name="spaceId" render={({ field }) => (
                       <FormItem><FormLabel>Espacio</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
@@ -543,7 +543,7 @@ function DashboardPageContent() {
                         <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                   </div>
-                   <FormField control={form.control} name="levelId" render={({ field }) => (
+                   <FormField control={sessionForm.control} name="levelId" render={({ field }) => (
                       <FormItem><FormLabel>Nivel (Opcional)</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Sin nivel" /></SelectTrigger></FormControl>
