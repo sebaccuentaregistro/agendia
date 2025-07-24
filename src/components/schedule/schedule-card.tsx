@@ -2,16 +2,16 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useMemo } from 'react';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Progress } from '@/components/ui/progress';
 import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
-import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, AlertTriangle, UserPlus } from 'lucide-react';
+import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, UserPlus } from 'lucide-react';
 import type { Session, Person } from '@/types';
-import { format, isBefore, isAfter, parse, startOfDay, addMinutes, subMinutes } from 'date-fns';
+import { format, isAfter, startOfDay, subMinutes } from 'date-fns';
 
 interface ScheduleCardProps {
     session: Session;
@@ -145,20 +145,27 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     </div>
                     <Progress value={stats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
-                <div className="w-full grid grid-cols-2 gap-2 p-1">
-                     <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
-                        <UserPlus className="mr-2 h-4 w-4" /> Inscripción
-                    </Button>
-                    {isDailyView ? (
+                {isDailyView ? (
+                    // --- Daily View Footer (Inicio) ---
+                     <div className="w-full grid grid-cols-2 gap-2 p-1">
+                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                        </Button>
                         <Button size="sm" onClick={() => handleAction('take-attendance', { session })} disabled={!isAttendanceEnabled}>
                             <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
                         </Button>
-                    ) : (
-                         <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                    </div>
+                ) : (
+                    // --- Structural View Footer (Horarios) ---
+                    <div className="w-full grid grid-cols-2 gap-2 p-1">
+                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
+                            <UserPlus className="mr-2 h-4 w-4" /> Inscripción
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
                             <CalendarClock className="mr-2 h-4 w-4" /> Recupero
                         </Button>
-                    )}
-                </div>
+                    </div>
+                )}
             </CardFooter>
         </Card>
     );
