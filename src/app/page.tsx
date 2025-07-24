@@ -529,7 +529,7 @@ function DashboardPageContent() {
                       </FormItem>
                     )}/>
                   </div>
-                  <FormField control={form.control} name="spaceId" render={({ field }) => (
+                  <FormField control={sessionForm.control} name="spaceId" render={({ field }) => (
                       <FormItem><FormLabel>Espacio</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
@@ -538,7 +538,7 @@ function DashboardPageContent() {
                       </FormItem>
                     )}/>
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={form.control} name="dayOfWeek" render={({ field }) => (
+                    <FormField control={sessionForm.control} name="dayOfWeek" render={({ field }) => (
                       <FormItem><FormLabel>Día de la semana</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
@@ -546,11 +546,11 @@ function DashboardPageContent() {
                         </Select><FormMessage />
                       </FormItem>
                     )}/>
-                    <FormField control={form.control} name="time" render={({ field }) => (
+                    <FormField control={sessionForm.control} name="time" render={({ field }) => (
                         <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                   </div>
-                   <FormField control={form.control} name="levelId" render={({ field }) => (
+                   <FormField control={sessionForm.control} name="levelId" render={({ field }) => (
                       <FormItem><FormLabel>Nivel (Opcional)</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Sin nivel" /></SelectTrigger></FormControl>
