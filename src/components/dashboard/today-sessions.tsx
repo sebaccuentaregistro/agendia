@@ -54,7 +54,7 @@ export function TodaySessions({
         <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg text-foreground">Sesiones de Hoy - {todayName}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
                 <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
                 <SelectTrigger className={cn("w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.specialistId !== 'all' })}>
                     <SelectValue placeholder="Especialista" />

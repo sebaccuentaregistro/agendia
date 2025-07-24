@@ -48,7 +48,7 @@ export function MainCards({ activePeopleCount, overdueCount, recoveryCount }: Ma
                             <card.icon className={`h-4 w-4 text-muted-foreground ${card.color}`} />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-2xl font-bold">{card.value}</div>
+                            <div className="text-3xl font-bold">{card.value}</div>
                         </CardContent>
                     </Card>
                 </Link>
