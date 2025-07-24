@@ -77,12 +77,15 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
         document.dispatchEvent(event);
     };
     
-    const isDailyView = view === 'daily';
-    
-    const stats = isDailyView ? dailyStats : structuralStats;
-    const progressColorClass = getProgressColorClass(stats.utilization);
     const isFixedFull = structuralStats.enrolledCount >= structuralStats.capacity;
     const isDailyFull = dailyStats.enrolledCount >= dailyStats.capacity;
+    
+    const isDailyView = view === 'daily';
+    const stats = isDailyView ? dailyStats : structuralStats;
+    
+    // In structural view (Horarios), we now show daily stats to match button states.
+    const displayStats = isDailyView ? dailyStats : dailyStats;
+    const progressColorClass = getProgressColorClass(displayStats.utilization);
     
     return (
         <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
@@ -121,29 +124,40 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
                     {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
                 </div>
-                 {(dailyStats.vacationingCount > 0 || dailyStats.oneTimeAttendeesCount > 0) && (
-                     <div className="text-xs text-muted-foreground space-y-1">
-                        {dailyStats.oneTimeAttendeesCount > 0 && <p>+ {dailyStats.oneTimeAttendeesCount} recupero(s)</p>}
-                        {dailyStats.vacationingCount > 0 && <p>- {dailyStats.vacationingCount} de vacaciones</p>}
-                    </div>
-                )}
             </CardContent>
             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div className="w-full px-2 pt-1 space-y-1">
                     <div className="flex justify-between items-center text-xs font-semibold">
-                        <span className="text-muted-foreground">{view === 'daily' ? 'Ocupación de Hoy' : 'Ocupación Fija'}</span>
-                        <span className="text-foreground">{view === 'daily' ? `${dailyStats.enrolledCount} / ${dailyStats.capacity}` : `${structuralStats.enrolledCount} / ${structuralStats.capacity}`}</span>
+                        <span className="text-muted-foreground">{isDailyView ? 'Ocupación de Hoy' : 'Ocupación Fija'}</span>
+                        <span className="text-foreground">{`${displayStats.enrolledCount} / ${displayStats.capacity}`}</span>
                     </div>
-                    <Progress value={view === 'daily' ? dailyStats.utilization : structuralStats.utilization} indicatorClassName={getProgressColorClass(view === 'daily' ? dailyStats.utilization : structuralStats.utilization)} className="h-1.5" />
+                    <Progress value={displayStats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
-                <div className="w-full grid grid-cols-2 gap-2 p-1">
-                    <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
-                        <UserPlus className="mr-2 h-4 w-4" /> Inscripción
-                    </Button>
-                     <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
-                        <CalendarClock className="mr-2 h-4 w-4" /> Recupero
-                    </Button>
-                </div>
+                { (dailyStats.vacationingCount > 0 || dailyStats.oneTimeAttendeesCount > 0) &&
+                    <div className="text-xs text-muted-foreground px-2 w-full">
+                        {dailyStats.oneTimeAttendeesCount > 0 && <p>+ {dailyStats.oneTimeAttendeesCount} recupero(s)</p>}
+                        {dailyStats.vacationingCount > 0 && <p>- {dailyStats.vacationingCount} de vacaciones</p>}
+                    </div>
+                }
+                {isDailyView ? (
+                    <div className="w-full grid grid-cols-2 gap-2 p-1">
+                         <Button size="sm" variant="outline" onClick={() => handleAction('take-attendance', { session })}>
+                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="w-full grid grid-cols-2 gap-2 p-1">
+                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
+                            <UserPlus className="mr-2 h-4 w-4" /> Inscripción
+                        </Button>
+                         <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                        </Button>
+                    </div>
+                )}
             </CardFooter>
         </Card>
     );
