@@ -162,3 +162,4 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
         </Card>
     );
 }
+
