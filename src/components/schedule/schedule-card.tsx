@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from '@/components/ui/progress';
 import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
-import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, AlertTriangle } from 'lucide-react';
+import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, AlertTriangle, UserPlus } from 'lucide-react';
 import type { Session, Person } from '@/types';
 import { format, isBefore, isAfter, parse, startOfDay, addMinutes, subMinutes } from 'date-fns';
 
@@ -102,8 +102,8 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                           <DropdownMenuItem onSelect={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
-                             <Users className="mr-2 h-4 w-4" />Inscripción Fija
+                           <DropdownMenuItem onSelect={() => handleAction('enroll-fixed', { session })}>
+                             <UserPlus className="mr-2 h-4 w-4" />Inscripción Fija
                            </DropdownMenuItem>
                            <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })} disabled={!isFixedFull}>
                              <ListPlus className="mr-2 h-4 w-4" />Añadir a Lista de Espera

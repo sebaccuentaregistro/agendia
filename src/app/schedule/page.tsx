@@ -115,7 +115,7 @@ function SchedulePageContent() {
             if (dayComparison !== 0) return dayComparison;
             return a.time.localeCompare(b.time);
         });
-  }, [sessions, filters, searchParams]);
+  }, [sessions, filters]);
   
 
   const getSessionDetails = (session: Session) => {
