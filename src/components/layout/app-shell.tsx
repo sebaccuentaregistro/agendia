@@ -2,11 +2,11 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
-import { StudioProvider } from '@/context/StudioContext';
+import { StudioProvider, useStudio } from '@/context/StudioContext';
 import { useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 import { OperatorLoginScreen } from './operator-login-screen';
@@ -17,19 +17,26 @@ import { WelcomeDialog } from '@/components/welcome-dialog';
 import { SessionDialog } from '@/components/schedule/session-dialog';
 import type { Person, Session } from '@/types';
 
-function ShellContent({ children }: { children: ReactNode }) {
-    const { 
-        activeOperator, 
-        isPersonDialogGloballyOpen,
-        setIsPersonDialogGloballyOpen,
-        isSessionDialogGloballyOpen,
-        setIsSessionDialogGloballyOpen,
-        personForWelcome,
-        setPersonForWelcome,
-        sessionToEdit,
-        setSessionToEdit,
-        isLimitReached,
-    } = useAuth();
+function ShellLogic({ children }: { children: ReactNode }) {
+    const { activeOperator, setPeopleCount, isLimitReached } = useAuth();
+    const { people } = useStudio();
+
+    // Global Dialog State
+    const [isPersonDialogGloballyOpen, setIsPersonDialogGloballyOpen] = useState(false);
+    const [isSessionDialogGloballyOpen, setIsSessionDialogGloballyOpen] = useState(false);
+    const [sessionToEdit, setSessionToEdit] = useState<Session | null>(null);
+    const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
+
+    const openPersonDialog = () => setIsPersonDialogGloballyOpen(true);
+    const openSessionDialog = (session: Session | null) => {
+        setSessionToEdit(session);
+        setIsSessionDialogGloballyOpen(true);
+    };
+    
+    useEffect(() => {
+        setPeopleCount(people.length);
+    }, [people, setPeopleCount]);
+
     const pathname = usePathname();
     const isOperatorsPage = pathname === '/operators';
     const isSuperAdminPage = pathname.startsWith('/superadmin');
@@ -40,7 +47,10 @@ function ShellContent({ children }: { children: ReactNode }) {
 
     return (
         <div className="flex min-h-screen w-full flex-col">
-            <AppHeader />
+            <AppHeader 
+                openPersonDialog={openPersonDialog}
+                openSessionDialog={openSessionDialog}
+            />
             <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
                 {children}
             </main>
@@ -105,7 +115,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     return (
         <StudioProvider>
-            <ShellContent>{children}</ShellContent>
+            <ShellLogic>{children}</ShellLogic>
         </StudioProvider>
     );
 }

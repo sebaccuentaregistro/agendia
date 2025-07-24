@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
@@ -12,6 +13,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { useAuth } from '@/context/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
+import type { Session } from '@/types';
 
 const navItems = [
   { href: "/", label: "Inicio" },
@@ -20,10 +22,15 @@ const navItems = [
   { href: "/tariffs", label: "Aranceles" },
 ];
 
-export function AppHeader() {
+interface AppHeaderProps {
+  openPersonDialog: () => void;
+  openSessionDialog: (session: Session | null) => void;
+}
+
+export function AppHeader({ openPersonDialog, openSessionDialog }: AppHeaderProps) {
   const pathname = usePathname();
   const { openTutorial, people } = useStudio();
-  const { logout, activeOperator, logoutOperator, userProfile, institute, openPersonDialog, openSessionDialog } = useAuth();
+  const { logout, activeOperator, logoutOperator, userProfile, institute } = useAuth();
   const router = useRouter();
 
   const handleFullLogout = async () => {
@@ -104,7 +111,7 @@ export function AppHeader() {
                 <DropdownMenuItem onSelect={() => openSessionDialog(null)}>
                     Nuevo Horario
                 </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => openPersonDialog()}>
+                <DropdownMenuItem onSelect={openPersonDialog}>
                     Nueva Persona
                 </DropdownMenuItem>
             </DropdownMenuContent>
