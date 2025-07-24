@@ -206,7 +206,7 @@ function StudentsPageContent() {
         </Alert>
       )}
 
-       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
                 <TabsList className="grid w-full grid-cols-2 sm:w-auto">
                     <TabsTrigger value="active">Activos ({people.length})</TabsTrigger>
@@ -231,83 +231,81 @@ function StudentsPageContent() {
                 </div>
             </div>
             <TabsContent value="active" className="mt-6">
-                <Tabs defaultValue={view} className="w-full">
-                    <TabsContent value="cards">
-                       {loading ? (
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
-                            </div>
-                        ) : filteredPeople.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                                {filteredPeople.map((person) => (
-                                    <PersonCard 
-                                        key={person.id} 
-                                        person={person}
-                                        tariff={tariffs.find(t => t.id === person.tariffId)}
-                                        recoveryCreditsCount={(recoveryDetails[person.id] || []).length}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
-                                <CardHeader>
-                                    <CardTitle>{searchTerm || statusFilterFromUrl !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
-                                    <CardDescription>
-                                        {searchTerm || statusFilterFromUrl !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    {!(searchTerm || statusFilterFromUrl !== 'all') && (
-                                        <Button onClick={handleAddClick} disabled={isLimitReached}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            Añadir Persona
-                                        </Button>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-                    </TabsContent>
-                    <TabsContent value="list">
-                        <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Nombre</TableHead>
-                                        <TableHead>Teléfono</TableHead>
-                                        <TableHead>Arancel</TableHead>
-                                        <TableHead>Estado de Pago</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                {filteredPeople.length > 0 ? (
-                                   filteredPeople.map(person => {
-                                       const tariff = tariffs.find(t => t.id === person.tariffId);
-                                       const paymentStatus = getStudentPaymentStatus(person, new Date());
-                                       return (
-                                        <TableRow key={person.id} onClick={() => router.push(`/students/${person.id}`)} className="cursor-pointer">
-                                            <TableCell className="font-medium">{person.name}</TableCell>
-                                            <TableCell>{person.phone}</TableCell>
-                                            <TableCell>{tariff?.name || 'N/A'}</TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className={cn(getStatusBadgeClass(paymentStatus.status))}>
-                                                    {paymentStatus.status}
-                                                </Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                       )
-                                   })
-                                ) : (
-                                    <TableRow>
-                                        <TableCell colSpan={4} className="h-24 text-center">
-                                            No se encontraron personas con los filtros actuales.
+                {view === 'cards' && (
+                    loading ? (
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
+                        </div>
+                    ) : filteredPeople.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            {filteredPeople.map((person) => (
+                                <PersonCard 
+                                    key={person.id} 
+                                    person={person}
+                                    tariff={tariffs.find(t => t.id === person.tariffId)}
+                                    recoveryCreditsCount={(recoveryDetails[person.id] || []).length}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                            <CardHeader>
+                                <CardTitle>{searchTerm || statusFilterFromUrl !== 'all' ? "No se encontraron personas" : "No Hay Personas"}</CardTitle>
+                                <CardDescription>
+                                    {searchTerm || statusFilterFromUrl !== 'all' ? "Prueba con otros filtros o limpia la búsqueda." : "Empieza a construir tu comunidad añadiendo tu primera persona."}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {!(searchTerm || statusFilterFromUrl !== 'all') && (
+                                    <Button onClick={handleAddClick} disabled={isLimitReached}>
+                                        <PlusCircle className="mr-2 h-4 w-4" />
+                                        Añadir Persona
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )
+                )}
+                {view === 'list' && (
+                    <Card className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Nombre</TableHead>
+                                    <TableHead>Teléfono</TableHead>
+                                    <TableHead>Arancel</TableHead>
+                                    <TableHead>Estado de Pago</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                            {filteredPeople.length > 0 ? (
+                               filteredPeople.map(person => {
+                                   const tariff = tariffs.find(t => t.id === person.tariffId);
+                                   const paymentStatus = getStudentPaymentStatus(person, new Date());
+                                   return (
+                                    <TableRow key={person.id} onClick={() => router.push(`/students/${person.id}`)} className="cursor-pointer">
+                                        <TableCell className="font-medium">{person.name}</TableCell>
+                                        <TableCell>{person.phone}</TableCell>
+                                        <TableCell>{tariff?.name || 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline" className={cn(getStatusBadgeClass(paymentStatus.status))}>
+                                                {paymentStatus.status}
+                                            </Badge>
                                         </TableCell>
                                     </TableRow>
-                                )}
-                                </TableBody>
-                            </Table>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
+                                   )
+                               })
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={4} className="h-24 text-center">
+                                        No se encontraron personas con los filtros actuales.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                            </TableBody>
+                        </Table>
+                    </Card>
+                )}
             </TabsContent>
              <TabsContent value="inactive" className="mt-6">
                 <div className="mt-8">
@@ -375,7 +373,3 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
-
-    
-
-    
