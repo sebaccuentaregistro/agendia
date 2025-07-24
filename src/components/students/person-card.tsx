@@ -2,7 +2,6 @@
 
 'use client';
 
-import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useStudio } from '@/context/StudioContext';
@@ -59,7 +58,7 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
     
     return (
         <Link href={`/students/${person.id}`} className="block">
-            <Card className="flex flex-col h-full rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary">
+            <Card className="flex flex-col h-full rounded-2xl shadow-lg border-border/20 bg-card transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary">
                 <CardHeader className="p-4">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-lg font-bold truncate">{person.name}</CardTitle>
@@ -67,14 +66,22 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                             <div className="flex items-center gap-2">
                                {onVacation && (
                                  <Tooltip>
-                                    <TooltipTrigger><Plane className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
-                                    <TooltipContent><p>De vacaciones</p></TooltipContent>
+                                    <TooltipTrigger asChild>
+                                        <Plane className="h-4 w-4 text-muted-foreground"/>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>De vacaciones</p>
+                                    </TooltipContent>
                                  </Tooltip>
                                )}
                                {recoveryCreditsCount > 0 && (
                                 <Tooltip>
-                                    <TooltipTrigger><CalendarClock className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
-                                    <TooltipContent><p>{recoveryCreditsCount} recupero(s) pendiente(s)</p></TooltipContent>
+                                    <TooltipTrigger asChild>
+                                        <CalendarClock className="h-4 w-4 text-muted-foreground"/>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{recoveryCreditsCount} recupero(s) pendiente(s)</p>
+                                    </TooltipContent>
                                 </Tooltip>
                                )}
                             </div>
