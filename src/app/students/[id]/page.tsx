@@ -4,9 +4,9 @@
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, MoreVertical, CalendarClock, Plane, Calendar as CalendarIcon, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Signal, DollarSign, ArrowLeft, UserX } from 'lucide-react';
+import { Pencil, Trash2, MoreVertical, CalendarClock, Plane, Calendar as CalendarIcon, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Signal, DollarSign, ArrowLeft, UserX, PlusCircle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Person, Payment, Session, Actividad, Specialist, Space, RecoveryCredit, Level, Tariff } from '@/types';
+import { Person, Session, Actividad, Specialist, Space, RecoveryCredit, Level, Tariff } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { getStudentPaymentStatus, calculateNextPaymentDate } from '@/lib/utils';
@@ -33,7 +33,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { 
     people, sessions, actividades, specialists, spaces, levels, tariffs, attendance, payments, 
-    deactivatePerson, revertLastPayment, recordPayment, loading 
+    deactivatePerson, revertLastPayment, recordPayment, loading, removePersonFromSession
   } = useStudio();
   
   const [person, setPerson] = useState<Person | null>(null);
@@ -51,6 +51,8 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   
   const [receiptInfo, setReceiptInfo] = useState<ReceiptInfo | null>(null);
   const { institute } = useAuth();
+  const [sessionToUnenroll, setSessionToUnenroll] = useState<Session | null>(null);
+
 
   useEffect(() => {
     if (!loading) {
@@ -151,6 +153,13 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     setIsDeactivateAlertOpen(false);
     router.push('/students');
   };
+
+  const handleUnenroll = () => {
+    if (sessionToUnenroll && person) {
+      removePersonFromSession(sessionToUnenroll.id, person.id);
+    }
+    setSessionToUnenroll(null);
+  };
   
   const getStatusBadgeClass = (status: typeof paymentStatusInfo.status) => {
     switch (status) {
@@ -205,6 +214,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={() => setIsPersonDialogOpen(true)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsVacationDialogOpen(true)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsJustifyAbsenceOpen(true)}><UserX className="mr-2 h-4 w-4"/>Notificar Ausencia</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsRevertAlertOpen(true)} disabled={personPaymentCount === 0}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={() => setIsDeactivateAlertOpen(true)} className="text-destructive focus:text-destructive"><UserX className="mr-2 h-4 w-4" />Desactivar Persona</DropdownMenuItem>
@@ -249,9 +259,14 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             <div className="space-y-8">
                 <Card className="w-full">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                             <ClipboardList className="h-5 w-5 text-primary"/>
-                             Actividad y Horarios
+                        <CardTitle className="flex items-center justify-between">
+                             <span className="flex items-center gap-2">
+                                <ClipboardList className="h-5 w-5 text-primary"/>
+                                Actividad y Horarios
+                             </span>
+                              <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>
+                                <PlusCircle className="mr-2 h-4 w-4"/>Inscribir
+                              </Button>
                         </CardTitle>
                         {recoveryCredits && recoveryCredits.length > 0 && (
                              <CardDescription className="flex items-center gap-1.5 text-amber-600 font-semibold pt-2">
@@ -265,10 +280,15 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                            <div className="space-y-2 pr-4">
                             {personSessions.length > 0 ? (
                                 personSessions.map(session => (
-                                    <div key={session.id} className="text-sm p-2 rounded-md bg-muted/50">
+                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50 group">
                                         <div className="flex justify-between items-start">
-                                          <p className="font-bold text-foreground">{session.actividadName}</p>
-                                          <p className="font-semibold text-xs">{session.dayOfWeek}, {session.time}</p>
+                                          <div>
+                                            <p className="font-bold text-foreground">{session.actividadName}</p>
+                                            <p className="font-semibold text-xs text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
+                                          </div>
+                                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setSessionToUnenroll(session)}>
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                          </Button>
                                         </div>
                                         <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
                                           <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
@@ -284,10 +304,6 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                             </div>
                         </ScrollArea>
                     </CardContent>
-                    <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                         <Button variant="default" onClick={() => setIsEnrollmentDialogOpen(true)}><ClipboardList className="mr-2 h-4 w-4"/>Administrar Inscripciones</Button>
-                         <Button variant="secondary" onClick={() => setIsJustifyAbsenceOpen(true)}><UserX className="mr-2 h-4 w-4"/>Notificar Ausencia</Button>
-                    </CardFooter>
                 </Card>
 
                  <Card>
@@ -327,6 +343,12 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             <AlertDialogContent>
                 <AlertDialogHeader><AlertDialogTitle>¿Registrar Pago Adicional?</AlertDialogTitle><AlertDialogDescription>Este alumno ya tiene su cuota al día. Si continúas, se registrará un pago por adelantado y su próxima fecha de vencimiento se extenderá. ¿Estás seguro?</AlertDialogDescription></AlertDialogHeader>
                 <AlertDialogFooter><AlertDialogCancel onClick={() => setIsPaymentAlertOpen(false)}>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmRecordPayment}>Sí, registrar pago</AlertDialogAction></AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={!!sessionToUnenroll} onOpenChange={() => setSessionToUnenroll(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader><AlertDialogTitle>¿Desinscribir de la clase?</AlertDialogTitle><AlertDialogDescription>Estás a punto de desinscribir a {person.name} de la clase de {sessionToUnenroll?.actividadName}. ¿Estás seguro?</AlertDialogDescription></AlertDialogHeader>
+                <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleUnenroll}>Sí, desinscribir</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
         <AlertDialog open={isRevertAlertOpen} onOpenChange={setIsRevertAlertOpen}>
