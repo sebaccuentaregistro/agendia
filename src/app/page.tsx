@@ -228,7 +228,6 @@ function DashboardPageContent() {
     
     // Waitlist Opportunities Logic
     const waitlistOpportunities: Opportunity[] = [];
-    const dayIndexMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
     
     sessions.forEach(session => {
         if (!session.waitlist || session.waitlist.length === 0) return;
@@ -236,25 +235,14 @@ function DashboardPageContent() {
         const space = spaces.find(s => s.id === session.spaceId);
         if (!space) return;
 
-        const sessionDayIndex = dayIndexMap[session.dayOfWeek];
-        const checkDate = nextDay(today, sessionDayIndex);
-        if (today.getDay() === sessionDayIndex) {
-            checkDate.setDate(checkDate.getDate()); 
-        }
-
-        const dateStr = format(checkDate, 'yyyy-MM-dd');
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
-
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
-        const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, checkDate)).length;
-        const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
+        const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
 
-        const dailyOccupancy = (fixedEnrolledPeople.length - vacationingCount) + oneTimeAttendeesCount;
-        const availableSlotsTotal = space.capacity - dailyOccupancy;
-        
-        if (availableSlotsTotal > 0) {
-            const fixedAvailable = space.capacity - fixedEnrolledPeople.length;
-            
+        // An opportunity only exists if there is a permanent spot available.
+        if (fixedAvailable > 0) {
+            const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
+            const temporaryAvailable = vacationingCount;
+
             const waitlistItems = session.waitlist.map(entry => {
                 if (typeof entry === 'string') {
                     const person = people.find(p => p.id === entry);
@@ -270,8 +258,8 @@ function DashboardPageContent() {
                     waitlist: waitlistItems,
                     availableSlots: {
                         fixed: fixedAvailable,
-                        temporary: vacationingCount,
-                        total: availableSlotsTotal,
+                        temporary: temporaryAvailable,
+                        total: fixedAvailable + temporaryAvailable,
                     }
                 });
             }
@@ -541,7 +529,7 @@ function DashboardPageContent() {
                       </FormItem>
                     )}/>
                   </div>
-                  <FormField control={sessionForm.control} name="spaceId" render={({ field }) => (
+                  <FormField control={form.control} name="spaceId" render={({ field }) => (
                       <FormItem><FormLabel>Espacio</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
@@ -550,7 +538,7 @@ function DashboardPageContent() {
                       </FormItem>
                     )}/>
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FormField control={sessionForm.control} name="dayOfWeek" render={({ field }) => (
+                    <FormField control={form.control} name="dayOfWeek" render={({ field }) => (
                       <FormItem><FormLabel>Día de la semana</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue/></SelectTrigger></FormControl>
@@ -558,11 +546,11 @@ function DashboardPageContent() {
                         </Select><FormMessage />
                       </FormItem>
                     )}/>
-                    <FormField control={sessionForm.control} name="time" render={({ field }) => (
+                    <FormField control={form.control} name="time" render={({ field }) => (
                         <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                     )}/>
                   </div>
-                   <FormField control={sessionForm.control} name="levelId" render={({ field }) => (
+                   <FormField control={form.control} name="levelId" render={({ field }) => (
                       <FormItem><FormLabel>Nivel (Opcional)</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Sin nivel" /></SelectTrigger></FormControl>
