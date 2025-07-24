@@ -8,7 +8,7 @@ import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
-import { CalendarClock, Plane } from 'lucide-react';
+import { CalendarClock, Plane, Heart } from 'lucide-react';
 import type { Person, Tariff, PaymentStatusInfo } from '@/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -23,6 +23,7 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
     const { isPersonOnVacation } = useStudio();
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     const onVacation = isPersonOnVacation(person, new Date());
+    const hasHealthInfo = !!person.healthInfo;
 
     const getStatusBadgeClass = () => {
         switch (paymentStatusInfo.status) {
@@ -67,6 +68,14 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                         </div>
                         <TooltipProvider>
                             <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                               {hasHealthInfo && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <div className="h-4 w-4 text-destructive"><Heart className="h-4 w-4"/></div>
+                                    </TooltipTrigger>
+                                    <TooltipContent><p>Tiene información de salud</p></TooltipContent>
+                                 </Tooltip>
+                               )}
                                {onVacation && (
                                  <Tooltip>
                                      <TooltipTrigger asChild>
@@ -90,7 +99,7 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                     </div>
                 </CardHeader>
                 
-                 <CardFooter className="p-4 pt-0 flex justify-between items-end">
+                 <CardFooter className="p-4 pt-0 flex flex-wrap justify-between items-end gap-2">
                     <Badge variant="outline" className={cn("font-semibold text-xs", getStatusBadgeClass())}>
                         {renderPaymentStatus(paymentStatusInfo)}
                     </Badge>

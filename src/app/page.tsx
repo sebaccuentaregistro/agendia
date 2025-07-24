@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
-import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2, UserPlus, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
 import type { Session, Person, PaymentReminderInfo, WaitlistEntry, WaitlistProspect, RecoveryCredit } from '@/types';
@@ -33,6 +33,7 @@ import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { Badge } from '@/components/ui/badge';
 import { MainCards } from '@/components/dashboard/main-cards';
 import { useShell } from '@/context/ShellContext';
+import { cn } from '@/lib/utils';
 
 
 function DashboardPageContent() {
@@ -318,7 +319,7 @@ function DashboardPageContent() {
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length, description: "Administra las salas y sus capacidades." },
     { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length, description: "Organiza clases y alumnos por nivel." },
     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length, description: "Configura tus planes de precios." },
-    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: ArrowRight, count: null, description: "Controla finanzas, operadores y más." },
+    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: Settings, count: null, description: "Controla finanzas, operadores y más." },
   ];
   
   const advancedCards = [
@@ -405,7 +406,7 @@ function DashboardPageContent() {
                         }}
                       >
                         Próximos Vencimientos
-                        {upcomingCount > 0 && <Badge variant="secondary" className="ml-2">{upcomingCount}</Badge>}
+                        {upcomingCount > 0 && <Badge variant="secondary" className="ml-2 bg-yellow-400/80 text-yellow-900 hover:bg-yellow-400">{upcomingCount}</Badge>}
                       </Button>
                   </CardContent>
                 </Card>

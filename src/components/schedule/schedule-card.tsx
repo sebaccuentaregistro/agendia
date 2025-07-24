@@ -151,20 +151,20 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                 }
                 {isDailyView ? (
                     <div className="w-full grid grid-cols-2 gap-2 p-1">
-                         <Button size="sm" variant="outline" onClick={() => handleAction('take-attendance', { session })}>
-                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
+                         <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('take-attendance', { session })}>
+                            <ClipboardCheck className="mr-1.5 h-4 w-4" /> Asistencia
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
-                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                            <CalendarClock className="mr-1.5 h-4 w-4" /> Recupero
                         </Button>
                     </div>
                 ) : (
                     <div className="w-full grid grid-cols-2 gap-2 p-1">
-                        <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
-                            <UserPlus className="mr-2 h-4 w-4" /> Inscripción
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
+                            <UserPlus className="mr-1.5 h-4 w-4" /> Inscripción
                         </Button>
-                         <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
-                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                         <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                            <CalendarClock className="mr-1.5 h-4 w-4" /> Recupero
                         </Button>
                     </div>
                 )}

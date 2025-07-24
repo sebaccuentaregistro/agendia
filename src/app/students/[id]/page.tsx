@@ -327,7 +327,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                     <CardContent className="space-y-3 text-sm">
                         {person.joinDate && <p className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground"/> Se unió el {format(person.joinDate, 'dd MMMM, yyyy', { locale: es })}</p>}
                         {level && <p className="flex items-center gap-2"><Signal className="h-4 w-4 text-muted-foreground"/> Nivel: {level.name}</p>}
-                        {person.healthInfo && <div className="text-sm"><p className="font-semibold flex items-center gap-2"><Heart className="h-4 w-4 text-muted-foreground"/>Info de Salud</p><p className="text-muted-foreground pl-6">{person.healthInfo}</p></div>}
+                        {person.healthInfo && <div className="text-sm"><p className="font-semibold flex items-center gap-2"><Heart className="h-4 w-4 text-destructive"/>Info de Salud</p><p className="text-muted-foreground pl-6">{person.healthInfo}</p></div>}
                         {person.notes && <div className="text-sm"><p className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground"/>Notas</p><p className="text-muted-foreground pl-6">{person.notes}</p></div>}
                          {!person.joinDate && !level && !person.healthInfo && !person.notes && (
                             <p className="text-muted-foreground text-center py-4">No hay información adicional.</p>

@@ -26,11 +26,11 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
 
     const getStatusBadgeClass = () => {
         switch (paymentStatusInfo.status) {
-            case 'Al día': return "bg-green-600 hover:bg-green-700 border-green-700 text-white";
-            case 'Atrasado': return "bg-red-600 hover:bg-red-700 border-red-700 text-white";
-            case 'Próximo a Vencer': return "bg-amber-500 hover:bg-amber-600 border-amber-600 text-white";
-            case 'Pendiente de Pago': return "bg-blue-600 hover:bg-blue-700 border-blue-700 text-white";
-            default: return "bg-gray-500 hover:bg-gray-600 border-gray-600 text-white";
+            case 'Al día': return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700";
+            case 'Atrasado': return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700";
+            case 'Próximo a Vencer': return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700";
+            case 'Pendiente de Pago': return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700";
+            default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
         }
     };
     
@@ -58,44 +58,49 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
     
     return (
         <Link href={`/students/${person.id}`} className="block">
-            <Card className="flex flex-col h-full rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary">
-                <CardHeader className="p-4">
-                    <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-bold truncate">{person.name}</CardTitle>
+            <Card className="flex flex-col h-full rounded-2xl shadow-lg border-border/20 bg-card transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary">
+                <CardHeader className="p-4 flex-grow">
+                    <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                            <CardTitle className="text-lg font-bold truncate">{person.name}</CardTitle>
+                            <CardDescription className="text-xs">{person.phone}</CardDescription>
+                        </div>
                         <TooltipProvider>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                                {onVacation && (
                                  <Tooltip>
-                                    <TooltipTrigger><Plane className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
+                                     <TooltipTrigger asChild>
+                                        <div className="h-4 w-4 text-muted-foreground"><Plane className="h-4 w-4"/></div>
+                                    </TooltipTrigger>
                                     <TooltipContent><p>De vacaciones</p></TooltipContent>
                                  </Tooltip>
                                )}
                                {recoveryCreditsCount > 0 && (
                                 <Tooltip>
-                                    <TooltipTrigger><CalendarClock className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
-                                    <TooltipContent><p>{recoveryCreditsCount} recupero(s) pendiente(s)</p></TooltipContent>
+                                    <TooltipTrigger asChild>
+                                        <div className="h-4 w-4 text-muted-foreground"><CalendarClock className="h-4 w-4"/></div>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>{recoveryCreditsCount} recupero(s) pendiente(s)</p>
+                                    </TooltipContent>
                                 </Tooltip>
                                )}
                             </div>
                         </TooltipProvider>
                     </div>
-                    <CardDescription className="text-xs">{person.phone}</CardDescription>
                 </CardHeader>
-
-                <CardContent className="p-4 pt-0 flex-grow">
-                     <Badge variant="secondary" className={cn("font-semibold text-xs", getStatusBadgeClass())}>
+                
+                 <CardFooter className="p-4 pt-0 flex flex-wrap justify-between items-end gap-2">
+                    <Badge variant="outline" className={cn("font-semibold text-xs", getStatusBadgeClass())}>
                         {renderPaymentStatus(paymentStatusInfo)}
                     </Badge>
-                </CardContent>
-                
-                 <CardFooter className="p-4 pt-0 text-right">
                      {paymentStatusInfo.status === 'Atrasado' && totalDebt > 0 ? (
-                        <div className="text-right w-full">
+                        <div className="text-right">
                             <p className="text-xs text-destructive">Deuda Total</p>
                             <p className="text-lg font-bold text-destructive">{formatPrice(totalDebt)}</p>
                         </div>
                     ) : (
-                         tariff && <p className="text-lg w-full font-bold text-foreground">{formatPrice(tariff.price)}</p>
+                         tariff && <p className="text-lg font-bold text-foreground">{formatPrice(tariff.price)}</p>
                     )}
                 </CardFooter>
             </Card>

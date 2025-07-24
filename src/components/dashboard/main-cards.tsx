@@ -5,6 +5,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, UserX, CalendarClock } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
 interface MainCardsProps {
     activePeopleCount: number;
@@ -16,6 +17,7 @@ export function MainCards({ activePeopleCount, overdueCount, recoveryCount }: Ma
     
     const cardData = [
         {
+            id: 'active',
             href: '/students',
             label: 'Alumnos Activos',
             value: activePeopleCount,
@@ -23,15 +25,17 @@ export function MainCards({ activePeopleCount, overdueCount, recoveryCount }: Ma
             color: 'text-blue-500'
         },
         {
+            id: 'overdue',
             href: '/students?filter=overdue',
-            label: 'Pagos Vencidos',
+            label: 'Vencidos',
             value: overdueCount,
             icon: UserX,
             color: 'text-destructive'
         },
         {
+            id: 'recovery',
             href: '/students?filter=pending-recovery',
-            label: 'Recuperos Pend.',
+            label: 'Recuperos',
             value: recoveryCount,
             icon: CalendarClock,
             color: 'text-amber-500'
@@ -48,7 +52,12 @@ export function MainCards({ activePeopleCount, overdueCount, recoveryCount }: Ma
                             <card.icon className={`h-4 w-4 text-muted-foreground ${card.color}`} />
                         </CardHeader>
                         <CardContent>
-                            <div className="text-3xl font-bold">{card.value}</div>
+                             <div className={cn(
+                                "text-3xl font-bold",
+                                card.id === 'overdue' && card.value > 0 && "text-destructive"
+                            )}>
+                                {card.value}
+                            </div>
                         </CardContent>
                     </Card>
                 </Link>
