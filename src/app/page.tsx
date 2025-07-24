@@ -21,7 +21,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from '@/components/welcome-dialog';
-import { MainCards } from '@/components/dashboard/main-cards';
 import { TodaySessions } from '@/components/dashboard/today-sessions';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { WaitlistSheet } from '@/components/waitlist-sheet';
@@ -415,8 +414,6 @@ function DashboardPageContent() {
       
       {dashboardView === 'main' && (
         <>
-            <MainCards />
-            
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
               <div className="md:col-span-2">
                 <TodaySessions
