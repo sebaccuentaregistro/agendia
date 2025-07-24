@@ -25,12 +25,12 @@ import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
-import { useAuth } from '@/context/AuthContext';
+import { useShell } from '@/context/ShellContext';
 
 
 function SchedulePageContent() {
   const { specialists, actividades, sessions, spaces, deleteSession, levels, loading } = useStudio();
-  const { openSessionDialog } = useAuth();
+  const { openSessionDialog } = useShell();
   
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);

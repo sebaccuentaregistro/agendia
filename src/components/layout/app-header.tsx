@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu';
 import { Separator } from '@/components/ui/separator';
 import type { Session } from '@/types';
+import { useShell } from '@/context/ShellContext';
 
 const navItems = [
   { href: "/", label: "Inicio" },
@@ -22,15 +23,12 @@ const navItems = [
   { href: "/tariffs", label: "Aranceles" },
 ];
 
-interface AppHeaderProps {
-  openPersonDialog: () => void;
-  openSessionDialog: (session: Session | null) => void;
-}
 
-export function AppHeader({ openPersonDialog, openSessionDialog }: AppHeaderProps) {
+export function AppHeader() {
   const pathname = usePathname();
   const { openTutorial, people } = useStudio();
   const { logout, activeOperator, logoutOperator, userProfile, institute } = useAuth();
+  const { openPersonDialog, openSessionDialog } = useShell();
   const router = useRouter();
 
   const handleFullLogout = async () => {

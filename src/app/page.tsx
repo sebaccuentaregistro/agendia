@@ -32,6 +32,7 @@ import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { Badge } from '@/components/ui/badge';
 import { MainCards } from '@/components/dashboard/main-cards';
+import { useShell } from '@/context/ShellContext';
 
 
 function DashboardPageContent() {
@@ -40,7 +41,8 @@ function DashboardPageContent() {
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
     updateOverdueStatuses
   } = useStudio();
-  const { isPinVerified, setPinVerified, openSessionDialog } = useAuth();
+  const { isPinVerified, setPinVerified } = useAuth();
+  const { openSessionDialog } = useShell();
   
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);

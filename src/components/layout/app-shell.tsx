@@ -6,8 +6,8 @@ import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { AppHeader } from './app-header';
 import { MobileBottomNav } from './mobile-bottom-nav';
-import { StudioProvider, useStudio } from '@/context/StudioContext';
-import { useAuth } from '@/context/AuthContext';
+import { StudioProvider } from '@/context/StudioContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { usePathname } from 'next/navigation';
 import { OperatorLoginScreen } from './operator-login-screen';
 import { cn } from '@/lib/utils';
@@ -16,10 +16,10 @@ import { PersonDialog } from '@/components/students/person-dialog';
 import { WelcomeDialog } from '@/components/welcome-dialog';
 import { SessionDialog } from '@/components/schedule/session-dialog';
 import type { Person, Session } from '@/types';
+import { ShellProvider } from '@/context/ShellContext';
 
-function ShellLogic({ children }: { children: ReactNode }) {
-    const { activeOperator, setPeopleCount, isLimitReached } = useAuth();
-    const { people } = useStudio();
+function ShellContent({ children }: { children: ReactNode }) {
+    const { activeOperator, setPeopleCount } = useAuth();
 
     // Global Dialog State
     const [isPersonDialogGloballyOpen, setIsPersonDialogGloballyOpen] = useState(false);
@@ -32,10 +32,6 @@ function ShellLogic({ children }: { children: ReactNode }) {
         setSessionToEdit(session);
         setIsSessionDialogGloballyOpen(true);
     };
-    
-    useEffect(() => {
-        setPeopleCount(people.length);
-    }, [people, setPeopleCount]);
 
     const pathname = usePathname();
     const isOperatorsPage = pathname === '/operators';
@@ -46,11 +42,9 @@ function ShellLogic({ children }: { children: ReactNode }) {
     }
 
     return (
+      <ShellProvider openPersonDialog={openPersonDialog} openSessionDialog={openSessionDialog}>
         <div className="flex min-h-screen w-full flex-col">
-            <AppHeader 
-                openPersonDialog={openPersonDialog}
-                openSessionDialog={openSessionDialog}
-            />
+            <AppHeader />
             <main className="flex-grow p-4 sm:p-6 lg:p-8 pb-20 md:pb-8">
                 {children}
             </main>
@@ -64,7 +58,6 @@ function ShellLogic({ children }: { children: ReactNode }) {
                     setPersonForWelcome(person);
                   }
                 }}
-                isLimitReached={isLimitReached}
             />
             <WelcomeDialog person={personForWelcome} onOpenChange={() => setPersonForWelcome(null)} />
             <SessionDialog
@@ -76,6 +69,7 @@ function ShellLogic({ children }: { children: ReactNode }) {
               session={sessionToEdit}
             />
         </div>
+      </ShellProvider>
     );
 }
 
@@ -115,7 +109,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
     return (
         <StudioProvider>
-            <ShellLogic>{children}</ShellLogic>
+            <ShellContent>{children}</ShellContent>
         </StudioProvider>
     );
 }
