@@ -99,8 +99,8 @@ export function PaymentRemindersSheet({ isOpen, onOpenChange, initialFocus }: Pa
         </h4>
         <div className="space-y-2">
         {peopleList.length > 0 ? peopleList.map(person => (
-            <div key={person.id} className={`flex items-center justify-between text-sm p-3 rounded-lg ${isOverdue ? 'bg-destructive/10' : 'bg-blue-500/10'}`}>
-                <div>
+            <div key={person.id} className={`flex items-start sm:items-center justify-between text-sm p-3 rounded-lg flex-col sm:flex-row gap-2 ${isOverdue ? 'bg-destructive/10' : 'bg-blue-500/10'}`}>
+                <div className="flex-grow">
                     <Link href={`/students?search=${encodeURIComponent(person.name)}`} className="group">
                         <div className="font-medium group-hover:underline">{person.name}</div>
                     </Link>
@@ -108,7 +108,7 @@ export function PaymentRemindersSheet({ isOpen, onOpenChange, initialFocus }: Pa
                         <span>{person.phone}</span>
                     </div>
                 </div>
-                <div className="text-right">
+                <div className="text-right flex-shrink-0 self-end sm:self-center">
                     {isOverdue && person.debt ? (
                         <span className="font-semibold">{formatPrice(person.debt)}</span>
                     ) : (

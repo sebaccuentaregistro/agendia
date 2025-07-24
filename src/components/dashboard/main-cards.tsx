@@ -27,7 +27,7 @@ export function MainCards({ activePeopleCount, overdueCount, recoveryCount }: Ma
         {
             id: 'overdue',
             href: '/students?filter=overdue',
-            label: 'Pagos Vencidos',
+            label: 'Vencidos',
             value: overdueCount,
             icon: UserX,
             color: 'text-destructive'
@@ -35,7 +35,7 @@ export function MainCards({ activePeopleCount, overdueCount, recoveryCount }: Ma
         {
             id: 'recovery',
             href: '/students?filter=pending-recovery',
-            label: 'Recuperos Pend.',
+            label: 'Recuperos',
             value: recoveryCount,
             icon: CalendarClock,
             color: 'text-amber-500'

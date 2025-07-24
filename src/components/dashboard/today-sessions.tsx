@@ -54,9 +54,9 @@ export function TodaySessions({
         <CardHeader>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="text-lg text-foreground">Sesiones de Hoy - {todayName}</CardTitle>
-            <div className="flex flex-wrap items-center gap-2 mb-2">
+            <div className="flex flex-col sm:flex-row flex-wrap items-center gap-2">
                 <Select value={filters.specialistId} onValueChange={(value) => handleFilterChange('specialistId', value)}>
-                <SelectTrigger className={cn("w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.specialistId !== 'all' })}>
+                <SelectTrigger className={cn("w-full sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.specialistId !== 'all' })}>
                     <SelectValue placeholder="Especialista" />
                 </SelectTrigger>
                 <SelectContent>
@@ -65,7 +65,7 @@ export function TodaySessions({
                 </SelectContent>
                 </Select>
                 <Select value={filters.actividadId} onValueChange={(value) => handleFilterChange('actividadId', value)}>
-                <SelectTrigger className={cn("w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.actividadId !== 'all' })}>
+                <SelectTrigger className={cn("w-full sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.actividadId !== 'all' })}>
                     <SelectValue placeholder="Actividad" />
                 </SelectTrigger>
                 <SelectContent>
@@ -74,7 +74,7 @@ export function TodaySessions({
                 </SelectContent>
                 </Select>
                  <Select value={filters.timeOfDay} onValueChange={(value) => handleFilterChange('timeOfDay', value)}>
-                <SelectTrigger className={cn("w-full min-w-[140px] flex-1 sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.timeOfDay !== 'all' })}>
+                <SelectTrigger className={cn("w-full sm:w-auto sm:flex-initial bg-background/70 border-border/50 shadow-sm rounded-xl", { "border-primary/50 text-primary font-semibold": filters.timeOfDay !== 'all' })}>
                     <SelectValue placeholder="Horario" />
                 </SelectTrigger>
                 <SelectContent>

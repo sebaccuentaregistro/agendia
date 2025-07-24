@@ -53,7 +53,7 @@ export function AppHeader() {
                     <span className="text-lg font-semibold text-slate-800 dark:text-white sm:inline">Agendia</span>
                 </div>
                 {institute && (
-                     <p className="text-sm font-semibold text-foreground">{institute.name}</p>
+                     <p className="hidden sm:block text-sm font-semibold text-foreground">{institute.name}</p>
                 )}
             </div>
         </Link>
