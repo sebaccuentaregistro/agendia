@@ -8,7 +8,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
-import type { Session, Person, PaymentReminderInfo, WaitlistEntry, WaitlistProspect } from '@/types';
+import type { Session, Person, PaymentReminderInfo, WaitlistEntry, WaitlistProspect, RecoveryCredit } from '@/types';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AttendanceSheet } from '@/components/attendance-sheet';
@@ -44,6 +44,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { MainCards } from '@/components/dashboard/main-cards';
 
 
 const sessionFormSchema = z.object({
@@ -187,7 +188,7 @@ function DashboardPageContent() {
   
   const clientSideData = useMemo(() => {
     if (!isMounted) {
-      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], overdueCount: 0, upcomingCount: 0 };
+      return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], overdueCount: 0, upcomingCount: 0, recoveryCount: 0 };
     }
     const now = new Date();
     const today = startOfDay(now);
@@ -207,6 +208,38 @@ function DashboardPageContent() {
     
     let overdueCount = 0;
     let upcomingCount = 0;
+    let recoveryPeople = new Set();
+
+    const allRecoveryCredits: Record<string, RecoveryCredit[]> = {};
+    people.forEach(p => (allRecoveryCredits[p.id] = []));
+    
+    let usedRecoveryCounts: Record<string, number> = {};
+    people.forEach(p => (usedRecoveryCounts[p.id] = 0));
+
+    attendance.forEach(record => {
+        (record.oneTimeAttendees || []).forEach(personId => {
+            if (usedRecoveryCounts[personId] !== undefined) {
+                usedRecoveryCounts[personId]++;
+            }
+        });
+        
+        (record.justifiedAbsenceIds || []).forEach(personId => {
+            if (allRecoveryCredits[personId]) {
+                 allRecoveryCredits[personId].push({
+                    className: 'Clase', // Simplified for performance on this page
+                    date: format(parse(record.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy'),
+                });
+            }
+        });
+    });
+    
+    Object.keys(allRecoveryCredits).forEach(personId => {
+        const usedCount = usedRecoveryCounts[personId] || 0;
+        if (allRecoveryCredits[personId].length > usedCount) {
+            recoveryPeople.add(personId);
+        }
+    });
+
 
     for (const p of people) {
       const status = getStudentPaymentStatus(p, now).status;
@@ -314,6 +347,7 @@ function DashboardPageContent() {
       waitlistOpportunities, waitlistSummary, totalWaitlistCount,
       churnRiskPeople,
       overdueCount, upcomingCount,
+      recoveryCount: recoveryPeople.size,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, spaces, actividades]);
 
@@ -328,6 +362,7 @@ function DashboardPageContent() {
     churnRiskPeople,
     overdueCount,
     upcomingCount,
+    recoveryCount,
   } = clientSideData;
   
   const isLimitReached = useMemo(() => {
@@ -415,6 +450,11 @@ function DashboardPageContent() {
       
       {dashboardView === 'main' && (
         <>
+            <MainCards 
+              activePeopleCount={people.length}
+              overdueCount={overdueCount}
+              recoveryCount={recoveryCount}
+            />
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8">
               <div className="md:col-span-2">
                 <TodaySessions
