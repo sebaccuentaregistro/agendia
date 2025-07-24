@@ -90,7 +90,7 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                     </div>
                 </CardHeader>
                 
-                 <CardFooter className="p-4 pt-0 flex justify-between items-end">
+                 <CardFooter className="p-4 pt-0 flex flex-wrap justify-between items-end gap-2">
                     <Badge variant="outline" className={cn("font-semibold text-xs", getStatusBadgeClass())}>
                         {renderPaymentStatus(paymentStatusInfo)}
                     </Badge>
