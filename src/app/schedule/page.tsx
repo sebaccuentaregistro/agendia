@@ -26,6 +26,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { ScheduleCard } from '@/components/schedule/schedule-card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertCircle } from 'lucide-react';
+import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 
 
 const formSchema = z.object({
@@ -43,6 +44,7 @@ function SchedulePageContent() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | undefined>(undefined);
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
+  const [sessionForEnrollment, setSessionForEnrollment] = useState<Session | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -59,23 +61,37 @@ function SchedulePageContent() {
     resolver: zodResolver(formSchema),
     defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
   });
-  
-  const handleEditSession = (session: Session) => {
-    setSelectedSession(session);
-    form.reset({
-      instructorId: session.instructorId,
-      actividadId: session.actividadId,
-      spaceId: session.spaceId,
-      dayOfWeek: session.dayOfWeek,
-      time: session.time,
-      levelId: session.levelId || 'none',
-    });
-    setIsDialogOpen(true);
-  };
-  
-  const handleDeleteSession = (session: Session) => {
-    setSessionForDelete(session);
-  };
+
+  useEffect(() => {
+    const handleAction = (e: Event) => {
+        const { action, session } = (e as CustomEvent).detail;
+        switch (action) {
+            case 'edit-session':
+                setSelectedSession(session);
+                form.reset({
+                    instructorId: session.instructorId,
+                    actividadId: session.actividadId,
+                    spaceId: session.spaceId,
+                    dayOfWeek: session.dayOfWeek,
+                    time: session.time,
+                    levelId: session.levelId || 'none',
+                });
+                setIsDialogOpen(true);
+                break;
+            case 'delete-session':
+                setSessionForDelete(session);
+                break;
+            case 'enroll-fixed':
+                setSessionForEnrollment(session);
+                break;
+        }
+    };
+    document.addEventListener('schedule-card-action', handleAction);
+    return () => {
+        document.removeEventListener('schedule-card-action', handleAction);
+    };
+
+  }, [form]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -278,8 +294,7 @@ function SchedulePageContent() {
                     <ScheduleCard 
                         key={session.id} 
                         session={session}
-                        onEdit={handleEditSession}
-                        onDelete={handleDeleteSession}
+                        view="structural"
                     />
                   ))}
                 </div>
@@ -316,7 +331,7 @@ function SchedulePageContent() {
                                 const enrolledCount = session.personIds.length;
                                 const spaceCapacity = space?.capacity ?? 0;
                                 return (
-                                    <TableRow key={session.id} className="cursor-pointer" onClick={() => handleEditSession(session)}>
+                                    <TableRow key={session.id} className="cursor-pointer" onClick={() => setIsDialogOpen(true)}>
                                         <TableCell className="font-medium">{session.dayOfWeek}, {session.time}</TableCell>
                                         <TableCell>{actividad?.name}</TableCell>
                                         <TableCell>{specialist?.name}</TableCell>
@@ -341,7 +356,10 @@ function SchedulePageContent() {
                     actividades={actividades}
                     spaces={spaces}
                     levels={levels}
-                    onSessionClick={handleEditSession}
+                    onSessionClick={(session) => {
+                        setSelectedSession(session);
+                        setIsDialogOpen(true);
+                    }}
                 />
             </TabsContent>
         </Tabs>
@@ -422,7 +440,13 @@ function SchedulePageContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
+      
+      {sessionForEnrollment && (
+        <EnrollPeopleDialog 
+          session={sessionForEnrollment}
+          onClose={() => setSessionForEnrollment(null)}
+        />
+      )}
     </div>
   );
 }
