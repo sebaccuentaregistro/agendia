@@ -144,17 +144,19 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     </div>
                     <Progress value={stats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
-                <div className="w-full grid grid-cols-2 gap-2 p-1">
-                     <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
-                        <UserPlus className="mr-2 h-4 w-4" /> Inscripción Fija
-                    </Button>
+                <div className="w-full grid grid-cols-1 gap-2 p-1">
                     {isDailyView ? (
-                        <Button size="sm" onClick={() => handleAction('take-attendance', { session })} disabled={!isAttendanceEnabled}>
-                            <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
-                        </Button>
+                        <div className="grid grid-cols-2 gap-2">
+                             <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={dailyStats.enrolledCount >= dailyStats.capacity}>
+                                <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                            </Button>
+                            <Button size="sm" onClick={() => handleAction('take-attendance', { session })} disabled={!isAttendanceEnabled}>
+                                <ClipboardCheck className="mr-2 h-4 w-4" /> Asistencia
+                            </Button>
+                        </div>
                     ) : (
-                         <Button size="sm" variant="outline" onClick={() => handleAction('enroll-recovery', { session })} disabled={dailyStats.enrolledCount >= dailyStats.capacity}>
-                            <CalendarClock className="mr-2 h-4 w-4" /> Recupero
+                         <Button size="sm" variant="outline" onClick={() => handleAction('enroll-fixed', { session })} disabled={isFixedFull}>
+                            <UserPlus className="mr-2 h-4 w-4" /> Inscripción Fija
                         </Button>
                     )}
                 </div>
@@ -162,4 +164,3 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
         </Card>
     );
 }
-
