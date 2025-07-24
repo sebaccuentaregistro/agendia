@@ -2,7 +2,6 @@
 
 'use client';
 
-import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useStudio } from '@/context/StudioContext';

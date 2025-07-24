@@ -3,7 +3,6 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense } from 'react';
-import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, MoreVertical, CalendarClock, Plane, Calendar as CalendarIcon, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Signal, DollarSign, ArrowLeft, UserX } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -26,7 +25,6 @@ import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -209,7 +207,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
               <DropdownMenuItem onSelect={() => setIsVacationDialogOpen(true)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => setIsRevertAlertOpen(true)} disabled={personPaymentCount === 0}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setIsDeactivateAlertOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Desactivar Persona</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setIsDeactivateAlertOpen(true)} className="text-destructive focus:text-destructive"><UserX className="mr-2 h-4 w-4" />Desactivar Persona</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -334,7 +332,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
         <AlertDialog open={isRevertAlertOpen} onOpenChange={setIsRevertAlertOpen}>
             <AlertDialogContent>
                 <AlertDialogHeader><AlertDialogTitle>¿Revertir último pago?</AlertDialogTitle><AlertDialogDescription>Esta acción eliminará el pago más reciente del historial y sumará 1 al contador de pagos pendientes. No se puede deshacer.</AlertDialogDescription></AlertDialogHeader>
-                <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => {revertLastPayment(person.id); setIsRevertAlertOpen(false);}} className="bg-destructive hover:bg-destructive/90">Sí, revertir pago</AlertDialogAction></AlertDialogFooter>
+                <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => {if(person) {revertLastPayment(person.id)}}} className="bg-destructive hover:bg-destructive/90">Sí, revertir pago</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
         <AlertDialog open={isDeactivateAlertOpen} onOpenChange={setIsDeactivateAlertOpen}>
@@ -354,5 +352,3 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
     </Suspense>
   )
 }
-
-    

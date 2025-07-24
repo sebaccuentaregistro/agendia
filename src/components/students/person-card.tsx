@@ -2,65 +2,36 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle as AlertDialogTitleAlert } from '@/components/ui/alert-dialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { WhatsAppIcon } from '@/components/whatsapp-icon';
 import { useStudio } from '@/context/StudioContext';
 import { getStudentPaymentStatus } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import Link from 'next/link';
+import { CalendarClock, Plane } from 'lucide-react';
+import type { Person, Tariff, PaymentStatusInfo } from '@/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-import { Pencil, MoreVertical, AlertTriangle, FileDown, UserX, CalendarClock, Plane, Calendar as CalendarIcon, X, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Check, Circle, HelpCircle, AlertCircle, LayoutGrid, List, ArrowLeft, Signal, Send, DollarSign, Trash2 } from 'lucide-react';
-import type { Person, Payment, NewPersonData, Session, Actividad, Specialist, Space, SessionAttendance, PaymentStatusInfo, RecoveryCredit, Level, Tariff } from '@/types';
 
 interface PersonCardProps {
     person: Person;
-    sessions: Session[];
-    actividades: Actividad[];
-    specialists: Specialist[];
-    spaces: Space[];
-    levels: Level[];
-    tariffs: Tariff[];
-    allPayments: Payment[];
-    recoveryCredits: RecoveryCredit[];
-    onDeactivated: () => void;
-    onManageVacations: (person: Person) => void;
-    onEdit: (person: Person) => void;
-    onViewHistory: (person: Person) => void;
-    onViewAttendanceHistory: (person: Person) => void;
-    onManageEnrollments: (person: Person) => void;
-    onJustifyAbsence: (person: Person) => void;
-    onRecordPayment: (person: Person) => void;
+    tariff?: Tariff;
+    recoveryCreditsCount: number;
 }
 
-export function PersonCard({ person, sessions, actividades, specialists, spaces, levels, tariffs, allPayments, recoveryCredits, onDeactivated, onManageVacations, onEdit, onViewHistory, onViewAttendanceHistory, onManageEnrollments, onJustifyAbsence, onRecordPayment }: PersonCardProps) {
-    const { deactivatePerson, revertLastPayment } = useStudio();
-    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-    const [isRevertDialogOpen, setIsRevertDialogOpen] = useState(false);
-    
-    const tariff = tariffs.find(t => t.id === person.tariffId);
+export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardProps) {
+    const { isPersonOnVacation } = useStudio();
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
-    const level = levels.find(l => l.id === person.levelId);
-    
-    const personPaymentCount = useMemo(() => {
-        return allPayments.filter(p => p.personId === person.id).length;
-    }, [allPayments, person.id]);
+    const onVacation = isPersonOnVacation(person, new Date());
 
     const getStatusBadgeClass = () => {
         switch (paymentStatusInfo.status) {
-            case 'Al día': return "bg-green-600 hover:bg-green-700 border-green-700 text-white";
-            case 'Atrasado': return "bg-red-600 hover:bg-red-700 border-red-700 text-white";
-            case 'Próximo a Vencer': return "bg-amber-500 hover:bg-amber-600 border-amber-600 text-white";
-            case 'Pendiente de Pago': return "bg-blue-600 hover:bg-blue-700 border-blue-700 text-white";
-            default: return "bg-gray-500 hover:bg-gray-600 border-gray-600 text-white";
+            case 'Al día': return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700";
+            case 'Atrasado': return "bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700";
+            case 'Próximo a Vencer': return "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700";
+            case 'Pendiente de Pago': return "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700";
+            default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
         }
     };
     
@@ -72,43 +43,6 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
       }).format(price);
     };
 
-    const handleDeactivate = async () => {
-        await deactivatePerson(person.id);
-        onDeactivated();
-        setIsDeleteDialogOpen(false);
-    };
-
-    const handleRevertPayment = () => {
-        revertLastPayment(person.id);
-        setIsRevertDialogOpen(false);
-    }
-
-    const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
-
-    const personSessions = useMemo(() => {
-        const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-        return sessions
-            .filter(s => s.personIds.includes(person.id))
-            .map(s => {
-                const actividad = actividades.find(a => a.id === s.actividadId);
-                const specialist = specialists.find(sp => sp.id === s.instructorId);
-                const space = spaces.find(sp => sp.id === s.spaceId);
-                const level = levels.find(l => l.id === s.levelId);
-                return { 
-                    ...s, 
-                    actividadName: actividad?.name || 'Clase',
-                    specialistName: specialist?.name || 'N/A',
-                    spaceName: space?.name || 'N/A',
-                    levelName: level?.name
-                };
-            })
-            .sort((a, b) => {
-                const dayComparison = dayOrder.indexOf(a.dayOfWeek) - dayOrder.indexOf(b.dayOfWeek);
-                if (dayComparison !== 0) return dayComparison;
-                return a.time.localeCompare(b.time);
-            });
-    }, [sessions, actividades, specialists, spaces, levels, person.id]);
-    
     const renderPaymentStatus = (statusInfo: PaymentStatusInfo) => {
         if (statusInfo.status === 'Próximo a Vencer') {
             if (statusInfo.daysUntilDue === 0) return 'Vence Hoy';
@@ -116,7 +50,7 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
             return `Vence en ${statusInfo.daysUntilDue} días`;
         }
         if (statusInfo.status === 'Atrasado') {
-            return `Atrasado (hace ${statusInfo.daysOverdue} ${statusInfo.daysOverdue === 1 ? 'día' : 'días'})`;
+            return `Atrasado (${statusInfo.daysOverdue}d)`;
         }
         return statusInfo.status === 'Pendiente de Pago' ? 'Pago Pendiente' : statusInfo.status;
     };
@@ -124,239 +58,48 @@ export function PersonCard({ person, sessions, actividades, specialists, spaces,
     const totalDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
     
     return (
-        <>
-            <Card className="flex flex-col rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1">
-                <CardHeader className="p-4 text-white bg-gradient-to-br from-primary to-fuchsia-600">
-                    <div className="flex items-start justify-between">
-                         <div className="flex-1">
-                            <div className="flex items-center gap-1 flex-wrap">
-                                <CardTitle className="text-xl font-bold">{person.name}</CardTitle>
-                                {person.healthInfo && (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
-                                                <Heart className="h-4 w-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-60">
-                                            <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">Info de Salud</h4>
-                                                <p className="text-sm text-muted-foreground">{person.healthInfo}</p>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                                {person.notes && (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                             <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
-                                                <FileText className="h-4 w-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-60">
-                                            <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">Notas</h4>
-                                                <p className="text-sm text-muted-foreground">{person.notes}</p>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                                {person.vacationPeriods && person.vacationPeriods.length > 0 && (
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
-                                                <Plane className="h-4 w-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-80">
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <h4 className="font-medium leading-none">Períodos de Vacaciones</h4>
-                                                    <p className="text-sm text-muted-foreground">La persona no aparecerá en la asistencia durante estas fechas.</p>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {person.vacationPeriods.map(vac => (
-                                                        <div key={vac.id} className="text-sm">
-                                                            <span className="font-semibold">{vac.startDate ? format(vac.startDate, 'dd/MM/yy') : 'N/A'}</span> al <span className="font-semibold">{vac.endDate ? format(vac.endDate, 'dd/MM/yy') : 'N/A'}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                <Button variant="outline" size="sm" className="w-full" onClick={() => onManageVacations(person)}>
-                                                    Gestionar Vacaciones
-                                                </Button>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                                {recoveryCredits.length > 0 && (
-                                     <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
-                                                <CalendarClock className="h-4 w-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-80">
-                                            <div className="space-y-2">
-                                                <h4 className="font-medium leading-none">Recuperos Pendientes ({recoveryCredits.length})</h4>
-                                                <p className="text-sm text-muted-foreground">
-                                                    Clases con ausencia justificada para recuperar:
-                                                </p>
-                                                <ScrollArea className="h-40">
-                                                    <ul className="space-y-2 pr-4">
-                                                        {recoveryCredits.map((credit, index) => (
-                                                          <li key={index} className="text-xs p-2 rounded-md bg-muted/50">
-                                                            <p className="font-bold text-foreground">{credit.className}</p>
-                                                            <p className="text-muted-foreground">{credit.date}</p>
-                                                          </li>
-                                                        ))}
-                                                    </ul>
-                                                </ScrollArea>
-                                                {recoveryCredits.length > 0 && (
-                                                    <Button asChild className="w-full">
-                                                        <Link href={`/schedule?recoveryMode=true&personId=${person.id}`}>
-                                                            <CalendarClock className="mr-2 h-4 w-4" />
-                                                            Recuperar Sesión
-                                                        </Link>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                )}
-                                 {level && (
-                                     <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-white hover:bg-white/20">
-                                                <Signal className="h-4 w-4" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-auto">
-                                            <div className="space-y-2 text-center">
-                                                <h4 className="font-medium leading-none">Nivel Asignado</h4>
-                                                <Badge variant="outline">{level.name}</Badge>
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                 )}
+        <Link href={`/students/${person.id}`} className="block">
+            <Card className="flex flex-col h-full rounded-2xl shadow-lg border-border/20 bg-card overflow-hidden transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary">
+                <CardHeader className="p-4">
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg font-bold truncate">{person.name}</CardTitle>
+                        <TooltipProvider>
+                            <div className="flex items-center gap-2">
+                               {onVacation && (
+                                 <Tooltip>
+                                    <TooltipTrigger><Plane className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
+                                    <TooltipContent><p>De vacaciones</p></TooltipContent>
+                                 </Tooltip>
+                               )}
+                               {recoveryCreditsCount > 0 && (
+                                <Tooltip>
+                                    <TooltipTrigger><CalendarClock className="h-4 w-4 text-muted-foreground"/></TooltipTrigger>
+                                    <TooltipContent><p>{recoveryCreditsCount} recupero(s) pendiente(s)</p></TooltipContent>
+                                </Tooltip>
+                               )}
                             </div>
-                            <Badge variant="secondary" className={cn("font-semibold mt-1.5 border-0 text-xs", getStatusBadgeClass())}>
-                               {renderPaymentStatus(paymentStatusInfo)}
-                            </Badge>
-                        </div>
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20 -mr-2 flex-shrink-0"><MoreVertical className="h-4 w-4" /></Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onSelect={() => onEdit(person)}><Pencil className="mr-2 h-4 w-4" />Editar Persona</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onJustifyAbsence(person)}><UserX className="mr-2 h-4 w-4" />Notificar Ausencia</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onManageVacations(person)}><Plane className="mr-2 h-4 w-4" />Gestionar Vacaciones</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => onViewHistory(person)}><History className="mr-2 h-4 w-4" />Historial de Pagos</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => onViewAttendanceHistory(person)}><CalendarIcon className="mr-2 h-4 w-4" />Historial de Asistencia</DropdownMenuItem>
-                                <DropdownMenuItem onSelect={() => setIsRevertDialogOpen(true)} disabled={personPaymentCount === 0}><Undo2 className="mr-2 h-4 w-4" />Volver atrás último pago</DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onSelect={() => setIsDeleteDialogOpen(true)} className="text-destructive focus:text-destructive"><Trash2 className="mr-2 h-4 w-4" />Desactivar Persona</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        </TooltipProvider>
                     </div>
-                     
-                    <div className="mt-2">
-                        <div className="flex justify-between items-baseline">
-                            <p className="text-sm font-semibold opacity-90">{tariff?.name}</p>
-                            {paymentStatusInfo.status === 'Atrasado' && totalDebt > 0 ? (
-                                <div className="text-right">
-                                    <p className="text-xs opacity-80">Deuda Total</p>
-                                    <p className="text-lg font-bold">{formatPrice(totalDebt)}</p>
-                                </div>
-                            ) : (
-                                tariff && <p className="text-lg font-bold">{formatPrice(tariff.price)}</p>
-                            )}
-                        </div>
-                        {person.lastPaymentDate ? (
-                            <p className="text-xs opacity-80 mt-1">Vence: {format(person.lastPaymentDate, 'dd/MM/yyyy')}</p>
-                        ) : (
-                            <p className="text-xs opacity-80 mt-1">Registra el primer pago para iniciar el ciclo.</p>
-                        )}
-                    </div>
+                    <CardDescription className="text-xs">{person.phone}</CardDescription>
                 </CardHeader>
 
-                <CardContent className="p-4 flex-grow space-y-4">
-                     <div className="space-y-2">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <span>{person.phone}</span>
-                            <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                                <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                                <span className="sr-only">Enviar WhatsApp a {person.name}</span>
-                            </a>
-                        </div>
-                     </div>
-                     <div className="space-y-3 pt-4 border-t border-border/50">
-                        <h4 className="font-semibold text-sm text-foreground">Horarios</h4>
-                        <ScrollArea className="h-28">
-                           <div className="space-y-2 pr-4">
-                            {personSessions.length > 0 ? (
-                                personSessions.map(session => (
-                                    <div key={session.id} className="text-xs p-2 rounded-md bg-muted/50">
-                                        <div className="flex justify-between items-start">
-                                          <p className="font-bold text-foreground">{session.actividadName}</p>
-                                          {session.levelName && <Badge variant="outline" className="text-[9px] px-1 py-0">{session.levelName}</Badge>}
-                                        </div>
-                                        <p className="text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
-                                        <div className="flex items-center gap-4 mt-1 text-muted-foreground">
-                                          <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
-                                          <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{session.spaceName}</span>
-                                        </div>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-xs text-muted-foreground text-center py-4">Sin horarios fijos.</p>
-                            )}
-                            </div>
-                        </ScrollArea>
-                    </div>
+                <CardContent className="p-4 pt-0 flex-grow">
+                     <Badge variant="outline" className={cn("font-semibold text-xs", getStatusBadgeClass())}>
+                        {renderPaymentStatus(paymentStatusInfo)}
+                    </Badge>
                 </CardContent>
                 
-                 <CardFooter className={cn(
-                    "grid gap-2 p-2 border-t mt-auto",
-                    recoveryCredits.length > 0 ? "grid-cols-3" : "grid-cols-2"
-                 )}>
-                    <Button
-                        onClick={() => onManageEnrollments(person)}
-                        variant="outline"
-                        className="w-full font-semibold"
-                    >
-                        <ClipboardList className="mr-2 h-4 w-4" />
-                        Inscribir
-                    </Button>
-                    {recoveryCredits.length > 0 && (
-                        <Button asChild variant="secondary" className="w-full font-semibold">
-                            <Link href={`/schedule?recoveryMode=true&personId=${person.id}`}>
-                                <CalendarClock className="mr-2 h-4 w-4" />
-                                Recuperar
-                            </Link>
-                        </Button>
+                 <CardFooter className="p-4 pt-0 text-right">
+                     {paymentStatusInfo.status === 'Atrasado' && totalDebt > 0 ? (
+                        <div className="text-right w-full">
+                            <p className="text-xs text-destructive">Deuda Total</p>
+                            <p className="text-lg font-bold text-destructive">{formatPrice(totalDebt)}</p>
+                        </div>
+                    ) : (
+                         tariff && <p className="text-lg w-full font-bold text-foreground">{formatPrice(tariff.price)}</p>
                     )}
-                    <Button onClick={() => onRecordPayment(person)} className="w-full font-bold">
-                        <DollarSign className="mr-2 h-4 w-4" />
-                        Registrar Pago
-                    </Button>
                 </CardFooter>
             </Card>
-            
-            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitleAlert>¿Desactivar a {person.name}?</AlertDialogTitleAlert><AlertDialogDescriptionAlert>Esta acción marcará a la persona como inactiva y la desinscribirá de todas sus clases. No se borrará su historial.</AlertDialogDescriptionAlert></AlertDialogHeader>
-                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDeactivate} className="bg-destructive hover:bg-destructive/90">Desactivar</AlertDialogAction></AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-
-             <AlertDialog open={isRevertDialogOpen} onOpenChange={setIsRevertDialogOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader><AlertDialogTitleAlert>¿Revertir último pago?</AlertDialogTitleAlert><AlertDialogDescriptionAlert>Esta acción eliminará el pago más reciente del historial y sumará 1 al contador de pagos pendientes. Esta acción no se puede deshacer.</AlertDialogDescriptionAlert></AlertDialogHeader>
-                    <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleRevertPayment} className="bg-destructive hover:bg-destructive/90">Sí, revertir pago</AlertDialogAction></AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
-        </>
+        </Link>
     );
 }
