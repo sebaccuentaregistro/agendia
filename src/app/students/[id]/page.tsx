@@ -349,12 +349,12 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 <>
                                  <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
                                  {upcomingRecoveries.map((rec) => (
-                                     <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center group">
+                                     <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center">
                                         <div>
                                             <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
                                             <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
                                         </div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => setRecoveryToCancel(rec)}>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setRecoveryToCancel(rec)}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                      </div>
