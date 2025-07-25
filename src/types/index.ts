@@ -100,6 +100,7 @@ export type NewPersonData = {
     joinDate?: Date;
     lastPaymentDate: Date | null;
     paymentOption: 'recordNow' | 'setManually' | 'pending';
+    outstandingPayments?: number;
 };
 
 export type WaitlistProspect = {
@@ -108,7 +109,7 @@ export type WaitlistProspect = {
     isProspect: true;
 };
 
-export type WaitlistEntry = string | (WaitlistProspect & { isProspect: true });
+export type WaitlistEntry = string | WaitlistProspect;
 
 export type Session = {
   id: string;

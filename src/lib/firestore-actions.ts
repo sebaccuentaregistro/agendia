@@ -88,7 +88,8 @@ export const addPersonAction = async (
     const personDocRef = doc(peopleRef);
 
     let finalLastPaymentDate: Date | null = null;
-    let finalOutstandingPayments: number = 0;
+    // Use the explicitly passed outstandingPayments value, or default to 0
+    let finalOutstandingPayments: number = personData.outstandingPayments || 0;
     const joinDate = personData.joinDate || now;
 
     switch (personData.paymentOption) {
@@ -97,7 +98,7 @@ export const addPersonAction = async (
             if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
             
             finalLastPaymentDate = calculateNextPaymentDate(now, joinDate, tariff);
-            finalOutstandingPayments = 0;
+            finalOutstandingPayments = 0; // Recording a payment clears outstanding debts.
 
             const paymentRecord: Omit<Payment, 'id'> = {
                 personId: personDocRef.id,
@@ -123,7 +124,7 @@ export const addPersonAction = async (
         }
         case 'setManually':
             finalLastPaymentDate = personData.lastPaymentDate || null;
-            finalOutstandingPayments = 0;
+            // outstandingPayments is already calculated and passed in personData
             break;
         case 'pending':
         default:

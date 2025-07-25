@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { CalendarIcon } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, isBefore, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
@@ -115,6 +115,17 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
       });
     } else {
       // Logic for creating a new person
+      
+      let initialOutstandingPayments = 0;
+      if (values.paymentOption === 'pending') {
+          initialOutstandingPayments = 1;
+      } else if (values.paymentOption === 'setManually' && values.lastPaymentDate) {
+          // If the manually set due date is in the past, they start with 1 outstanding payment.
+          if (isBefore(startOfDay(values.lastPaymentDate), startOfDay(new Date()))) {
+              initialOutstandingPayments = 1;
+          }
+      }
+
       const finalValues: NewPersonData = {
           name: values.name,
           phone: values.phone,
@@ -125,14 +136,22 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           joinDate: values.joinDate,
           lastPaymentDate: values.lastPaymentDate || null,
           paymentOption: values.paymentOption,
+          outstandingPayments: initialOutstandingPayments,
       };
+      
       const newPersonId = await addPerson(finalValues);
       if (onPersonCreated && newPersonId) {
         onPersonCreated({
           id: newPersonId,
-          ...finalValues,
+          name: finalValues.name,
+          phone: finalValues.phone,
+          tariffId: finalValues.tariffId,
+          levelId: finalValues.levelId,
+          healthInfo: finalValues.healthInfo,
+          notes: finalValues.notes,
           joinDate: finalValues.joinDate || null,
           lastPaymentDate: finalValues.lastPaymentDate || null,
+          outstandingPayments: initialOutstandingPayments,
           avatar: '',
           vacationPeriods: [],
         });
