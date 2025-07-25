@@ -109,8 +109,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
       if (record.justifiedAbsenceIds?.includes(person.id)) {
         justifiedAbsencesCount++;
       }
-      // Only count a recovery as "used" if its date has passed.
-      if (record.oneTimeAttendees?.includes(person.id) && isBefore(recordDate, today)) {
+      if (record.oneTimeAttendees?.includes(person.id)) {
         usedRecoveriesCount++;
       }
     });
@@ -351,7 +350,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 Actividad y Horarios
                              </span>
                         </CardTitle>
-                        {recoveryCredits && recoveryCredits.length > 0 && (
+                        {recoveryCredits.length > 0 && (
                              <CardDescription className="flex items-center gap-1.5 text-amber-600 font-semibold pt-2">
                                 <CalendarClock className="h-4 w-4"/>
                                 Tiene {recoveryCredits.length} clase(s) para recuperar.
