@@ -27,6 +27,7 @@ import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { useShell } from '@/context/ShellContext';
 import { CancelSessionDialog } from '@/components/cancel-session-dialog';
+import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 
 
 function SchedulePageContent() {
@@ -39,6 +40,7 @@ function SchedulePageContent() {
   const [sessionForRecovery, setSessionForRecovery] = useState<Session | null>(null);
   const [sessionForStudents, setSessionForStudents] = useState<Session | null>(null);
   const [sessionForCancellation, setSessionForCancellation] = useState<{session: Session, date: Date} | null>(null);
+  const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -75,6 +77,9 @@ function SchedulePageContent() {
                 break;
             case 'cancel-session':
                 setSessionForCancellation({ session, date });
+                break;
+            case 'notify-attendees':
+                setSessionForNotification(session);
                 break;
         }
     };
@@ -372,6 +377,12 @@ function SchedulePageContent() {
             session={sessionForCancellation.session}
             date={sessionForCancellation.date}
             onClose={() => setSessionForCancellation(null)}
+        />
+      )}
+       {sessionForNotification && (
+        <NotifyAttendeesDialog 
+            session={sessionForNotification}
+            onClose={() => setSessionForNotification(null)}
         />
       )}
     </div>
