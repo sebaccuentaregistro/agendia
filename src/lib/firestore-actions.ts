@@ -514,15 +514,20 @@ export const reactivateCancelledSessionAction = async (
 
     // 2. If a cancellationId exists, find and remove the corresponding 'available' credits
     if (cancellationId) {
-        const peopleWithCreditQuery = query(peopleRef, where('recoveryCredits', 'array-contains-any', [{cancellationId, status: 'available'}]));
-        const peopleSnap = await getDocs(peopleWithCreditQuery);
-        
-        peopleSnap.forEach(personDoc => {
+        // Since we can't query objects in arrays, we get all people and filter locally.
+        const allPeopleSnap = await getDocs(peopleRef);
+        allPeopleSnap.forEach(personDoc => {
             const personData = personDoc.data() as Person;
-            const updatedCredits = personData.recoveryCredits?.filter(credit => {
-                return !(credit.cancellationId === cancellationId && credit.status === 'available');
-            });
-            batch.update(personDoc.ref, { recoveryCredits: updatedCredits });
+            if (personData.recoveryCredits && personData.recoveryCredits.length > 0) {
+                const creditsToKeep = personData.recoveryCredits.filter(credit => 
+                    !(credit.cancellationId === cancellationId && credit.status === 'available')
+                );
+                
+                // Only update if the credits array has changed.
+                if (creditsToKeep.length < personData.recoveryCredits.length) {
+                    batch.update(personDoc.ref, { recoveryCredits: creditsToKeep });
+                }
+            }
         });
     }
     
