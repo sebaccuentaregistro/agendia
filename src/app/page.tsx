@@ -69,6 +69,7 @@ function DashboardPageContent() {
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [sessionForCancellation, setSessionForCancellation] = useState<{ session: Session, date: Date } | null>(null);
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
+  const [sessionForReactivation, setSessionForReactivation] = useState<{ session: Session, date: Date } | null>(null);
   
   useEffect(() => {
     setIsMounted(true);
@@ -98,7 +99,7 @@ function DashboardPageContent() {
                 setSessionForCancellation({ session, date });
                 break;
             case 'reactivate-session':
-                reactivateCancelledSession(session.id, date);
+                setSessionForReactivation({ session, date });
                 break;
             case 'edit-session':
                 openSessionDialog(session);
@@ -113,7 +114,7 @@ function DashboardPageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [openSessionDialog, reactivateCancelledSession]);
+  }, [openSessionDialog]);
 
 
   const handleUpdateDebts = async () => {
@@ -133,6 +134,13 @@ function DashboardPageContent() {
     }
   };
   
+  const handleReactivateSession = async () => {
+    if (sessionForReactivation) {
+        await reactivateCancelledSession(sessionForReactivation.session.id, sessionForReactivation.date);
+        setSessionForReactivation(null);
+    }
+  };
+
   const clientSideData = useMemo(() => {
     if (!isMounted) {
       return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], overdueCount: 0, upcomingCount: 0, recoveryCount: 0 };
@@ -535,6 +543,21 @@ function DashboardPageContent() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+        <AlertDialog open={!!sessionForReactivation} onOpenChange={() => setSessionForReactivation(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Reactivar la clase?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Estás a punto de reactivar la clase de {sessionForReactivation ? actividades.find(a => a.id === sessionForReactivation.session.actividadId)?.name : ''} para hoy.
+                        Los créditos de recupero otorgados por la cancelación (que no hayan sido usados) serán eliminados. ¿Deseas continuar?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>No, mantener cancelada</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleReactivateSession}>Sí, reactivar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
       <PaymentRemindersSheet 
         isOpen={isRemindersSheetOpen} 
@@ -553,7 +576,3 @@ export default function RootPage() {
     </Suspense>
   );
 }
-
-    
-
-    

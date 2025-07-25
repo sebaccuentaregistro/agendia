@@ -42,6 +42,7 @@ function SchedulePageContent() {
   const [sessionForStudents, setSessionForStudents] = useState<Session | null>(null);
   const [sessionForCancellation, setSessionForCancellation] = useState<{session: Session, date: Date} | null>(null);
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
+  const [sessionForReactivation, setSessionForReactivation] = useState<{ session: Session, date: Date } | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -90,7 +91,7 @@ function SchedulePageContent() {
                 setSessionForNotification(session);
                 break;
             case 'reactivate-session':
-                reactivateCancelledSession(session.id, date);
+                setSessionForReactivation({ session, date });
                 break;
         }
     };
@@ -99,7 +100,7 @@ function SchedulePageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [openSessionDialog, personForRecovery, reactivateCancelledSession]);
+  }, [openSessionDialog, personForRecovery]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -159,6 +160,13 @@ function SchedulePageContent() {
     }
   };
 
+  const handleReactivateSession = async () => {
+    if (sessionForReactivation) {
+        await reactivateCancelledSession(sessionForReactivation.session.id, sessionForReactivation.date);
+        setSessionForReactivation(null);
+    }
+  };
+
   const handleFilterChange = (filterName: keyof typeof filters, value: string) => {
     setFilters(prev => ({ ...prev, [filterName]: value }));
     const newParams = new URLSearchParams(searchParams);
@@ -203,7 +211,7 @@ function SchedulePageContent() {
         inscriptos: "Inscriptos",
         capacidad: "Capacidad",
     };
-    exportToCsv('horarios.csv', dataToExport);
+    exportToCsv('horarios.csv', dataToExport, headers);
   }
 
   return (
@@ -378,6 +386,22 @@ function SchedulePageContent() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Sí, eliminar sesión</AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={!!sessionForReactivation} onOpenChange={() => setSessionForReactivation(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Reactivar la clase?</AlertDialogTitle>
+                <AlertDialogDescriptionAlert>
+                    Estás a punto de reactivar la clase de {sessionForReactivation ? actividades.find(a => a.id === sessionForReactivation.session.actividadId)?.name : ''} para hoy.
+                    Los créditos de recupero otorgados por la cancelación (que no hayan sido usados) serán eliminados. ¿Deseas continuar?
+                </AlertDialogDescriptionAlert>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>No, mantener cancelada</AlertDialogCancel>
+                <AlertDialogAction onClick={handleReactivateSession}>Sí, reactivar</AlertDialogAction>
+            </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       
