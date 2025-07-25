@@ -32,7 +32,7 @@ import { format, startOfDay } from 'date-fns';
 
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading, people, isPersonOnVacation, attendance } = useStudio();
+  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading, people, isPersonOnVacation, attendance, reactivateCancelledSession } = useStudio();
   const { openSessionDialog } = useShell();
   
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
@@ -89,6 +89,9 @@ function SchedulePageContent() {
             case 'notify-attendees':
                 setSessionForNotification(session);
                 break;
+            case 'reactivate-session':
+                reactivateCancelledSession(session.id, date);
+                break;
         }
     };
     document.addEventListener('schedule-card-action', handleAction);
@@ -96,7 +99,7 @@ function SchedulePageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [openSessionDialog, personForRecovery]);
+  }, [openSessionDialog, personForRecovery, reactivateCancelledSession]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
@@ -200,7 +203,7 @@ function SchedulePageContent() {
         inscriptos: "Inscriptos",
         capacidad: "Capacidad",
     };
-    exportToCsv('horarios.csv', dataToExport, headers);
+    exportToCsv('horarios.csv', dataToExport);
   }
 
   return (
