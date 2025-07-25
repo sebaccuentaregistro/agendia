@@ -21,11 +21,10 @@ import { AttendanceHistoryDialog } from '@/app/students/attendance-history-dialo
 import { JustifiedAbsenceDialog } from '@/app/students/justified-absence-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, parse, startOfDay, isBefore, isToday } from 'date-fns';
+import { format, parse, startOfDay, isBefore, isToday, compareDesc } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -93,36 +92,38 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
     let justifiedAbsencesCount = 0;
     const upcomingRecs: UpcomingRecovery[] = [];
-    const usedRecoveryDates: string[] = [];
+    let usedRecoveriesCount = 0;
 
-    attendance.forEach(record => {
-        const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
-
-        if (record.justifiedAbsenceIds?.includes(person.id)) {
-            justifiedAbsencesCount++;
+    const allPersonAttendance = attendance.filter(record => 
+        record.oneTimeAttendees?.includes(person.id) ||
+        record.justifiedAbsenceIds?.includes(person.id)
+    );
+    
+    allPersonAttendance.forEach(record => {
+      const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+      if (record.justifiedAbsenceIds?.includes(person.id)) {
+        justifiedAbsencesCount++;
+      }
+      if (record.oneTimeAttendees?.includes(person.id)) {
+        if (isBefore(recordDate, today)) {
+            usedRecoveriesCount++;
+        } else {
+           const session = sessions.find(s => s.id === record.sessionId);
+           if(session) {
+               const actividad = actividades.find(a => a.id === session.actividadId);
+               upcomingRecs.push({
+                    date: recordDate,
+                    className: actividad?.name || 'Clase',
+                    time: session.time,
+                    sessionId: session.id,
+                    dateStr: record.date
+               });
+           }
         }
-
-        if (record.oneTimeAttendees?.includes(person.id)) {
-             if (isBefore(recordDate, today)) {
-                usedRecoveryDates.push(record.date); // This recovery is used up
-             } else {
-                const session = sessions.find(s => s.id === record.sessionId);
-                if (session) {
-                    const actividad = actividades.find(a => a.id === session.actividadId);
-                    upcomingRecs.push({
-                        date: recordDate,
-                        className: actividad?.name || 'Clase',
-                        time: session.time,
-                        sessionId: session.id,
-                        dateStr: record.date
-                    });
-                }
-             }
-        }
+      }
     });
     
-    // An available credit is a justified absence minus any used (past) or scheduled (future) recovery.
-    const availableCredits = Math.max(0, justifiedAbsencesCount - (usedRecoveryDates.length + upcomingRecs.length));
+    const availableCredits = Math.max(0, justifiedAbsencesCount - usedRecoveriesCount - upcomingRecs.length);
 
     const personSessions = sessions
       .filter(s => s.personIds.includes(person.id))
@@ -214,6 +215,45 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
         default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
     }
   };
+
+  const renderFinancialStatus = () => {
+    if (!paymentStatusInfo) return null;
+    
+    const baseClass = "text-center p-3 rounded-lg font-semibold";
+    const statusClass = getStatusBadgeClass(paymentStatusInfo.status).replace('border-', 'bg-');
+    
+    switch (paymentStatusInfo.status) {
+        case 'Atrasado':
+            return (
+                <div className={cn(baseClass, statusClass)}>
+                    Debe: {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(totalDebt)}
+                    <span className="block text-xs font-normal opacity-90">({paymentStatusInfo.daysOverdue} días de atraso)</span>
+                </div>
+            );
+        case 'Próximo a Vencer':
+             return (
+                <div className={cn(baseClass, statusClass)}>
+                   Vence {paymentStatusInfo.daysUntilDue === 0 ? 'hoy' : `en ${paymentStatusInfo.daysUntilDue} día(s)`}
+                   <span className="block text-xs font-normal opacity-90">({person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yy') : 'N/A'})</span>
+                </div>
+            );
+        case 'Al día':
+            return (
+                <div className={cn(baseClass, statusClass)}>
+                    Al día
+                    <span className="block text-xs font-normal opacity-90">Próximo vencimiento: {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yyyy') : 'N/A'}</span>
+                </div>
+            );
+        case 'Pendiente de Pago':
+             return (
+                <div className={cn(baseClass, statusClass)}>
+                    Pendiente de Primer Pago
+                </div>
+            );
+        default: return null;
+    }
+};
+
   
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
@@ -285,16 +325,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                         </div>
                         <p className="text-2xl font-bold">{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(tariff?.price || 0)}</p>
                     </div>
-                     {paymentStatusInfo.status === 'Atrasado' ? (
-                        <div className="text-center text-destructive p-3 rounded-lg bg-destructive/10">
-                            <p className="font-bold">Deuda Total: {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(totalDebt)}</p>
-                            <p className="text-xs">({paymentStatusInfo.daysOverdue} días de atraso)</p>
-                        </div>
-                    ) : (
-                        <div className="text-sm text-muted-foreground">
-                            Próximo vencimiento: {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd MMMM, yyyy', { locale: es }) : 'Pendiente de primer pago'}
-                        </div>
-                    )}
+                    {renderFinancialStatus()}
                 </CardContent>
                 <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Button onClick={handleRecordPaymentClick}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago</Button>
@@ -321,7 +352,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                        <div className="space-y-2">
                             {personSessions.length > 0 ? (
                                 personSessions.map(session => (
-                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50 group">
+                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50">
                                         <div className="flex justify-between items-start">
                                           <div>
                                             <p className="font-bold text-foreground">{session.actividadName}</p>
@@ -346,7 +377,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 <>
                                  <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
                                  {upcomingRecoveries.map((rec) => (
-                                     <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center group">
+                                     <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center">
                                         <div>
                                             <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
                                             <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
