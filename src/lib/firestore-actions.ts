@@ -5,7 +5,7 @@
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField, arrayRemove } from 'firebase/firestore';
 import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
 import { db } from './firebase';
-import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval, addDays, isAfter } from 'date-fns';
+import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval, addDays, isAfter, differenceInDays, differenceInWeeks, differenceInCalendarMonths } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -86,18 +86,16 @@ export const addPersonAction = async (
     const now = new Date();
     const batch = writeBatch(db);
     const personDocRef = doc(peopleRef);
+    const tariff = tariffs.find(t => t.id === personData.tariffId);
+    if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
 
     let finalLastPaymentDate: Date | null = null;
-    const finalOutstandingPayments: number = personData.outstandingPayments || 0;
+    let finalOutstandingPayments: number = 0;
     const joinDate = personData.joinDate || now;
 
     switch (personData.paymentOption) {
         case 'recordNow': {
-            const tariff = tariffs.find(t => t.id === personData.tariffId);
-            if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
-            
             finalLastPaymentDate = calculateNextPaymentDate(now, joinDate, tariff);
-
             const paymentRecord: Omit<Payment, 'id'> = {
                 personId: personDocRef.id,
                 date: now,
@@ -107,7 +105,6 @@ export const addPersonAction = async (
                 timestamp: now,
             };
             batch.set(doc(paymentsRef), cleanDataForFirestore(paymentRecord));
-            
             batch.set(doc(auditLogRef), {
                 operatorId: operator.id,
                 operatorName: operator.name,
@@ -124,8 +121,22 @@ export const addPersonAction = async (
             finalLastPaymentDate = personData.lastPaymentDate || null;
             break;
         case 'pending':
-        default:
-            finalLastPaymentDate = null;
+            const debtStartDate = personData.lastPaymentDate; // This field is used for "Deuda desde"
+            if (debtStartDate && isBefore(debtStartDate, now)) {
+                const cycle = tariff.paymentCycle || 'monthly';
+                let cyclesMissed = 0;
+                switch(cycle) {
+                    case 'weekly': cyclesMissed = differenceInWeeks(now, debtStartDate); break;
+                    case 'biweekly': cyclesMissed = Math.floor(differenceInWeeks(now, debtStartDate) / 2); break;
+                    case 'bimonthly': cyclesMissed = Math.floor(differenceInCalendarMonths(now, debtStartDate) / 2); break;
+                    case 'monthly':
+                    default: cyclesMissed = differenceInCalendarMonths(now, debtStartDate); break;
+                }
+                finalOutstandingPayments = Math.max(1, cyclesMissed); // Always owe at least 1 cycle
+            } else {
+                 finalOutstandingPayments = 1; // Default to 1 if no date is set or date is not in the past.
+            }
+            finalLastPaymentDate = debtStartDate || subMonths(now, finalOutstandingPayments); // Set a logical past due date
             break;
     }
 

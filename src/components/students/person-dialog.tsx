@@ -86,7 +86,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
             healthInfo: '',
             notes: '',
             joinDate: new Date(),
-            lastPaymentDate: null,
+            lastPaymentDate: new Date(),
             paymentOption: 'recordNow',
           });
         }
@@ -115,17 +115,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
       });
     } else {
       // Logic for creating a new person
-      
-      let initialOutstandingPayments = 0;
-      if (values.paymentOption === 'pending') {
-          initialOutstandingPayments = 1;
-      } else if (values.paymentOption === 'setManually' && values.lastPaymentDate) {
-          // If the manually set due date is in the past, they start with 1 outstanding payment.
-          if (isBefore(startOfDay(values.lastPaymentDate), startOfDay(new Date()))) {
-              initialOutstandingPayments = 1;
-          }
-      }
-
       const finalValues: NewPersonData = {
           name: values.name,
           phone: values.phone,
@@ -136,7 +125,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           joinDate: values.joinDate,
           lastPaymentDate: values.lastPaymentDate || null,
           paymentOption: values.paymentOption,
-          outstandingPayments: initialOutstandingPayments,
       };
       
       const newPersonId = await addPerson(finalValues);
@@ -151,7 +139,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           notes: finalValues.notes,
           joinDate: finalValues.joinDate || null,
           lastPaymentDate: finalValues.lastPaymentDate || null,
-          outstandingPayments: initialOutstandingPayments,
+          outstandingPayments: 0, // This will be calculated on the backend now
           avatar: '',
           vacationPeriods: [],
         });
@@ -268,7 +256,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
                               <RadioGroupItem value="recordNow" />
                             </FormControl>
                             <FormLabel className="font-normal">
-                              Registrar pago ahora y establecer vencimiento automático
+                              Registrar pago ahora (vencimiento automático)
                             </FormLabel>
                           </FormItem>
                           <FormItem className="flex items-center space-x-3 space-y-0">
@@ -284,7 +272,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
                               <RadioGroupItem value="pending" />
                             </FormControl>
                             <FormLabel className="font-normal">
-                              Dejar como pendiente de pago
+                              Registrar deuda pendiente (migración)
                             </FormLabel>
                           </FormItem>
                         </RadioGroup>
@@ -295,13 +283,13 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
                 />
             )}
 
-            {!person && paymentOption === 'setManually' && (
+            {!person && (paymentOption === 'setManually' || paymentOption === 'pending') && (
               <FormField
                 control={form.control}
                 name="lastPaymentDate"
                 render={({ field }) => (
                   <FormItem className="flex flex-col animate-in fade-in-0 zoom-in-95">
-                    <FormLabel>Fecha del Próximo Vencimiento</FormLabel>
+                    <FormLabel>{paymentOption === 'setManually' ? 'Fecha del Próximo Vencimiento' : 'Deuda desde la fecha'}</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
