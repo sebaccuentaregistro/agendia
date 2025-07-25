@@ -109,7 +109,8 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
       if (record.justifiedAbsenceIds?.includes(person.id)) {
         justifiedAbsencesCount++;
       }
-      if (record.oneTimeAttendees?.includes(person.id)) {
+      // Only count a recovery as "used" if its date has passed.
+      if (record.oneTimeAttendees?.includes(person.id) && isBefore(recordDate, today)) {
         usedRecoveriesCount++;
       }
     });
