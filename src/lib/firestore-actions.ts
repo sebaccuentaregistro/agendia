@@ -90,54 +90,32 @@ export const addPersonAction = async (
     if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
 
     let finalLastPaymentDate: Date | null = null;
-    let finalOutstandingPayments: number = 0;
+    let finalOutstandingPayments: number = personData.outstandingPayments || 0;
     const joinDate = personData.joinDate || now;
 
-    switch (personData.paymentOption) {
-        case 'recordNow': {
-            finalLastPaymentDate = calculateNextPaymentDate(now, joinDate, tariff);
-            const paymentRecord: Omit<Payment, 'id'> = {
-                personId: personDocRef.id,
-                date: now,
-                amount: tariff.price,
-                tariffId: tariff.id,
-                createdAt: now,
-                timestamp: now,
-            };
-            batch.set(doc(paymentsRef), cleanDataForFirestore(paymentRecord));
-            batch.set(doc(auditLogRef), {
-                operatorId: operator.id,
-                operatorName: operator.name,
-                action: 'REGISTRO_PAGO',
-                entityType: 'pago',
-                entityId: personDocRef.id,
-                entityName: personData.name,
-                timestamp: now,
-                details: { amount: tariff.price, tariffName: tariff.name }
-            } as Omit<AuditLog, 'id'>);
-            break;
-        }
-        case 'setManually':
-            finalLastPaymentDate = personData.lastPaymentDate || null;
-            break;
-        case 'pending':
-            const debtStartDate = personData.lastPaymentDate; // This field is used for "Deuda desde"
-            if (debtStartDate && isBefore(debtStartDate, now)) {
-                const cycle = tariff.paymentCycle || 'monthly';
-                let cyclesMissed = 0;
-                switch(cycle) {
-                    case 'weekly': cyclesMissed = differenceInWeeks(now, debtStartDate); break;
-                    case 'biweekly': cyclesMissed = Math.floor(differenceInWeeks(now, debtStartDate) / 2); break;
-                    case 'bimonthly': cyclesMissed = Math.floor(differenceInCalendarMonths(now, debtStartDate) / 2); break;
-                    case 'monthly':
-                    default: cyclesMissed = differenceInCalendarMonths(now, debtStartDate); break;
-                }
-                finalOutstandingPayments = Math.max(1, cyclesMissed); // Always owe at least 1 cycle
-            } else {
-                 finalOutstandingPayments = 1; // Default to 1 if no date is set or date is not in the past.
-            }
-            finalLastPaymentDate = debtStartDate || subMonths(now, finalOutstandingPayments); // Set a logical past due date
-            break;
+    if (personData.paymentOption === 'recordNow') {
+        finalLastPaymentDate = calculateNextPaymentDate(now, joinDate, tariff);
+        const paymentRecord: Omit<Payment, 'id'> = {
+            personId: personDocRef.id,
+            date: now,
+            amount: tariff.price,
+            tariffId: tariff.id,
+            createdAt: now,
+            timestamp: now,
+        };
+        batch.set(doc(paymentsRef), cleanDataForFirestore(paymentRecord));
+        batch.set(doc(auditLogRef), {
+            operatorId: operator.id,
+            operatorName: operator.name,
+            action: 'REGISTRO_PAGO',
+            entityType: 'pago',
+            entityId: personDocRef.id,
+            entityName: personData.name,
+            timestamp: now,
+            details: { amount: tariff.price, tariffName: tariff.name }
+        } as Omit<AuditLog, 'id'>);
+    } else {
+        finalLastPaymentDate = personData.lastPaymentDate || null;
     }
 
     const newPerson: Omit<Person, 'id'> = {
@@ -261,17 +239,21 @@ export const recordPaymentAction = async (
     paymentsRef: CollectionReference,
     auditLogRef: CollectionReference
 ) => {
-    console.log(`[DEBUG] Iniciando recordPaymentAction para la persona: ${person.id}`);
     const now = new Date();
     const batch = writeBatch(db);
 
     // 1. Calculate new state for the person
     const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
     
-    // The key change: calculate from the *previous* due date, not from today.
-    const newExpiryDate = (newOutstandingPayments === 0) 
-        ? calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff)
-        : person.lastPaymentDate;
+    let newExpiryDate: Date;
+
+    if (newOutstandingPayments > 0) {
+        // If there's still debt, advance the due date by one cycle from the *previous* due date
+        newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff);
+    } else {
+        // If the debt is now zero, the new cycle starts from today
+        newExpiryDate = calculateNextPaymentDate(now, person.joinDate, tariff);
+    }
 
     // 2. Create the new payment record
     const paymentRecord: Omit<Payment, 'id'> = {
@@ -311,9 +293,7 @@ export const recordPaymentAction = async (
 
     // 5. Commit all batched writes
     try {
-        console.log(`[DEBUG] A punto de confirmar el guardado del pago para ${person.id}.`);
         await batch.commit();
-        console.log(`[DEBUG] Éxito: El pago fue confirmado en la base de datos para ${person.id}.`);
     } catch (error) {
         console.error(`[DEBUG] Error al confirmar el guardado del pago:`, error);
         throw error;
