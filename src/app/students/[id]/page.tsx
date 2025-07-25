@@ -95,12 +95,14 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
     const today = startOfDay(new Date());
 
+    const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
+    
     // --- DEBUG: START ---
     console.log("--- DEBUG: CÁLCULO DE CRÉDITOS ---");
     console.log("Persona:", person.name);
 
     const relevantAttendance = attendance.filter(record => 
-        record.justifiedAbsenceIds?.includes(person.id) || 
+        (personSessionIds.has(record.sessionId) && record.justifiedAbsenceIds?.includes(person.id)) || 
         record.oneTimeAttendees?.includes(person.id)
     );
     console.log("Registros de asistencia relevantes:", relevantAttendance);
