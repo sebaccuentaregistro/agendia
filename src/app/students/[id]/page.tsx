@@ -80,39 +80,43 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     }
   }, [params.id, people, loading, router]);
   
-    const availableCredits = useMemo(() => {
-        if (!person) return 0;
-
-        console.log("--- DEBUG: CÁLCULO DE CRÉDITOS ---");
-        console.log("Persona:", person.name);
-
-        const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
-        
-        const allPersonAttendance = attendance.filter(record => 
-            (personSessionIds.has(record.sessionId) && record.justifiedAbsenceIds?.includes(person.id)) || 
-            record.oneTimeAttendees?.includes(person.id)
-        );
-        console.log("Registros de asistencia relevantes:", allPersonAttendance);
-
-        const justifiedAbsencesCount = allPersonAttendance.filter(record => 
-            record.justifiedAbsenceIds?.includes(person.id)
-        ).length;
-        console.log("Ausencias Justificadas Contadas:", justifiedAbsencesCount);
-
-        const usedRecoveriesCount = allPersonAttendance.filter(record => 
-            record.oneTimeAttendees?.includes(person.id)
-        ).length;
-        console.log("Recuperos Agendados Contados:", usedRecoveriesCount);
-        
-        const creditsCalculation = justifiedAbsencesCount - usedRecoveriesCount;
-        console.log(`Cálculo: ${justifiedAbsencesCount} - ${usedRecoveriesCount} = ${creditsCalculation}`);
-
-        const creditsFinal = Math.max(0, creditsCalculation);
-        console.log("Créditos Disponibles Final:", creditsFinal);
+  const availableCredits = useMemo(() => {
+    console.log("--- DEBUG: CÁLCULO DE CRÉDITOS ---");
+    if (!person) {
+        console.log("Persona no encontrada, retornando 0 créditos.");
         console.log("------------------------------------");
+        return 0;
+    }
+    console.log("Persona:", person.name);
 
-        return creditsFinal;
-    }, [person, sessions, attendance]);
+    const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
+
+    const allPersonAttendance = attendance.filter(record => 
+        (personSessionIds.has(record.sessionId) || record.oneTimeAttendees?.includes(person.id))
+    );
+    console.log("Registros de asistencia relevantes:", allPersonAttendance);
+
+
+    const justifiedAbsencesCount = allPersonAttendance.filter(record => 
+        record.justifiedAbsenceIds?.includes(person.id)
+    ).length;
+    console.log("Ausencias Justificadas Contadas:", justifiedAbsencesCount);
+
+    const usedRecoveriesCount = allPersonAttendance.filter(record => 
+        record.oneTimeAttendees?.includes(person.id)
+    ).length;
+    console.log("Recuperos Agendados Contados:", usedRecoveriesCount);
+
+    const creditsCalculation = justifiedAbsencesCount - usedRecoveriesCount;
+    console.log("Cálculo:", justifiedAbsencesCount, "-", usedRecoveriesCount, "=", creditsCalculation);
+    
+    const creditsFinal = Math.max(0, creditsCalculation);
+    console.log("Créditos Disponibles Final:", creditsFinal);
+    console.log("------------------------------------");
+
+    return creditsFinal;
+  }, [person, sessions, attendance, people]);
+
 
   const { tariff, level, paymentStatusInfo, totalDebt, personSessions, upcomingRecoveries } = useMemo(() => {
     if (!person) return { personSessions: [], upcomingRecoveries: [] };
