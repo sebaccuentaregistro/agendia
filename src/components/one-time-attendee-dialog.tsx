@@ -40,6 +40,7 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
   });
 
   const selectedDate = form.watch('date');
+  const selectedPersonId = form.watch('personId');
 
   const dayMap: { [key in Session['dayOfWeek']]: number } = useMemo(() => ({
     'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6,
@@ -63,12 +64,15 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [people, attendance, personForRecovery]);
 
-  const { occupationMessage, isFull } = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true };
+  const { occupationMessage, isFull, isAlreadyRecovering } = useMemo(() => {
+    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true, isAlreadyRecovering: false };
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
     const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
+
+    // Check if the selected person is already in the one-time list for this date
+    const alreadyRecovering = selectedPersonId ? oneTimeIds.includes(selectedPersonId) : false;
 
     const vacationingPeopleCount = session.personIds
         .filter(pid => {
@@ -81,7 +85,9 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
     const isClassFull = currentOccupation >= capacity;
     
     let message = '';
-    if (isClassFull) {
+    if (alreadyRecovering) {
+        message = 'Esta persona ya está anotada para recuperar en esta fecha.';
+    } else if (isClassFull) {
         message = 'No hay cupos disponibles para esta fecha.';
     } else {
         const availableSpots = capacity - currentOccupation;
@@ -90,15 +96,22 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
 
     return {
         occupationMessage: message,
-        isFull: isClassFull
+        isFull: isClassFull,
+        isAlreadyRecovering: alreadyRecovering,
     }
-  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
+  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity, selectedPersonId]);
 
   function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
     addOneTimeAttendee(session.id, values.personId, values.date);
     onClose();
   }
   
+  const hasCredits = useMemo(() => {
+      if (!selectedPersonId) return true; // Don't block until a person is selected
+      const person = eligiblePeople.find(p => p.id === selectedPersonId);
+      return !!person;
+  }, [selectedPersonId, eligiblePeople]);
+
   return (
     <Dialog open onOpenChange={onClose}>
         <DialogContent>
@@ -150,7 +163,7 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
                                     </PopoverContent>
                                 </Popover>
                                 {occupationMessage && (
-                                    <div className={cn("text-sm mt-2 p-2 rounded-md", isFull ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
+                                    <div className={cn("text-sm mt-2 p-2 rounded-md", isFull || isAlreadyRecovering ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
                                         <p className="font-semibold">{occupationMessage}</p>
                                     </div>
                                 )}
@@ -193,7 +206,7 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button type="submit" disabled={!form.formState.isValid || isFull}>Añadir Persona</Button>
+                        <Button type="submit" disabled={!form.formState.isValid || isFull || !hasCredits || isAlreadyRecovering}>Añadir Persona</Button>
                     </DialogFooter>
                 </form>
             </Form>
