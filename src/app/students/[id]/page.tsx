@@ -105,7 +105,6 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     );
     
     allPersonAttendance.forEach(record => {
-      const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
       if (record.justifiedAbsenceIds?.includes(person.id)) {
         justifiedAbsencesCount++;
       }
@@ -114,7 +113,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
       }
     });
 
-    const oneTimeAttendances = attendance.filter(record => record.oneTimeAttendees?.includes(person.id));
+    const oneTimeAttendances = allPersonAttendance.filter(record => record.oneTimeAttendees?.includes(person.id));
     for (const record of oneTimeAttendances) {
         const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
         if (!isBefore(recordDate, today)) {
