@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useEffect } from 'react';
@@ -20,7 +19,6 @@ import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useStudio } from '@/context/StudioContext';
 import type { Person, NewPersonData } from '@/types';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
@@ -31,7 +29,6 @@ const personFormSchema = z.object({
   notes: z.string().optional(),
   joinDate: z.date().optional(),
   lastPaymentDate: z.date().nullable().optional(),
-  paymentOption: z.enum(['recordNow', 'setManually', 'pending']).default('recordNow'),
 });
 
 type PersonFormData = z.infer<typeof personFormSchema>;
@@ -59,7 +56,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
         notes: '',
         joinDate: new Date(),
         lastPaymentDate: null,
-        paymentOption: 'recordNow',
     }
   });
   
@@ -75,7 +71,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
             notes: person.notes,
             joinDate: person.joinDate || new Date(),
             lastPaymentDate: person.lastPaymentDate,
-            paymentOption: 'recordNow', // Default for editing, logic is handled differently.
           });
         } else {
           form.reset({
@@ -86,15 +81,12 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
             healthInfo: '',
             notes: '',
             joinDate: new Date(),
-            lastPaymentDate: new Date(),
-            paymentOption: 'recordNow',
+            lastPaymentDate: null,
           });
         }
     }
   }, [person, initialData, open, form]);
   
-  const paymentOption = form.watch('paymentOption');
-
   const onSubmit = async (values: PersonFormData) => {
     if (!person && isLimitReached) {
         return;
@@ -124,7 +116,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           notes: values.notes,
           joinDate: values.joinDate,
           lastPaymentDate: values.lastPaymentDate || null,
-          paymentOption: values.paymentOption,
+          paymentOption: 'recordNow', // This is now simplified
       };
       
       const newPersonId = await addPerson(finalValues);
@@ -139,7 +131,7 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           notes: finalValues.notes,
           joinDate: finalValues.joinDate || null,
           lastPaymentDate: finalValues.lastPaymentDate || null,
-          outstandingPayments: 0, // This will be calculated on the backend now
+          outstandingPayments: 0,
           avatar: '',
           vacationPeriods: [],
         });
@@ -210,107 +202,35 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
                   )}
                 />
             </div>
-            {person && (
-                 <FormField
-                    control={form.control}
-                    name="lastPaymentDate"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-col animate-in fade-in-0 zoom-in-95">
-                        <FormLabel>Fecha del Próximo Vencimiento</FormLabel>
-                        <Popover>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                            <Button
-                                variant="outline"
-                                className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
-                                {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
-                        </PopoverContent>
-                        </Popover>
-                        <FormMessage />
-                    </FormItem>
-                    )}
-                />
-            )}
-            {!person && (
-                <FormField
-                  control={form.control}
-                  name="paymentOption"
-                  render={({ field }) => (
-                    <FormItem className="space-y-3">
-                      <FormLabel>Gestión del Primer Pago</FormLabel>
-                      <FormControl>
-                        <RadioGroup
-                          onValueChange={field.onChange}
-                          defaultValue={field.value}
-                          className="flex flex-col space-y-1"
-                        >
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="recordNow" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Registrar pago ahora (vencimiento automático)
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="setManually" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Establecer próximo vencimiento manualmente
-                            </FormLabel>
-                          </FormItem>
-                          <FormItem className="flex items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <RadioGroupItem value="pending" />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              Registrar deuda pendiente (migración)
-                            </FormLabel>
-                          </FormItem>
-                        </RadioGroup>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-            )}
-
-            {!person && (paymentOption === 'setManually' || paymentOption === 'pending') && (
-              <FormField
+             <FormField
                 control={form.control}
                 name="lastPaymentDate"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col animate-in fade-in-0 zoom-in-95">
-                    <FormLabel>{paymentOption === 'setManually' ? 'Fecha del Próximo Vencimiento' : 'Deuda desde la fecha'}</FormLabel>
+                <FormItem className="flex flex-col animate-in fade-in-0 zoom-in-95">
+                    <FormLabel>Fecha del Próximo Vencimiento</FormLabel>
                     <Popover>
-                      <PopoverTrigger asChild>
+                    <PopoverTrigger asChild>
                         <FormControl>
-                          <Button
+                        <Button
                             variant="outline"
                             className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                          >
-                            {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elegir fecha</span>}
+                        >
+                            {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Sin vencimiento (Pago Pendiente)</span>}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
+                        </Button>
                         </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
                         <Calendar mode="single" selected={field.value || undefined} onSelect={field.onChange} />
-                      </PopoverContent>
+                    </PopoverContent>
                     </Popover>
+                    <FormDescription className="text-xs">
+                        Si no se registra un pago hoy, establece cuándo debería ser el próximo vencimiento.
+                    </FormDescription>
                     <FormMessage />
-                  </FormItem>
+                </FormItem>
                 )}
-              />
-            )}
+            />
             <FormField control={form.control} name="healthInfo" render={({ field }) => (
               <FormItem><FormLabel>Información de Salud (Opcional)</FormLabel><FormControl><Textarea placeholder="Alergias, lesiones, etc." {...field} value={field.value || ''}/></FormControl><FormMessage /></FormItem>
             )}/>

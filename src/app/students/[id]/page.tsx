@@ -229,35 +229,35 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   const renderFinancialStatus = () => {
     if (!paymentStatusInfo) return null;
     
-    const baseClass = "text-center p-3 rounded-lg font-semibold";
+    const baseClass = "text-center p-3 rounded-lg";
     const statusClass = getStatusBadgeClass(paymentStatusInfo.status).replace('border-', 'bg-');
     
     switch (paymentStatusInfo.status) {
         case 'Atrasado':
             return (
                 <div className={cn(baseClass, statusClass)}>
-                    Debe: {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(totalDebt)}
+                    <span className="font-semibold">Debe: {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(totalDebt)}</span>
                     <span className="block text-xs font-normal opacity-90">({paymentStatusInfo.daysOverdue} días de atraso)</span>
                 </div>
             );
         case 'Próximo a Vencer':
              return (
                 <div className={cn(baseClass, statusClass)}>
-                   Vence {paymentStatusInfo.daysUntilDue === 0 ? 'hoy' : `en ${paymentStatusInfo.daysUntilDue} día(s)`}
+                   <span className="font-semibold">Vence {paymentStatusInfo.daysUntilDue === 0 ? 'hoy' : `en ${paymentStatusInfo.daysUntilDue} día(s)`}</span>
                    <span className="block text-xs font-normal opacity-90">({person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yy') : 'N/A'})</span>
                 </div>
             );
         case 'Al día':
             return (
                 <div className={cn(baseClass, statusClass)}>
-                    Al día
+                    <span className="font-semibold">Al día</span>
                     <span className="block text-xs font-normal opacity-90">Próximo vencimiento: {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yyyy') : 'N/A'}</span>
                 </div>
             );
         case 'Pendiente de Pago':
              return (
                 <div className={cn(baseClass, statusClass)}>
-                    Pendiente de Primer Pago
+                    <span className="font-semibold">Pendiente de Primer Pago</span>
                 </div>
             );
         default: return null;
@@ -358,48 +358,46 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                             </CardDescription>
                         )}
                     </CardHeader>
-                    <CardContent>
-                       <div className="space-y-2">
-                            {personSessions.length > 0 ? (
-                                personSessions.map(session => (
-                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50">
-                                        <div className="flex justify-between items-start">
-                                          <div>
-                                            <p className="font-bold text-foreground">{session.actividadName}</p>
-                                            <p className="font-semibold text-xs text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
-                                          </div>
-                                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSessionToUnenroll(session)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                          </Button>
-                                        </div>
-                                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                          <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
-                                          <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{session.spaceName}</span>
-                                        </div>
+                    <CardContent className="space-y-2">
+                        {personSessions.length > 0 ? (
+                            personSessions.map(session => (
+                                <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <p className="font-bold text-foreground">{session.actividadName}</p>
+                                        <p className="font-semibold text-xs text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
+                                      </div>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSessionToUnenroll(session)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="text-center text-muted-foreground text-sm py-8">
-                                    Sin horarios fijos asignados.
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                      <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
+                                      <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{session.spaceName}</span>
+                                    </div>
                                 </div>
-                            )}
-                            {upcomingRecoveries.length > 0 && (
-                                <>
-                                 <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
-                                 {upcomingRecoveries.map((rec) => (
-                                     <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center">
-                                        <div>
-                                            <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
-                                            <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
-                                        </div>
-                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setRecoveryToCancel(rec)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                     </div>
-                                 ))}
-                                </>
-                            )}
-                        </div>
+                            ))
+                        ) : (
+                            <div className="text-center text-muted-foreground text-sm py-8">
+                                Sin horarios fijos asignados.
+                            </div>
+                        )}
+                        {upcomingRecoveries.length > 0 && (
+                            <>
+                             <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
+                             {upcomingRecoveries.map((rec) => (
+                                 <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center">
+                                    <div>
+                                        <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
+                                        <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setRecoveryToCancel(rec)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                 </div>
+                             ))}
+                            </>
+                        )}
                     </CardContent>
                      <CardFooter className="grid grid-cols-2 gap-2">
                         <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>

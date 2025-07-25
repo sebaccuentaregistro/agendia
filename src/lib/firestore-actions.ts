@@ -88,34 +88,12 @@ export const addPersonAction = async (
     const personDocRef = doc(peopleRef);
     const tariff = tariffs.find(t => t.id === personData.tariffId);
     if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
-
-    let finalLastPaymentDate: Date | null = null;
-    let finalOutstandingPayments: number = personData.outstandingPayments || 0;
-    const joinDate = personData.joinDate || now;
-
-    if (personData.paymentOption === 'recordNow') {
-        finalLastPaymentDate = calculateNextPaymentDate(now, joinDate, tariff);
-        const paymentRecord: Omit<Payment, 'id'> = {
-            personId: personDocRef.id,
-            date: now,
-            amount: tariff.price,
-            tariffId: tariff.id,
-            createdAt: now,
-            timestamp: now,
-        };
-        batch.set(doc(paymentsRef), cleanDataForFirestore(paymentRecord));
-        batch.set(doc(auditLogRef), {
-            operatorId: operator.id,
-            operatorName: operator.name,
-            action: 'REGISTRO_PAGO',
-            entityType: 'pago',
-            entityId: personDocRef.id,
-            entityName: personData.name,
-            timestamp: now,
-            details: { amount: tariff.price, tariffName: tariff.name }
-        } as Omit<AuditLog, 'id'>);
-    } else {
-        finalLastPaymentDate = personData.lastPaymentDate || null;
+    
+    let outstandingPayments = 0;
+    
+    // If a past due date is set, they start with 1 outstanding payment.
+    if (personData.lastPaymentDate && isBefore(startOfDay(personData.lastPaymentDate), startOfDay(now))) {
+        outstandingPayments = 1;
     }
 
     const newPerson: Omit<Person, 'id'> = {
@@ -125,11 +103,11 @@ export const addPersonAction = async (
         levelId: personData.levelId,
         healthInfo: personData.healthInfo,
         notes: personData.notes,
-        joinDate: joinDate,
-        lastPaymentDate: finalLastPaymentDate,
+        joinDate: personData.joinDate || now,
+        lastPaymentDate: personData.lastPaymentDate || null,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
-        outstandingPayments: finalOutstandingPayments,
+        outstandingPayments: outstandingPayments,
         status: 'active',
         inactiveDate: null,
     };
