@@ -525,6 +525,7 @@ export const addJustifiedAbsenceAction = async (
             presentIds: [],
             absentIds: [personId],
             justifiedAbsenceIds: [],
+            status: 'active',
         };
         batch.set(doc(attendanceRef), attendanceRecord);
     } else {
@@ -534,6 +535,7 @@ export const addJustifiedAbsenceAction = async (
             absentIds: arrayUnion(personId),
             // Ensure they are not in present or justified lists
             presentIds: arrayRemove(personId),
+            justifiedAbsenceIds: arrayRemove(personId),
         });
     }
 
@@ -548,14 +550,27 @@ export const addOneTimeAttendeeAction = async (
     date: Date
 ) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const q = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-    
+    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+
     return runTransaction(db, async (transaction) => {
-        // Get the person to find an available credit
+        // --- READS FIRST ---
         const personDocRef = doc(peopleRef, personId);
         const personSnap = await transaction.get(personDocRef);
         if (!personSnap.exists()) throw new Error("La persona no existe.");
-        
+
+        const attendanceSnapshot = await getDocs(attendanceQuery);
+        let attendanceDocRef: DocumentReference;
+        let currentAttendanceData: Partial<SessionAttendance> = {};
+
+        if (attendanceSnapshot.empty) {
+            attendanceDocRef = doc(attendanceRef); // Define ref for new doc
+        } else {
+            attendanceDocRef = attendanceSnapshot.docs[0].ref;
+            const attendanceSnap = await transaction.get(attendanceDocRef);
+            currentAttendanceData = attendanceSnap.data() || {};
+        }
+
+        // --- LOGIC ---
         const personData = personSnap.data() as Person;
         const availableCredit = (personData.recoveryCredits || []).find(c => c.status === 'available');
 
@@ -563,36 +578,25 @@ export const addOneTimeAttendeeAction = async (
             throw new Error("La persona no tiene créditos de recupero disponibles.");
         }
 
-        // Mark the credit as used
         const updatedCredits = (personData.recoveryCredits || []).map(c => 
             c.id === availableCredit.id 
                 ? { ...c, status: 'used', usedInSessionId: sessionId, usedOnDate: dateStr } 
                 : c
         );
+
+        const oneTimeAttendees = Array.from(new Set([...(currentAttendanceData.oneTimeAttendees || []), personId]));
+        const presentIds = Array.from(new Set([...(currentAttendanceData.presentIds || []), personId]));
+
+        // --- WRITES LAST ---
         transaction.update(personDocRef, { recoveryCredits: updatedCredits });
-
-        // Update attendance
-        const attendanceQuerySnapshot = await getDocs(q); // Read inside transaction
-        let attendanceDocRef;
-        let currentData = {};
         
-        if (attendanceQuerySnapshot.empty) {
-            attendanceDocRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
-        } else {
-            attendanceDocRef = attendanceQuerySnapshot.docs[0].ref;
-            const snap = await transaction.get(attendanceDocRef);
-            currentData = snap.data() || {};
-        }
-
-        const oneTimeAttendees = Array.from(new Set([...((currentData as any).oneTimeAttendees || []), personId]));
-        const presentIds = Array.from(new Set([...((currentData as any).presentIds || []), personId]));
-
         transaction.set(attendanceDocRef, {
-            ...currentData,
+            ...currentAttendanceData,
             sessionId: sessionId,
             date: dateStr,
             oneTimeAttendees,
             presentIds,
+            status: 'active',
         }, { merge: true });
     });
 };
