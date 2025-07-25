@@ -1,8 +1,15 @@
 
 
 export type RecoveryCredit = {
-  className: string;
-  date: string;
+  id: string;
+  reason: 'justified_absence' | 'class_cancellation' | 'manual_grant';
+  grantedAt: Date;
+  expiresAt: Date;
+  status: 'available' | 'used' | 'expired';
+  originalSessionId?: string; 
+  originalSessionDate?: string; 
+  usedInSessionId?: string;
+  usedOnDate?: string;
 };
 
 export type LoginCredentials = {
@@ -82,6 +89,7 @@ export type Person = {
   lastPaymentDate: Date | null;
   avatar: string;
   vacationPeriods?: VacationPeriod[];
+  recoveryCredits?: RecoveryCredit[];
   healthInfo?: string;
   levelId?: string;
   notes?: string;
