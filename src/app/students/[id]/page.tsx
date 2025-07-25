@@ -95,25 +95,30 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
     const today = startOfDay(new Date());
 
-    let justifiedAbsencesCount = 0;
-    const upcomingRecs: UpcomingRecovery[] = [];
-    let usedRecoveriesCount = 0;
-
     const allPersonAttendance = attendance.filter(record => 
-        record.oneTimeAttendees?.includes(person.id) ||
-        record.justifiedAbsenceIds?.includes(person.id)
+        record.justifiedAbsenceIds?.includes(person.id) ||
+        record.oneTimeAttendees?.includes(person.id)
     );
     
-    allPersonAttendance.forEach(record => {
-      if (record.justifiedAbsenceIds?.includes(person.id)) {
-        justifiedAbsencesCount++;
-      }
-      if (record.oneTimeAttendees?.includes(person.id)) {
-        usedRecoveriesCount++;
-      }
-    });
+    const justifiedAbsencesCount = allPersonAttendance.filter(record => record.justifiedAbsenceIds?.includes(person.id)).length;
+    
+    const usedRecoveriesCount = allPersonAttendance.filter(record => record.oneTimeAttendees?.includes(person.id)).length;
 
+    const availableCredits = Math.max(0, justifiedAbsencesCount - usedRecoveriesCount);
+    
+    console.log("--- DEBUG: CÁLCULO DE CRÉDITOS ---");
+    console.log(`Persona: ${person.name}`);
+    console.log("Registros de asistencia relevantes:", allPersonAttendance);
+    console.log(`Ausencias Justificadas Contadas: ${justifiedAbsencesCount}`);
+    console.log(`Recuperos Agendados Contados: ${usedRecoveriesCount}`);
+    console.log(`Cálculo: ${justifiedAbsencesCount} - ${usedRecoveriesCount} = ${availableCredits}`);
+    console.log(`Créditos Disponibles Final: ${availableCredits}`);
+    console.log("------------------------------------");
+
+
+    const upcomingRecs: UpcomingRecovery[] = [];
     const oneTimeAttendances = allPersonAttendance.filter(record => record.oneTimeAttendees?.includes(person.id));
+
     for (const record of oneTimeAttendances) {
         const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
         if (!isBefore(recordDate, today)) {
@@ -131,8 +136,6 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
         }
     }
     
-    const availableCredits = Math.max(0, justifiedAbsencesCount - usedRecoveriesCount);
-
     const personSessions = sessions
       .filter(s => s.personIds.includes(person.id))
       .map(s => {
