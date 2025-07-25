@@ -3,7 +3,7 @@
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField, arrayRemove } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect, RecoveryCredit } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval, addDays, isAfter, differenceInDays, differenceInWeeks, differenceInCalendarMonths } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
@@ -110,6 +110,7 @@ export const addPersonAction = async (
         outstandingPayments: outstandingPayments,
         status: 'active',
         inactiveDate: null,
+        recoveryCredits: [],
     };
     
     batch.set(personDocRef, cleanDataForFirestore(newPerson));
@@ -464,18 +465,60 @@ export const cancelSessionForDayAction = async (
   await batch.commit();
 };
 
-export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
+export const addJustifiedAbsenceAction = async (
+    peopleRef: CollectionReference,
+    attendanceRef: CollectionReference,
+    personId: string,
+    sessionId: string,
+    date: Date
+) => {
+    const personDocRef = doc(peopleRef, personId);
+
+    // Create the new credit
+    const newCredit: RecoveryCredit = {
+        id: `credit-${Date.now()}`,
+        reason: 'justified_absence',
+        grantedAt: new Date(),
+        expiresAt: addDays(new Date(), 30), // Expires in 30 days
+        status: 'available',
+        originalSessionId: sessionId,
+        originalSessionDate: formatDate(date, 'yyyy-MM-dd'),
+    };
+
+    const batch = writeBatch(db);
+
+    // 1. Add the credit to the person's document
+    batch.update(personDocRef, {
+        recoveryCredits: arrayUnion(newCredit)
+    });
+
+    // 2. Mark the person as absent in the attendance record for that day
     const dateStr = formatDate(date, 'yyyy-MM-dd');
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-    
     const snap = await getDocs(attendanceQuery);
+    
     if (snap.empty) {
-        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [personId] });
+        // If no record exists, create one with the person as absent
+        const attendanceRecord: Omit<SessionAttendance, 'id'> = {
+            sessionId: sessionId,
+            date: dateStr,
+            presentIds: [],
+            absentIds: [personId],
+            justifiedAbsenceIds: [], // This field is now deprecated but kept for safety
+        };
+        batch.set(doc(attendanceRef), attendanceRecord);
     } else {
-        const record = snap.docs[0].data() as SessionAttendance;
-        const updatedJustified = Array.from(new Set([...(record.justifiedAbsenceIds || []), personId]));
-        await updateEntity(snap.docs[0].ref, { justifiedAbsenceIds: updatedJustified });
+        // If a record exists, add the person to the absent list
+        const attendanceDocRef = snap.docs[0].ref;
+        batch.update(attendanceDocRef, {
+            absentIds: arrayUnion(personId),
+            // Ensure they are not in present or justified lists
+            presentIds: arrayRemove(personId),
+            justifiedAbsenceIds: arrayRemove(personId),
+        });
     }
+
+    await batch.commit();
 };
 
 export const addOneTimeAttendeeAction = async (

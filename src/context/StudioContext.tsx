@@ -513,11 +513,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const addJustifiedAbsence = (personId: string, sessionId: string, date: Date) => handleAction(
-        addJustifiedAbsenceAction(collectionRefs!.attendance, personId, sessionId, date),
-        'Ausencia justificada registrada.',
-        'Error al justificar la ausencia.'
-    );
+    const addJustifiedAbsence = (personId: string, sessionId: string, date: Date) => {
+        if (!collectionRefs) return;
+        handleAction(
+            addJustifiedAbsenceAction(collectionRefs.people, collectionRefs.attendance, personId, sessionId, date),
+            'Ausencia justificada registrada y crédito otorgado.',
+            'Error al justificar la ausencia.'
+        );
+    };
     
     const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
         if (!collectionRefs) return;
