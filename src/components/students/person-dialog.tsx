@@ -139,7 +139,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           outstandingPayments: initialOutstandingPayments,
       };
       
-      console.log('DEBUG: [person-dialog.tsx] Datos enviados a addPerson:', finalValues);
       const newPersonId = await addPerson(finalValues);
       if (onPersonCreated && newPersonId) {
         onPersonCreated({
