@@ -80,8 +80,8 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     }
   }, [params.id, people, loading, router]);
   
-  const { tariff, level, paymentStatusInfo, totalDebt, recoveryCredits, personSessions, upcomingRecoveries } = useMemo(() => {
-    if (!person) return { recoveryCredits: [], personSessions: [], upcomingRecoveries: [] };
+  const { tariff, level, paymentStatusInfo, totalDebt, availableCredits, personSessions, upcomingRecoveries } = useMemo(() => {
+    if (!person) return { availableCredits: 0, personSessions: [], upcomingRecoveries: [] };
 
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const level = levels.find(l => l.id === person.levelId);
@@ -106,16 +106,6 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
     const availableCredits = Math.max(0, justifiedAbsencesCount - usedRecoveriesCount);
     
-    console.log("--- DEBUG: CÁLCULO DE CRÉDITOS ---");
-    console.log(`Persona: ${person.name}`);
-    console.log("Registros de asistencia relevantes:", allPersonAttendance);
-    console.log(`Ausencias Justificadas Contadas: ${justifiedAbsencesCount}`);
-    console.log(`Recuperos Agendados Contados: ${usedRecoveriesCount}`);
-    console.log(`Cálculo: ${justifiedAbsencesCount} - ${usedRecoveriesCount} = ${availableCredits}`);
-    console.log(`Créditos Disponibles Final: ${availableCredits}`);
-    console.log("------------------------------------");
-
-
     const upcomingRecs: UpcomingRecovery[] = [];
     const oneTimeAttendances = allPersonAttendance.filter(record => record.oneTimeAttendees?.includes(person.id));
 
@@ -156,7 +146,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
       level,
       paymentStatusInfo,
       totalDebt,
-      recoveryCredits: Array(availableCredits).fill({}),
+      availableCredits,
       personSessions,
       upcomingRecoveries: upcomingRecs.sort((a,b) => a.date.getTime() - b.date.getTime())
     };
@@ -352,10 +342,10 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 Actividad y Horarios
                              </span>
                         </CardTitle>
-                        {recoveryCredits.length > 0 && (
+                        {availableCredits > 0 && (
                              <CardDescription className="flex items-center gap-1.5 text-amber-600 font-semibold pt-2">
                                 <CalendarClock className="h-4 w-4"/>
-                                Tiene {recoveryCredits.length} clase(s) para recuperar.
+                                Tiene {availableCredits} clase(s) para recuperar.
                             </CardDescription>
                         )}
                     </CardHeader>
@@ -404,7 +394,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                         <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>
                             <PlusCircle className="mr-2 h-4 w-4"/>Inscribir a Clase
                         </Button>
-                        <Button asChild variant="outline" size="sm" disabled={recoveryCredits.length === 0}>
+                        <Button asChild variant="outline" size="sm" disabled={availableCredits <= 0}>
                             <Link href={`/schedule?recoveryMode=true&personId=${person.id}`}>
                                 <CalendarClock className="mr-2 h-4 w-4"/>Recuperar Clase
                             </Link>
