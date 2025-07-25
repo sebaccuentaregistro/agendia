@@ -28,10 +28,11 @@ import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { useShell } from '@/context/ShellContext';
 import { CancelSessionDialog } from '@/components/cancel-session-dialog';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
+import { format, startOfDay } from 'date-fns';
 
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading, people } = useStudio();
+  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading, people, isPersonOnVacation, attendance } = useStudio();
   const { openSessionDialog } = useShell();
   
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
@@ -99,15 +100,29 @@ function SchedulePageContent() {
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const today = startOfDay(new Date());
+    const dateStr = format(today, 'yyyy-MM-dd');
     
     return sessions
         .filter(session => {
-            const space = spaces.find(s => s.id === session.spaceId);
-            const capacity = space?.capacity ?? 0;
-            const isFull = session.personIds.length >= capacity;
+            if (recoveryMode) {
+                const space = spaces.find(s => s.id === session.spaceId);
+                const capacity = space?.capacity ?? 0;
+                
+                const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
+                const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
+                
+                const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
+                const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
+                
+                const dailyOccupancy = (fixedEnrolledPeople.length - vacationingCount) + oneTimeAttendeesCount;
+
+                if (dailyOccupancy >= capacity) {
+                    return false; // Hide if full for today
+                }
+            }
             
             return (
-                (!recoveryMode || !isFull) &&
                 (filters.day === 'all' || session.dayOfWeek === filters.day) &&
                 (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
                 (filters.specialistId === 'all' || session.instructorId === filters.specialistId) &&
@@ -119,7 +134,7 @@ function SchedulePageContent() {
             if (dayComparison !== 0) return dayComparison;
             return a.time.localeCompare(b.time);
         });
-  }, [sessions, filters, spaces, recoveryMode]);
+  }, [sessions, filters, spaces, recoveryMode, attendance, people, isPersonOnVacation]);
   
 
   const getSessionDetails = (session: Session) => {
