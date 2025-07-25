@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction, removePersonFromSessionAction } from '@/lib/firestore-actions';
+import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction, removePersonFromSessionAction, cancelSessionForDayAction, reactivateCancelledSessionAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -39,12 +39,14 @@ interface StudioContextType {
     recordPayment: (personId: string) => Promise<void>;
     revertLastPayment: (personId: string) => void;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
+    cancelSessionForDay: (session: Session, date: Date, grantRecoveryCredits: boolean) => Promise<void>;
+    reactivateCancelledSession: (sessionId: string, date: Date) => Promise<void>;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
     addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
     removeVacationPeriod: (personId: string, vacationId: string, force?: boolean) => void;
     removeOneTimeAttendee: (sessionId: string, personId: string, date: string) => Promise<void>;
     addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
-    addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
+    addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => Promise<void>;
     removePersonFromSession: (sessionId: string, personId: string) => void;
     addToWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
     removeFromWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
@@ -153,12 +155,21 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     if (docData.joinDate) itemWithId.joinDate = safelyParseDate(docData, 'joinDate');
                     if (docData.lastPaymentDate) itemWithId.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
                     if (docData.inactiveDate) itemWithId.inactiveDate = safelyParseDate(docData, 'inactiveDate');
+                    if (docData.grantedAt) itemWithId.grantedAt = safelyParseDate(docData, 'grantedAt');
+                    if (docData.expiresAt) itemWithId.expiresAt = safelyParseDate(docData, 'expiresAt');
                     
                     if (itemWithId.vacationPeriods && Array.isArray(itemWithId.vacationPeriods)) {
                         itemWithId.vacationPeriods = itemWithId.vacationPeriods.map((v: any) => ({
                             ...v,
                             startDate: safelyParseDate(v, 'startDate'),
                             endDate: safelyParseDate(v, 'endDate'),
+                        }));
+                    }
+                     if (itemWithId.recoveryCredits && Array.isArray(itemWithId.recoveryCredits)) {
+                        itemWithId.recoveryCredits = itemWithId.recoveryCredits.map((c: any) => ({
+                            ...c,
+                            grantedAt: safelyParseDate(c, 'grantedAt'),
+                            expiresAt: safelyParseDate(c, 'expiresAt'),
                         }));
                     }
                     
@@ -399,7 +410,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const deleteSpecialist = (id: string) => deleteGenericEntityWithUsageCheck('specialists', id, "Especialista eliminado.", "Error al eliminar el especialista.", [{collection: 'sessions', field: 'instructorId'}]);
 
     const addSpace = (space: Omit<Space, 'id'>) => addGenericEntity('spaces', space, "Espacio creado.", "Error al crear el espacio.");
-    const updateSpace = (space: Space) => updateGenericEntity('spaces', space, "Espacio actualizado.", "Error al actualizar el espacio.");
+    const updateSpace = (space: Space) => updateGenericEntity('spaces', space, "Espacio actualizado.", "Error al actualizar la espacio.");
     const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId'}]);
     
     const addLevel = (level: Omit<Level, 'id'>) => addGenericEntity('levels', level, "Nivel creado.", "Error al crear el nivel.");
@@ -442,6 +453,53 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       );
     }
     
+    const cancelSessionForDay = async (session: Session, date: Date, grantRecoveryCredits: boolean) => {
+        if (!collectionRefs || !activeOperator) return;
+
+        const enrolledPeopleIds = session.personIds.filter(pid => {
+            const person = people.find(p => p.id === pid);
+            return person && !isPersonOnVacation(person, date);
+        });
+
+        const activityName = data.actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
+
+        await withOperator(
+            (operator) => cancelSessionForDayAction(
+                collectionRefs.attendance,
+                collectionRefs.people,
+                session.id,
+                date,
+                enrolledPeopleIds,
+                grantRecoveryCredits,
+                collectionRefs.audit_logs,
+                operator,
+                activityName
+            ),
+            `La sesión de ${activityName} ha sido cancelada para hoy.`,
+            'Error al cancelar la sesión.'
+        );
+    };
+
+    const reactivateCancelledSession = async (sessionId: string, date: Date) => {
+        if (!collectionRefs || !activeOperator) return;
+
+        const activityName = data.actividades.find(a => a.id === sessionId)?.name || 'Clase';
+        
+        await withOperator(
+            (operator) => reactivateCancelledSessionAction(
+                collectionRefs.attendance,
+                collectionRefs.people,
+                sessionId,
+                date,
+                collectionRefs.audit_logs,
+                operator,
+                activityName
+            ),
+            `La sesión de ${activityName} ha sido reactivada.`,
+            'Error al reactivar la sesión.'
+        );
+    };
+
     const isPersonOnVacation = useCallback((person: Person, date: Date) => {
         if (!person.vacationPeriods) return false;
         return person.vacationPeriods.some(period => {
@@ -486,16 +544,19 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         );
     };
 
-    const addJustifiedAbsence = (personId: string, sessionId: string, date: Date) => handleAction(
-        addJustifiedAbsenceAction(collectionRefs!.attendance, personId, sessionId, date),
-        'Ausencia justificada registrada.',
-        'Error al justificar la ausencia.'
-    );
-    
-    const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
+    const addJustifiedAbsence = (personId: string, sessionId: string, date: Date) => {
         if (!collectionRefs) return;
         handleAction(
-            addOneTimeAttendeeAction(collectionRefs.attendance, doc(collectionRefs.sessions, sessionId), personId, date),
+            addJustifiedAbsenceAction(collectionRefs.people, collectionRefs.attendance, personId, sessionId, date),
+            'Ausencia justificada registrada y crédito otorgado.',
+            'Error al justificar la ausencia.'
+        );
+    };
+    
+    const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
+        if (!collectionRefs) return Promise.reject();
+        return handleAction(
+            addOneTimeAttendeeAction(collectionRefs.attendance, collectionRefs.people, sessionId, personId, date),
             'Asistente puntual añadido.',
             'Error al añadir asistente puntual.'
         );
@@ -622,6 +683,8 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             deleteSession,
             enrollPeopleInClass,
             saveAttendance,
+            cancelSessionForDay,
+            reactivateCancelledSession,
             isPersonOnVacation,
             addVacationPeriod,
             removeVacationPeriod,

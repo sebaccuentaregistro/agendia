@@ -1,8 +1,16 @@
 
 
 export type RecoveryCredit = {
-  className: string;
-  date: string;
+  id: string;
+  reason: 'justified_absence' | 'class_cancellation' | 'manual_grant';
+  grantedAt: Date;
+  expiresAt: Date;
+  status: 'available' | 'used' | 'expired';
+  originalSessionId?: string; 
+  originalSessionDate?: string; 
+  usedInSessionId?: string;
+  usedOnDate?: string;
+  cancellationId?: string; // NUEVO: Vincula el crédito a un evento de cancelación específico
 };
 
 export type LoginCredentials = {
@@ -82,6 +90,7 @@ export type Person = {
   lastPaymentDate: Date | null;
   avatar: string;
   vacationPeriods?: VacationPeriod[];
+  recoveryCredits?: RecoveryCredit[];
   healthInfo?: string;
   levelId?: string;
   notes?: string;
@@ -100,6 +109,7 @@ export type NewPersonData = {
     joinDate?: Date;
     lastPaymentDate: Date | null;
     paymentOption: 'recordNow' | 'setManually' | 'pending';
+    outstandingPayments?: number;
 };
 
 export type WaitlistProspect = {
@@ -161,6 +171,8 @@ export type SessionAttendance = {
   absentIds: string[];
   justifiedAbsenceIds?: string[];
   oneTimeAttendees?: string[]; // People added just for this day for a specific reason (e.g., recovery)
+  status?: 'active' | 'cancelled';
+  cancellationId?: string; // NUEVO: ID único para el evento de cancelación
 };
 
 export type AppNotification = {

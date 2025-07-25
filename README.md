@@ -48,4 +48,4 @@ Al finalizar, la terminal te mostrará la URL pública de tu aplicación (normal
 ¡Felicitaciones! Tu aplicación estará de producción.
 
 ---
-**Nota de prueba:** Este cambio se hizo  en la rama `proximas-mejoras` para probar el flujo de Git.
+**Nota de prueba:** Este cambio se hizo en la rama `proximas-mejoras` para probar el flujo de Git.

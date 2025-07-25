@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2, UserPlus, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
@@ -30,6 +31,7 @@ import { EnrollPeopleDialog } from '@/components/enroll-people-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 import { WaitlistDialog } from '@/components/waitlist-dialog';
+import { CancelSessionDialog } from '@/components/cancel-session-dialog';
 import { Badge } from '@/components/ui/badge';
 import { MainCards } from '@/components/dashboard/main-cards';
 import { useShell } from '@/context/ShellContext';
@@ -40,7 +42,7 @@ function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses
+    updateOverdueStatuses, deleteSession, reactivateCancelledSession
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const { openSessionDialog } = useShell();
@@ -65,12 +67,15 @@ function DashboardPageContent() {
   const [sessionForOneTime, setSessionForOneTime] = useState<Session | null>(null);
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
+  const [sessionForCancellation, setSessionForCancellation] = useState<{ session: Session, date: Date } | null>(null);
+  const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
+  const [sessionForReactivation, setSessionForReactivation] = useState<{ session: Session, date: Date } | null>(null);
   
   useEffect(() => {
     setIsMounted(true);
     
     const handleAction = (e: Event) => {
-        const { action, session } = (e as CustomEvent).detail;
+        const { action, session, date } = (e as CustomEvent).detail;
         switch (action) {
             case 'view-students':
                 setSelectedSessionForStudents(session);
@@ -90,8 +95,17 @@ function DashboardPageContent() {
             case 'add-to-waitlist':
                 setSessionForWaitlist(session);
                 break;
+            case 'cancel-session':
+                setSessionForCancellation({ session, date });
+                break;
+            case 'reactivate-session':
+                setSessionForReactivation({ session, date });
+                break;
             case 'edit-session':
                 openSessionDialog(session);
+                break;
+            case 'delete-session':
+                setSessionForDelete(session);
                 break;
         }
     };
@@ -112,7 +126,21 @@ function DashboardPageContent() {
     });
     setIsUpdatingDebts(false);
   };
+
+  const handleDeleteSession = () => {
+    if (sessionForDelete) {
+      deleteSession(sessionForDelete.id);
+      setSessionForDelete(null);
+    }
+  };
   
+  const handleReactivateSession = async () => {
+    if (sessionForReactivation) {
+        await reactivateCancelledSession(sessionForReactivation.session.id, sessionForReactivation.date);
+        setSessionForReactivation(null);
+    }
+  };
+
   const clientSideData = useMemo(() => {
     if (!isMounted) {
       return { todaysSessions: [], todayName: '', totalDebt: 0, collectionPercentage: 0, waitlistOpportunities: [], waitlistSummary: [], totalWaitlistCount: 0, churnRiskPeople: [], overdueCount: 0, upcomingCount: 0, recoveryCount: 0 };
@@ -135,38 +163,7 @@ function DashboardPageContent() {
     
     let overdueCount = 0;
     let upcomingCount = 0;
-    let recoveryPeople = new Set();
-
-    const allRecoveryCredits: Record<string, RecoveryCredit[]> = {};
-    people.forEach(p => (allRecoveryCredits[p.id] = []));
-    
-    let usedRecoveryCounts: Record<string, number> = {};
-    people.forEach(p => (usedRecoveryCounts[p.id] = 0));
-
-    attendance.forEach(record => {
-        (record.oneTimeAttendees || []).forEach(personId => {
-            if (usedRecoveryCounts[personId] !== undefined) {
-                usedRecoveryCounts[personId]++;
-            }
-        });
-        
-        (record.justifiedAbsenceIds || []).forEach(personId => {
-            if (allRecoveryCredits[personId]) {
-                 allRecoveryCredits[personId].push({
-                    className: 'Clase', // Simplified for performance on this page
-                    date: format(parse(record.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy'),
-                });
-            }
-        });
-    });
-    
-    Object.keys(allRecoveryCredits).forEach(personId => {
-        const usedCount = usedRecoveryCounts[personId] || 0;
-        if (allRecoveryCredits[personId].length > usedCount) {
-            recoveryPeople.add(personId);
-        }
-    });
-
+    let recoveryPeopleCount = 0;
 
     for (const p of people) {
       const status = getStudentPaymentStatus(p, now).status;
@@ -175,7 +172,11 @@ function DashboardPageContent() {
       } else if (status === 'Próximo a Vencer') {
         upcomingCount++;
       }
+      if ((p.recoveryCredits?.filter(c => c.status === 'available').length || 0) > 0) {
+        recoveryPeopleCount++;
+      }
     }
+
 
     const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
     const potentialIncome = people.reduce((acc, person) => {
@@ -274,7 +275,7 @@ function DashboardPageContent() {
       waitlistOpportunities, waitlistSummary, totalWaitlistCount,
       churnRiskPeople,
       overdueCount, upcomingCount,
-      recoveryCount: recoveryPeople.size,
+      recoveryCount: recoveryPeopleCount,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, spaces, actividades]);
 
@@ -523,6 +524,40 @@ function DashboardPageContent() {
             onClose={() => setSessionForWaitlist(null)}
         />
       )}
+       {sessionForCancellation && (
+        <CancelSessionDialog
+            session={sessionForCancellation.session}
+            date={sessionForCancellation.date}
+            onClose={() => setSessionForCancellation(null)}
+        />
+      )}
+       <AlertDialog open={!!sessionForDelete} onOpenChange={() => setSessionForDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la sesión. Si hay personas inscriptas, no podrás eliminarla.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSession} className="bg-destructive hover:bg-destructive/90">Sí, eliminar sesión</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+        <AlertDialog open={!!sessionForReactivation} onOpenChange={() => setSessionForReactivation(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Reactivar la clase?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Estás a punto de reactivar la clase de {sessionForReactivation ? actividades.find(a => a.id === sessionForReactivation.session.actividadId)?.name : ''} para hoy.
+                        Los créditos de recupero otorgados por la cancelación (que no hayan sido usados) serán eliminados. ¿Deseas continuar?
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>No, mantener cancelada</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleReactivateSession}>Sí, reactivar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
       <PaymentRemindersSheet 
         isOpen={isRemindersSheetOpen} 

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PlusCircle, FileDown, LayoutGrid, List, CalendarDays, UserPlus } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
-import type { Session } from '@/types';
+import type { Person, Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import * as z from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,10 +26,13 @@ import { WaitlistDialog } from '@/components/waitlist-dialog';
 import { OneTimeAttendeeDialog } from '@/components/one-time-attendee-dialog';
 import { EnrolledStudentsSheet } from '@/components/enrolled-students-sheet';
 import { useShell } from '@/context/ShellContext';
+import { CancelSessionDialog } from '@/components/cancel-session-dialog';
+import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
+import { format, startOfDay } from 'date-fns';
 
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading } = useStudio();
+  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading, people, isPersonOnVacation, attendance, reactivateCancelledSession } = useStudio();
   const { openSessionDialog } = useShell();
   
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
@@ -37,9 +40,19 @@ function SchedulePageContent() {
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [sessionForRecovery, setSessionForRecovery] = useState<Session | null>(null);
   const [sessionForStudents, setSessionForStudents] = useState<Session | null>(null);
+  const [sessionForCancellation, setSessionForCancellation] = useState<{session: Session, date: Date} | null>(null);
+  const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
+  const [sessionForReactivation, setSessionForReactivation] = useState<{ session: Session, date: Date } | null>(null);
   
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const recoveryMode = searchParams.get('recoveryMode') === 'true';
+  const personIdForRecovery = searchParams.get('personId');
+  const personForRecovery = useMemo(() => {
+    return recoveryMode && personIdForRecovery ? people.find(p => p.id === personIdForRecovery) : null;
+  }, [recoveryMode, personIdForRecovery, people]);
+
 
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'cards');
   const [filters, setFilters] = useState({
@@ -51,7 +64,7 @@ function SchedulePageContent() {
   
   useEffect(() => {
     const handleAction = (e: Event) => {
-        const { action, session } = (e as CustomEvent).detail;
+        const { action, session, date } = (e as CustomEvent).detail;
         switch (action) {
             case 'edit-session':
                 openSessionDialog(session);
@@ -71,6 +84,15 @@ function SchedulePageContent() {
             case 'view-students':
                 setSessionForStudents(session);
                 break;
+            case 'cancel-session':
+                setSessionForCancellation({ session, date });
+                break;
+            case 'notify-attendees':
+                setSessionForNotification(session);
+                break;
+            case 'reactivate-session':
+                setSessionForReactivation({ session, date });
+                break;
         }
     };
     document.addEventListener('schedule-card-action', handleAction);
@@ -78,13 +100,32 @@ function SchedulePageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [openSessionDialog]);
+  }, [openSessionDialog, personForRecovery]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const today = startOfDay(new Date());
+    const dateStr = format(today, 'yyyy-MM-dd');
     
     return sessions
         .filter(session => {
+            if (recoveryMode) {
+                const space = spaces.find(s => s.id === session.spaceId);
+                const capacity = space?.capacity ?? 0;
+                
+                const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
+                const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
+                
+                const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
+                const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
+                
+                const dailyOccupancy = (fixedEnrolledPeople.length - vacationingCount) + oneTimeAttendeesCount;
+
+                if (dailyOccupancy >= capacity) {
+                    return false; // Hide if full for today
+                }
+            }
+            
             return (
                 (filters.day === 'all' || session.dayOfWeek === filters.day) &&
                 (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
@@ -97,7 +138,7 @@ function SchedulePageContent() {
             if (dayComparison !== 0) return dayComparison;
             return a.time.localeCompare(b.time);
         });
-  }, [sessions, filters]);
+  }, [sessions, filters, spaces, recoveryMode, attendance, people, isPersonOnVacation]);
   
 
   const getSessionDetails = (session: Session) => {
@@ -116,6 +157,13 @@ function SchedulePageContent() {
     if (sessionForDelete) {
       deleteSession(sessionForDelete.id);
       setSessionForDelete(null);
+    }
+  };
+
+  const handleReactivateSession = async () => {
+    if (sessionForReactivation) {
+        await reactivateCancelledSession(sessionForReactivation.session.id, sessionForReactivation.date);
+        setSessionForReactivation(null);
     }
   };
 
@@ -224,12 +272,12 @@ function SchedulePageContent() {
             </div>
         </Card>
         
-      {searchParams.get('recoveryMode') === 'true' && (
+      {recoveryMode && personForRecovery && (
             <Alert className="border-primary/50 text-primary">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Modo Recupero Activado</AlertTitle>
+                <AlertTitle>Modo Recupero Activado para: {personForRecovery.name}</AlertTitle>
                 <AlertDescription>
-                    Estás viendo los horarios disponibles para recuperar una clase. Solo se muestran las sesiones con cupos libres. Haz clic en "Añadir Recupero" en la clase que desees.
+                    Se muestran las clases con cupos disponibles. Haz clic en "Recupero" en la clase que desees para usar el crédito.
                 </AlertDescription>
             </Alert>
         )}
@@ -252,8 +300,9 @@ function SchedulePageContent() {
                   {filteredAndSortedSessions.map((session) => (
                     <ScheduleCard 
                         key={session.id} 
-                        session={session}
-                        view="structural"
+                        session={session} 
+                        view={recoveryMode ? "daily" : "structural"}
+                        isRecoveryMode={recoveryMode}
                     />
                   ))}
                 </div>
@@ -262,12 +311,14 @@ function SchedulePageContent() {
                     <CardHeader>
                     <CardTitle>No se encontraron sesiones</CardTitle>
                     <CardDescription>
-                        Prueba con otros filtros o añade una nueva sesión a tu horario.
+                        {recoveryMode ? "No hay clases con cupos disponibles." : "Prueba con otros filtros o añade una nueva sesión a tu horario."}
                     </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Horario</Button>
-                    </CardContent>
+                    {!recoveryMode && (
+                        <CardContent>
+                            <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Horario</Button>
+                        </CardContent>
+                    )}
                 </Card>
               )}
             </TabsContent>
@@ -315,8 +366,11 @@ function SchedulePageContent() {
                     actividades={actividades}
                     spaces={spaces}
                     levels={levels}
-                    onSessionClick={(session) => {
+                    onSessionClick={(session, date) => {
                         openSessionDialog(session);
+                    }}
+                    onCancelClick={(session, date) => {
+                        setSessionForCancellation({session, date});
                     }}
                 />
             </TabsContent>
@@ -335,6 +389,22 @@ function SchedulePageContent() {
         </AlertDialogContent>
       </AlertDialog>
       
+      <AlertDialog open={!!sessionForReactivation} onOpenChange={() => setSessionForReactivation(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>¿Reactivar la clase?</AlertDialogTitle>
+                <AlertDialogDescriptionAlert>
+                    Estás a punto de reactivar la clase de {sessionForReactivation ? actividades.find(a => a.id === sessionForReactivation.session.actividadId)?.name : ''} para hoy.
+                    Los créditos de recupero otorgados por la cancelación (que no hayan sido usados) serán eliminados. ¿Deseas continuar?
+                </AlertDialogDescriptionAlert>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>No, mantener cancelada</AlertDialogCancel>
+                <AlertDialogAction onClick={handleReactivateSession}>Sí, reactivar</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
       {sessionForEnrollment && (
         <EnrollPeopleDialog 
           session={sessionForEnrollment}
@@ -344,6 +414,7 @@ function SchedulePageContent() {
        {sessionForRecovery && (
         <OneTimeAttendeeDialog 
             session={sessionForRecovery}
+            personForRecovery={personForRecovery}
             onClose={() => setSessionForRecovery(null)}
         />
       )}
@@ -358,6 +429,19 @@ function SchedulePageContent() {
             session={sessionForStudents}
             onClose={() => setSessionForStudents(null)}
           />
+      )}
+       {sessionForCancellation && (
+        <CancelSessionDialog
+            session={sessionForCancellation.session}
+            date={sessionForCancellation.date}
+            onClose={() => setSessionForCancellation(null)}
+        />
+      )}
+       {sessionForNotification && (
+        <NotifyAttendeesDialog 
+            session={sessionForNotification}
+            onClose={() => setSessionForNotification(null)}
+        />
       )}
     </div>
   );

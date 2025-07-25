@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useStudio } from '@/context/StudioContext';
-import { Session } from '@/types';
+import { Session, Person } from '@/types';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
@@ -24,48 +24,54 @@ const oneTimeAttendeeSchema = z.object({
     date: z.date({ required_error: 'Debes seleccionar una fecha.' }),
 });
 
-export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
+interface OneTimeAttendeeDialogProps {
+    session: Session | null;
+    personForRecovery?: Person | null;
+    onClose: () => void;
+}
+
+export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: OneTimeAttendeeDialogProps) {
   const { people, addOneTimeAttendee, actividades, attendance, spaces, isPersonOnVacation } = useStudio();
-  const actividad = actividades.find(a => a.id === session.actividadId);
-  const space = spaces.find(s => s.id === session.spaceId);
+  const actividad = session ? actividades.find(a => a.id === session.actividadId) : undefined;
+  const space = session ? spaces.find(s => s.id === session.spaceId) : undefined;
   const capacity = space?.capacity ?? 0;
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
     resolver: zodResolver(oneTimeAttendeeSchema),
     defaultValues: {
-        personId: undefined,
+        personId: personForRecovery?.id || undefined,
         date: undefined,
     }
   });
 
   const selectedDate = form.watch('date');
+  const selectedPersonId = form.watch('personId');
 
   const dayMap: { [key in Session['dayOfWeek']]: number } = useMemo(() => ({
     'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6,
   }), []);
 
-  const sessionDayNumber = dayMap[session.dayOfWeek];
+  const sessionDayNumber = session ? dayMap[session.dayOfWeek] : -1;
   
   const eligiblePeople = useMemo(() => {
-    const balances: Record<string, number> = {};
-    people.forEach(p => (balances[p.id] = 0));
-    attendance.forEach(record => {
-      (record.justifiedAbsenceIds || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]++; });
-      (record.oneTimeAttendees || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
-    });
-    
+    if (personForRecovery) {
+        return [personForRecovery];
+    }
     return people
-      .filter(person => (balances[person.id] > 0))
+      .filter(person => (person.recoveryCredits || []).some(c => c.status === 'available'))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [people, attendance]);
+  }, [people, personForRecovery]);
 
-  const { occupationMessage, isFull } = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true };
+  const { occupationMessage, isFull, isAlreadyRecovering } = useMemo(() => {
+    if (!selectedDate || !session) return { occupationMessage: 'Selecciona una fecha.', isFull: true, isAlreadyRecovering: false };
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
     const oneTimeIds = attendanceRecord?.oneTimeAttendees || [];
+
+    // Check if the selected person is already in the one-time list for this date
+    const alreadyRecovering = selectedPersonId ? oneTimeIds.includes(selectedPersonId) : false;
 
     const vacationingPeopleCount = session.personIds
         .filter(pid => {
@@ -78,7 +84,9 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
     const isClassFull = currentOccupation >= capacity;
     
     let message = '';
-    if (isClassFull) {
+    if (alreadyRecovering) {
+        message = 'Esta persona ya está anotada para recuperar en esta fecha.';
+    } else if (isClassFull) {
         message = 'No hay cupos disponibles para esta fecha.';
     } else {
         const availableSpots = capacity - currentOccupation;
@@ -87,15 +95,27 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
 
     return {
         occupationMessage: message,
-        isFull: isClassFull
+        isFull: isClassFull,
+        isAlreadyRecovering: alreadyRecovering,
     }
-  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity]);
+  }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity, selectedPersonId]);
 
-  function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
-    addOneTimeAttendee(session.id, values.personId, values.date);
+  async function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
+    if (!session) return;
+    await addOneTimeAttendee(session.id, values.personId, values.date);
     onClose();
   }
   
+  const availableCredits = useMemo(() => {
+      if (!selectedPersonId) return 0;
+      const person = people.find(p => p.id === selectedPersonId);
+      return (person?.recoveryCredits || []).filter(c => c.status === 'available').length;
+  }, [selectedPersonId, people]);
+
+  const hasCredits = availableCredits > 0;
+
+  if (!session) return null;
+
   return (
     <Dialog open onOpenChange={onClose}>
         <DialogContent>
@@ -147,7 +167,7 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
                                     </PopoverContent>
                                 </Popover>
                                 {occupationMessage && (
-                                    <div className={cn("text-sm mt-2 p-2 rounded-md", isFull ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
+                                    <div className={cn("text-sm mt-2 p-2 rounded-md", isFull || isAlreadyRecovering ? "bg-destructive/10 text-destructive" : "bg-muted text-muted-foreground")}>
                                         <p className="font-semibold">{occupationMessage}</p>
                                     </div>
                                 )}
@@ -164,7 +184,7 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
                                 <Select 
                                     onValueChange={field.onChange}
                                     value={field.value} 
-                                    disabled={!selectedDate || isFull}
+                                    disabled={!selectedDate || isFull || !!personForRecovery}
                                 >
                                     <FormControl>
                                         <SelectTrigger>
@@ -177,7 +197,7 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
                                               {person.name}
                                             </SelectItem>
                                         ))}
-                                        {eligiblePeople.length === 0 && (
+                                        {eligiblePeople.length === 0 && !personForRecovery && (
                                             <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
                                     </SelectContent>
@@ -190,7 +210,7 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
 
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
-                        <Button type="submit" disabled={!form.formState.isValid || isFull}>Añadir Persona</Button>
+                        <Button type="submit" disabled={!form.formState.isValid || isFull || !hasCredits || isAlreadyRecovering}>Añadir Persona</Button>
                     </DialogFooter>
                 </form>
             </Form>

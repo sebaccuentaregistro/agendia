@@ -9,13 +9,15 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from '@/components/ui/progress';
 import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
-import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, UserPlus } from 'lucide-react';
-import type { Session, Person } from '@/types';
-import { format, isAfter, startOfDay, subMinutes } from 'date-fns';
+import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, UserPlus, XCircle, RefreshCw } from 'lucide-react';
+import type { Session, Person, SessionAttendance } from '@/types';
+import { format, isAfter, startOfDay, subMinutes, isToday } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface ScheduleCardProps {
     session: Session;
     view?: 'structural' | 'daily';
+    isRecoveryMode?: boolean;
 }
 
 const formatTime = (time: string) => {
@@ -23,10 +25,14 @@ const formatTime = (time: string) => {
     return time;
 };
 
-export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps) {
+export function ScheduleCard({ session, view = 'structural', isRecoveryMode = false }: ScheduleCardProps) {
     const { specialists, actividades, spaces, levels, attendance, isPersonOnVacation, people } = useStudio();
     
-    const { specialist, actividad, space, level, dailyStats, structuralStats } = useMemo(() => {
+    const isDailyView = view === 'daily';
+    const today = startOfDay(new Date());
+    const dateStr = format(today, 'yyyy-MM-dd');
+
+    const { specialist, actividad, space, level, dailyStats, structuralStats, isCancelledToday } = useMemo(() => {
         const structuralData = {
             specialist: specialists.find((i) => i.id === session.instructorId),
             actividad: actividades.find((s) => s.id === session.actividadId),
@@ -38,9 +44,7 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
         const spaceCapacity = structuralData.space?.capacity ?? 0;
         const structuralUtilization = spaceCapacity > 0 ? (enrolledCount / spaceCapacity) * 100 : 0;
         
-        const today = startOfDay(new Date());
-        const dateStr = format(today, 'yyyy-MM-dd');
-        const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
+        const attendanceRecord = attendance.find((a: SessionAttendance) => a.sessionId === session.id && a.date === dateStr);
         const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
         
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
@@ -49,6 +53,8 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
         const dailyOccupancy = (fixedEnrolledPeople.length - vacationingCount) + oneTimeAttendeesCount;
         const dailyUtilization = spaceCapacity > 0 ? (dailyOccupancy / spaceCapacity) * 100 : 0;
         
+        const isCancelled = attendanceRecord?.status === 'cancelled';
+
         return {
             ...structuralData,
             structuralStats: {
@@ -62,9 +68,10 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                 utilization: dailyUtilization,
                 vacationingCount,
                 oneTimeAttendeesCount
-            }
+            },
+            isCancelledToday: isCancelled,
         };
-    }, [session, specialists, actividades, spaces, levels, attendance, people, isPersonOnVacation]);
+    }, [session, specialists, actividades, spaces, levels, attendance, people, isPersonOnVacation, dateStr, today]);
 
     const getProgressColorClass = (utilization: number) => {
         if (utilization >= 100) return "bg-red-600";
@@ -80,15 +87,12 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
     const isFixedFull = structuralStats.enrolledCount >= structuralStats.capacity;
     const isDailyFull = dailyStats.enrolledCount >= dailyStats.capacity;
     
-    const isDailyView = view === 'daily';
     const stats = isDailyView ? dailyStats : structuralStats;
-    
-    // In structural view (Horarios), we now show daily stats to match button states.
     const displayStats = isDailyView ? dailyStats : dailyStats;
     const progressColorClass = getProgressColorClass(displayStats.utilization);
     
     return (
-        <Card className="flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+        <Card className={cn("flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1", isCancelledToday && "border-destructive/30")}>
             <CardHeader className="p-4 pb-2">
                 <div className="flex items-start justify-between">
                     <CardTitle className="text-xl font-bold text-slate-800 dark:text-slate-100">{actividad?.name}</CardTitle>
@@ -97,13 +101,24 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 dark:text-slate-300 -mr-2 -mt-2"><MoreHorizontal className="h-4 w-4" /></Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                           <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })} disabled={!isFixedFull}>
-                             <ListPlus className="mr-2 h-4 w-4" />Añadir a Lista de Espera
-                           </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleAction('add-to-waitlist', { session })} disabled={isFixedFull}>
+                            <ListPlus className="mr-2 h-4 w-4" />Añadir a Lista de Espera
+                        </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                             <DropdownMenuItem onSelect={() => handleAction('notify-attendees', { session })}>
+                            <DropdownMenuItem onSelect={() => handleAction('notify-attendees', { session })}>
                                 <Bell className="mr-2 h-4 w-4" />Notificar Asistentes
                             </DropdownMenuItem>
+                            {isCancelledToday ? (
+                                <DropdownMenuItem onSelect={() => handleAction('reactivate-session', { session, date: new Date() })}>
+                                    <RefreshCw className="mr-2 h-4 w-4 text-green-600" />
+                                    <span className="text-green-600">Reactivar Clase de Hoy</span>
+                                </DropdownMenuItem>
+                            ) : (
+                                <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session, date: new Date() })}>
+                                    <XCircle className="mr-2 h-4 w-4 text-destructive" />
+                                    <span className="text-destructive">Cancelar solo por hoy</span>
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => handleAction('edit-session', { session })}>
                                 <Pencil className="mr-2 h-4 w-4" />Editar Sesión
@@ -118,14 +133,20 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                     <p className="font-semibold">{session.dayOfWeek}, {formatTime(session.time)}</p>
                 </div>
             </CardHeader>
-            <CardContent className="p-4 pt-2 flex-grow space-y-4">
-                <div className="space-y-1 text-sm">
+            <CardContent className="p-4 pt-2 flex-grow space-y-3">
+                 {isCancelledToday && (
+                    <div className="flex items-center justify-center gap-2 rounded-lg bg-destructive/10 p-2 text-center text-sm font-semibold text-destructive">
+                        <XCircle className="h-4 w-4" />
+                        <span>Cancelada Hoy</span>
+                    </div>
+                )}
+                 <div className="space-y-1 text-sm">
                     <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
                     {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
                 </div>
             </CardContent>
-            <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
+             <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div 
                   className="w-full px-2 pt-1 space-y-1 cursor-pointer"
                   onClick={() => handleAction('view-students', { session })}
@@ -145,16 +166,16 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                       onClick={() => handleAction('view-students', { session })}
                       role="button"
                     >
-                        {dailyStats.oneTimeAttendeesCount > 0 && <p>+ {dailyStats.oneTimeAttendeesCount} recupero(s)</p>}
-                        {dailyStats.vacationingCount > 0 && <p>- {dailyStats.vacationingCount} de vacaciones</p>}
+                        {dailyStats.oneTimeAttendeesCount > 0 && <p className="font-semibold text-green-600">+ {dailyStats.oneTimeAttendeesCount} recupero(s)</p>}
+                        {dailyStats.vacationingCount > 0 && <p className="font-semibold text-amber-600">{dailyStats.vacationingCount} de vacaciones</p>}
                     </div>
                 }
-                {isDailyView ? (
+                {isDailyView || isRecoveryMode ? (
                     <div className="w-full grid grid-cols-2 gap-2 p-1">
-                         <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('take-attendance', { session })}>
+                         <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('take-attendance', { session })} disabled={isCancelledToday}>
                             <ClipboardCheck className="mr-1.5 h-4 w-4" /> Asistencia
                         </Button>
-                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull}>
+                        <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('enroll-recovery', { session })} disabled={isDailyFull || isCancelledToday}>
                             <CalendarClock className="mr-1.5 h-4 w-4" /> Recupero
                         </Button>
                     </div>

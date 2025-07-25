@@ -21,11 +21,10 @@ import { AttendanceHistoryDialog } from '@/app/students/attendance-history-dialo
 import { JustifiedAbsenceDialog } from '@/app/students/justified-absence-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, parse } from 'date-fns';
+import { format, parse, startOfDay, isBefore, isToday, compareDesc } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useRouter } from 'next/navigation';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -35,11 +34,19 @@ type SessionWithDetails = Session & {
     spaceName: string;
 };
 
+type UpcomingRecovery = {
+    date: Date;
+    className: string;
+    time: string;
+    sessionId: string;
+    dateStr: string;
+};
+
 function StudentDetailContent({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { 
     people, sessions, actividades, specialists, spaces, levels, tariffs, attendance, payments, 
-    deactivatePerson, revertLastPayment, recordPayment, loading, removePersonFromSession
+    deactivatePerson, revertLastPayment, recordPayment, loading, removePersonFromSession, removeOneTimeAttendee
   } = useStudio();
   
   const [person, setPerson] = useState<Person | null>(null);
@@ -58,6 +65,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   const [receiptInfo, setReceiptInfo] = useState<ReceiptInfo | null>(null);
   const { institute } = useAuth();
   const [sessionToUnenroll, setSessionToUnenroll] = useState<SessionWithDetails | null>(null);
+  const [recoveryToCancel, setRecoveryToCancel] = useState<UpcomingRecovery | null>(null);
 
 
   useEffect(() => {
@@ -72,28 +80,47 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     }
   }, [params.id, people, loading, router]);
   
-  const { tariff, level, paymentStatusInfo, totalDebt, recoveryCredits, personSessions } = useMemo(() => {
-    if (!person) return { recoveryCredits: [], personSessions: [] };
+  const availableCredits = useMemo(() => {
+    if (!person || !person.recoveryCredits) return 0;
+    return person.recoveryCredits.filter(c => c.status === 'available').length;
+  }, [person]);
+
+
+  const { tariff, level, paymentStatusInfo, totalDebt, personSessions, upcomingRecoveries } = useMemo(() => {
+    if (!person) return { personSessions: [], upcomingRecoveries: [] };
 
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const level = levels.find(l => l.id === person.levelId);
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
-    const totalDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
-
-    const credits: RecoveryCredit[] = [];
-    let usedRecoveryCount = 0;
     
-    attendance.forEach(record => {
-      if (record.oneTimeAttendees?.includes(person.id)) usedRecoveryCount++;
-      if (record.justifiedAbsenceIds?.includes(person.id)) {
-        const session = sessions.find(s => s.id === record.sessionId);
-        credits.push({
-          className: session ? (actividades.find(a => a.id === session.actividadId)?.name || 'Clase') : 'Clase',
-          date: format(parse(record.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy'),
-        });
-      }
-    });
+    let debtMultiplier = person.outstandingPayments || 0;
+     if (paymentStatusInfo.status === 'Atrasado' && debtMultiplier <= 0) {
+        debtMultiplier = 1;
+    }
+    const totalDebt = (tariff?.price || 0) * debtMultiplier;
 
+    const today = startOfDay(new Date());
+
+    const upcomingRecs: UpcomingRecovery[] = [];
+    const oneTimeAttendances = attendance.filter(record => record.oneTimeAttendees?.includes(person.id));
+
+    for (const record of oneTimeAttendances) {
+        const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+        if (!isBefore(recordDate, today)) {
+             const session = sessions.find(s => s.id === record.sessionId);
+             if (session) {
+                 const actividad = actividades.find(a => a.id === session.actividadId);
+                 upcomingRecs.push({
+                      date: recordDate,
+                      className: actividad?.name || 'Clase',
+                      time: session.time,
+                      sessionId: session.id,
+                      dateStr: record.date
+                 });
+             }
+        }
+    }
+    
     const personSessions = sessions
       .filter(s => s.personIds.includes(person.id))
       .map(s => {
@@ -109,15 +136,15 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
          return a.time.localeCompare(b.time);
       });
 
-    return { 
-      tariff, 
-      level, 
-      paymentStatusInfo, 
-      totalDebt, 
-      recoveryCredits: credits.slice(usedRecoveryCount),
-      personSessions
+    return {
+      tariff,
+      level,
+      paymentStatusInfo,
+      totalDebt,
+      personSessions,
+      upcomingRecoveries: upcomingRecs.sort((a,b) => a.date.getTime() - b.date.getTime())
     };
-  }, [person, tariffs, levels, attendance, sessions, actividades, specialists, spaces]);
+}, [person, tariffs, levels, attendance, sessions, actividades, specialists, spaces]);
   
   const personPaymentCount = useMemo(() => {
       if (!person) return 0;
@@ -167,6 +194,13 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     setSessionToUnenroll(null);
   };
   
+  const handleCancelRecovery = async () => {
+    if (recoveryToCancel && person) {
+      await removeOneTimeAttendee(recoveryToCancel.sessionId, person.id, recoveryToCancel.dateStr);
+    }
+    setRecoveryToCancel(null);
+  };
+
   const getStatusBadgeClass = (status: PaymentStatusInfo['status']) => {
     switch (status) {
         case 'Al día': return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700";
@@ -176,6 +210,47 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
         default: return "bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
     }
   };
+
+  const renderFinancialStatus = () => {
+    if (!paymentStatusInfo) return null;
+    
+    const baseClass = "text-center p-3 rounded-lg";
+    const statusClass = getStatusBadgeClass(paymentStatusInfo.status).replace('border-', 'bg-');
+    
+    switch (paymentStatusInfo.status) {
+        case 'Atrasado':
+            return (
+                <div className={cn(baseClass, statusClass)}>
+                    <span className="font-semibold">Debe: {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(totalDebt)}</span>
+                    <span className="block text-xs font-normal opacity-90">({paymentStatusInfo.daysOverdue} días de atraso)</span>
+                </div>
+            );
+        case 'Próximo a Vencer':
+             if (!person) return null;
+             return (
+                <div className={cn(baseClass, statusClass)}>
+                   <span className="font-semibold">Vence {paymentStatusInfo.daysUntilDue === 0 ? 'hoy' : `en ${paymentStatusInfo.daysUntilDue} día(s)`}</span>
+                   <span className="block text-xs font-normal opacity-90">({person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yy') : 'N/A'})</span>
+                </div>
+            );
+        case 'Al día':
+            if (!person) return null;
+            return (
+                <div className={cn(baseClass, statusClass)}>
+                    <span className="font-semibold">Al día</span>
+                    <span className="block text-xs font-normal opacity-90">Próximo vencimiento: {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yy') : 'N/A'}</span>
+                </div>
+            );
+        case 'Pendiente de Pago':
+             return (
+                <div className={cn(baseClass, statusClass)}>
+                    <span className="font-semibold">Pendiente de Primer Pago</span>
+                </div>
+            );
+        default: return null;
+    }
+};
+
   
   const formatWhatsAppLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`;
 
@@ -192,7 +267,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   }
 
   const sessionToUnenrollName = sessionToUnenroll ? actividades.find(a => a.id === sessionToUnenroll.actividadId)?.name : '';
-
+  const isRecoverButtonDisabled = availableCredits <= 0;
 
   return (
     <div className="space-y-8">
@@ -247,16 +322,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                         </div>
                         <p className="text-2xl font-bold">{new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(tariff?.price || 0)}</p>
                     </div>
-                     {paymentStatusInfo.status === 'Atrasado' ? (
-                        <div className="text-center text-destructive p-3 rounded-lg bg-destructive/10">
-                            <p className="font-bold">Deuda Total: {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', minimumFractionDigits: 0 }).format(totalDebt)}</p>
-                            <p className="text-xs">({paymentStatusInfo.daysOverdue} días de atraso)</p>
-                        </div>
-                    ) : (
-                        <div className="text-sm text-muted-foreground">
-                            Próximo vencimiento: {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd MMMM, yyyy', { locale: es }) : 'Pendiente de primer pago'}
-                        </div>
-                    )}
+                    {renderFinancialStatus()}
                 </CardContent>
                 <CardFooter className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <Button onClick={handleRecordPaymentClick}><DollarSign className="mr-2 h-4 w-4"/>Registrar Pago</Button>
@@ -271,47 +337,70 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 <ClipboardList className="h-5 w-5 text-primary"/>
                                 Actividad y Horarios
                              </span>
-                              <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/>Inscribir
-                              </Button>
                         </CardTitle>
-                        {recoveryCredits && recoveryCredits.length > 0 && (
+                        {availableCredits > 0 && (
                              <CardDescription className="flex items-center gap-1.5 text-amber-600 font-semibold pt-2">
                                 <CalendarClock className="h-4 w-4"/>
-                                Tiene {recoveryCredits.length} clase(s) para recuperar.
+                                Tiene {availableCredits} clase(s) para recuperar.
                             </CardDescription>
                         )}
                     </CardHeader>
-                    <CardContent>
-                       <ScrollArea className="h-40">
-                           <div className="space-y-2 pr-4">
-                            {personSessions.length > 0 ? (
-                                personSessions.map(session => (
-                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50 group">
-                                        <div className="flex justify-between items-start">
-                                          <div>
-                                            <p className="font-bold text-foreground">{session.actividadName}</p>
-                                            <p className="font-semibold text-xs text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
-                                          </div>
-                                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setSessionToUnenroll(session)}>
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                          </Button>
-                                        </div>
-                                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                                          <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
-                                          <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{session.spaceName}</span>
-                                        </div>
+                    <CardContent className="space-y-2">
+                        {personSessions.length > 0 ? (
+                            personSessions.map(session => (
+                                <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <p className="font-bold text-foreground">{session.actividadName}</p>
+                                        <p className="font-semibold text-xs text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
+                                      </div>
+                                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSessionToUnenroll(session)}>
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                      </Button>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="text-center text-muted-foreground text-sm py-8">
-                                    Sin horarios fijos asignados.
+                                    <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                      <span className="flex items-center gap-1.5"><User className="h-3 w-3" />{session.specialistName}</span>
+                                      <span className="flex items-center gap-1.5"><MapPin className="h-3 w-3" />{session.spaceName}</span>
+                                    </div>
                                 </div>
-                            )}
+                            ))
+                        ) : (
+                            <div className="text-center text-muted-foreground text-sm py-8">
+                                Sin horarios fijos asignados.
                             </div>
-                        </ScrollArea>
+                        )}
+                        {upcomingRecoveries.length > 0 && (
+                            <>
+                             <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
+                             {upcomingRecoveries.map((rec) => (
+                                 <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center">
+                                    <div>
+                                        <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
+                                        <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => setRecoveryToCancel(rec)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                 </div>
+                             ))}
+                            </>
+                        )}
                     </CardContent>
                      <CardFooter className="grid grid-cols-2 gap-2">
+                        <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4"/>Inscribir a Clase
+                        </Button>
+                        {isRecoverButtonDisabled ? (
+                            <Button variant="outline" size="sm" disabled>
+                                <CalendarClock className="mr-2 h-4 w-4"/>Recuperar Clase
+                            </Button>
+                        ) : (
+                            <Button asChild variant="outline" size="sm">
+                                <Link href={`/schedule?recoveryMode=true&personId=${person.id}`}>
+                                    <CalendarClock className="mr-2 h-4 w-4"/>Recuperar Clase
+                                </Link>
+                            </Button>
+                        )}
                         <Button variant="outline" size="sm" onClick={() => setIsVacationDialogOpen(true)}><Plane className="mr-2 h-4 w-4" />Vacaciones</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsJustifyAbsenceOpen(true)}><UserX className="mr-2 h-4 w-4" />Justificar Ausencia</Button>
                     </CardFooter>
@@ -360,6 +449,12 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             <AlertDialogContent>
                 <AlertDialogHeader><AlertDialogTitle>¿Desinscribir de la clase?</AlertDialogTitle><AlertDialogDescription>Estás a punto de desinscribir a {person.name} de la clase de {sessionToUnenrollName}. ¿Estás seguro?</AlertDialogDescription></AlertDialogHeader>
                 <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleUnenroll}>Sí, desinscribir</AlertDialogAction></AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={!!recoveryToCancel} onOpenChange={() => setRecoveryToCancel(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader><AlertDialogTitle>¿Cancelar Recupero?</AlertDialogTitle><AlertDialogDescription>Estás a punto de cancelar el recupero de {person.name} para la clase de {recoveryToCancel?.className} del {recoveryToCancel && format(recoveryToCancel.date, 'dd/MM/yyyy')}. El crédito será devuelto a la persona.</AlertDialogDescription></AlertDialogHeader>
+                <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleCancelRecovery}>Sí, cancelar recupero</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
         <AlertDialog open={isRevertAlertOpen} onOpenChange={setIsRevertAlertOpen}>

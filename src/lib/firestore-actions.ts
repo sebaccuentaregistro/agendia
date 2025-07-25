@@ -3,9 +3,9 @@
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField, arrayRemove } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect, RecoveryCredit } from '@/types';
 import { db } from './firebase';
-import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval, addDays, isAfter } from 'date-fns';
+import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval, addDays, isAfter, differenceInDays, differenceInWeeks, differenceInCalendarMonths } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
 
 // Helper function to remove undefined fields from an object before Firestore operations.
@@ -86,50 +86,14 @@ export const addPersonAction = async (
     const now = new Date();
     const batch = writeBatch(db);
     const personDocRef = doc(peopleRef);
-
-    let finalLastPaymentDate: Date | null = null;
-    let finalOutstandingPayments: number = 0;
-    const joinDate = personData.joinDate || now;
-
-    switch (personData.paymentOption) {
-        case 'recordNow': {
-            const tariff = tariffs.find(t => t.id === personData.tariffId);
-            if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
-            
-            finalLastPaymentDate = calculateNextPaymentDate(now, joinDate, tariff);
-            finalOutstandingPayments = 0;
-
-            const paymentRecord: Omit<Payment, 'id'> = {
-                personId: personDocRef.id,
-                date: now,
-                amount: tariff.price,
-                tariffId: tariff.id,
-                createdAt: now,
-                timestamp: now,
-            };
-            batch.set(doc(paymentsRef), cleanDataForFirestore(paymentRecord));
-            
-            batch.set(doc(auditLogRef), {
-                operatorId: operator.id,
-                operatorName: operator.name,
-                action: 'REGISTRO_PAGO',
-                entityType: 'pago',
-                entityId: personDocRef.id,
-                entityName: personData.name,
-                timestamp: now,
-                details: { amount: tariff.price, tariffName: tariff.name }
-            } as Omit<AuditLog, 'id'>);
-            break;
-        }
-        case 'setManually':
-            finalLastPaymentDate = personData.lastPaymentDate || null;
-            finalOutstandingPayments = 0;
-            break;
-        case 'pending':
-        default:
-            finalLastPaymentDate = null;
-            finalOutstandingPayments = 1;
-            break;
+    const tariff = tariffs.find(t => t.id === personData.tariffId);
+    if (!tariff) throw new Error("Arancel seleccionado no encontrado.");
+    
+    let outstandingPayments = 0;
+    
+    // If a past due date is set, they start with 1 outstanding payment.
+    if (personData.lastPaymentDate && isBefore(startOfDay(personData.lastPaymentDate), startOfDay(now))) {
+        outstandingPayments = 1;
     }
 
     const newPerson: Omit<Person, 'id'> = {
@@ -139,15 +103,16 @@ export const addPersonAction = async (
         levelId: personData.levelId,
         healthInfo: personData.healthInfo,
         notes: personData.notes,
-        joinDate: joinDate,
-        lastPaymentDate: finalLastPaymentDate,
+        joinDate: personData.joinDate || now,
+        lastPaymentDate: personData.lastPaymentDate || null,
         avatar: `https://placehold.co/100x100.png`,
         vacationPeriods: [],
-        outstandingPayments: finalOutstandingPayments,
+        outstandingPayments: outstandingPayments,
         status: 'active',
         inactiveDate: null,
+        recoveryCredits: [],
     };
-
+    
     batch.set(personDocRef, cleanDataForFirestore(newPerson));
 
     batch.set(doc(auditLogRef), {
@@ -253,17 +218,21 @@ export const recordPaymentAction = async (
     paymentsRef: CollectionReference,
     auditLogRef: CollectionReference
 ) => {
-    console.log(`[DEBUG] Iniciando recordPaymentAction para la persona: ${person.id}`);
     const now = new Date();
     const batch = writeBatch(db);
 
     // 1. Calculate new state for the person
     const newOutstandingPayments = Math.max(0, (person.outstandingPayments || 0) - 1);
     
-    // The key change: calculate from the *previous* due date, not from today.
-    const newExpiryDate = (newOutstandingPayments === 0) 
-        ? calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff)
-        : person.lastPaymentDate;
+    let newExpiryDate: Date;
+
+    if (newOutstandingPayments > 0) {
+        // If there's still debt, advance the due date by one cycle from the *previous* due date
+        newExpiryDate = calculateNextPaymentDate(person.lastPaymentDate || now, person.joinDate, tariff);
+    } else {
+        // If the debt is now zero, the new cycle starts from today
+        newExpiryDate = calculateNextPaymentDate(now, person.joinDate, tariff);
+    }
 
     // 2. Create the new payment record
     const paymentRecord: Omit<Payment, 'id'> = {
@@ -303,9 +272,7 @@ export const recordPaymentAction = async (
 
     // 5. Commit all batched writes
     try {
-        console.log(`[DEBUG] A punto de confirmar el guardado del pago para ${person.id}.`);
         await batch.commit();
-        console.log(`[DEBUG] Éxito: El pago fue confirmado en la base de datos para ${person.id}.`);
     } catch (error) {
         console.error(`[DEBUG] Error al confirmar el guardado del pago:`, error);
         throw error;
@@ -428,7 +395,7 @@ export const saveAttendanceAction = async (
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
     const snap = await getDocs(attendanceQuery);
     
-    const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds };
+    const record = { sessionId, date: dateStr, presentIds, absentIds, justifiedAbsenceIds, status: 'active' };
     let docRef;
 
     if (snap.empty) {
@@ -448,62 +415,251 @@ export const saveAttendanceAction = async (
     }
 };
 
-export const addJustifiedAbsenceAction = async (attendanceRef: CollectionReference, personId: string, sessionId: string, date: Date) => {
+export const cancelSessionForDayAction = async (
+  attendanceRef: CollectionReference,
+  peopleRef: CollectionReference,
+  sessionId: string,
+  date: Date,
+  enrolledPeopleIds: string[],
+  grantRecoveryCredits: boolean,
+  auditLogRef: CollectionReference,
+  operator: Operator,
+  activityName: string
+) => {
+  const dateStr = formatDate(date, 'yyyy-MM-dd');
+  const batch = writeBatch(db);
+  const cancellationId = `cancel-${sessionId}-${dateStr}`;
+
+  // 1. Mark the session as cancelled in the attendance collection
+  const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
+  const snap = await getDocs(attendanceQuery);
+
+  const newRecord: Partial<SessionAttendance> = {
+    sessionId,
+    date: dateStr,
+    status: 'cancelled',
+    cancellationId, // Guardar el ID de cancelación
+    presentIds: [],
+    absentIds: [],
+    justifiedAbsenceIds: [],
+  };
+
+  let docRef;
+  if (snap.empty) {
+    docRef = doc(attendanceRef);
+  } else {
+    docRef = snap.docs[0].ref;
+  }
+  batch.set(docRef, newRecord, { merge: true });
+
+  // 2. Grant recovery credits if toggled
+  if (grantRecoveryCredits && enrolledPeopleIds.length > 0) {
+    for (const personId of enrolledPeopleIds) {
+      const personDocRef = doc(peopleRef, personId);
+      const newCredit: RecoveryCredit = {
+        id: `credit-${Date.now()}-${personId}`,
+        reason: 'class_cancellation',
+        grantedAt: new Date(),
+        expiresAt: addDays(new Date(), 30), // Expires in 30 days
+        status: 'available',
+        originalSessionId: sessionId,
+        originalSessionDate: dateStr,
+        cancellationId, // Vincular el crédito a la cancelación
+      };
+      batch.update(personDocRef, {
+        recoveryCredits: arrayUnion(newCredit)
+      });
+    }
+  }
+  
+  // 3. Create an audit log for the cancellation
+  batch.set(doc(auditLogRef), {
+    operatorId: operator.id,
+    operatorName: operator.name,
+    action: 'CANCELAR_SESION',
+    entityType: 'clase',
+    entityId: sessionId,
+    entityName: `Clase de ${activityName}`,
+    timestamp: new Date(),
+    details: { date: dateStr, grantedCredits: grantRecoveryCredits, affectedPeople: enrolledPeopleIds.length }
+  } as Omit<AuditLog, 'id'>);
+
+  await batch.commit();
+};
+
+export const reactivateCancelledSessionAction = async (
+    attendanceRef: CollectionReference,
+    peopleRef: CollectionReference,
+    sessionId: string,
+    date: Date,
+    auditLogRef: CollectionReference,
+    operator: Operator,
+    activityName: string
+) => {
+    const dateStr = formatDate(date, 'yyyy-MM-dd');
+    const batch = writeBatch(db);
+
+    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr), where('status', '==', 'cancelled'));
+    const snap = await getDocs(attendanceQuery);
+
+    if (snap.empty) {
+        throw new Error("No se encontró una sesión cancelada para reactivar en esta fecha.");
+    }
+    const attendanceDoc = snap.docs[0];
+    const attendanceData = attendanceDoc.data() as SessionAttendance;
+    const cancellationId = attendanceData.cancellationId;
+
+    // 1. Delete the attendance record for the cancelled session
+    batch.delete(attendanceDoc.ref);
+
+    // 2. If a cancellationId exists, find and remove the corresponding 'available' credits
+    if (cancellationId) {
+        // Since we can't query objects in arrays, we get all people and filter locally.
+        const allPeopleSnap = await getDocs(peopleRef);
+        allPeopleSnap.forEach(personDoc => {
+            const personData = personDoc.data() as Person;
+            if (personData.recoveryCredits && personData.recoveryCredits.length > 0) {
+                const creditsToKeep = personData.recoveryCredits.filter(credit => 
+                    !(credit.cancellationId === cancellationId && credit.status === 'available')
+                );
+                
+                // Only update if the credits array has changed.
+                if (creditsToKeep.length < personData.recoveryCredits.length) {
+                    batch.update(personDoc.ref, { recoveryCredits: creditsToKeep });
+                }
+            }
+        });
+    }
+    
+    // 3. Create audit log
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'REACTIVAR_SESION',
+        entityType: 'clase',
+        entityId: sessionId,
+        entityName: `Clase de ${activityName}`,
+        timestamp: new Date(),
+        details: { date: dateStr }
+    } as Omit<AuditLog, 'id'>);
+
+    await batch.commit();
+};
+
+
+export const addJustifiedAbsenceAction = async (
+    peopleRef: CollectionReference,
+    attendanceRef: CollectionReference,
+    personId: string,
+    sessionId: string,
+    date: Date
+) => {
+    const personDocRef = doc(peopleRef, personId);
+
+    // Create the new credit
+    const newCredit: RecoveryCredit = {
+        id: `credit-${Date.now()}-${personId}`,
+        reason: 'justified_absence',
+        grantedAt: new Date(),
+        expiresAt: addDays(new Date(), 30), // Expires in 30 days
+        status: 'available',
+        originalSessionId: sessionId,
+        originalSessionDate: formatDate(date, 'yyyy-MM-dd'),
+    };
+
+    const batch = writeBatch(db);
+
+    // 1. Add the credit to the person's document
+    batch.update(personDocRef, {
+        recoveryCredits: arrayUnion(newCredit)
+    });
+
+    // 2. Mark the person as absent in the attendance record for that day
     const dateStr = formatDate(date, 'yyyy-MM-dd');
     const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
-    
     const snap = await getDocs(attendanceQuery);
+    
     if (snap.empty) {
-        await addEntity(attendanceRef, { sessionId, date: dateStr, presentIds: [], absentIds: [], justifiedAbsenceIds: [personId] });
+        // If no record exists, create one with the person as absent
+        const attendanceRecord: Omit<SessionAttendance, 'id'> = {
+            sessionId: sessionId,
+            date: dateStr,
+            presentIds: [],
+            absentIds: [personId],
+            justifiedAbsenceIds: [],
+            status: 'active',
+        };
+        batch.set(doc(attendanceRef), attendanceRecord);
     } else {
-        const record = snap.docs[0].data() as SessionAttendance;
-        const updatedJustified = Array.from(new Set([...(record.justifiedAbsenceIds || []), personId]));
-        await updateEntity(snap.docs[0].ref, { justifiedAbsenceIds: updatedJustified });
+        // If a record exists, add the person to the absent list
+        const attendanceDocRef = snap.docs[0].ref;
+        batch.update(attendanceDocRef, {
+            absentIds: arrayUnion(personId),
+            // Ensure they are not in present or justified lists
+            presentIds: arrayRemove(personId),
+            justifiedAbsenceIds: arrayRemove(personId),
+        });
     }
+
+    await batch.commit();
 };
 
 export const addOneTimeAttendeeAction = async (
     attendanceRef: CollectionReference,
-    sessionRef: DocumentReference,
+    peopleRef: CollectionReference,
+    sessionId: string,
     personId: string,
     date: Date
 ) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const q = query(attendanceRef, where('sessionId', '==', sessionRef.id), where('date', '==', dateStr));
-    
-    // Perform reads outside the transaction
-    const attendanceQuerySnapshot = await getDocs(q);
-    let attendanceDocRef;
-    let attendanceDocExists = false;
-
-    if (attendanceQuerySnapshot.empty) {
-        attendanceDocRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
-    } else {
-        attendanceDocRef = attendanceQuerySnapshot.docs[0].ref;
-        attendanceDocExists = true;
-    }
+    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
 
     return runTransaction(db, async (transaction) => {
-        // --- All reads are done. Perform writes. ---
+        // --- READS FIRST ---
+        const personDocRef = doc(peopleRef, personId);
+        const personSnap = await transaction.get(personDocRef);
+        if (!personSnap.exists()) throw new Error("La persona no existe.");
 
-        // 1. Update attendance
-        const currentData = attendanceDocExists ? (await transaction.get(attendanceDocRef)).data() : {};
-        const oneTimeAttendees = Array.from(new Set([...(currentData?.oneTimeAttendees || []), personId]));
-        const presentIds = Array.from(new Set([...(currentData?.presentIds || []), personId]));
+        const attendanceSnapshot = await getDocs(attendanceQuery);
+        let attendanceDocRef: DocumentReference;
+        let currentAttendanceData: Partial<SessionAttendance> = {};
 
-        if (attendanceDocExists) {
-            transaction.update(attendanceDocRef, { oneTimeAttendees, presentIds });
+        if (attendanceSnapshot.empty) {
+            attendanceDocRef = doc(attendanceRef); // Define ref for new doc
         } else {
-            const newAttendanceData = {
-                sessionId: sessionRef.id,
-                date: dateStr,
-                oneTimeAttendees,
-                presentIds,
-                absentIds: [],
-                justifiedAbsenceIds: [],
-            };
-            transaction.set(attendanceDocRef, newAttendanceData);
+            attendanceDocRef = attendanceSnapshot.docs[0].ref;
+            const attendanceSnap = await transaction.get(attendanceDocRef);
+            currentAttendanceData = attendanceSnap.data() || {};
         }
+
+        // --- LOGIC ---
+        const personData = personSnap.data() as Person;
+        const availableCredit = (personData.recoveryCredits || []).find(c => c.status === 'available');
+
+        if (!availableCredit) {
+            throw new Error("La persona no tiene créditos de recupero disponibles.");
+        }
+
+        const updatedCredits = (personData.recoveryCredits || []).map(c => 
+            c.id === availableCredit.id 
+                ? { ...c, status: 'used', usedInSessionId: sessionId, usedOnDate: dateStr } 
+                : c
+        );
+
+        const oneTimeAttendees = Array.from(new Set([...(currentAttendanceData.oneTimeAttendees || []), personId]));
+        const presentIds = Array.from(new Set([...(currentAttendanceData.presentIds || []), personId]));
+
+        // --- WRITES LAST ---
+        transaction.update(personDocRef, { recoveryCredits: updatedCredits });
+        
+        transaction.set(attendanceDocRef, {
+            ...currentAttendanceData,
+            sessionId: sessionId,
+            date: dateStr,
+            oneTimeAttendees,
+            presentIds,
+            status: 'active',
+        }, { merge: true });
     });
 };
 

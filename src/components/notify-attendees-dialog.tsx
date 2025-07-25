@@ -107,3 +107,5 @@ export function NotifyAttendeesDialog({ session, onClose }: NotifyAttendeesDialo
     </Dialog>
   );
 }
+
+    

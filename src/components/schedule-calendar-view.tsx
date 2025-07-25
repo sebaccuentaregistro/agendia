@@ -7,7 +7,9 @@ import type { Session, Specialist, Actividad, Space, Level } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
-import { Signal } from 'lucide-react';
+import { Signal, MoreHorizontal, Pencil, XCircle } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Button } from './ui/button';
 
 interface ScheduleCalendarViewProps {
   sessions: Session[];
@@ -15,10 +17,11 @@ interface ScheduleCalendarViewProps {
   actividades: Actividad[];
   spaces: Space[];
   levels: Level[];
-  onSessionClick: (session: Session) => void;
+  onSessionClick: (session: Session, date: Date) => void;
+  onCancelClick: (session: Session, date: Date) => void;
 }
 
-export function ScheduleCalendarView({ sessions, specialists, actividades, levels, onSessionClick }: ScheduleCalendarViewProps) {
+export function ScheduleCalendarView({ sessions, specialists, actividades, levels, onSessionClick, onCancelClick }: ScheduleCalendarViewProps) {
   const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   const timeSlots = Array.from({ length: 16 }, (_, i) => `${String(i + 7).padStart(2, '0')}:00`); // 7:00 to 22:00
 
@@ -27,6 +30,17 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
     acc[key] = session;
     return acc;
   }, {} as Record<string, Session>);
+  
+  const getNextDateForDay = (dayName: string): Date => {
+      const dayMap: Record<string, number> = { 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0 };
+      const targetDay = dayMap[dayName];
+      const today = new Date();
+      const currentDay = today.getDay();
+      const distance = (targetDay - currentDay + 7) % 7;
+      const nextDate = new Date(today.setDate(today.getDate() + distance));
+      return nextDate;
+  };
+
 
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
@@ -46,6 +60,8 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
 
           if (sessionsForDay.length === 0) return null;
 
+          const dateForDay = getNextDateForDay(day);
+
           return (
             <div key={day}>
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3 sticky top-0 bg-background/80 py-2">{day}</h3>
@@ -55,7 +71,7 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
                   return (
                     <Card
                       key={session.id}
-                      onClick={() => onSessionClick(session)}
+                      onClick={() => onSessionClick(session, dateForDay)}
                       className="p-3 cursor-pointer bg-white/50 dark:bg-white/10 hover:bg-white/70 dark:hover:bg-white/20 transition-colors"
                     >
                       <div className="flex justify-between items-start gap-4">
@@ -97,23 +113,37 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
                     </div>
                     {daysOfWeek.map(day => {
                         const session = scheduleGrid[`${day}-${time}`];
+                        const dateForDay = getNextDateForDay(day);
                         return (
-                            <div key={`${day}-${time}`} className="border-l border-b border-slate-200/50 dark:border-slate-700/50 min-h-[70px] p-1 relative">
+                            <div key={`${day}-${time}`} className="border-l border-b border-slate-200/50 dark:border-slate-700/50 min-h-[70px] p-1 relative group">
                                 {session && (() => {
                                     const { specialist, actividad, level } = getSessionDetails(session);
                                     return (
                                         <Card 
-                                            onClick={() => onSessionClick(session)}
                                             className={cn(
                                                 "h-full w-full cursor-pointer transition-all hover:shadow-lg hover:border-primary/50",
                                                 "bg-white/50 dark:bg-white/10"
                                             )}
                                         >
-                                            <CardContent className="p-2 text-center flex flex-col justify-center items-center h-full">
-                                                <p className="font-bold text-xs leading-tight text-primary">{actividad?.name || 'Sesión'}</p>
-                                                <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">{specialist?.name || 'N/A'}</p>
-                                                {level && <Badge variant="outline" className="text-[9px] px-1 py-0 mt-1 flex items-center gap-1"><Signal className="h-2 w-2"/>{level.name}</Badge>}
-                                            </CardContent>
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                                <CardContent className="p-2 text-center flex flex-col justify-center items-center h-full">
+                                                    <p className="font-bold text-xs leading-tight text-primary">{actividad?.name || 'Sesión'}</p>
+                                                    <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">{specialist?.name || 'N/A'}</p>
+                                                    {level && <Badge variant="outline" className="text-[9px] px-1 py-0 mt-1 flex items-center gap-1"><Signal className="h-2 w-2"/>{level.name}</Badge>}
+                                                </CardContent>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-48 p-0">
+                                               <div className="flex flex-col text-sm">
+                                                  <Button variant="ghost" className="justify-start p-2" onClick={() => onSessionClick(session, dateForDay)}>
+                                                      <Pencil className="mr-2 h-4 w-4" /> Editar Sesión
+                                                  </Button>
+                                                  <Button variant="ghost" className="justify-start p-2 text-destructive hover:text-destructive" onClick={() => onCancelClick(session, dateForDay)}>
+                                                      <XCircle className="mr-2 h-4 w-4" /> Cancelar este día
+                                                  </Button>
+                                               </div>
+                                            </PopoverContent>
+                                          </Popover>
                                         </Card>
                                     );
                                 })()}
