@@ -444,29 +444,30 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     }
     
     const cancelSessionForDay = async (session: Session, date: Date, grantRecoveryCredits: boolean) => {
-      if (!collectionRefs || !activeOperator) return;
+        if (!collectionRefs || !activeOperator) return;
 
-      const enrolledPeopleIds = session.personIds.filter(pid => {
-        const person = people.find(p => p.id === pid);
-        return person && !isPersonOnVacation(person, date);
-      });
+        const enrolledPeopleIds = session.personIds.filter(pid => {
+            const person = people.find(p => p.id === pid);
+            return person && !isPersonOnVacation(person, date);
+        });
 
-      const activityName = data.actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
+        const activityName = data.actividades.find(a => a.id === session.actividadId)?.name || 'Clase';
 
-      await withOperator(
-        (operator) => cancelSessionForDayAction(
-          collectionRefs.attendance,
-          session.id,
-          date,
-          enrolledPeopleIds,
-          grantRecoveryCredits,
-          collectionRefs.audit_logs,
-          operator,
-          activityName
-        ),
-        `La sesión de ${activityName} ha sido cancelada para hoy.`,
-        'Error al cancelar la sesión.'
-      );
+        await withOperator(
+            (operator) => cancelSessionForDayAction(
+                collectionRefs.attendance,
+                collectionRefs.people,
+                session.id,
+                date,
+                enrolledPeopleIds,
+                grantRecoveryCredits,
+                collectionRefs.audit_logs,
+                operator,
+                activityName
+            ),
+            `La sesión de ${activityName} ha sido cancelada para hoy.`,
+            'Error al cancelar la sesión.'
+        );
     };
 
     const isPersonOnVacation = useCallback((person: Person, date: Date) => {

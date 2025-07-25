@@ -417,6 +417,7 @@ export const saveAttendanceAction = async (
 
 export const cancelSessionForDayAction = async (
   attendanceRef: CollectionReference,
+  peopleRef: CollectionReference,
   sessionId: string,
   date: Date,
   enrolledPeopleIds: string[],
@@ -426,6 +427,9 @@ export const cancelSessionForDayAction = async (
   activityName: string
 ) => {
   const dateStr = formatDate(date, 'yyyy-MM-dd');
+  const batch = writeBatch(db);
+
+  // 1. Mark the session as cancelled in the attendance collection
   const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
   const snap = await getDocs(attendanceQuery);
 
@@ -435,11 +439,8 @@ export const cancelSessionForDayAction = async (
     status: 'cancelled',
     presentIds: [],
     absentIds: [],
+    justifiedAbsenceIds: [],
   };
-
-  if (grantRecoveryCredits) {
-    newRecord.justifiedAbsenceIds = enrolledPeopleIds;
-  }
 
   let docRef;
   if (snap.empty) {
@@ -447,10 +448,28 @@ export const cancelSessionForDayAction = async (
   } else {
     docRef = snap.docs[0].ref;
   }
-
-  const batch = writeBatch(db);
   batch.set(docRef, newRecord, { merge: true });
+
+  // 2. Grant recovery credits if toggled
+  if (grantRecoveryCredits && enrolledPeopleIds.length > 0) {
+    for (const personId of enrolledPeopleIds) {
+      const personDocRef = doc(peopleRef, personId);
+      const newCredit: RecoveryCredit = {
+        id: `credit-${Date.now()}-${personId}`,
+        reason: 'class_cancellation',
+        grantedAt: new Date(),
+        expiresAt: addDays(new Date(), 30), // Expires in 30 days
+        status: 'available',
+        originalSessionId: sessionId,
+        originalSessionDate: dateStr,
+      };
+      batch.update(personDocRef, {
+        recoveryCredits: arrayUnion(newCredit)
+      });
+    }
+  }
   
+  // 3. Create an audit log for the cancellation
   batch.set(doc(auditLogRef), {
     operatorId: operator.id,
     operatorName: operator.name,
@@ -459,11 +478,12 @@ export const cancelSessionForDayAction = async (
     entityId: sessionId,
     entityName: `Clase de ${activityName}`,
     timestamp: new Date(),
-    details: { date: dateStr, grantedCredits: grantRecoveryCredits }
+    details: { date: dateStr, grantedCredits: grantRecoveryCredits, affectedPeople: enrolledPeopleIds.length }
   } as Omit<AuditLog, 'id'>);
 
   await batch.commit();
 };
+
 
 export const addJustifiedAbsenceAction = async (
     peopleRef: CollectionReference,
@@ -876,3 +896,4 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     
     return updatedCount;
 };
+
