@@ -159,8 +159,8 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
                       onClick={() => handleAction('view-students', { session })}
                       role="button"
                     >
-                        {dailyStats.oneTimeAttendeesCount > 0 && <p>+ {dailyStats.oneTimeAttendeesCount} recupero(s)</p>}
-                        {dailyStats.vacationingCount > 0 && <p>- {dailyStats.vacationingCount} de vacaciones</p>}
+                        {dailyStats.oneTimeAttendeesCount > 0 && <p className="font-semibold text-green-600">+ {dailyStats.oneTimeAttendeesCount} recupero(s)</p>}
+                        {dailyStats.vacationingCount > 0 && <p className="font-semibold text-amber-600">{dailyStats.vacationingCount} de vacaciones</p>}
                     </div>
                 }
                 {isDailyView || isRecoveryMode ? (
