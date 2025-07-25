@@ -66,13 +66,13 @@ function DashboardPageContent() {
   const [sessionForOneTime, setSessionForOneTime] = useState<Session | null>(null);
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
-  const [sessionForCancellation, setSessionForCancellation] = useState<Session | null>(null);
+  const [sessionForCancellation, setSessionForCancellation] = useState<{ session: Session, date: Date } | null>(null);
   
   useEffect(() => {
     setIsMounted(true);
     
     const handleAction = (e: Event) => {
-        const { action, session } = (e as CustomEvent).detail;
+        const { action, session, date } = (e as CustomEvent).detail;
         switch (action) {
             case 'view-students':
                 setSelectedSessionForStudents(session);
@@ -93,7 +93,7 @@ function DashboardPageContent() {
                 setSessionForWaitlist(session);
                 break;
             case 'cancel-session':
-                setSessionForCancellation(session);
+                setSessionForCancellation({ session, date });
                 break;
             case 'edit-session':
                 openSessionDialog(session);
@@ -140,38 +140,7 @@ function DashboardPageContent() {
     
     let overdueCount = 0;
     let upcomingCount = 0;
-    let recoveryPeople = new Set();
-
-    const allRecoveryCredits: Record<string, RecoveryCredit[]> = {};
-    people.forEach(p => (allRecoveryCredits[p.id] = []));
-    
-    let usedRecoveryCounts: Record<string, number> = {};
-    people.forEach(p => (usedRecoveryCounts[p.id] = 0));
-
-    attendance.forEach(record => {
-        (record.oneTimeAttendees || []).forEach(personId => {
-            if (usedRecoveryCounts[personId] !== undefined) {
-                usedRecoveryCounts[personId]++;
-            }
-        });
-        
-        (record.justifiedAbsenceIds || []).forEach(personId => {
-            if (allRecoveryCredits[personId]) {
-                 allRecoveryCredits[personId].push({
-                    className: 'Clase', // Simplified for performance on this page
-                    date: format(parse(record.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy'),
-                });
-            }
-        });
-    });
-    
-    Object.keys(allRecoveryCredits).forEach(personId => {
-        const usedCount = usedRecoveryCounts[personId] || 0;
-        if (allRecoveryCredits[personId].length > usedCount) {
-            recoveryPeople.add(personId);
-        }
-    });
-
+    let recoveryPeopleCount = 0;
 
     for (const p of people) {
       const status = getStudentPaymentStatus(p, now).status;
@@ -180,7 +149,11 @@ function DashboardPageContent() {
       } else if (status === 'Próximo a Vencer') {
         upcomingCount++;
       }
+      if ((p.recoveryCredits?.filter(c => c.status === 'available').length || 0) > 0) {
+        recoveryPeopleCount++;
+      }
     }
+
 
     const overduePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
     const potentialIncome = people.reduce((acc, person) => {
@@ -279,7 +252,7 @@ function DashboardPageContent() {
       waitlistOpportunities, waitlistSummary, totalWaitlistCount,
       churnRiskPeople,
       overdueCount, upcomingCount,
-      recoveryCount: recoveryPeople.size,
+      recoveryCount: recoveryPeopleCount,
     };
   }, [people, sessions, attendance, isPersonOnVacation, isMounted, tariffs, payments, spaces, actividades]);
 
@@ -530,7 +503,8 @@ function DashboardPageContent() {
       )}
        {sessionForCancellation && (
         <CancelSessionDialog
-            session={sessionForCancellation}
+            session={sessionForCancellation.session}
+            date={sessionForCancellation.date}
             onClose={() => setSessionForCancellation(null)}
         />
       )}
