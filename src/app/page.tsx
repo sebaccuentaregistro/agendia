@@ -5,6 +5,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from 'react';
 
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ArrowLeft, RefreshCw, Loader2, ListPlus, Star, ClipboardList, Warehouse, Signal, DollarSign, Percent, Landmark, KeyRound, Banknote, LineChart, ListChecks, ArrowRight, Bell, Trash2, UserPlus, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { useStudio } from '@/context/StudioContext';
@@ -41,7 +42,7 @@ function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses
+    updateOverdueStatuses, deleteSession
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const { openSessionDialog } = useShell();
@@ -67,6 +68,7 @@ function DashboardPageContent() {
   const [sessionForNotification, setSessionForNotification] = useState<Session | null>(null);
   const [sessionForWaitlist, setSessionForWaitlist] = useState<Session | null>(null);
   const [sessionForCancellation, setSessionForCancellation] = useState<{ session: Session, date: Date } | null>(null);
+  const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
   
   useEffect(() => {
     setIsMounted(true);
@@ -98,6 +100,9 @@ function DashboardPageContent() {
             case 'edit-session':
                 openSessionDialog(session);
                 break;
+            case 'delete-session':
+                setSessionForDelete(session);
+                break;
         }
     };
     document.addEventListener('schedule-card-action', handleAction);
@@ -116,6 +121,13 @@ function DashboardPageContent() {
       description: count > 0 ? `Se actualizaron los estados de ${count} persona(s).` : "No se encontraron nuevas deudas para actualizar."
     });
     setIsUpdatingDebts(false);
+  };
+
+  const handleDeleteSession = () => {
+    if (sessionForDelete) {
+      deleteSession(sessionForDelete.id);
+      setSessionForDelete(null);
+    }
   };
   
   const clientSideData = useMemo(() => {
@@ -508,6 +520,18 @@ function DashboardPageContent() {
             onClose={() => setSessionForCancellation(null)}
         />
       )}
+       <AlertDialog open={!!sessionForDelete} onOpenChange={() => setSessionForDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás realmente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción no se puede deshacer. Esto eliminará permanentemente la sesión. Si hay personas inscriptas, no podrás eliminarla.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteSession} className="bg-destructive hover:bg-destructive/90">Sí, eliminar sesión</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <WaitlistSheet isOpen={isWaitlistSheetOpen} onOpenChange={setIsWaitlistSheetOpen} />
       <PaymentRemindersSheet 
         isOpen={isRemindersSheetOpen} 
@@ -526,5 +550,7 @@ export default function RootPage() {
     </Suspense>
   );
 }
+
+    
 
     
