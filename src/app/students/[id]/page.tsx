@@ -80,9 +80,10 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     }
   }, [params.id, people, loading, router]);
   
-  const availableCredits = useMemo(() => {
+ const availableCredits = useMemo(() => {
     if (!person) return 0;
     
+    // We need to check all attendance records to get the full picture
     const justifiedAbsencesCount = attendance.filter(record => 
         record.justifiedAbsenceIds?.includes(person.id)
     ).length;
@@ -245,7 +246,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             return (
                 <div className={cn(baseClass, statusClass)}>
                     <span className="font-semibold">Al día</span>
-                    <span className="block text-xs font-normal opacity-90">Próximo vencimiento: {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yyyy') : 'N/A'}</span>
+                    <span className="block text-xs font-normal opacity-90">Próximo vencimiento: {person.lastPaymentDate ? format(person.lastPaymentDate, 'dd/MM/yy') : 'N/A'}</span>
                 </div>
             );
         case 'Pendiente de Pago':
