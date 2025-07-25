@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PlusCircle, FileDown, LayoutGrid, List, CalendarDays, UserPlus } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription as AlertDialogDescriptionAlert, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import React, { useState, useMemo, useEffect, Suspense, useCallback } from 'react';
-import type { Session } from '@/types';
+import type { Person, Session } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import * as z from 'zod';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -74,11 +74,7 @@ function SchedulePageContent() {
                 setSessionForEnrollment(session);
                 break;
             case 'enroll-recovery':
-                 if (personForRecovery) {
-                    setSessionForRecovery({ ...session, personForRecovery });
-                 } else {
-                    setSessionForRecovery(session);
-                 }
+                setSessionForRecovery(session);
                 break;
             case 'add-to-waitlist':
                 setSessionForWaitlist(session);

@@ -24,10 +24,16 @@ const oneTimeAttendeeSchema = z.object({
     date: z.date({ required_error: 'Debes seleccionar una fecha.' }),
 });
 
-export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: { session: Session & { personForRecovery?: Person | null }; onClose: () => void; }) {
+interface OneTimeAttendeeDialogProps {
+    session: Session | null;
+    personForRecovery?: Person | null;
+    onClose: () => void;
+}
+
+export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: OneTimeAttendeeDialogProps) {
   const { people, addOneTimeAttendee, actividades, attendance, spaces, isPersonOnVacation } = useStudio();
-  const actividad = actividades.find(a => a.id === session.actividadId);
-  const space = spaces.find(s => s.id === session.spaceId);
+  const actividad = session ? actividades.find(a => a.id === session.actividadId) : undefined;
+  const space = session ? spaces.find(s => s.id === session.spaceId) : undefined;
   const capacity = space?.capacity ?? 0;
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
@@ -46,7 +52,7 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
     'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6,
   }), []);
 
-  const sessionDayNumber = dayMap[session.dayOfWeek];
+  const sessionDayNumber = session ? dayMap[session.dayOfWeek] : -1;
   
   const eligiblePeople = useMemo(() => {
     if (personForRecovery) {
@@ -58,7 +64,7 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
   }, [people, personForRecovery]);
 
   const { occupationMessage, isFull, isAlreadyRecovering } = useMemo(() => {
-    if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true, isAlreadyRecovering: false };
+    if (!selectedDate || !session) return { occupationMessage: 'Selecciona una fecha.', isFull: true, isAlreadyRecovering: false };
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const attendanceRecord = attendance.find(a => a.sessionId === session.id && a.date === dateStr);
@@ -95,6 +101,7 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity, selectedPersonId]);
 
   async function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
+    if (!session) return;
     await addOneTimeAttendee(session.id, values.personId, values.date);
     onClose();
   }
@@ -106,6 +113,8 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
   }, [selectedPersonId, people]);
 
   const hasCredits = availableCredits > 0;
+
+  if (!session) return null;
 
   return (
     <Dialog open onOpenChange={onClose}>
