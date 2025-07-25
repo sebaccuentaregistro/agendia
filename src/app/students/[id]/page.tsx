@@ -87,10 +87,9 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     const level = levels.find(l => l.id === person.levelId);
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     
-    // --- DEBT CALCULATION ---
     let debtMultiplier = person.outstandingPayments || 0;
-    if (paymentStatusInfo.status === 'Atrasado' && debtMultiplier <= 0) {
-        debtMultiplier = 1; // Defensive check: If status is overdue, debt must be at least 1 cycle.
+     if (paymentStatusInfo.status === 'Atrasado' && debtMultiplier <= 0) {
+        debtMultiplier = 1;
     }
     const totalDebt = (tariff?.price || 0) * debtMultiplier;
 
