@@ -21,7 +21,7 @@ import { AttendanceHistoryDialog } from '@/app/students/attendance-history-dialo
 import { JustifiedAbsenceDialog } from '@/app/students/justified-absence-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, parse, isAfter, startOfDay, isToday, isBefore } from 'date-fns';
+import { format, parse, startOfDay, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
@@ -97,16 +97,13 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     attendance.forEach(record => {
         const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
 
-        // Count all justified absences to get total credits earned
         if (record.justifiedAbsenceIds?.includes(person.id)) {
             justifiedAbsencesCount++;
         }
 
-        // Count all one-time attendances (past and future) to get total credits used
         if (record.oneTimeAttendees?.includes(person.id)) {
             oneTimeAttendancesCount++;
 
-            // If the one-time attendance is for today or future, add it to the upcoming list
             if (!isBefore(recordDate, today)) {
                 const session = sessions.find(s => s.id === record.sessionId);
                 if (session) {
@@ -122,8 +119,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             }
         }
     });
-
-    // An available credit is one that has not been used for a past or future recovery
+    
     const availableCredits = Math.max(0, justifiedAbsencesCount - oneTimeAttendancesCount);
 
     const personSessions = sessions
@@ -324,13 +320,13 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                            <div className="space-y-2 pr-4">
                             {personSessions.length > 0 ? (
                                 personSessions.map(session => (
-                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50 group">
+                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50">
                                         <div className="flex justify-between items-start">
                                           <div>
                                             <p className="font-bold text-foreground">{session.actividadName}</p>
                                             <p className="font-semibold text-xs text-muted-foreground">{session.dayOfWeek}, {session.time}</p>
                                           </div>
-                                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => setSessionToUnenroll(session)}>
+                                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setSessionToUnenroll(session)}>
                                             <Trash2 className="h-4 w-4 text-destructive" />
                                           </Button>
                                         </div>
