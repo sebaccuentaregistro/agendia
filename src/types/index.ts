@@ -108,7 +108,7 @@ export type WaitlistProspect = {
     isProspect: true;
 };
 
-export type WaitlistEntry = string | WaitlistProspect;
+export type WaitlistEntry = string | (WaitlistProspect & { isProspect: true });
 
 export type Session = {
   id: string;

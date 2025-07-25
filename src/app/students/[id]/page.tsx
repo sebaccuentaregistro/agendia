@@ -21,7 +21,7 @@ import { AttendanceHistoryDialog } from '@/app/students/attendance-history-dialo
 import { JustifiedAbsenceDialog } from '@/app/students/justified-absence-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, parse } from 'date-fns';
+import { format, parse, isAfter, startOfDay, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
@@ -33,6 +33,12 @@ type SessionWithDetails = Session & {
     actividadName: string;
     specialistName: string;
     spaceName: string;
+};
+
+type UpcomingRecovery = {
+    date: Date;
+    className: string;
+    time: string;
 };
 
 function StudentDetailContent({ params }: { params: { id: string } }) {
@@ -72,8 +78,8 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     }
   }, [params.id, people, loading, router]);
   
-  const { tariff, level, paymentStatusInfo, totalDebt, recoveryCredits, personSessions } = useMemo(() => {
-    if (!person) return { recoveryCredits: [], personSessions: [] };
+  const { tariff, level, paymentStatusInfo, totalDebt, recoveryCredits, personSessions, upcomingRecoveries } = useMemo(() => {
+    if (!person) return { recoveryCredits: [], personSessions: [], upcomingRecoveries: [] };
 
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const level = levels.find(l => l.id === person.levelId);
@@ -83,13 +89,35 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     const credits: RecoveryCredit[] = [];
     let usedRecoveryCount = 0;
     
+    const upcomingRecs: UpcomingRecovery[] = [];
+    const today = startOfDay(new Date());
+    
     attendance.forEach(record => {
-      if (record.oneTimeAttendees?.includes(person.id)) usedRecoveryCount++;
+      const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+
+      // Check for one-time attendances (both past for credit count and future for display)
+      if (record.oneTimeAttendees?.includes(person.id)) {
+        if (isBefore(recordDate, today)) {
+          usedRecoveryCount++;
+        } else {
+           const session = sessions.find(s => s.id === record.sessionId);
+            if (session) {
+                const actividad = actividades.find(a => a.id === session.actividadId);
+                upcomingRecs.push({
+                    date: recordDate,
+                    className: actividad?.name || 'Clase',
+                    time: session.time
+                });
+            }
+        }
+      }
+      
+      // Check for justified absences to calculate available credits
       if (record.justifiedAbsenceIds?.includes(person.id)) {
         const session = sessions.find(s => s.id === record.sessionId);
         credits.push({
           className: session ? (actividades.find(a => a.id === session.actividadId)?.name || 'Clase') : 'Clase',
-          date: format(parse(record.date, 'yyyy-MM-dd', new Date()), 'dd/MM/yy'),
+          date: format(recordDate, 'dd/MM/yy'),
         });
       }
     });
@@ -115,7 +143,8 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
       paymentStatusInfo, 
       totalDebt, 
       recoveryCredits: credits.slice(usedRecoveryCount),
-      personSessions
+      personSessions,
+      upcomingRecoveries: upcomingRecs.sort((a,b) => a.date.getTime() - b.date.getTime())
     };
   }, [person, tariffs, levels, attendance, sessions, actividades, specialists, spaces]);
   
@@ -304,6 +333,17 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 <div className="text-center text-muted-foreground text-sm py-8">
                                     Sin horarios fijos asignados.
                                 </div>
+                            )}
+                            {upcomingRecoveries.length > 0 && (
+                                <>
+                                 <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
+                                 {upcomingRecoveries.map((rec, index) => (
+                                     <div key={index} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40">
+                                        <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
+                                        <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
+                                     </div>
+                                 ))}
+                                </>
                             )}
                             </div>
                         </ScrollArea>
