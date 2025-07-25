@@ -21,7 +21,7 @@ import { AttendanceHistoryDialog } from '@/app/students/attendance-history-dialo
 import { JustifiedAbsenceDialog } from '@/app/students/justified-absence-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, parse, startOfDay, isBefore } from 'date-fns';
+import { format, parse, startOfDay, isBefore, isToday } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
@@ -89,10 +89,11 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     const totalDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
 
-    let justifiedAbsencesCount = 0;
-    let oneTimeAttendancesCount = 0;
-    const upcomingRecs: UpcomingRecovery[] = [];
     const today = startOfDay(new Date());
+
+    let justifiedAbsencesCount = 0;
+    const upcomingRecs: UpcomingRecovery[] = [];
+    const usedRecoveryDates: string[] = [];
 
     attendance.forEach(record => {
         const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
@@ -102,9 +103,9 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
         }
 
         if (record.oneTimeAttendees?.includes(person.id)) {
-            oneTimeAttendancesCount++;
-
-            if (!isBefore(recordDate, today)) {
+             if (isBefore(recordDate, today)) {
+                usedRecoveryDates.push(record.date); // This recovery is used up
+             } else {
                 const session = sessions.find(s => s.id === record.sessionId);
                 if (session) {
                     const actividad = actividades.find(a => a.id === session.actividadId);
@@ -116,11 +117,12 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                         dateStr: record.date
                     });
                 }
-            }
+             }
         }
     });
     
-    const availableCredits = Math.max(0, justifiedAbsencesCount - oneTimeAttendancesCount);
+    // An available credit is a justified absence minus any used (past) or scheduled (future) recovery.
+    const availableCredits = Math.max(0, justifiedAbsencesCount - (usedRecoveryDates.length + upcomingRecs.length));
 
     const personSessions = sessions
       .filter(s => s.personIds.includes(person.id))
@@ -316,11 +318,10 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                         )}
                     </CardHeader>
                     <CardContent>
-                       <ScrollArea className="h-40">
-                           <div className="space-y-2 pr-4">
+                       <div className="space-y-2">
                             {personSessions.length > 0 ? (
                                 personSessions.map(session => (
-                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50">
+                                    <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50 group">
                                         <div className="flex justify-between items-start">
                                           <div>
                                             <p className="font-bold text-foreground">{session.actividadName}</p>
@@ -345,7 +346,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 <>
                                  <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
                                  {upcomingRecoveries.map((rec) => (
-                                     <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center">
+                                     <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center group">
                                         <div>
                                             <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
                                             <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
@@ -357,8 +358,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                  ))}
                                 </>
                             )}
-                            </div>
-                        </ScrollArea>
+                        </div>
                     </CardContent>
                      <CardFooter className="grid grid-cols-2 gap-2">
                         <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>
