@@ -95,26 +95,9 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
     const today = startOfDay(new Date());
 
-    // START: Credit Calculation
-    const allPersonSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
-    const allPersonAttendance = attendance.filter(record => 
-        allPersonSessionIds.has(record.sessionId) || // Attendance for their fixed classes
-        record.oneTimeAttendees?.includes(person.id)   // Attendance as a one-time attendee
-    );
-    
-    const justifiedAbsencesCount = allPersonAttendance.filter(record => record.justifiedAbsenceIds?.includes(person.id)).length;
-    const usedRecoveriesCount = allPersonAttendance.filter(record => record.oneTimeAttendees?.includes(person.id)).length;
+    const justifiedAbsencesCount = attendance.filter(record => record.justifiedAbsenceIds?.includes(person.id)).length;
+    const usedRecoveriesCount = attendance.filter(record => record.oneTimeAttendees?.includes(person.id)).length;
     const availableCredits = Math.max(0, justifiedAbsencesCount - usedRecoveriesCount);
-    // DEBUG LOGS
-    console.log("--- DEBUG: CÁLCULO DE CRÉDITOS ---");
-    console.log(`Persona: ${person.name}`);
-    console.log("Registros de asistencia relevantes:", allPersonAttendance);
-    console.log("Ausencias Justificadas Contadas:", justifiedAbsencesCount);
-    console.log("Recuperos Agendados Contados:", usedRecoveriesCount);
-    console.log(`Cálculo: ${justifiedAbsencesCount} - ${usedRecoveriesCount} = ${justifiedAbsencesCount - usedRecoveriesCount}`);
-    console.log("Créditos Disponibles Final:", availableCredits);
-    console.log("------------------------------------");
-    // END: Credit Calculation
     
     const upcomingRecs: UpcomingRecovery[] = [];
     const oneTimeAttendances = attendance.filter(record => record.oneTimeAttendees?.includes(person.id));
