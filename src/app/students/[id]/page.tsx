@@ -95,9 +95,29 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
     const today = startOfDay(new Date());
 
-    const justifiedAbsencesCount = attendance.filter(record => record.justifiedAbsenceIds?.includes(person.id)).length;
-    const usedRecoveriesCount = attendance.filter(record => record.oneTimeAttendees?.includes(person.id)).length;
-    const availableCredits = Math.max(0, justifiedAbsencesCount - usedRecoveriesCount);
+    // --- DEBUG: START ---
+    console.log("--- DEBUG: CÁLCULO DE CRÉDITOS ---");
+    console.log("Persona:", person.name);
+
+    const relevantAttendance = attendance.filter(record => 
+        record.justifiedAbsenceIds?.includes(person.id) || 
+        record.oneTimeAttendees?.includes(person.id)
+    );
+    console.log("Registros de asistencia relevantes:", relevantAttendance);
+    
+    const justifiedAbsencesCount = relevantAttendance.filter(record => record.justifiedAbsenceIds?.includes(person.id)).length;
+    const usedRecoveriesCount = relevantAttendance.filter(record => record.oneTimeAttendees?.includes(person.id)).length;
+
+    console.log("Ausencias Justificadas Contadas:", justifiedAbsencesCount);
+    console.log("Recuperos Agendados Contados:", usedRecoveriesCount);
+    
+    const creditsCalculation = justifiedAbsencesCount - usedRecoveriesCount;
+    console.log(`Cálculo: ${justifiedAbsencesCount} - ${usedRecoveriesCount} = ${creditsCalculation}`);
+
+    const creditsFinal = Math.max(0, creditsCalculation);
+    console.log("Créditos Disponibles Final:", creditsFinal);
+    console.log("------------------------------------");
+    // --- DEBUG: END ---
     
     const upcomingRecs: UpcomingRecovery[] = [];
     const oneTimeAttendances = attendance.filter(record => record.oneTimeAttendees?.includes(person.id));
@@ -139,7 +159,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
       level,
       paymentStatusInfo,
       totalDebt,
-      availableCredits,
+      availableCredits: creditsFinal,
       personSessions,
       upcomingRecoveries: upcomingRecs.sort((a,b) => a.date.getTime() - b.date.getTime())
     };
