@@ -226,6 +226,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                 </div>
             );
         case 'Próximo a Vencer':
+             if (!person) return null;
              return (
                 <div className={cn(baseClass, statusClass)}>
                    <span className="font-semibold">Vence {paymentStatusInfo.daysUntilDue === 0 ? 'hoy' : `en ${paymentStatusInfo.daysUntilDue} día(s)`}</span>
@@ -233,6 +234,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                 </div>
             );
         case 'Al día':
+            if (!person) return null;
             return (
                 <div className={cn(baseClass, statusClass)}>
                     <span className="font-semibold">Al día</span>
