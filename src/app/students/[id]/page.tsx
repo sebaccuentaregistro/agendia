@@ -90,19 +90,17 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     console.log("Persona:", person.name);
 
     const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
-
-    const allPersonAttendance = attendance.filter(record => 
+    
+    console.log("Registros de asistencia relevantes:", attendance.filter(record => 
         (personSessionIds.has(record.sessionId) || record.oneTimeAttendees?.includes(person.id))
-    );
-    console.log("Registros de asistencia relevantes:", allPersonAttendance);
+    ));
 
-
-    const justifiedAbsencesCount = allPersonAttendance.filter(record => 
+    const justifiedAbsencesCount = attendance.filter(record => 
         record.justifiedAbsenceIds?.includes(person.id)
     ).length;
     console.log("Ausencias Justificadas Contadas:", justifiedAbsencesCount);
 
-    const usedRecoveriesCount = allPersonAttendance.filter(record => 
+    const usedRecoveriesCount = attendance.filter(record => 
         record.oneTimeAttendees?.includes(person.id)
     ).length;
     console.log("Recuperos Agendados Contados:", usedRecoveriesCount);
@@ -115,7 +113,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     console.log("------------------------------------");
 
     return creditsFinal;
-  }, [person, sessions, attendance, people]);
+  }, [person, sessions, attendance]);
 
 
   const { tariff, level, paymentStatusInfo, totalDebt, personSessions, upcomingRecoveries } = useMemo(() => {
