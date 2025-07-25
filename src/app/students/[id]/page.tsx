@@ -21,7 +21,7 @@ import { AttendanceHistoryDialog } from '@/app/students/attendance-history-dialo
 import { JustifiedAbsenceDialog } from '@/app/students/justified-absence-dialog';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { format, parse, isAfter, startOfDay, isToday } from 'date-fns';
+import { format, parse, isAfter, startOfDay, isToday, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Link from 'next/link';
 import { WhatsAppIcon } from '@/components/whatsapp-icon';
