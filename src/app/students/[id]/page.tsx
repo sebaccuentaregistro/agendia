@@ -90,10 +90,11 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     console.log("Persona:", person.name);
 
     const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
-    
-    console.log("Registros de asistencia relevantes:", attendance.filter(record => 
-        (personSessionIds.has(record.sessionId) || record.oneTimeAttendees?.includes(person.id))
-    ));
+    const allPersonAttendance = attendance.filter(record => 
+        (personSessionIds.has(record.sessionId) && (record.justifiedAbsenceIds?.includes(person.id) || record.absentIds?.includes(person.id))) ||
+        record.oneTimeAttendees?.includes(person.id)
+    );
+    console.log("Registros de asistencia relevantes:", allPersonAttendance);
 
     const justifiedAbsencesCount = attendance.filter(record => 
         record.justifiedAbsenceIds?.includes(person.id)
@@ -111,9 +112,8 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     const creditsFinal = Math.max(0, creditsCalculation);
     console.log("Créditos Disponibles Final:", creditsFinal);
     console.log("------------------------------------");
-
     return creditsFinal;
-  }, [person, sessions, attendance]);
+  }, [person, sessions, attendance, people]);
 
 
   const { tariff, level, paymentStatusInfo, totalDebt, personSessions, upcomingRecoveries } = useMemo(() => {
@@ -295,10 +295,24 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   }
 
   const sessionToUnenrollName = sessionToUnenroll ? actividades.find(a => a.id === sessionToUnenroll.actividadId)?.name : '';
+  const debugData = {
+    justified: attendance.filter(r => r.justifiedAbsenceIds?.includes(person.id)).length,
+    used: attendance.filter(r => r.oneTimeAttendees?.includes(person.id)).length,
+  };
 
 
   return (
     <div className="space-y-8">
+       <div className="border-2 border-red-500 p-4 my-4 font-mono bg-red-500/10 text-red-800 dark:bg-red-900/20 dark:text-red-200">
+        <h3 className="text-lg font-bold">DEBUG EN VIVO</h3>
+        <p>Persona: {person?.name || 'Cargando...'}</p>
+        <p>Ausencias Justificadas: {debugData.justified}</p>
+        <p>Recuperos Agendados: {debugData.used}</p>
+        <p>Cálculo: {debugData.justified} - {debugData.used} = {debugData.justified - debugData.used}</p>
+        <p>Créditos Disponibles Final: {availableCredits}</p>
+        <p>Botón Habilitado?: {availableCredits > 0 ? 'SÍ' : 'NO'}</p>
+      </div>
+
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex-1">
             <div className="flex items-center gap-4">
@@ -502,3 +516,5 @@ export default function StudentDetailPage({ params }: { params: { id: string } }
     </Suspense>
   )
 }
+
+    
