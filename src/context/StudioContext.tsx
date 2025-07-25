@@ -45,7 +45,7 @@ interface StudioContextType {
     removeVacationPeriod: (personId: string, vacationId: string, force?: boolean) => void;
     removeOneTimeAttendee: (sessionId: string, personId: string, date: string) => Promise<void>;
     addJustifiedAbsence: (personId: string, sessionId: string, date: Date) => void;
-    addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => void;
+    addOneTimeAttendee: (sessionId: string, personId: string, date: Date) => Promise<void>;
     removePersonFromSession: (sessionId: string, personId: string) => void;
     addToWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
     removeFromWaitlist: (sessionId: string, entry: WaitlistEntry) => void;
@@ -154,12 +154,21 @@ export function StudioProvider({ children }: { children: ReactNode }) {
                     if (docData.joinDate) itemWithId.joinDate = safelyParseDate(docData, 'joinDate');
                     if (docData.lastPaymentDate) itemWithId.lastPaymentDate = safelyParseDate(docData, 'lastPaymentDate');
                     if (docData.inactiveDate) itemWithId.inactiveDate = safelyParseDate(docData, 'inactiveDate');
+                    if (docData.grantedAt) itemWithId.grantedAt = safelyParseDate(docData, 'grantedAt');
+                    if (docData.expiresAt) itemWithId.expiresAt = safelyParseDate(docData, 'expiresAt');
                     
                     if (itemWithId.vacationPeriods && Array.isArray(itemWithId.vacationPeriods)) {
                         itemWithId.vacationPeriods = itemWithId.vacationPeriods.map((v: any) => ({
                             ...v,
                             startDate: safelyParseDate(v, 'startDate'),
                             endDate: safelyParseDate(v, 'endDate'),
+                        }));
+                    }
+                     if (itemWithId.recoveryCredits && Array.isArray(itemWithId.recoveryCredits)) {
+                        itemWithId.recoveryCredits = itemWithId.recoveryCredits.map((c: any) => ({
+                            ...c,
+                            grantedAt: safelyParseDate(c, 'grantedAt'),
+                            expiresAt: safelyParseDate(c, 'expiresAt'),
                         }));
                     }
                     
@@ -524,9 +533,9 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     };
     
     const addOneTimeAttendee = (sessionId: string, personId: string, date: Date) => {
-        if (!collectionRefs) return;
-        handleAction(
-            addOneTimeAttendeeAction(collectionRefs.attendance, doc(collectionRefs.sessions, sessionId), personId, date),
+        if (!collectionRefs) return Promise.reject();
+        return handleAction(
+            addOneTimeAttendeeAction(collectionRefs.attendance, collectionRefs.people, sessionId, personId, date),
             'Asistente puntual añadido.',
             'Error al añadir asistente puntual.'
         );

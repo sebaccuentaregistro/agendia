@@ -496,7 +496,7 @@ export const addJustifiedAbsenceAction = async (
 
     // Create the new credit
     const newCredit: RecoveryCredit = {
-        id: `credit-${Date.now()}`,
+        id: `credit-${Date.now()}-${personId}`,
         reason: 'justified_absence',
         grantedAt: new Date(),
         expiresAt: addDays(new Date(), 30), // Expires in 30 days
@@ -524,7 +524,7 @@ export const addJustifiedAbsenceAction = async (
             date: dateStr,
             presentIds: [],
             absentIds: [personId],
-            justifiedAbsenceIds: [], // This field is now deprecated but kept for safety
+            justifiedAbsenceIds: [],
         };
         batch.set(doc(attendanceRef), attendanceRecord);
     } else {
@@ -534,7 +534,6 @@ export const addJustifiedAbsenceAction = async (
             absentIds: arrayUnion(personId),
             // Ensure they are not in present or justified lists
             presentIds: arrayRemove(personId),
-            justifiedAbsenceIds: arrayRemove(personId),
         });
     }
 
@@ -543,46 +542,58 @@ export const addJustifiedAbsenceAction = async (
 
 export const addOneTimeAttendeeAction = async (
     attendanceRef: CollectionReference,
-    sessionRef: DocumentReference,
+    peopleRef: CollectionReference,
+    sessionId: string,
     personId: string,
     date: Date
 ) => {
     const dateStr = formatDate(date, 'yyyy-MM-dd');
-    const q = query(attendanceRef, where('sessionId', '==', sessionRef.id), where('date', '==', dateStr));
+    const q = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
     
-    // Perform reads outside the transaction
-    const attendanceQuerySnapshot = await getDocs(q);
-    let attendanceDocRef;
-    let attendanceDocExists = false;
-
-    if (attendanceQuerySnapshot.empty) {
-        attendanceDocRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
-    } else {
-        attendanceDocRef = attendanceQuerySnapshot.docs[0].ref;
-        attendanceDocExists = true;
-    }
-
     return runTransaction(db, async (transaction) => {
-        // --- All reads are done. Perform writes. ---
+        // Get the person to find an available credit
+        const personDocRef = doc(peopleRef, personId);
+        const personSnap = await transaction.get(personDocRef);
+        if (!personSnap.exists()) throw new Error("La persona no existe.");
+        
+        const personData = personSnap.data() as Person;
+        const availableCredit = (personData.recoveryCredits || []).find(c => c.status === 'available');
 
-        // 1. Update attendance
-        const currentData = attendanceDocExists ? (await transaction.get(attendanceDocRef)).data() : {};
-        const oneTimeAttendees = Array.from(new Set([...(currentData?.oneTimeAttendees || []), personId]));
-        const presentIds = Array.from(new Set([...(currentData?.presentIds || []), personId]));
-
-        if (attendanceDocExists) {
-            transaction.update(attendanceDocRef, { oneTimeAttendees, presentIds });
-        } else {
-            const newAttendanceData = {
-                sessionId: sessionRef.id,
-                date: dateStr,
-                oneTimeAttendees,
-                presentIds,
-                absentIds: [],
-                justifiedAbsenceIds: [],
-            };
-            transaction.set(attendanceDocRef, newAttendanceData);
+        if (!availableCredit) {
+            throw new Error("La persona no tiene créditos de recupero disponibles.");
         }
+
+        // Mark the credit as used
+        const updatedCredits = (personData.recoveryCredits || []).map(c => 
+            c.id === availableCredit.id 
+                ? { ...c, status: 'used', usedInSessionId: sessionId, usedOnDate: dateStr } 
+                : c
+        );
+        transaction.update(personDocRef, { recoveryCredits: updatedCredits });
+
+        // Update attendance
+        const attendanceQuerySnapshot = await getDocs(q); // Read inside transaction
+        let attendanceDocRef;
+        let currentData = {};
+        
+        if (attendanceQuerySnapshot.empty) {
+            attendanceDocRef = doc(collection(attendanceRef.firestore, attendanceRef.path));
+        } else {
+            attendanceDocRef = attendanceQuerySnapshot.docs[0].ref;
+            const snap = await transaction.get(attendanceDocRef);
+            currentData = snap.data() || {};
+        }
+
+        const oneTimeAttendees = Array.from(new Set([...((currentData as any).oneTimeAttendees || []), personId]));
+        const presentIds = Array.from(new Set([...((currentData as any).presentIds || []), personId]));
+
+        transaction.set(attendanceDocRef, {
+            ...currentData,
+            sessionId: sessionId,
+            date: dateStr,
+            oneTimeAttendees,
+            presentIds,
+        }, { merge: true });
     });
 };
 
@@ -896,4 +907,3 @@ export const updateOverdueStatusesAction = async (peopleRef: CollectionReference
     
     return updatedCount;
 };
-

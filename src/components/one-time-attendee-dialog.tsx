@@ -52,17 +52,10 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
     if (personForRecovery) {
         return [personForRecovery];
     }
-    const balances: Record<string, number> = {};
-    people.forEach(p => (balances[p.id] = 0));
-    attendance.forEach(record => {
-      (record.justifiedAbsenceIds || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]++; });
-      (record.oneTimeAttendees || []).forEach(personId => { if (balances[personId] !== undefined) balances[personId]--; });
-    });
-    
     return people
-      .filter(person => (balances[person.id] > 0))
+      .filter(person => (person.recoveryCredits || []).some(c => c.status === 'available'))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [people, attendance, personForRecovery]);
+  }, [people, personForRecovery]);
 
   const { occupationMessage, isFull, isAlreadyRecovering } = useMemo(() => {
     if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true, isAlreadyRecovering: false };
@@ -101,16 +94,18 @@ export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: {
     }
   }, [selectedDate, session, attendance, people, isPersonOnVacation, capacity, selectedPersonId]);
 
-  function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
-    addOneTimeAttendee(session.id, values.personId, values.date);
+  async function onSubmit(values: z.infer<typeof oneTimeAttendeeSchema>) {
+    await addOneTimeAttendee(session.id, values.personId, values.date);
     onClose();
   }
   
-  const hasCredits = useMemo(() => {
-      if (!selectedPersonId) return true; // Don't block until a person is selected
-      const person = eligiblePeople.find(p => p.id === selectedPersonId);
-      return !!person;
-  }, [selectedPersonId, eligiblePeople]);
+  const availableCredits = useMemo(() => {
+      if (!selectedPersonId) return 0;
+      const person = people.find(p => p.id === selectedPersonId);
+      return (person?.recoveryCredits || []).filter(c => c.status === 'available').length;
+  }, [selectedPersonId, people]);
+
+  const hasCredits = availableCredits > 0;
 
   return (
     <Dialog open onOpenChange={onClose}>
