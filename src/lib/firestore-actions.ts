@@ -83,6 +83,7 @@ export const addPersonAction = async (
     auditLogRef: CollectionReference,
     operator: Operator
 ) => {
+    console.log('DEBUG: [firestore-actions.ts] Datos recibidos en addPersonAction:', personData);
     const now = new Date();
     const batch = writeBatch(db);
     const personDocRef = doc(peopleRef);
@@ -148,6 +149,8 @@ export const addPersonAction = async (
         status: 'active',
         inactiveDate: null,
     };
+    
+    console.log('DEBUG: [firestore-actions.ts] Objeto final a guardar en Firestore:', newPerson);
 
     batch.set(personDocRef, cleanDataForFirestore(newPerson));
 
