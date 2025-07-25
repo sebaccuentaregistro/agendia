@@ -39,13 +39,15 @@ type UpcomingRecovery = {
     date: Date;
     className: string;
     time: string;
+    sessionId: string;
+    dateStr: string;
 };
 
 function StudentDetailContent({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { 
     people, sessions, actividades, specialists, spaces, levels, tariffs, attendance, payments, 
-    deactivatePerson, revertLastPayment, recordPayment, loading, removePersonFromSession
+    deactivatePerson, revertLastPayment, recordPayment, loading, removePersonFromSession, removeOneTimeAttendee
   } = useStudio();
   
   const [person, setPerson] = useState<Person | null>(null);
@@ -64,6 +66,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   const [receiptInfo, setReceiptInfo] = useState<ReceiptInfo | null>(null);
   const { institute } = useAuth();
   const [sessionToUnenroll, setSessionToUnenroll] = useState<SessionWithDetails | null>(null);
+  const [recoveryToCancel, setRecoveryToCancel] = useState<UpcomingRecovery | null>(null);
 
 
   useEffect(() => {
@@ -92,6 +95,8 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     const today = startOfDay(new Date());
 
     attendance.forEach(record => {
+        const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+
         // Count all justified absences to get total credits earned
         if (record.justifiedAbsenceIds?.includes(person.id)) {
             justifiedAbsencesCount++;
@@ -102,7 +107,6 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             oneTimeAttendancesCount++;
 
             // If the one-time attendance is for today or future, add it to the upcoming list
-            const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
             if (!isBefore(recordDate, today)) {
                 const session = sessions.find(s => s.id === record.sessionId);
                 if (session) {
@@ -110,13 +114,16 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                     upcomingRecs.push({
                         date: recordDate,
                         className: actividad?.name || 'Clase',
-                        time: session.time
+                        time: session.time,
+                        sessionId: session.id,
+                        dateStr: record.date
                     });
                 }
             }
         }
     });
 
+    // An available credit is one that has not been used for a past or future recovery
     const availableCredits = Math.max(0, justifiedAbsencesCount - oneTimeAttendancesCount);
 
     const personSessions = sessions
@@ -139,7 +146,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
       level,
       paymentStatusInfo,
       totalDebt,
-      recoveryCredits: Array(availableCredits).fill({}), // Return an array of the correct length for the count
+      recoveryCredits: Array(availableCredits).fill({}),
       personSessions,
       upcomingRecoveries: upcomingRecs.sort((a,b) => a.date.getTime() - b.date.getTime())
     };
@@ -193,6 +200,13 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     setSessionToUnenroll(null);
   };
   
+  const handleCancelRecovery = async () => {
+    if (recoveryToCancel && person) {
+      await removeOneTimeAttendee(recoveryToCancel.sessionId, person.id, recoveryToCancel.dateStr);
+    }
+    setRecoveryToCancel(null);
+  };
+
   const getStatusBadgeClass = (status: PaymentStatusInfo['status']) => {
     switch (status) {
         case 'Al día': return "bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700";
@@ -334,10 +348,15 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                             {upcomingRecoveries.length > 0 && (
                                 <>
                                  <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
-                                 {upcomingRecoveries.map((rec, index) => (
-                                     <div key={index} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40">
-                                        <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
-                                        <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
+                                 {upcomingRecoveries.map((rec) => (
+                                     <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center group">
+                                        <div>
+                                            <p className="font-bold text-blue-800 dark:text-blue-300">{rec.className}</p>
+                                            <p className="font-semibold text-xs text-blue-700 dark:text-blue-400">{format(rec.date, "eeee, dd/MM 'a las' HH:mm", { locale: es })}</p>
+                                        </div>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-destructive" onClick={() => setRecoveryToCancel(rec)}>
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
                                      </div>
                                  ))}
                                 </>
@@ -402,6 +421,12 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
             <AlertDialogContent>
                 <AlertDialogHeader><AlertDialogTitle>¿Desinscribir de la clase?</AlertDialogTitle><AlertDialogDescription>Estás a punto de desinscribir a {person.name} de la clase de {sessionToUnenrollName}. ¿Estás seguro?</AlertDialogDescription></AlertDialogHeader>
                 <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleUnenroll}>Sí, desinscribir</AlertDialogAction></AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+        <AlertDialog open={!!recoveryToCancel} onOpenChange={() => setRecoveryToCancel(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader><AlertDialogTitle>¿Cancelar Recupero?</AlertDialogTitle><AlertDialogDescription>Estás a punto de cancelar el recupero de {person.name} para la clase de {recoveryToCancel?.className} del {recoveryToCancel && format(recoveryToCancel.date, 'dd/MM/yyyy')}. El crédito será devuelto a la persona.</AlertDialogDescription></AlertDialogHeader>
+                <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleCancelRecovery}>Sí, cancelar recupero</AlertDialogAction></AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
         <AlertDialog open={isRevertAlertOpen} onOpenChange={setIsRevertAlertOpen}>
