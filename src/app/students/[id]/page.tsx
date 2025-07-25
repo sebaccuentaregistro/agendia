@@ -80,47 +80,19 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     }
   }, [params.id, people, loading, router]);
   
-  const { availableCredits, debugData } = useMemo(() => {
-    console.log("--- DEBUG: CÁLCULO DE CRÉDITOS ---");
-    if (!person) {
-        console.log("Persona no encontrada, retornando 0 créditos.");
-        console.log("------------------------------------");
-        return { availableCredits: 0, debugData: { justified: 0, used: 0, calculation: 'No person', final: 0 } };
-    }
-    console.log("Persona:", person.name);
-
-    const personSessionIds = new Set(sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id));
-    const allPersonAttendance = attendance.filter(record => 
-        (personSessionIds.has(record.sessionId) || record.oneTimeAttendees?.includes(person.id))
-    );
-    console.log("Registros de asistencia relevantes:", allPersonAttendance);
-
-    const justifiedAbsencesCount = allPersonAttendance.filter(record => 
+  const availableCredits = useMemo(() => {
+    if (!person) return 0;
+    
+    const justifiedAbsencesCount = attendance.filter(record => 
         record.justifiedAbsenceIds?.includes(person.id)
     ).length;
-    console.log("Ausencias Justificadas Contadas:", justifiedAbsencesCount);
 
-    const usedRecoveriesCount = allPersonAttendance.filter(record => 
+    const usedRecoveriesCount = attendance.filter(record => 
         record.oneTimeAttendees?.includes(person.id)
     ).length;
-    console.log("Recuperos Agendados Contados:", usedRecoveriesCount);
 
-    const creditsCalculation = justifiedAbsencesCount - usedRecoveriesCount;
-    console.log("Cálculo:", justifiedAbsencesCount, "-", usedRecoveriesCount, "=", creditsCalculation);
-    
-    const creditsFinal = Math.max(0, creditsCalculation);
-    console.log("Créditos Disponibles Final:", creditsFinal);
-    console.log("------------------------------------");
-    
-    const debugInfo = {
-        justified: justifiedAbsencesCount,
-        used: usedRecoveriesCount,
-        calculation: `${justifiedAbsencesCount} - ${usedRecoveriesCount} = ${creditsCalculation}`,
-        final: creditsFinal
-    };
-
-    return { availableCredits: creditsFinal, debugData: debugInfo };
-  }, [person, sessions, attendance, people]);
+    return Math.max(0, justifiedAbsencesCount - usedRecoveriesCount);
+  }, [person, attendance]);
 
 
   const { tariff, level, paymentStatusInfo, totalDebt, personSessions, upcomingRecoveries } = useMemo(() => {
@@ -306,16 +278,6 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
   return (
     <div className="space-y-8">
-      <div className="border-2 border-red-500 p-4 my-4 font-mono bg-red-500/10 text-red-800 dark:bg-red-900/20 dark:text-red-200">
-        <h3 className="text-lg font-bold">DEBUG EN VIVO</h3>
-        <p>Persona: {person?.name || 'Cargando...'}</p>
-        <p>Ausencias Justificadas: {debugData.justified}</p>
-        <p>Recuperos Agendados: {debugData.used}</p>
-        <p>Cálculo: {debugData.calculation}</p>
-        <p>Créditos Disponibles Final: {debugData.final}</p>
-        <p>Botón Habilitado?: {isRecoverButtonDisabled ? 'NO' : 'SÍ'}</p>
-      </div>
-
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex-1">
             <div className="flex items-center gap-4">
