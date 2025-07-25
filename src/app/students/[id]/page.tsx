@@ -80,20 +80,10 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     }
   }, [params.id, people, loading, router]);
   
- const availableCredits = useMemo(() => {
-    if (!person) return 0;
-    
-    // We need to check all attendance records to get the full picture
-    const justifiedAbsencesCount = attendance.filter(record => 
-        record.justifiedAbsenceIds?.includes(person.id)
-    ).length;
-
-    const usedRecoveriesCount = attendance.filter(record => 
-        record.oneTimeAttendees?.includes(person.id)
-    ).length;
-
-    return Math.max(0, justifiedAbsencesCount - usedRecoveriesCount);
-  }, [person, attendance]);
+  const availableCredits = useMemo(() => {
+    if (!person || !person.recoveryCredits) return 0;
+    return person.recoveryCredits.filter(c => c.status === 'available').length;
+  }, [person]);
 
 
   const { tariff, level, paymentStatusInfo, totalDebt, personSessions, upcomingRecoveries } = useMemo(() => {
