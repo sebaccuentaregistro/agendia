@@ -428,6 +428,7 @@ export const cancelSessionForDayAction = async (
 ) => {
   const dateStr = formatDate(date, 'yyyy-MM-dd');
   const batch = writeBatch(db);
+  const cancellationId = `cancel-${sessionId}-${dateStr}`;
 
   // 1. Mark the session as cancelled in the attendance collection
   const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr));
@@ -437,6 +438,7 @@ export const cancelSessionForDayAction = async (
     sessionId,
     date: dateStr,
     status: 'cancelled',
+    cancellationId, // Guardar el ID de cancelación
     presentIds: [],
     absentIds: [],
     justifiedAbsenceIds: [],
@@ -462,6 +464,7 @@ export const cancelSessionForDayAction = async (
         status: 'available',
         originalSessionId: sessionId,
         originalSessionDate: dateStr,
+        cancellationId, // Vincular el crédito a la cancelación
       };
       batch.update(personDocRef, {
         recoveryCredits: arrayUnion(newCredit)
@@ -482,6 +485,60 @@ export const cancelSessionForDayAction = async (
   } as Omit<AuditLog, 'id'>);
 
   await batch.commit();
+};
+
+export const reactivateCancelledSessionAction = async (
+    attendanceRef: CollectionReference,
+    peopleRef: CollectionReference,
+    sessionId: string,
+    date: Date,
+    auditLogRef: CollectionReference,
+    operator: Operator,
+    activityName: string
+) => {
+    const dateStr = formatDate(date, 'yyyy-MM-dd');
+    const batch = writeBatch(db);
+
+    const attendanceQuery = query(attendanceRef, where('sessionId', '==', sessionId), where('date', '==', dateStr), where('status', '==', 'cancelled'));
+    const snap = await getDocs(attendanceQuery);
+
+    if (snap.empty) {
+        throw new Error("No se encontró una sesión cancelada para reactivar en esta fecha.");
+    }
+    const attendanceDoc = snap.docs[0];
+    const attendanceData = attendanceDoc.data() as SessionAttendance;
+    const cancellationId = attendanceData.cancellationId;
+
+    // 1. Delete the attendance record for the cancelled session
+    batch.delete(attendanceDoc.ref);
+
+    // 2. If a cancellationId exists, find and remove the corresponding 'available' credits
+    if (cancellationId) {
+        const peopleWithCreditQuery = query(peopleRef, where('recoveryCredits', 'array-contains-any', [{cancellationId, status: 'available'}]));
+        const peopleSnap = await getDocs(peopleWithCreditQuery);
+        
+        peopleSnap.forEach(personDoc => {
+            const personData = personDoc.data() as Person;
+            const updatedCredits = personData.recoveryCredits?.filter(credit => {
+                return !(credit.cancellationId === cancellationId && credit.status === 'available');
+            });
+            batch.update(personDoc.ref, { recoveryCredits: updatedCredits });
+        });
+    }
+    
+    // 3. Create audit log
+    batch.set(doc(auditLogRef), {
+        operatorId: operator.id,
+        operatorName: operator.name,
+        action: 'REACTIVAR_SESION',
+        entityType: 'clase',
+        entityId: sessionId,
+        entityName: `Clase de ${activityName}`,
+        timestamp: new Date(),
+        details: { date: dateStr }
+    } as Omit<AuditLog, 'id'>);
+
+    await batch.commit();
 };
 
 

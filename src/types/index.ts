@@ -10,6 +10,7 @@ export type RecoveryCredit = {
   originalSessionDate?: string; 
   usedInSessionId?: string;
   usedOnDate?: string;
+  cancellationId?: string; // NUEVO: Vincula el crédito a un evento de cancelación específico
 };
 
 export type LoginCredentials = {
@@ -171,6 +172,7 @@ export type SessionAttendance = {
   justifiedAbsenceIds?: string[];
   oneTimeAttendees?: string[]; // People added just for this day for a specific reason (e.g., recovery)
   status?: 'active' | 'cancelled';
+  cancellationId?: string; // NUEVO: ID único para el evento de cancelación
 };
 
 export type AppNotification = {

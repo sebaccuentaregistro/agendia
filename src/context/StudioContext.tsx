@@ -6,7 +6,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
-import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction, removePersonFromSessionAction, cancelSessionForDayAction } from '@/lib/firestore-actions';
+import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction, removePersonFromSessionAction, cancelSessionForDayAction, reactivateCancelledSessionAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
 
@@ -40,6 +40,7 @@ interface StudioContextType {
     revertLastPayment: (personId: string) => void;
     saveAttendance: (sessionId: string, presentIds: string[], absentIds: string[], justifiedAbsenceIds: string[]) => void;
     cancelSessionForDay: (session: Session, date: Date, grantRecoveryCredits: boolean) => Promise<void>;
+    reactivateCancelledSession: (sessionId: string, date: Date) => Promise<void>;
     isPersonOnVacation: (person: Person, date: Date) => boolean;
     addVacationPeriod: (personId: string, startDate: Date, endDate: Date) => void;
     removeVacationPeriod: (personId: string, vacationId: string, force?: boolean) => void;
@@ -409,7 +410,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const deleteSpecialist = (id: string) => deleteGenericEntityWithUsageCheck('specialists', id, "Especialista eliminado.", "Error al eliminar el especialista.", [{collection: 'sessions', field: 'instructorId'}]);
 
     const addSpace = (space: Omit<Space, 'id'>) => addGenericEntity('spaces', space, "Espacio creado.", "Error al crear el espacio.");
-    const updateSpace = (space: Space) => updateGenericEntity('spaces', space, "Espacio actualizado.", "Error al actualizar el espacio.");
+    const updateSpace = (space: Space) => updateGenericEntity('spaces', space, "Espacio actualizado.", "Error al actualizar la espacio.");
     const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId'}]);
     
     const addLevel = (level: Omit<Level, 'id'>) => addGenericEntity('levels', level, "Nivel creado.", "Error al crear el nivel.");
@@ -476,6 +477,26 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             ),
             `La sesión de ${activityName} ha sido cancelada para hoy.`,
             'Error al cancelar la sesión.'
+        );
+    };
+
+    const reactivateCancelledSession = async (sessionId: string, date: Date) => {
+        if (!collectionRefs || !activeOperator) return;
+
+        const activityName = data.actividades.find(a => a.id === sessionId)?.name || 'Clase';
+        
+        await withOperator(
+            (operator) => reactivateCancelledSessionAction(
+                collectionRefs.attendance,
+                collectionRefs.people,
+                sessionId,
+                date,
+                collectionRefs.audit_logs,
+                operator,
+                activityName
+            ),
+            `La sesión de ${activityName} ha sido reactivada.`,
+            'Error al reactivar la sesión.'
         );
     };
 
@@ -663,6 +684,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             enrollPeopleInClass,
             saveAttendance,
             cancelSessionForDay,
+            reactivateCancelledSession,
             isPersonOnVacation,
             addVacationPeriod,
             removeVacationPeriod,

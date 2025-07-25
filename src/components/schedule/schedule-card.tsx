@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from '@/components/ui/progress';
 import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
-import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, UserPlus, XCircle } from 'lucide-react';
+import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, UserPlus, XCircle, RefreshCw } from 'lucide-react';
 import type { Session, Person, SessionAttendance } from '@/types';
 import { format, isAfter, startOfDay, subMinutes, isToday } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
@@ -108,10 +108,17 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
                             <DropdownMenuItem onSelect={() => handleAction('notify-attendees', { session })}>
                                 <Bell className="mr-2 h-4 w-4" />Notificar Asistentes
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session, date: new Date() })} disabled={isCancelledToday}>
-                                <XCircle className="mr-2 h-4 w-4 text-destructive" />
-                                <span className="text-destructive">Cancelar solo por hoy</span>
-                            </DropdownMenuItem>
+                            {isCancelledToday ? (
+                                <DropdownMenuItem onSelect={() => handleAction('reactivate-session', { session, date: new Date() })}>
+                                    <RefreshCw className="mr-2 h-4 w-4 text-green-600" />
+                                    <span className="text-green-600">Reactivar Clase de Hoy</span>
+                                </DropdownMenuItem>
+                            ) : (
+                                <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session, date: new Date() })}>
+                                    <XCircle className="mr-2 h-4 w-4 text-destructive" />
+                                    <span className="text-destructive">Cancelar solo por hoy</span>
+                                </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => handleAction('edit-session', { session })}>
                                 <Pencil className="mr-2 h-4 w-4" />Editar Sesión

@@ -42,7 +42,7 @@ function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
     isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
-    updateOverdueStatuses, deleteSession
+    updateOverdueStatuses, deleteSession, reactivateCancelledSession
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
   const { openSessionDialog } = useShell();
@@ -97,6 +97,9 @@ function DashboardPageContent() {
             case 'cancel-session':
                 setSessionForCancellation({ session, date });
                 break;
+            case 'reactivate-session':
+                reactivateCancelledSession(session.id, date);
+                break;
             case 'edit-session':
                 openSessionDialog(session);
                 break;
@@ -110,7 +113,7 @@ function DashboardPageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [openSessionDialog]);
+  }, [openSessionDialog, reactivateCancelledSession]);
 
 
   const handleUpdateDebts = async () => {
