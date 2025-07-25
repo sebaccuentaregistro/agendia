@@ -87,18 +87,13 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     const level = levels.find(l => l.id === person.levelId);
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     
-    // --- DEBUGGING START ---
-    console.log("--- DEBUG: Calculando Deuda ---");
-    console.log("Persona:", person);
-    console.log("Arancel encontrado:", tariff);
-    console.log("Pagos pendientes (outstandingPayments):", person.outstandingPayments);
-    const calculatedDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
-    console.log(`Cálculo: (${tariff?.price || 0}) * (${person.outstandingPayments || 0}) = ${calculatedDebt}`);
-    const totalDebt = calculatedDebt;
-    console.log("Deuda Total Calculada:", totalDebt);
-    console.log("--- DEBUG END ---");
-    // --- DEBUGGING END ---
-    
+    // --- DEBT CALCULATION ---
+    let debtMultiplier = person.outstandingPayments || 0;
+    if (paymentStatusInfo.status === 'Atrasado' && debtMultiplier <= 0) {
+        debtMultiplier = 1; // Defensive check: If status is overdue, debt must be at least 1 cycle.
+    }
+    const totalDebt = (tariff?.price || 0) * debtMultiplier;
+
     const today = startOfDay(new Date());
 
     let justifiedAbsencesCount = 0;
@@ -116,25 +111,29 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
         justifiedAbsencesCount++;
       }
       if (record.oneTimeAttendees?.includes(person.id)) {
-        if (isBefore(recordDate, today)) {
-            usedRecoveriesCount++;
-        } else {
-           const session = sessions.find(s => s.id === record.sessionId);
-           if(session) {
-               const actividad = actividades.find(a => a.id === session.actividadId);
-               upcomingRecs.push({
-                    date: recordDate,
-                    className: actividad?.name || 'Clase',
-                    time: session.time,
-                    sessionId: session.id,
-                    dateStr: record.date
-               });
-           }
-        }
+        usedRecoveriesCount++;
       }
     });
+
+    const oneTimeAttendances = attendance.filter(record => record.oneTimeAttendees?.includes(person.id));
+    for (const record of oneTimeAttendances) {
+        const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+        if (!isBefore(recordDate, today)) {
+             const session = sessions.find(s => s.id === record.sessionId);
+             if (session) {
+                 const actividad = actividades.find(a => a.id === session.actividadId);
+                 upcomingRecs.push({
+                      date: recordDate,
+                      className: actividad?.name || 'Clase',
+                      time: session.time,
+                      sessionId: session.id,
+                      dateStr: record.date
+                 });
+             }
+        }
+    }
     
-    const availableCredits = Math.max(0, justifiedAbsencesCount - usedRecoveriesCount - upcomingRecs.length);
+    const availableCredits = Math.max(0, justifiedAbsencesCount - usedRecoveriesCount);
 
     const personSessions = sessions
       .filter(s => s.personIds.includes(person.id))
