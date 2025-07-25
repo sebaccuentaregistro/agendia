@@ -86,8 +86,19 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     const tariff = tariffs.find(t => t.id === person.tariffId);
     const level = levels.find(l => l.id === person.levelId);
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
-    const totalDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
-
+    
+    // --- DEBUGGING START ---
+    console.log("--- DEBUG: Calculando Deuda ---");
+    console.log("Persona:", person);
+    console.log("Arancel encontrado:", tariff);
+    console.log("Pagos pendientes (outstandingPayments):", person.outstandingPayments);
+    const calculatedDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
+    console.log(`Cálculo: (${tariff?.price || 0}) * (${person.outstandingPayments || 0}) = ${calculatedDebt}`);
+    const totalDebt = calculatedDebt;
+    console.log("Deuda Total Calculada:", totalDebt);
+    console.log("--- DEBUG END ---");
+    // --- DEBUGGING END ---
+    
     const today = startOfDay(new Date());
 
     let justifiedAbsencesCount = 0;
