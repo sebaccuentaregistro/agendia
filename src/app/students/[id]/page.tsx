@@ -86,41 +86,38 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     const totalDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
 
-    const credits: RecoveryCredit[] = [];
-    let usedRecoveryCount = 0;
-    
+    let justifiedAbsencesCount = 0;
+    let oneTimeAttendancesCount = 0;
     const upcomingRecs: UpcomingRecovery[] = [];
     const today = startOfDay(new Date());
-    
-    attendance.forEach(record => {
-      const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
 
-      // Check for one-time attendances (both past for credit count and future for display)
-      if (record.oneTimeAttendees?.includes(person.id)) {
-        if (isBefore(recordDate, today)) {
-          usedRecoveryCount++;
-        } else {
-           const session = sessions.find(s => s.id === record.sessionId);
-            if (session) {
-                const actividad = actividades.find(a => a.id === session.actividadId);
-                upcomingRecs.push({
-                    date: recordDate,
-                    className: actividad?.name || 'Clase',
-                    time: session.time
-                });
+    attendance.forEach(record => {
+        // Count all justified absences to get total credits earned
+        if (record.justifiedAbsenceIds?.includes(person.id)) {
+            justifiedAbsencesCount++;
+        }
+
+        // Count all one-time attendances (past and future) to get total credits used
+        if (record.oneTimeAttendees?.includes(person.id)) {
+            oneTimeAttendancesCount++;
+
+            // If the one-time attendance is for today or future, add it to the upcoming list
+            const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+            if (!isBefore(recordDate, today)) {
+                const session = sessions.find(s => s.id === record.sessionId);
+                if (session) {
+                    const actividad = actividades.find(a => a.id === session.actividadId);
+                    upcomingRecs.push({
+                        date: recordDate,
+                        className: actividad?.name || 'Clase',
+                        time: session.time
+                    });
+                }
             }
         }
-      }
-      
-      // Check for justified absences to calculate available credits
-      if (record.justifiedAbsenceIds?.includes(person.id)) {
-        const session = sessions.find(s => s.id === record.sessionId);
-        credits.push({
-          className: session ? (actividades.find(a => a.id === session.actividadId)?.name || 'Clase') : 'Clase',
-          date: format(recordDate, 'dd/MM/yy'),
-        });
-      }
     });
+
+    const availableCredits = Math.max(0, justifiedAbsencesCount - oneTimeAttendancesCount);
 
     const personSessions = sessions
       .filter(s => s.personIds.includes(person.id))
@@ -137,16 +134,16 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
          return a.time.localeCompare(b.time);
       });
 
-    return { 
-      tariff, 
-      level, 
-      paymentStatusInfo, 
-      totalDebt, 
-      recoveryCredits: credits.slice(usedRecoveryCount),
+    return {
+      tariff,
+      level,
+      paymentStatusInfo,
+      totalDebt,
+      recoveryCredits: Array(availableCredits).fill({}), // Return an array of the correct length for the count
       personSessions,
       upcomingRecoveries: upcomingRecs.sort((a,b) => a.date.getTime() - b.date.getTime())
     };
-  }, [person, tariffs, levels, attendance, sessions, actividades, specialists, spaces]);
+}, [person, tariffs, levels, attendance, sessions, actividades, specialists, spaces]);
   
   const personPaymentCount = useMemo(() => {
       if (!person) return 0;
