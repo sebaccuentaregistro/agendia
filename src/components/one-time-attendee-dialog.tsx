@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useStudio } from '@/context/StudioContext';
-import { Session } from '@/types';
+import { Session, Person } from '@/types';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
@@ -24,7 +24,7 @@ const oneTimeAttendeeSchema = z.object({
     date: z.date({ required_error: 'Debes seleccionar una fecha.' }),
 });
 
-export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; onClose: () => void; }) {
+export function OneTimeAttendeeDialog({ session, personForRecovery, onClose }: { session: Session & { personForRecovery?: Person | null }; onClose: () => void; }) {
   const { people, addOneTimeAttendee, actividades, attendance, spaces, isPersonOnVacation } = useStudio();
   const actividad = actividades.find(a => a.id === session.actividadId);
   const space = spaces.find(s => s.id === session.spaceId);
@@ -34,7 +34,7 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
   const form = useForm<z.infer<typeof oneTimeAttendeeSchema>>({
     resolver: zodResolver(oneTimeAttendeeSchema),
     defaultValues: {
-        personId: undefined,
+        personId: personForRecovery?.id || undefined,
         date: undefined,
     }
   });
@@ -48,6 +48,9 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
   const sessionDayNumber = dayMap[session.dayOfWeek];
   
   const eligiblePeople = useMemo(() => {
+    if (personForRecovery) {
+        return [personForRecovery];
+    }
     const balances: Record<string, number> = {};
     people.forEach(p => (balances[p.id] = 0));
     attendance.forEach(record => {
@@ -58,7 +61,7 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
     return people
       .filter(person => (balances[person.id] > 0))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [people, attendance]);
+  }, [people, attendance, personForRecovery]);
 
   const { occupationMessage, isFull } = useMemo(() => {
     if (!selectedDate) return { occupationMessage: 'Selecciona una fecha.', isFull: true };
@@ -164,7 +167,7 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
                                 <Select 
                                     onValueChange={field.onChange}
                                     value={field.value} 
-                                    disabled={!selectedDate || isFull}
+                                    disabled={!selectedDate || isFull || !!personForRecovery}
                                 >
                                     <FormControl>
                                         <SelectTrigger>
@@ -177,7 +180,7 @@ export function OneTimeAttendeeDialog({ session, onClose }: { session: Session; 
                                               {person.name}
                                             </SelectItem>
                                         ))}
-                                        {eligiblePeople.length === 0 && (
+                                        {eligiblePeople.length === 0 && !personForRecovery && (
                                             <div className="p-4 text-center text-sm text-muted-foreground">No hay personas con recuperos pendientes.</div>
                                         )}
                                     </SelectContent>

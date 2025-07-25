@@ -31,7 +31,7 @@ import { NotifyAttendeesDialog } from '@/components/notify-attendees-dialog';
 
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading } = useStudio();
+  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading, people } = useStudio();
   const { openSessionDialog } = useShell();
   
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
@@ -44,6 +44,13 @@ function SchedulePageContent() {
   
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  const recoveryMode = searchParams.get('recoveryMode') === 'true';
+  const personIdForRecovery = searchParams.get('personId');
+  const personForRecovery = useMemo(() => {
+    return recoveryMode && personIdForRecovery ? people.find(p => p.id === personIdForRecovery) : null;
+  }, [recoveryMode, personIdForRecovery, people]);
+
 
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'cards');
   const [filters, setFilters] = useState({
@@ -67,7 +74,11 @@ function SchedulePageContent() {
                 setSessionForEnrollment(session);
                 break;
             case 'enroll-recovery':
-                setSessionForRecovery(session);
+                 if (personForRecovery) {
+                    setSessionForRecovery({ ...session, personForRecovery });
+                 } else {
+                    setSessionForRecovery(session);
+                 }
                 break;
             case 'add-to-waitlist':
                 setSessionForWaitlist(session);
@@ -88,14 +99,19 @@ function SchedulePageContent() {
         document.removeEventListener('schedule-card-action', handleAction);
     };
 
-  }, [openSessionDialog]);
+  }, [openSessionDialog, personForRecovery]);
   
   const filteredAndSortedSessions = useMemo(() => {
     const dayOrder = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
     
     return sessions
         .filter(session => {
+            const space = spaces.find(s => s.id === session.spaceId);
+            const capacity = space?.capacity ?? 0;
+            const isFull = session.personIds.length >= capacity;
+            
             return (
+                (!recoveryMode || !isFull) &&
                 (filters.day === 'all' || session.dayOfWeek === filters.day) &&
                 (filters.actividadId === 'all' || session.actividadId === filters.actividadId) &&
                 (filters.specialistId === 'all' || session.instructorId === filters.specialistId) &&
@@ -107,7 +123,7 @@ function SchedulePageContent() {
             if (dayComparison !== 0) return dayComparison;
             return a.time.localeCompare(b.time);
         });
-  }, [sessions, filters]);
+  }, [sessions, filters, spaces, recoveryMode]);
   
 
   const getSessionDetails = (session: Session) => {
@@ -234,12 +250,12 @@ function SchedulePageContent() {
             </div>
         </Card>
         
-      {searchParams.get('recoveryMode') === 'true' && (
+      {recoveryMode && personForRecovery && (
             <Alert className="border-primary/50 text-primary">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Modo Recupero Activado</AlertTitle>
+                <AlertTitle>Modo Recupero Activado para: {personForRecovery.name}</AlertTitle>
                 <AlertDescription>
-                    Estás viendo los horarios disponibles para recuperar una clase. Solo se muestran las sesiones con cupos libres. Haz clic en "Añadir Recupero" en la clase que desees.
+                    Se muestran las clases con cupos disponibles. Haz clic en "Recupero" en la clase que desees para usar el crédito.
                 </AlertDescription>
             </Alert>
         )}
@@ -263,7 +279,8 @@ function SchedulePageContent() {
                     <ScheduleCard 
                         key={session.id} 
                         session={session} 
-                        view="daily"
+                        view={recoveryMode ? "daily" : "structural"}
+                        isRecoveryMode={recoveryMode}
                     />
                   ))}
                 </div>
@@ -272,12 +289,14 @@ function SchedulePageContent() {
                     <CardHeader>
                     <CardTitle>No se encontraron sesiones</CardTitle>
                     <CardDescription>
-                        Prueba con otros filtros o añade una nueva sesión a tu horario.
+                        {recoveryMode ? "No hay clases con cupos disponibles." : "Prueba con otros filtros o añade una nueva sesión a tu horario."}
                     </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Horario</Button>
-                    </CardContent>
+                    {!recoveryMode && (
+                        <CardContent>
+                            <Button onClick={handleAdd}><PlusCircle className="mr-2 h-4 w-4" />Añadir Horario</Button>
+                        </CardContent>
+                    )}
                 </Card>
               )}
             </TabsContent>
@@ -357,6 +376,7 @@ function SchedulePageContent() {
        {sessionForRecovery && (
         <OneTimeAttendeeDialog 
             session={sessionForRecovery}
+            personForRecovery={personForRecovery}
             onClose={() => setSessionForRecovery(null)}
         />
       )}

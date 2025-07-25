@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -16,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 interface ScheduleCardProps {
     session: Session;
     view?: 'structural' | 'daily';
+    isRecoveryMode?: boolean;
 }
 
 const formatTime = (time: string) => {
@@ -23,7 +25,7 @@ const formatTime = (time: string) => {
     return time;
 };
 
-export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps) {
+export function ScheduleCard({ session, view = 'structural', isRecoveryMode = false }: ScheduleCardProps) {
     const { specialists, actividades, spaces, levels, attendance, isPersonOnVacation, people } = useStudio();
     
     const isDailyView = view === 'daily';
@@ -161,7 +163,7 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
                         {dailyStats.vacationingCount > 0 && <p>- {dailyStats.vacationingCount} de vacaciones</p>}
                     </div>
                 }
-                {isDailyView ? (
+                {isDailyView || isRecoveryMode ? (
                     <div className="w-full grid grid-cols-2 gap-2 p-1">
                          <Button size="sm" variant="outline" className="text-xs" onClick={() => handleAction('take-attendance', { session })} disabled={isCancelledToday}>
                             <ClipboardCheck className="mr-1.5 h-4 w-4" /> Asistencia
@@ -184,5 +186,3 @@ export function ScheduleCard({ session, view = 'structural' }: ScheduleCardProps
         </Card>
     );
 }
-
-    

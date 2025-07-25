@@ -271,9 +271,6 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 <ClipboardList className="h-5 w-5 text-primary"/>
                                 Actividad y Horarios
                              </span>
-                              <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>
-                                <PlusCircle className="mr-2 h-4 w-4"/>Inscribir
-                              </Button>
                         </CardTitle>
                         {recoveryCredits && recoveryCredits.length > 0 && (
                              <CardDescription className="flex items-center gap-1.5 text-amber-600 font-semibold pt-2">
@@ -312,6 +309,14 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                         </ScrollArea>
                     </CardContent>
                      <CardFooter className="grid grid-cols-2 gap-2">
+                        <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4"/>Inscribir a Clase
+                        </Button>
+                        <Button asChild variant="outline" size="sm" disabled={recoveryCredits.length === 0}>
+                            <Link href={`/schedule?recoveryMode=true&personId=${person.id}`}>
+                                <CalendarClock className="mr-2 h-4 w-4"/>Recuperar Clase
+                            </Link>
+                        </Button>
                         <Button variant="outline" size="sm" onClick={() => setIsVacationDialogOpen(true)}><Plane className="mr-2 h-4 w-4" />Vacaciones</Button>
                         <Button variant="outline" size="sm" onClick={() => setIsJustifyAbsenceOpen(true)}><UserX className="mr-2 h-4 w-4" />Justificar Ausencia</Button>
                     </CardFooter>
