@@ -3,7 +3,7 @@
 // This file contains all the functions that interact with Firestore.
 // It is separated from the React context to avoid issues with Next.js Fast Refresh.
 import { collection, addDoc, doc, setDoc, deleteDoc, query, where, writeBatch, getDocs, Timestamp, CollectionReference, DocumentReference, orderBy, limit, updateDoc, arrayUnion, runTransaction, getDoc, deleteField, arrayRemove } from 'firebase/firestore';
-import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Level, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect, RecoveryCredit } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, VacationPeriod, Actividad, Specialist, Space, Payment, NewPersonData, AuditLog, Operator, AppNotification, WaitlistEntry, WaitlistProspect, RecoveryCredit } from '@/types';
 import { db } from './firebase';
 import { format as formatDate, addMonths, subMonths, startOfDay, isBefore, parse, isWithinInterval, addDays, isAfter, differenceInDays, differenceInWeeks, differenceInCalendarMonths } from 'date-fns';
 import { calculateNextPaymentDate } from './utils';
@@ -100,7 +100,6 @@ export const addPersonAction = async (
         name: personData.name,
         phone: personData.phone,
         tariffId: personData.tariffId,
-        levelId: personData.levelId,
         healthInfo: personData.healthInfo,
         notes: personData.notes,
         joinDate: personData.joinDate || now,
@@ -877,7 +876,6 @@ type AllDataContext = {
     actividades: Actividad[];
     specialists: Specialist[];
     spaces: Space[];
-    levels: Level[];
 };
 
 export const deleteWithUsageCheckAction = async (

@@ -5,7 +5,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { onSnapshot, collection, doc, Unsubscribe, query, orderBy, QuerySnapshot, getDoc, where, getDocs, writeBatch, deleteField } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Level, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
+import type { Person, Session, SessionAttendance, Tariff, Actividad, Specialist, Space, Payment, NewPersonData, AppNotification, AuditLog, Operator, WaitlistEntry, WaitlistProspect } from '@/types';
 import { addPersonAction, deactivatePersonAction, reactivatePersonAction, recordPaymentAction, revertLastPaymentAction, enrollPeopleInClassAction, saveAttendanceAction, addJustifiedAbsenceAction, addOneTimeAttendeeAction, addVacationPeriodAction, removeVacationPeriodAction, deleteWithUsageCheckAction, enrollPersonInSessionsAction, addEntity, updateEntity, deleteEntity, updateOverdueStatusesAction, addToWaitlistAction, enrollFromWaitlistAction, removeFromWaitlistAction, enrollProspectFromWaitlistAction, removeOneTimeAttendeeAction, removePersonFromSessionAction, cancelSessionForDayAction, reactivateCancelledSessionAction } from '@/lib/firestore-actions';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
@@ -17,7 +17,6 @@ interface StudioContextType {
     actividades: Actividad[];
     specialists: Specialist[];
     spaces: Space[];
-    levels: Level[];
     tariffs: Tariff[];
     payments: Payment[];
     attendance: SessionAttendance[];
@@ -59,9 +58,6 @@ interface StudioContextType {
     addSpace: (space: Omit<Space, 'id'>) => void;
     updateSpace: (space: Space) => void;
     deleteSpace: (spaceId: string) => void;
-    addLevel: (level: Omit<Level, 'id'>) => void;
-    updateLevel: (level: Level) => void;
-    deleteLevel: (levelId: string) => void;
     addTariff: (tariff: Omit<Tariff, 'id'>) => void;
     updateTariff: (tariff: Tariff) => void;
     deleteTariff: (tariffId: string) => void;
@@ -87,7 +83,6 @@ const collections = {
     attendance: 'attendance',
     notifications: 'notifications',
     tariffs: 'tariffs',
-    levels: 'levels',
     audit_logs: 'audit_logs',
     operators: 'operators',
 };
@@ -386,7 +381,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
         try {
             const allDataForMessages = {
                 sessions: data.sessions, people: [...people, ...inactivePeople], actividades: data.actividades,
-                specialists: data.specialists, spaces: data.spaces, levels: data.levels,
+                specialists: data.specialists, spaces: data.spaces,
             };
             await deleteWithUsageCheckAction(collectionRefs, entityId, collectionKey, checks, allDataForMessages);
             await handleAction(deleteEntity(doc(collectionRefs[collectionKey], entityId)), successMessage, errorMessage);
@@ -412,12 +407,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const addSpace = (space: Omit<Space, 'id'>) => addGenericEntity('spaces', space, "Espacio creado.", "Error al crear el espacio.");
     const updateSpace = (space: Space) => updateGenericEntity('spaces', space, "Espacio actualizado.", "Error al actualizar la espacio.");
     const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId'}]);
-    
-    const addLevel = (level: Omit<Level, 'id'>) => addGenericEntity('levels', level, "Nivel creado.", "Error al crear el nivel.");
-    const updateLevel = (level: Level) => updateGenericEntity('levels', level, "Nivel actualizado.", "Error al actualizar la nivel.");
-    const deleteLevel = (id: string) => deleteGenericEntityWithUsageCheck('levels', id, "Nivel eliminado.", "Error al eliminar el nivel.", [
-        {collection: 'sessions', field: 'levelId'}, {collection: 'people', field: 'levelId'}
-    ]);
     
     const addTariff = (tariff: Omit<Tariff, 'id'>) => addGenericEntity('tariffs', tariff, "Arancel creado.", "Error al crear el arancel.");
     const updateTariff = (tariff: Tariff) => updateGenericEntity('tariffs', tariff, "Arancel actualizado.", "Error al actualizar el arancel.");
@@ -703,9 +692,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
             addSpace,
             updateSpace,
             deleteSpace,
-            addLevel,
-            updateLevel,
-            deleteLevel,
             addTariff,
             updateTariff,
             deleteTariff,
