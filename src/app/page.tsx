@@ -41,7 +41,7 @@ import { cn } from '@/lib/utils';
 function DashboardPageContent() {
   const { 
     sessions, specialists, actividades, spaces, people, attendance, isPersonOnVacation, 
-    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, levels, tariffs, payments, operators,
+    isTutorialOpen, openTutorial, closeTutorial: handleCloseTutorial, tariffs, payments, operators,
     updateOverdueStatuses, deleteSession, reactivateCancelledSession
   } = useStudio();
   const { isPinVerified, setPinVerified } = useAuth();
@@ -318,7 +318,6 @@ function DashboardPageContent() {
     { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length, description: "Gestiona instructores y sus actividades." },
     { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length, description: "Define los tipos de clases que ofreces." },
     { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length, description: "Administra las salas y sus capacidades." },
-    { id: 'levels', href: "/levels", label: "Niveles", icon: Signal, count: levels.length, description: "Organiza clases y alumnos por nivel." },
     { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length, description: "Configura tus planes de precios." },
     { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: Settings, count: null, description: "Controla finanzas, operadores y más." },
   ];
