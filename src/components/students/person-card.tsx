@@ -87,7 +87,7 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                                {recoveryCreditsCount > 0 && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="h-4 w-4 text-muted-foreground"><CalendarClock className="h-4 w-4"/></div>
+                                        <div className="h-4 w-4 text-amber-600"><CalendarClock className="h-4 w-4"/></div>
                                     </TooltipTrigger>
                                     <TooltipContent>
                                         <p>{recoveryCreditsCount} recupero(s) pendiente(s)</p>
