@@ -6,12 +6,11 @@ Este manual detalla cómo configurar los pilares fundamentales de tu centro de b
 
 ### ¿Qué son los Pilares de Configuración?
 
-Son las cinco secciones de **Gestión** que encontrarás en la pantalla de **Inicio**. Cada una representa una parte clave de tu operación:
+Son las secciones de **Gestión** que encontrarás en la pantalla de **Inicio**. Cada una representa una parte clave de tu operación:
 
 *   **Actividades:** Los tipos de clases o servicios que ofreces (Ej: "Yoga Vinyasa", "Pilates Reformer").
 *   **Especialistas:** Los instructores o profesionales que imparten las clases.
 *   **Espacios:** Las salas, salones o áreas físicas donde se realizan las actividades.
-*   **Niveles:** Los grados de dificultad o experiencia para tus clases y alumnos (Ej: "Principiante", "Avanzado").
 *   **Aranceles:** Los planes de precios o abonos que pagan tus alumnos.
 
 A continuación, te explicamos cómo gestionar cada una de estas secciones.
@@ -48,14 +47,7 @@ Define las salas donde se dictarán las clases.
     *   **Horario (Opcional):** Puedes definir un horario de apertura y cierre para la sala. El sistema te advertirá si intentas programar una clase fuera de ese rango.
 *   **Editar/eliminar:** Utiliza los íconos correspondientes en cada tarjeta de sala.
 
-### 1.4. Gestión de Niveles de Práctica
-
-Organiza tus clases y alumnos por su grado de experiencia.
-
-*   **Para añadir:** Ve a `Inicio` → `Gestión` → `Niveles` y haz clic en "Añadir Nivel".
-*   **Uso:** Una vez creados, podrás asignar un nivel a tus **sesiones** en el horario y también a cada **alumno** en su perfil. Esto te ayuda a saber qué clases son adecuadas para cada persona.
-
-### 1.5. Gestión de Aranceles
+### 1.4. Gestión de Aranceles
 
 Establece tus planes de precios.
 
@@ -66,4 +58,4 @@ Establece tus planes de precios.
     *   **Ciclo de Pago:** Define la recurrencia (Mensual, Semanal, etc.).
     *   **Sesiones por Semana (Opcional):** Si el plan tiene un límite de clases semanales (Ej: 2 veces por semana), puedes indicarlo aquí. El sistema te avisará si intentas inscribir a un alumno a más clases de las que su plan permite.
 
-Una vez que hayas configurado estas cinco secciones, tendrás una base sólida para empezar a organizar tus horarios y gestionar tu alumnado de forma eficiente.
+Una vez que hayas configurado estas cuatro secciones, tendrás una base sólida para empezar a organizar tus horarios y gestionar tu alumnado de forma eficiente.

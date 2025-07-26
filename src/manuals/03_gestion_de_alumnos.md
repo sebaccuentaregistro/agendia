@@ -12,7 +12,6 @@ La sección de **Personas** es donde gestionas el activo más importante de tu e
 **Campos del Perfil:**
 *   **Nombre y Teléfono:** Datos básicos de contacto.
 *   **Arancel:** Asigna el plan de precios que pagará el alumno. Es un campo obligatorio.
-*   **Nivel (Opcional):** Asigna el nivel de práctica del alumno.
 *   **Fecha de Ingreso:** Por defecto es el día actual.
 *   **Próximo Vencimiento (Opcional):** Si estableces una fecha aquí, el sistema calculará los vencimientos a partir de ella. Si lo dejas en blanco, el alumno aparecerá con estado "Pendiente de Pago" hasta que registres su primer abono.
 *   **Info de Salud y Notas (Opcional):** Campos para información relevante que solo tú y tus operadores podrán ver.

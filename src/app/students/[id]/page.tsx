@@ -6,7 +6,7 @@ import React, { useState, useMemo, useEffect, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, MoreVertical, CalendarClock, Plane, Calendar as CalendarIcon, History, Undo2, Heart, FileText, ClipboardList, User, MapPin, Signal, DollarSign, ArrowLeft, UserX, PlusCircle } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Person, Session, Actividad, Specialist, Space, RecoveryCredit, Level, Tariff, PaymentStatusInfo } from '@/types';
+import { Person, Session, Actividad, Specialist, Space, RecoveryCredit, Tariff, PaymentStatusInfo } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { getStudentPaymentStatus, calculateNextPaymentDate } from '@/lib/utils';
@@ -45,7 +45,7 @@ type UpcomingRecovery = {
 function StudentDetailContent({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { 
-    people, sessions, actividades, specialists, spaces, levels, tariffs, attendance, payments, 
+    people, sessions, actividades, specialists, spaces, tariffs, attendance, payments, 
     deactivatePerson, revertLastPayment, recordPayment, loading, removePersonFromSession, removeOneTimeAttendee
   } = useStudio();
   
@@ -86,11 +86,10 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   }, [person]);
 
 
-  const { tariff, level, paymentStatusInfo, totalDebt, personSessions, upcomingRecoveries } = useMemo(() => {
+  const { tariff, paymentStatusInfo, totalDebt, personSessions, upcomingRecoveries } = useMemo(() => {
     if (!person) return { personSessions: [], upcomingRecoveries: [] };
 
     const tariff = tariffs.find(t => t.id === person.tariffId);
-    const level = levels.find(l => l.id === person.levelId);
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     
     let debtMultiplier = person.outstandingPayments || 0;
@@ -138,13 +137,12 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
 
     return {
       tariff,
-      level,
       paymentStatusInfo,
       totalDebt,
       personSessions,
       upcomingRecoveries: upcomingRecs.sort((a,b) => a.date.getTime() - b.date.getTime())
     };
-}, [person, tariffs, levels, attendance, sessions, actividades, specialists, spaces]);
+}, [person, tariffs, attendance, sessions, actividades, specialists, spaces]);
   
   const personPaymentCount = useMemo(() => {
       if (!person) return 0;
@@ -431,10 +429,9 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                     </CardHeader>
                     <CardContent className="space-y-3 text-sm">
                         {person.joinDate && <p className="flex items-center gap-2"><CalendarIcon className="h-4 w-4 text-muted-foreground"/> Se unió el {format(person.joinDate, 'dd MMMM, yyyy', { locale: es })}</p>}
-                        {level && <p className="flex items-center gap-2"><Signal className="h-4 w-4 text-muted-foreground"/> Nivel: {level.name}</p>}
                         {person.healthInfo && <div className="text-sm"><p className="font-semibold flex items-center gap-2"><Heart className="h-4 w-4 text-destructive"/>Info de Salud</p><p className="text-muted-foreground pl-6">{person.healthInfo}</p></div>}
                         {person.notes && <div className="text-sm"><p className="font-semibold flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground"/>Notas</p><p className="text-muted-foreground pl-6">{person.notes}</p></div>}
-                         {!person.joinDate && !level && !person.healthInfo && !person.notes && (
+                         {!person.joinDate && !person.healthInfo && !person.notes && (
                             <p className="text-muted-foreground text-center py-4">No hay información adicional.</p>
                          )}
                     </CardContent>

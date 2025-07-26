@@ -26,18 +26,17 @@ const formatTime = (time: string) => {
 };
 
 export function ScheduleCard({ session, view = 'structural', isRecoveryMode = false }: ScheduleCardProps) {
-    const { specialists, actividades, spaces, levels, attendance, isPersonOnVacation, people } = useStudio();
+    const { specialists, actividades, spaces, attendance, isPersonOnVacation, people } = useStudio();
     
     const isDailyView = view === 'daily';
     const today = startOfDay(new Date());
     const dateStr = format(today, 'yyyy-MM-dd');
 
-    const { specialist, actividad, space, level, dailyStats, structuralStats, isCancelledToday } = useMemo(() => {
+    const { specialist, actividad, space, dailyStats, structuralStats, isCancelledToday } = useMemo(() => {
         const structuralData = {
             specialist: specialists.find((i) => i.id === session.instructorId),
             actividad: actividades.find((s) => s.id === session.actividadId),
             space: spaces.find((s) => s.id === session.spaceId),
-            level: levels.find(l => l.id === session.levelId),
         };
 
         const enrolledCount = session.personIds.length;
@@ -71,7 +70,7 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
             },
             isCancelledToday: isCancelled,
         };
-    }, [session, specialists, actividades, spaces, levels, attendance, people, isPersonOnVacation, dateStr, today]);
+    }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, today]);
 
     const getProgressColorClass = (utilization: number) => {
         if (utilization >= 100) return "bg-red-600";
@@ -143,7 +142,6 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
                  <div className="space-y-1 text-sm">
                     <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
-                    {level && <p className="flex items-center gap-2 capitalize"><Signal className="h-4 w-4 text-slate-500" /> {level.name}</p>}
                 </div>
             </CardContent>
              <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">

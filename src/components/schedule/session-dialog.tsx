@@ -20,7 +20,6 @@ const sessionFormSchema = z.object({
   spaceId: z.string().min(1, { message: 'Debes seleccionar un espacio.' }),
   dayOfWeek: z.enum(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']),
   time: z.string().min(1, { message: 'La hora es obligatoria.' }).regex(/^([01]\d|2[0-3]):([0-5]\d)$/, { message: 'Formato de hora inválido (HH:MM).' }),
-  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
 });
 
 interface SessionDialogProps {
@@ -30,11 +29,11 @@ interface SessionDialogProps {
 }
 
 export function SessionDialog({ isOpen, onClose, session: selectedSessionForEdit }: SessionDialogProps) {
-  const { specialists, actividades, spaces, levels, addSession, updateSession } = useStudio();
+  const { specialists, actividades, spaces, addSession, updateSession } = useStudio();
   
   const form = useForm<z.infer<typeof sessionFormSchema>>({
     resolver: zodResolver(sessionFormSchema),
-    defaultValues: { dayOfWeek: 'Lunes', time: '', levelId: 'none' },
+    defaultValues: { dayOfWeek: 'Lunes', time: '' },
   });
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export function SessionDialog({ isOpen, onClose, session: selectedSessionForEdit
           spaceId: selectedSessionForEdit.spaceId,
           dayOfWeek: selectedSessionForEdit.dayOfWeek,
           time: selectedSessionForEdit.time,
-          levelId: selectedSessionForEdit.levelId || 'none',
         });
       } else {
         form.reset({
@@ -55,7 +53,6 @@ export function SessionDialog({ isOpen, onClose, session: selectedSessionForEdit
           spaceId: '',
           dayOfWeek: 'Lunes',
           time: '',
-          levelId: 'none',
         });
       }
     }
@@ -64,7 +61,6 @@ export function SessionDialog({ isOpen, onClose, session: selectedSessionForEdit
   const onSessionSubmit = (values: z.infer<typeof sessionFormSchema>) => {
     const sessionData = {
         ...values,
-        levelId: values.levelId === 'none' ? undefined : values.levelId,
     };
     if (selectedSessionForEdit) {
       updateSession({ ...selectedSessionForEdit, ...sessionData });
@@ -125,17 +121,6 @@ export function SessionDialog({ isOpen, onClose, session: selectedSessionForEdit
                       <FormItem><FormLabel>Hora</FormLabel><FormControl><Input type="time" {...field} /></FormControl><FormMessage /></FormItem>
                   )}/>
                 </div>
-                 <FormField control={form.control} name="levelId" render={({ field }) => (
-                    <FormItem><FormLabel>Nivel (Opcional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Sin nivel" /></SelectTrigger></FormControl>
-                          <SelectContent>
-                              <SelectItem value="none">Sin nivel</SelectItem>
-                              {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                          </SelectContent>
-                      </Select><FormMessage />
-                    </FormItem>
-                  )}/>
                 <DialogFooter>
                     <Button variant="outline" type="button" onClick={onClose}>Cancelar</Button>
                     <Button type="submit">Guardar Cambios</Button>
