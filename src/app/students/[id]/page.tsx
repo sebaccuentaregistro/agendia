@@ -81,8 +81,8 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   }, [params.id, people, loading, router]);
   
   const availableCredits = useMemo(() => {
-    if (!person || !person.recoveryCredits) return 0;
-    return person.recoveryCredits.filter(c => c.status === 'available').length;
+    if (!person || !person.recoveryCredits) return [];
+    return person.recoveryCredits.filter(c => c.status === 'available');
   }, [person]);
 
 
@@ -267,7 +267,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   }
 
   const sessionToUnenrollName = sessionToUnenroll ? actividades.find(a => a.id === sessionToUnenroll.actividadId)?.name : '';
-  const isRecoverButtonDisabled = availableCredits <= 0;
+  const isRecoverButtonDisabled = availableCredits.length <= 0;
 
   return (
     <div className="space-y-8">
@@ -338,14 +338,15 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 Actividad y Horarios
                              </span>
                         </CardTitle>
-                        {availableCredits > 0 && (
+                        {availableCredits.length > 0 && (
                              <CardDescription className="flex items-center gap-1.5 text-amber-600 font-semibold pt-2">
                                 <CalendarClock className="h-4 w-4"/>
-                                Tiene {availableCredits} clase(s) para recuperar.
+                                Tiene {availableCredits.length} clase(s) para recuperar.
                             </CardDescription>
                         )}
                     </CardHeader>
                     <CardContent className="space-y-2">
+                        {personSessions.length > 0 && <p className="font-semibold text-sm text-muted-foreground">Horarios Fijos</p>}
                         {personSessions.length > 0 ? (
                             personSessions.map(session => (
                                 <div key={session.id} className="text-sm p-3 rounded-md bg-muted/50">
@@ -365,13 +366,13 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                 </div>
                             ))
                         ) : (
-                            <div className="text-center text-muted-foreground text-sm py-8">
+                            <div className="text-center text-muted-foreground text-sm py-4">
                                 Sin horarios fijos asignados.
                             </div>
                         )}
                         {upcomingRecoveries.length > 0 && (
                             <>
-                             <p className="font-bold text-xs uppercase text-muted-foreground pt-4">Recuperos Agendados</p>
+                             <p className="font-semibold text-sm text-muted-foreground pt-4">Recuperos Agendados</p>
                              {upcomingRecoveries.map((rec) => (
                                  <div key={`${rec.sessionId}-${rec.dateStr}`} className="text-sm p-3 rounded-md bg-blue-100/60 dark:bg-blue-900/40 flex justify-between items-center">
                                     <div>
@@ -384,6 +385,21 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                                  </div>
                              ))}
                             </>
+                        )}
+                         {availableCredits.length > 0 && (
+                          <>
+                            <p className="font-semibold text-sm text-muted-foreground pt-4">Créditos Disponibles</p>
+                            {availableCredits.map((credit) => (
+                              <div key={credit.id} className="text-sm p-3 rounded-md bg-amber-100/60 dark:bg-amber-900/40">
+                                <p className="font-bold text-amber-800 dark:text-amber-300">
+                                  1 Crédito
+                                </p>
+                                <p className="font-semibold text-xs text-amber-700 dark:text-amber-400">
+                                  Vence el: {format(credit.expiresAt, 'dd MMMM, yyyy', { locale: es })}
+                                </p>
+                              </div>
+                            ))}
+                          </>
                         )}
                     </CardContent>
                      <CardFooter className="grid grid-cols-2 gap-2">

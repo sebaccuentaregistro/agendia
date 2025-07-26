@@ -460,7 +460,7 @@ export const cancelSessionForDayAction = async (
         id: `credit-${Date.now()}-${personId}`,
         reason: 'class_cancellation',
         grantedAt: new Date(),
-        expiresAt: addDays(new Date(), 30), // Expires in 30 days
+        expiresAt: addMonths(new Date(), 1),
         status: 'available',
         originalSessionId: sessionId,
         originalSessionDate: dateStr,
@@ -561,7 +561,7 @@ export const addJustifiedAbsenceAction = async (
         id: `credit-${Date.now()}-${personId}`,
         reason: 'justified_absence',
         grantedAt: new Date(),
-        expiresAt: addDays(new Date(), 30), // Expires in 30 days
+        expiresAt: addMonths(new Date(), 1),
         status: 'available',
         originalSessionId: sessionId,
         originalSessionDate: formatDate(date, 'yyyy-MM-dd'),
