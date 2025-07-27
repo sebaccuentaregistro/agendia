@@ -16,8 +16,6 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface ScheduleCardProps {
     session: Session;
-    view?: 'structural' | 'daily';
-    isRecoveryMode?: boolean;
 }
 
 const formatTime = (time: string) => {
@@ -25,23 +23,20 @@ const formatTime = (time: string) => {
     return time;
 };
 
-export function ScheduleCard({ session, view = 'structural', isRecoveryMode = false }: ScheduleCardProps) {
+export function ScheduleCard({ session }: ScheduleCardProps) {
     const { specialists, actividades, spaces, attendance, isPersonOnVacation, people } = useStudio();
     
-    const isDailyView = view === 'daily';
     const today = startOfDay(new Date());
     const dateStr = format(today, 'yyyy-MM-dd');
 
-    const { specialist, actividad, space, dailyStats, structuralStats, isCancelledToday } = useMemo(() => {
+    const { specialist, actividad, space, dailyStats, isCancelledToday } = useMemo(() => {
         const structuralData = {
             specialist: specialists.find((i) => i.id === session.instructorId),
             actividad: actividades.find((s) => s.id === session.actividadId),
             space: spaces.find((s) => s.id === session.spaceId),
         };
 
-        const enrolledCount = session.personIds.length;
         const spaceCapacity = structuralData.space?.capacity ?? 0;
-        const structuralUtilization = spaceCapacity > 0 ? (enrolledCount / spaceCapacity) * 100 : 0;
         
         const attendanceRecord = attendance.find((a: SessionAttendance) => a.sessionId === session.id && a.date === dateStr);
         const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
@@ -54,22 +49,8 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
         
         const isCancelled = attendanceRecord?.status === 'cancelled';
         
-        console.log(`[Debug Card: ${structuralData.actividad?.name} @ ${session.time}]`, {
-          view,
-          dailyStats: {
-            enrolledCount: dailyOccupancy,
-            oneTimeAttendeesCount,
-            vacationingCount
-          },
-        });
-
         return {
             ...structuralData,
-            structuralStats: {
-                enrolledCount,
-                capacity: spaceCapacity,
-                utilization: structuralUtilization,
-            },
             dailyStats: {
                 enrolledCount: dailyOccupancy,
                 capacity: spaceCapacity,
@@ -79,7 +60,7 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
             },
             isCancelledToday: isCancelled,
         };
-    }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, today, view]);
+    }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, today]);
 
     const getProgressColorClass = (utilization: number) => {
         if (utilization >= 100) return "bg-red-600";
@@ -92,7 +73,7 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
         document.dispatchEvent(event);
     };
     
-    const isFixedFull = structuralStats.enrolledCount >= structuralStats.capacity;
+    const isFixedFull = session.personIds.length >= (space?.capacity ?? 0);
     const isDailyFull = dailyStats.enrolledCount >= dailyStats.capacity;
     
     const progressColorClass = getProgressColorClass(dailyStats.utilization);

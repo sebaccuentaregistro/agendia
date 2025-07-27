@@ -94,8 +94,7 @@ export function TodaySessions({
                   {filteredSessions.map(session => (
                     <ScheduleCard 
                         key={session.id} 
-                        session={session} 
-                        view="daily"
+                        session={session}
                     />
                   ))}
                 </div>
