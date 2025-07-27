@@ -53,6 +53,15 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
         const dailyUtilization = spaceCapacity > 0 ? (dailyOccupancy / spaceCapacity) * 100 : 0;
         
         const isCancelled = attendanceRecord?.status === 'cancelled';
+        
+        console.log(`[Debug Card: ${structuralData.actividad?.name} @ ${session.time}]`, {
+          view,
+          dailyStats: {
+            enrolledCount: dailyOccupancy,
+            oneTimeAttendeesCount,
+            vacationingCount
+          },
+        });
 
         return {
             ...structuralData,
@@ -70,7 +79,7 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
             },
             isCancelledToday: isCancelled,
         };
-    }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, today]);
+    }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, today, view]);
 
     const getProgressColorClass = (utilization: number) => {
         if (utilization >= 100) return "bg-red-600";

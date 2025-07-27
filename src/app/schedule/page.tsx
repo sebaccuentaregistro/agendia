@@ -298,8 +298,7 @@ function SchedulePageContent() {
                     <ScheduleCard 
                         key={session.id} 
                         session={session} 
-                        view={recoveryMode ? "daily" : "structural"}
-                        isRecoveryMode={recoveryMode}
+                        view="daily"
                     />
                   ))}
                 </div>
