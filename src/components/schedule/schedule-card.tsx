@@ -56,9 +56,6 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
             oneTimeAttendeesCount
         };
 
-        // DEBUG LOG
-        console.log(`[DEBUG] Card: ${structuralData.actividad?.name} at ${session.time}`, { dailyStats: finalDailyStats, isCancelledToday: isCancelled });
-
         return {
             ...structuralData,
             dailyStats: finalDailyStats,
