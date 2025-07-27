@@ -9,8 +9,8 @@ import { Progress } from '@/components/ui/progress';
 import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
 import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, UserPlus, XCircle, RefreshCw } from 'lucide-react';
-import type { Session, Person, SessionAttendance } from '@/types';
-import { format, isAfter, startOfDay, subMinutes, isToday } from 'date-fns';
+import type { Session, Person, SessionAttendance, Day } from '@/types';
+import { format, isAfter, startOfDay, subMinutes, isToday, nextDay } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface ScheduleCardProps {
@@ -22,11 +22,25 @@ const formatTime = (time: string) => {
     return time;
 };
 
+const getNextDateForDay = (dayName: Session['dayOfWeek']): Date => {
+  const dayMap: Record<Session['dayOfWeek'], Day> = { 'Domingo': 0, 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6 };
+  const targetDay = dayMap[dayName];
+  const today = startOfDay(new Date());
+  
+  // Si el día de la sesión es hoy, usamos hoy.
+  if (today.getDay() === targetDay) {
+      return today;
+  }
+  // Si no, calculamos la fecha del próximo día correspondiente.
+  return nextDay(today, targetDay);
+};
+
+
 export function ScheduleCard({ session }: ScheduleCardProps) {
     const { specialists, actividades, spaces, attendance, isPersonOnVacation, people } = useStudio();
     
-    const today = startOfDay(new Date());
-    const dateStr = format(today, 'yyyy-MM-dd');
+    const relevantDate = getNextDateForDay(session.dayOfWeek);
+    const dateStr = format(relevantDate, 'yyyy-MM-dd');
 
     const { specialist, actividad, space, dailyStats, isCancelledToday, debugInfo } = useMemo(() => {
         const structuralData = {
@@ -41,7 +55,7 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
         const oneTimeAttendeesCount = attendanceRecord?.oneTimeAttendees?.length || 0;
         
         const fixedEnrolledPeople = session.personIds.map(pid => people.find(p => p.id === pid)).filter((p): p is Person => !!p);
-        const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, today)).length;
+        const vacationingCount = fixedEnrolledPeople.filter(p => isPersonOnVacation(p, relevantDate)).length;
         
         const dailyOccupancy = (fixedEnrolledPeople.length - vacationingCount) + oneTimeAttendeesCount;
         const dailyUtilization = spaceCapacity > 0 ? (dailyOccupancy / spaceCapacity) * 100 : 0;
@@ -70,7 +84,7 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
             isCancelledToday: isCancelled,
             debugInfo: debugData
         };
-    }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, today]);
+    }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, relevantDate]);
 
     const getProgressColorClass = (utilization: number) => {
         if (utilization >= 100) return "bg-red-600";
@@ -106,12 +120,12 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
                                 <Bell className="mr-2 h-4 w-4" />Notificar Asistentes
                             </DropdownMenuItem>
                             {isCancelledToday ? (
-                                <DropdownMenuItem onSelect={() => handleAction('reactivate-session', { session, date: new Date() })}>
+                                <DropdownMenuItem onSelect={() => handleAction('reactivate-session', { session, date: relevantDate })}>
                                     <RefreshCw className="mr-2 h-4 w-4 text-green-600" />
                                     <span className="text-green-600">Reactivar Clase de Hoy</span>
                                 </DropdownMenuItem>
                             ) : (
-                                <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session, date: new Date() })}>
+                                <DropdownMenuItem onSelect={() => handleAction('cancel-session', { session, date: relevantDate })}>
                                     <XCircle className="mr-2 h-4 w-4 text-destructive" />
                                     <span className="text-destructive">Cancelar solo por hoy</span>
                                 </DropdownMenuItem>
@@ -141,7 +155,7 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
                     <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
                 </div>
-                <div className="bg-red-500/20 text-red-800 dark:text-red-200 text-xs p-2 rounded-md font-mono">
+                 <div className="bg-red-500/20 text-red-800 dark:text-red-200 text-xs p-2 rounded-md font-mono">
                     <p className="font-bold">[DEBUG]</p>
                     <pre><code>{JSON.stringify(debugInfo, null, 2)}</code></pre>
                 </div>
