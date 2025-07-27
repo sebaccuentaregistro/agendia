@@ -46,7 +46,7 @@ export function StudentFilters({
         <div className="flex gap-2 flex-col sm:flex-row">
           <Select value={actividadFilter} onValueChange={setActividadFilter}>
             <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-              <SelectValue placeholder="Actividad" />
+              <SelectValue placeholder="Actividades" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las Actividades</SelectItem>
@@ -59,7 +59,7 @@ export function StudentFilters({
           </Select>
           <Select value={specialistFilter} onValueChange={setSpecialistFilter}>
             <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-              <SelectValue placeholder="Especialista" />
+              <SelectValue placeholder="Especialistas" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los Especialistas</SelectItem>
@@ -72,7 +72,7 @@ export function StudentFilters({
           </Select>
           <Select value={spaceFilter} onValueChange={setSpaceFilter}>
             <SelectTrigger className="w-full sm:w-[160px] bg-white dark:bg-zinc-800 border-border shadow-sm rounded-xl">
-              <SelectValue placeholder="Espacio" />
+              <SelectValue placeholder="Espacios" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos los Espacios</SelectItem>
