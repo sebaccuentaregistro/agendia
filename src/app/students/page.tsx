@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense, Fragment } from 'react';
@@ -19,7 +20,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsList, TabsContent, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { format } from 'date-fns';
+import { format, isAfter, parse, startOfDay } from 'date-fns';
 import { PersonCard } from '@/components/students/person-card';
 import { StudentFilters } from '@/components/students/student-filters';
 
@@ -65,25 +66,42 @@ function StudentsPageContent() {
     if (!isMounted) return { groupedPeople: { overdue: [], upcoming: [], onTime: [] }, filteredInactivePeople: [], recoveryCreditsMap: {} };
     
     const now = new Date();
+    const today = startOfDay(now);
     const term = searchTerm.toLowerCase();
 
-    const overdue: Person[] = [];
-    const upcoming: Person[] = [];
-    const onTime: Person[] = [];
-    
     const tempRecoveryCreditsMap: Record<string, number> = {};
-
     people.forEach(person => {
-        let credits = 0;
-        let used = 0;
-        attendance.forEach((record: SessionAttendance) => {
-            if (record.justifiedAbsenceIds?.includes(person.id)) credits++;
-            if (record.oneTimeAttendees?.includes(person.id)) used++;
-        });
-        tempRecoveryCreditsMap[person.id] = Math.max(0, credits - used);
+        credits = (person.recoveryCredits || []).filter(c => c.status === 'available').length;
+        tempRecoveryCreditsMap[person.id] = credits;
     });
-    
-    const activePeopleFiltered = people
+
+    let filteredActivePeople = people;
+
+    // Apply URL-based filters first
+    const filterParam = searchParams.get('filter');
+    if (filterParam) {
+        if (filterParam === 'overdue') {
+            filteredActivePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
+        } else if (filterParam === 'pending-recovery') {
+            const futureRecoveries = new Set<string>();
+            attendance.forEach(record => {
+                const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+                if (isAfter(recordDate, today) || recordDate.getTime() === today.getTime()) {
+                    record.oneTimeAttendees?.forEach(id => futureRecoveries.add(id));
+                }
+            });
+
+            filteredActivePeople = people.filter(p => {
+                const hasAvailableCredits = (p.recoveryCredits || []).some(c => c.status === 'available');
+                const hasFutureRecovery = futureRecoveries.has(p.id);
+                return hasAvailableCredits || hasFutureRecovery;
+            });
+        }
+    }
+
+
+    // Apply search and dropdown filters
+    filteredActivePeople = filteredActivePeople
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
       .filter(person => {
         if (actividadFilter === 'all' && specialistFilter === 'all' && spaceFilter === 'all') {
@@ -100,7 +118,12 @@ function StudentsPageContent() {
         );
       });
 
-    activePeopleFiltered.forEach(person => {
+    const overdue: Person[] = [];
+    const upcoming: Person[] = [];
+    const onTime: Person[] = [];
+    let credits = 0;
+    
+    filteredActivePeople.forEach(person => {
         const status = getStudentPaymentStatus(person, now).status;
         if (status === 'Atrasado') {
           overdue.push(person);
@@ -116,7 +139,7 @@ function StudentsPageContent() {
         .sort((a,b) => (a.inactiveDate && b.inactiveDate) ? b.inactiveDate.getTime() - a.inactiveDate.getTime() : a.name.localeCompare(b.name));
       
     return { groupedPeople: { overdue, upcoming, onTime }, filteredInactivePeople: finalFilteredInactivePeople, recoveryCreditsMap: tempRecoveryCreditsMap };
-  }, [people, inactivePeople, searchTerm, isMounted, attendance, sessions, actividadFilter, specialistFilter, spaceFilter]);
+  }, [people, inactivePeople, searchTerm, isMounted, attendance, sessions, actividadFilter, specialistFilter, spaceFilter, searchParams]);
 
    const handleExport = () => {
     const dataToExport = people.map(p => ({
