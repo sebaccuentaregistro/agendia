@@ -160,7 +160,7 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
                 </div>
                 { (dailyStats.vacationingCount > 0 || dailyStats.oneTimeAttendeesCount > 0) &&
                     <div 
-                      className="text-xs text-muted-foreground px-2 w-full cursor-pointer"
+                      className="text-xs px-2 w-full cursor-pointer space-y-1"
                       onClick={() => handleAction('view-students', { session })}
                       role="button"
                     >
@@ -191,4 +191,3 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
         </Card>
     );
 }
-
