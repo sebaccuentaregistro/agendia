@@ -100,9 +100,9 @@ export default function OperatorsPage() {
       {isPinVerified && (
         <div className="flex justify-start">
             <Button variant="outline" asChild>
-                <Link href="/?view=advanced">
+                <Link href="/?view=management">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Volver a Gestión Avanzada
+                    Volver a Gestión
                 </Link>
             </Button>
         </div>
@@ -158,6 +158,14 @@ export default function OperatorsPage() {
        {!isPinVerified && (
           <>
             <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
+            <div className="flex justify-start">
+                <Button variant="outline" asChild>
+                    <Link href="/?view=management">
+                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        Volver a Gestión
+                    </Link>
+                </Button>
+            </div>
             <Card className="mt-4 flex flex-col items-center justify-center p-12 text-center bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20">
                 <CardHeader>
                 <CardTitle className="text-slate-800 dark:text-slate-100">Acceso Restringido</CardTitle>

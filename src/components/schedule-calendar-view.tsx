@@ -3,7 +3,7 @@
 'use client';
 
 import React from 'react';
-import type { Session, Specialist, Actividad, Space, Level } from '@/types';
+import type { Session, Specialist, Actividad, Space } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
@@ -16,12 +16,11 @@ interface ScheduleCalendarViewProps {
   specialists: Specialist[];
   actividades: Actividad[];
   spaces: Space[];
-  levels: Level[];
   onSessionClick: (session: Session, date: Date) => void;
   onCancelClick: (session: Session, date: Date) => void;
 }
 
-export function ScheduleCalendarView({ sessions, specialists, actividades, levels, onSessionClick, onCancelClick }: ScheduleCalendarViewProps) {
+export function ScheduleCalendarView({ sessions, specialists, actividades, onSessionClick, onCancelClick }: ScheduleCalendarViewProps) {
   const daysOfWeek = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   const timeSlots = Array.from({ length: 16 }, (_, i) => `${String(i + 7).padStart(2, '0')}:00`); // 7:00 to 22:00
 
@@ -45,8 +44,7 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
   const getSessionDetails = (session: Session) => {
     const specialist = specialists.find((i) => i.id === session.instructorId);
     const actividad = actividades.find((s) => s.id === session.actividadId);
-    const level = levels.find(l => l.id === session.levelId);
-    return { specialist, actividad, level };
+    return { specialist, actividad };
   };
 
   return (
@@ -67,7 +65,7 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
               <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3 sticky top-0 bg-background/80 py-2">{day}</h3>
               <div className="space-y-3">
                 {sessionsForDay.map(session => {
-                  const { specialist, actividad, level } = getSessionDetails(session);
+                  const { specialist, actividad } = getSessionDetails(session);
                   return (
                     <Card
                       key={session.id}
@@ -78,7 +76,6 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
                         <div className="flex-1 space-y-1">
                           <p className="font-bold text-primary">{actividad?.name || 'Sesión'}</p>
                           <p className="text-xs text-slate-600 dark:text-slate-400">{specialist?.name || 'N/A'}</p>
-                           {level && <Badge variant="outline" className="text-[10px] px-1 py-0">{level.name}</Badge>}
                         </div>
                         <p className="font-semibold text-sm text-slate-700 dark:text-slate-300 flex-shrink-0">{session.time}</p>
                       </div>
@@ -117,7 +114,7 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
                         return (
                             <div key={`${day}-${time}`} className="border-l border-b border-slate-200/50 dark:border-slate-700/50 min-h-[70px] p-1 relative group">
                                 {session && (() => {
-                                    const { specialist, actividad, level } = getSessionDetails(session);
+                                    const { specialist, actividad } = getSessionDetails(session);
                                     return (
                                         <Card 
                                             className={cn(
@@ -130,7 +127,6 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, level
                                                 <CardContent className="p-2 text-center flex flex-col justify-center items-center h-full">
                                                     <p className="font-bold text-xs leading-tight text-primary">{actividad?.name || 'Sesión'}</p>
                                                     <p className="text-[10px] text-slate-600 dark:text-slate-400 mt-1">{specialist?.name || 'N/A'}</p>
-                                                    {level && <Badge variant="outline" className="text-[9px] px-1 py-0 mt-1 flex items-center gap-1"><Signal className="h-2 w-2"/>{level.name}</Badge>}
                                                 </CardContent>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-48 p-0">

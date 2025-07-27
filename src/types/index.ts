@@ -62,11 +62,6 @@ export type Actividad = {
   name: string;
 };
 
-export type Level = {
-  id: string;
-  name: string;
-};
-
 export type Specialist = {
   id: string;
   name: string;
@@ -92,7 +87,6 @@ export type Person = {
   vacationPeriods?: VacationPeriod[];
   recoveryCredits?: RecoveryCredit[];
   healthInfo?: string;
-  levelId?: string;
   notes?: string;
   outstandingPayments?: number;
   status?: 'active' | 'inactive';
@@ -103,7 +97,6 @@ export type NewPersonData = {
     name: string;
     phone: string;
     tariffId: string;
-    levelId?: string;
     healthInfo?: string;
     notes?: string;
     joinDate?: Date;
@@ -129,7 +122,6 @@ export type Session = {
   time: string; // Format "HH:mm"
   personIds: string[];
   waitlist: WaitlistEntry[];
-  levelId?: string;
 };
 
 export type Payment = {

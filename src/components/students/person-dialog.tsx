@@ -23,7 +23,6 @@ import type { Person, NewPersonData } from '@/types';
 const personFormSchema = z.object({
   name: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
   phone: z.string().min(7, { message: 'Por favor, introduce un número de teléfono válido.' }),
-  levelId: z.preprocess((val) => (val === 'none' || val === '' ? undefined : val), z.string().optional()),
   tariffId: z.string().min(1, { message: 'Debes seleccionar un arancel.' }),
   healthInfo: z.string().optional(),
   notes: z.string().optional(),
@@ -43,14 +42,13 @@ interface PersonDialogProps {
 }
 
 export function PersonDialog({ person, initialData, onOpenChange, open, onPersonCreated, isLimitReached }: PersonDialogProps) {
-  const { addPerson, updatePerson, levels, tariffs } = useStudio();
+  const { addPerson, updatePerson, tariffs } = useStudio();
   
   const form = useForm<PersonFormData>({
     resolver: zodResolver(personFormSchema),
     defaultValues: {
         name: '',
         phone: '',
-        levelId: 'none',
         tariffId: '',
         healthInfo: '',
         notes: '',
@@ -65,7 +63,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           form.reset({
             name: person.name,
             phone: person.phone,
-            levelId: person.levelId || 'none',
             tariffId: person.tariffId,
             healthInfo: person.healthInfo,
             notes: person.notes,
@@ -76,7 +73,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           form.reset({
             name: initialData?.name || '',
             phone: initialData?.phone || '',
-            levelId: 'none',
             tariffId: '',
             healthInfo: '',
             notes: '',
@@ -99,7 +95,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           name: values.name,
           phone: values.phone,
           tariffId: values.tariffId,
-          levelId: values.levelId === 'none' ? undefined : values.levelId,
           healthInfo: values.healthInfo,
           notes: values.notes,
           joinDate: values.joinDate || person.joinDate,
@@ -111,7 +106,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           name: values.name,
           phone: values.phone,
           tariffId: values.tariffId,
-          levelId: values.levelId === 'none' ? undefined : values.levelId,
           healthInfo: values.healthInfo,
           notes: values.notes,
           joinDate: values.joinDate,
@@ -126,7 +120,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
           name: finalValues.name,
           phone: finalValues.phone,
           tariffId: finalValues.tariffId,
-          levelId: finalValues.levelId,
           healthInfo: finalValues.healthInfo,
           notes: finalValues.notes,
           joinDate: finalValues.joinDate || null,
@@ -166,15 +159,6 @@ export function PersonDialog({ person, initialData, onOpenChange, open, onPerson
               )}/>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField control={form.control} name="levelId" render={({ field }) => (
-                    <FormItem><FormLabel>Nivel (Opcional)</FormLabel><Select onValueChange={field.onChange} value={field.value || 'none'}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger></FormControl>
-                        <SelectContent>
-                          <SelectItem value="none">Sin nivel</SelectItem>
-                          {levels.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select><FormMessage /></FormItem>
-                )}/>
                 <FormField
                   control={form.control}
                   name="joinDate"

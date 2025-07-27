@@ -23,7 +23,7 @@ interface EnrollmentsDialogProps {
 }
 
 export function EnrollmentsDialog({ person, onClose }: EnrollmentsDialogProps) {
-    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces, levels, triggerWaitlistCheck } = useStudio();
+    const { sessions, specialists, actividades, enrollPersonInSessions, tariffs, spaces, triggerWaitlistCheck } = useStudio();
     
     const [filters, setFilters] = useState({ day: 'all', actividadId: 'all', specialistId: 'all' });
     const [searchTerm, setSearchTerm] = useState('');
@@ -176,7 +176,6 @@ export function EnrollmentsDialog({ person, onClose }: EnrollmentsDialogProps) {
                                                         const actividad = actividades.find(a => a.id === session.actividadId);
                                                         const specialist = specialists.find(s => s.id === session.instructorId);
                                                         const space = spaces.find(s => s.id === session.spaceId);
-                                                        const level = levels.find(l => l.id === session.levelId);
                                                         const capacity = space?.capacity ?? 0;
                                                         const enrolledCount = session.personIds.length;
                                                         const isAlreadyEnrolledInThisClass = field.value?.includes(session.id);
@@ -202,7 +201,6 @@ export function EnrollmentsDialog({ person, onClose }: EnrollmentsDialogProps) {
                                                                             <span className="text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><User className="h-3 w-3" /> {specialist?.name || 'N/A'}</span>
                                                                             <span className="text-xs text-slate-700 dark:text-slate-300 flex items-center gap-1.5"><MapPin className="h-3 w-3" /> {space?.name || 'N/A'}</span>
                                                                         </div>
-                                                                        {level && <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-medium mt-1 flex items-center gap-1.5"><Signal className="h-3 w-3"/>{level.name}</Badge>}
                                                                     </div>
                                                                     <div className="text-right flex-shrink-0 ml-4">
                                                                         <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{session.time}</p>

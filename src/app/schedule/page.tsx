@@ -32,7 +32,7 @@ import { format, startOfDay } from 'date-fns';
 
 
 function SchedulePageContent() {
-  const { specialists, actividades, sessions, spaces, deleteSession, levels, loading, people, isPersonOnVacation, attendance, reactivateCancelledSession } = useStudio();
+  const { specialists, actividades, sessions, spaces, deleteSession, loading, people, isPersonOnVacation, attendance, reactivateCancelledSession } = useStudio();
   const { openSessionDialog } = useShell();
   
   const [sessionForDelete, setSessionForDelete] = useState<Session | null>(null);
@@ -145,8 +145,7 @@ function SchedulePageContent() {
     const specialist = specialists.find((i) => i.id === session.instructorId);
     const actividad = actividades.find((s) => s.id === session.actividadId);
     const space = spaces.find((s) => s.id === session.spaceId);
-    const level = levels.find(l => l.id === session.levelId);
-    return { specialist, actividad, space, level };
+    return { specialist, actividad, space };
   };
 
   const handleAdd = () => {
@@ -187,7 +186,7 @@ function SchedulePageContent() {
 
   const handleExport = () => {
     const dataToExport = filteredAndSortedSessions.map(session => {
-        const { specialist, actividad, space, level } = getSessionDetails(session);
+        const { specialist, actividad, space } = getSessionDetails(session);
         const enrolledCount = session.personIds.length;
         const spaceCapacity = space?.capacity ?? 0;
         return {
@@ -196,7 +195,6 @@ function SchedulePageContent() {
             actividad: actividad?.name || 'N/A',
             especialista: specialist?.name || 'N/A',
             espacio: space?.name || 'N/A',
-            nivel: level?.name || 'N/A',
             inscriptos: enrolledCount,
             capacidad: spaceCapacity,
         };
@@ -207,7 +205,6 @@ function SchedulePageContent() {
         actividad: "Actividad",
         especialista: "Especialista",
         espacio: "Espacio",
-        nivel: "Nivel",
         inscriptos: "Inscriptos",
         capacidad: "Capacidad",
     };
@@ -365,7 +362,6 @@ function SchedulePageContent() {
                     specialists={specialists} 
                     actividades={actividades}
                     spaces={spaces}
-                    levels={levels}
                     onSessionClick={(session, date) => {
                         openSessionDialog(session);
                     }}

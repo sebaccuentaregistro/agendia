@@ -1,10 +1,11 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect, Suspense, Fragment } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileDown, Search, AlertCircle, Clock, CheckCircle, ChevronDown, UserX } from 'lucide-react';
+import { PlusCircle, FileDown, Search, AlertCircle, Clock, CheckCircle, ChevronDown, UserX, CalendarClock } from 'lucide-react';
 import type { Person, PaymentReminderInfo, Tariff, SessionAttendance } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -19,11 +20,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tabs, TabsList, TabsContent, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { format } from 'date-fns';
+import { format, isAfter, parse, startOfDay, isBefore } from 'date-fns';
 import { PersonCard } from '@/components/students/person-card';
+import { StudentFilters } from '@/components/students/student-filters';
+
+type RecoveryStatus = 'none' | 'pending' | 'scheduled';
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson } = useStudio();
+  const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson, sessions } = useStudio();
   const { institute, isLimitReached, setPeopleCount } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +38,9 @@ function StudentsPageContent() {
   const statusFilterFromUrl = searchParams.get('filter') || 'all';
   const initialTab = statusFilterFromUrl === 'inactive' ? 'inactive' : 'active';
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [actividadFilter, setActividadFilter] = useState('all');
+  const [specialistFilter, setSpecialistFilter] = useState('all');
+  const [spaceFilter, setSpaceFilter] = useState('all');
 
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
   
@@ -57,31 +64,78 @@ function StudentsPageContent() {
     }
   }, [searchParams]);
 
-  const { groupedPeople, filteredInactivePeople, recoveryCreditsMap } = useMemo(() => {
-    if (!isMounted) return { groupedPeople: { overdue: [], upcoming: [], onTime: [] }, filteredInactivePeople: [], recoveryCreditsMap: {} };
+  const { groupedPeople, filteredInactivePeople, recoveryStatusMap } = useMemo(() => {
+    if (!isMounted) return { groupedPeople: { overdue: [], upcoming: [], onTime: [] }, filteredInactivePeople: [], recoveryStatusMap: {} };
     
     const now = new Date();
+    const today = startOfDay(now);
     const term = searchTerm.toLowerCase();
+
+    // --- Start of Recovery Status Logic ---
+    const tempRecoveryStatusMap: Record<string, RecoveryStatus> = {};
+    const futureRecoveries = new Set<string>();
+
+    // 1. Find all people with a scheduled recovery in the future
+    attendance.forEach(record => {
+        const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+        if (!isBefore(recordDate, today)) {
+            record.oneTimeAttendees?.forEach(id => futureRecoveries.add(id));
+        }
+    });
+
+    people.forEach(person => {
+        const hasAvailableCredits = (person.recoveryCredits || []).some(c => c.status === 'available');
+        const hasFutureRecovery = futureRecoveries.has(person.id);
+
+        if (hasFutureRecovery) {
+            tempRecoveryStatusMap[person.id] = 'scheduled';
+        } else if (hasAvailableCredits) {
+            tempRecoveryStatusMap[person.id] = 'pending';
+        } else {
+            tempRecoveryStatusMap[person.id] = 'none';
+        }
+    });
+    // --- End of Recovery Status Logic ---
+
+    let filteredActivePeople = people;
+
+    // Apply URL-based filters first
+    const filterParam = searchParams.get('filter');
+    if (filterParam) {
+        if (filterParam === 'overdue') {
+            filteredActivePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
+        } else if (filterParam === 'pending-recovery') {
+            filteredActivePeople = people.filter(p => {
+                const status = tempRecoveryStatusMap[p.id];
+                return status === 'pending' || status === 'scheduled';
+            });
+        }
+    }
+
+
+    // Apply search and dropdown filters
+    filteredActivePeople = filteredActivePeople
+      .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
+      .filter(person => {
+        if (actividadFilter === 'all' && specialistFilter === 'all' && spaceFilter === 'all') {
+            return true;
+        }
+        const personSessionIds = sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id);
+        if (personSessionIds.length === 0) return false;
+        
+        return sessions.some(session => 
+            personSessionIds.includes(session.id) &&
+            (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
+            (specialistFilter === 'all' || session.instructorId === specialistFilter) &&
+            (spaceFilter === 'all' || session.spaceId === spaceFilter)
+        );
+      });
 
     const overdue: Person[] = [];
     const upcoming: Person[] = [];
     const onTime: Person[] = [];
     
-    const tempRecoveryCreditsMap: Record<string, number> = {};
-
-    people.forEach(person => {
-        let credits = 0;
-        let used = 0;
-        attendance.forEach((record: SessionAttendance) => {
-            if (record.justifiedAbsenceIds?.includes(person.id)) credits++;
-            if (record.oneTimeAttendees?.includes(person.id)) used++;
-        });
-        tempRecoveryCreditsMap[person.id] = Math.max(0, credits - used);
-    });
-
-    people
-      .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
-      .forEach(person => {
+    filteredActivePeople.forEach(person => {
         const status = getStudentPaymentStatus(person, now).status;
         if (status === 'Atrasado') {
           overdue.push(person);
@@ -96,8 +150,8 @@ function StudentsPageContent() {
         .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
         .sort((a,b) => (a.inactiveDate && b.inactiveDate) ? b.inactiveDate.getTime() - a.inactiveDate.getTime() : a.name.localeCompare(b.name));
       
-    return { groupedPeople: { overdue, upcoming, onTime }, filteredInactivePeople: finalFilteredInactivePeople, recoveryCreditsMap: tempRecoveryCreditsMap };
-  }, [people, inactivePeople, searchTerm, isMounted, attendance]);
+    return { groupedPeople: { overdue, upcoming, onTime }, filteredInactivePeople: finalFilteredInactivePeople, recoveryStatusMap: tempRecoveryStatusMap };
+  }, [people, inactivePeople, searchTerm, isMounted, attendance, sessions, actividadFilter, specialistFilter, spaceFilter, searchParams]);
 
    const handleExport = () => {
     const dataToExport = people.map(p => ({
@@ -135,13 +189,13 @@ function StudentsPageContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {groupPeople.map((person) => {
                 const tariff = tariffs.find(t => t.id === person.tariffId);
-                const recoveryCreditsCount = recoveryCreditsMap[person.id] || 0;
+                const recoveryStatus = recoveryStatusMap[person.id] || 'none';
                 return (
                  <PersonCard
                     key={person.id}
                     person={person}
                     tariff={tariff}
-                    recoveryCreditsCount={recoveryCreditsCount}
+                    recoveryStatus={recoveryStatus}
                   />
                 );
               })}
@@ -199,16 +253,19 @@ function StudentsPageContent() {
                     <TabsTrigger value="active">Activos ({people.length})</TabsTrigger>
                     <TabsTrigger value="inactive">Inactivos ({inactivePeople.length})</TabsTrigger>
                 </TabsList>
-                 <div className="relative w-full sm:max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        placeholder="Buscar por nombre..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full bg-background border-border shadow-sm rounded-xl"
-                    />
-                </div>
             </div>
+            
+            <StudentFilters 
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                actividadFilter={actividadFilter}
+                setActividadFilter={setActividadFilter}
+                specialistFilter={specialistFilter}
+                setSpecialistFilter={setSpecialistFilter}
+                spaceFilter={spaceFilter}
+                setSpaceFilter={setSpaceFilter}
+            />
+
             <TabsContent value="active" className="mt-6">
                 {loading ? (
                     <div className="space-y-8">
@@ -286,3 +343,5 @@ export default function StudentsPage() {
     </Suspense>
   );
 }
+
+    
