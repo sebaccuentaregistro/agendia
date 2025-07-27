@@ -71,7 +71,7 @@ function StudentsPageContent() {
 
     const tempRecoveryCreditsMap: Record<string, number> = {};
     people.forEach(person => {
-        credits = (person.recoveryCredits || []).filter(c => c.status === 'available').length;
+        const credits = (person.recoveryCredits || []).filter(c => c.status === 'available').length;
         tempRecoveryCreditsMap[person.id] = credits;
     });
 
@@ -121,7 +121,6 @@ function StudentsPageContent() {
     const overdue: Person[] = [];
     const upcoming: Person[] = [];
     const onTime: Person[] = [];
-    let credits = 0;
     
     filteredActivePeople.forEach(person => {
         const status = getStudentPaymentStatus(person, now).status;
