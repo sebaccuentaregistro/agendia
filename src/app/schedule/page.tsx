@@ -228,7 +228,7 @@ function SchedulePageContent() {
                             <SelectValue placeholder="Día" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los Días</SelectItem>
+                            <SelectItem value="all">Día</SelectItem>
                             {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map(day => <SelectItem key={day} value={day}>{day}</SelectItem>)}
                         </SelectContent>
                     </Select>
@@ -237,7 +237,7 @@ function SchedulePageContent() {
                             <SelectValue placeholder="Actividad" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todas las Actividades</SelectItem>
+                            <SelectItem value="all">Actividad</SelectItem>
                             {actividades.map(a => (
                                 <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                             ))}
@@ -248,7 +248,7 @@ function SchedulePageContent() {
                             <SelectValue placeholder="Especialista" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los Especialistas</SelectItem>
+                            <SelectItem value="all">Especialista</SelectItem>
                             {specialists.map(s => (
                                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                             ))}
@@ -259,7 +259,7 @@ function SchedulePageContent() {
                             <SelectValue placeholder="Espacio" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Todos los Espacios</SelectItem>
+                            <SelectItem value="all">Espacio</SelectItem>
                             {spaces.map(s => (
                                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                             ))}
