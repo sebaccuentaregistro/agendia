@@ -132,6 +132,12 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
                     <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
                 </div>
+                {/* --- DEBUG BLOCK START --- */}
+                <div className="text-xs bg-red-100 dark:bg-red-900/30 p-2 rounded-md border border-red-300 dark:border-red-700 text-red-800 dark:text-red-200">
+                    <p className="font-bold">DEBUG:</p>
+                    <pre className="whitespace-pre-wrap text-[10px]">{JSON.stringify(dailyStats, null, 2)}</pre>
+                </div>
+                {/* --- DEBUG BLOCK END --- */}
             </CardContent>
              <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div 
