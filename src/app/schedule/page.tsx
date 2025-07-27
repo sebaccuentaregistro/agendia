@@ -297,9 +297,7 @@ function SchedulePageContent() {
                   {filteredAndSortedSessions.map((session) => (
                     <ScheduleCard 
                         key={session.id} 
-                        session={session} 
-                        view={recoveryMode ? "daily" : "structural"}
-                        isRecoveryMode={recoveryMode}
+                        session={session}
                     />
                   ))}
                 </div>

@@ -33,11 +33,13 @@ export function ScheduleCalendarView({ sessions, specialists, actividades, onSes
   const getNextDateForDay = (dayName: string): Date => {
       const dayMap: Record<string, number> = { 'Lunes': 1, 'Martes': 2, 'Miércoles': 3, 'Jueves': 4, 'Viernes': 5, 'Sábado': 6, 'Domingo': 0 };
       const targetDay = dayMap[dayName];
-      const today = new Date();
+      let today = new Date();
       const currentDay = today.getDay();
-      const distance = (targetDay - currentDay + 7) % 7;
-      const nextDate = new Date(today.setDate(today.getDate() + distance));
-      return nextDate;
+      let distance = (targetDay - currentDay + 7) % 7;
+      if (distance === 0 && targetDay !== currentDay) {
+          distance = 7;
+      }
+      return new Date(today.setDate(today.getDate() + distance));
   };
 
 

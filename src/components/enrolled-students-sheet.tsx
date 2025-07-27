@@ -3,6 +3,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -93,7 +94,9 @@ export function EnrolledStudentsSheet({ session, onClose }: EnrolledStudentsShee
 
   const { specialist, actividad, space, count } = sessionDetails as any;
   
-  const handleRemoveClick = (person: EnrolledPerson) => {
+  const handleRemoveClick = (e: React.MouseEvent, person: EnrolledPerson) => {
+    e.preventDefault();
+    e.stopPropagation();
     setPersonToRemove(person);
   };
 
@@ -125,35 +128,37 @@ export function EnrolledStudentsSheet({ session, onClose }: EnrolledStudentsShee
         <ScrollArea className="mt-4 space-y-4 h-[calc(100%-10rem)] pr-4">
           {enrolledPeople.length > 0 ? (
             enrolledPeople.map(person => (
-              <Card key={person.id} className={cn(
-                "p-3 bg-card/80 border"
-              )}>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-1">
-                     <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-foreground">{person.name}</p>
-                        <Badge variant={person.enrollmentStatus === 'Fijo' ? 'default' : 'secondary'} className={cn(
-                            "text-xs",
-                            person.enrollmentStatus === 'Fijo' && "bg-primary/80",
-                            person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white"
-                        )}>
-                            {person.enrollmentStatus} {person.enrollmentStatus === 'Recupero' && person.displayDate}
-                        </Badge>
-                     </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>{person.phone}</span>
-                       <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer">
-                          <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
-                          <span className="sr-only">Enviar WhatsApp a {person.name}</span>
-                      </a>
+              <Link key={person.id} href={`/students/${person.id}`} passHref>
+                <Card className={cn(
+                  "p-3 bg-card/80 border hover:bg-muted/50 transition-colors cursor-pointer"
+                )}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 space-y-1">
+                       <div className="flex items-center gap-2 flex-wrap">
+                          <p className="font-semibold text-foreground">{person.name}</p>
+                          <Badge variant={person.enrollmentStatus === 'Fijo' ? 'default' : 'secondary'} className={cn(
+                              "text-xs",
+                              person.enrollmentStatus === 'Fijo' && "bg-primary/80",
+                              person.enrollmentStatus === 'Recupero' && "bg-amber-500/80 text-white"
+                          )}>
+                              {person.enrollmentStatus} {person.enrollmentStatus === 'Recupero' && person.displayDate}
+                          </Badge>
+                       </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>{person.phone}</span>
+                         <a href={formatWhatsAppLink(person.phone)} target="_blank" rel="noopener noreferrer" onClick={(e) => { e.stopPropagation(); }}>
+                            <WhatsAppIcon className="text-green-600 hover:text-green-700 transition-colors" />
+                            <span className="sr-only">Enviar WhatsApp a {person.name}</span>
+                        </a>
+                      </div>
                     </div>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={(e) => handleRemoveClick(e, person)}>
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Eliminar asistente</span>
+                    </Button>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleRemoveClick(person)}>
-                    <Trash2 className="h-4 w-4" />
-                    <span className="sr-only">Eliminar asistente</span>
-                  </Button>
-                </div>
-              </Card>
+                </Card>
+              </Link>
             ))
           ) : (
             <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border/30">

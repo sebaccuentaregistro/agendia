@@ -265,7 +265,7 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
   }
 
   const sessionToUnenrollName = sessionToUnenroll ? actividades.find(a => a.id === sessionToUnenroll.actividadId)?.name : '';
-  const isRecoverButtonDisabled = availableCredits.length <= 0;
+  const hasAvailableCredits = availableCredits.length > 0;
 
   return (
     <div className="space-y-8">
@@ -404,15 +404,15 @@ function StudentDetailContent({ params }: { params: { id: string } }) {
                         <Button variant="default" size="sm" onClick={() => setIsEnrollmentDialogOpen(true)}>
                             <PlusCircle className="mr-2 h-4 w-4"/>Inscribir a Clase
                         </Button>
-                        {isRecoverButtonDisabled ? (
-                            <Button variant="outline" size="sm" disabled>
-                                <CalendarClock className="mr-2 h-4 w-4"/>Recuperar Clase
-                            </Button>
-                        ) : (
-                            <Button asChild variant="outline" size="sm">
+                        {hasAvailableCredits ? (
+                            <Button asChild variant="default" size="sm" className="bg-amber-500 hover:bg-amber-600 text-white animate-pulse">
                                 <Link href={`/schedule?recoveryMode=true&personId=${person.id}`}>
                                     <CalendarClock className="mr-2 h-4 w-4"/>Recuperar Clase
                                 </Link>
+                            </Button>
+                        ) : (
+                            <Button variant="outline" size="sm" disabled>
+                                <CalendarClock className="mr-2 h-4 w-4"/>Recuperar Clase
                             </Button>
                         )}
                         <Button variant="outline" size="sm" onClick={() => setIsVacationDialogOpen(true)}><Plane className="mr-2 h-4 w-4" />Vacaciones</Button>
