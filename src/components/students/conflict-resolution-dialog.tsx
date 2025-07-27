@@ -95,4 +95,3 @@ export function ConflictResolutionDialog({ conflictInfo, onClose }: ConflictReso
     </Dialog>
   );
 }
-

@@ -409,7 +409,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const deleteSpace = (id: string) => deleteGenericEntityWithUsageCheck('spaces', id, "Espacio eliminado.", "Error al eliminar el espacio.", [{collection: 'sessions', field: 'spaceId'}]);
     
     const addTariff = (tariff: Omit<Tariff, 'id'>) => addGenericEntity('tariffs', tariff, "Arancel creado.", "Error al crear el arancel.");
-    const updateTariff = (tariff: Tariff) => updateGenericEntity('tariffs', tariff, "Arancel actualizado.", "Error al actualizar el arancel.");
+    const updateTariff = (tariff: Tariff) => updateGenericEntity('tariffs', tariff, "Arancel actualizado.", "Error al actualizar la arancel.");
     const deleteTariff = (id: string) => deleteGenericEntityWithUsageCheck('tariffs', id, "Arancel eliminado.", "Error al eliminar el arancel.", [{collection: 'people', field: 'tariffId'}]);
     
     const addOperator = (operator: Omit<Operator, 'id'>) => addGenericEntity('operators', operator, "Operador creado.", "Error al crear operador.");
