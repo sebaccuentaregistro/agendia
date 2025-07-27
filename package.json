@@ -1,6 +1,6 @@
 {
   "name": "agendia",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "Forcing a dependency refresh to resolve a module resolution error.",
   "scripts": {
