@@ -21,9 +21,10 @@ import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { PersonCard } from '@/components/students/person-card';
+import { StudentFilters } from '@/components/students/student-filters';
 
 function StudentsPageContent() {
-  const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson } = useStudio();
+  const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson, sessions } = useStudio();
   const { institute, isLimitReached, setPeopleCount } = useAuth();
   const [isPersonDialogOpen, setIsPersonDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,6 +35,9 @@ function StudentsPageContent() {
   const statusFilterFromUrl = searchParams.get('filter') || 'all';
   const initialTab = statusFilterFromUrl === 'inactive' ? 'inactive' : 'active';
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [actividadFilter, setActividadFilter] = useState('all');
+  const [specialistFilter, setSpecialistFilter] = useState('all');
+  const [spaceFilter, setSpaceFilter] = useState('all');
 
   const [personForWelcome, setPersonForWelcome] = useState<Person | null>(null);
   
@@ -78,10 +82,25 @@ function StudentsPageContent() {
         });
         tempRecoveryCreditsMap[person.id] = Math.max(0, credits - used);
     });
-
-    people
+    
+    const activePeopleFiltered = people
       .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
-      .forEach(person => {
+      .filter(person => {
+        if (actividadFilter === 'all' && specialistFilter === 'all' && spaceFilter === 'all') {
+            return true;
+        }
+        const personSessionIds = sessions.filter(s => s.personIds.includes(person.id)).map(s => s.id);
+        if (personSessionIds.length === 0) return false;
+        
+        return sessions.some(session => 
+            personSessionIds.includes(session.id) &&
+            (actividadFilter === 'all' || session.actividadId === actividadFilter) &&
+            (specialistFilter === 'all' || session.instructorId === specialistFilter) &&
+            (spaceFilter === 'all' || session.spaceId === spaceFilter)
+        );
+      });
+
+    activePeopleFiltered.forEach(person => {
         const status = getStudentPaymentStatus(person, now).status;
         if (status === 'Atrasado') {
           overdue.push(person);
@@ -97,7 +116,7 @@ function StudentsPageContent() {
         .sort((a,b) => (a.inactiveDate && b.inactiveDate) ? b.inactiveDate.getTime() - a.inactiveDate.getTime() : a.name.localeCompare(b.name));
       
     return { groupedPeople: { overdue, upcoming, onTime }, filteredInactivePeople: finalFilteredInactivePeople, recoveryCreditsMap: tempRecoveryCreditsMap };
-  }, [people, inactivePeople, searchTerm, isMounted, attendance]);
+  }, [people, inactivePeople, searchTerm, isMounted, attendance, sessions, actividadFilter, specialistFilter, spaceFilter]);
 
    const handleExport = () => {
     const dataToExport = people.map(p => ({
@@ -199,16 +218,19 @@ function StudentsPageContent() {
                     <TabsTrigger value="active">Activos ({people.length})</TabsTrigger>
                     <TabsTrigger value="inactive">Inactivos ({inactivePeople.length})</TabsTrigger>
                 </TabsList>
-                 <div className="relative w-full sm:max-w-xs">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                        placeholder="Buscar por nombre..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-10 w-full bg-background border-border shadow-sm rounded-xl"
-                    />
-                </div>
             </div>
+            
+            <StudentFilters 
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                actividadFilter={actividadFilter}
+                setActividadFilter={setActividadFilter}
+                specialistFilter={specialistFilter}
+                setSpecialistFilter={setSpecialistFilter}
+                spaceFilter={spaceFilter}
+                setSpaceFilter={setSpaceFilter}
+            />
+
             <TabsContent value="active" className="mt-6">
                 {loading ? (
                     <div className="space-y-8">

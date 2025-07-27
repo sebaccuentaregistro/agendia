@@ -49,7 +49,7 @@ export function StudentFilters({
               <SelectValue placeholder="Actividad" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Actividad</SelectItem>
+              <SelectItem value="all">Todas las Actividades</SelectItem>
               {actividades.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
                   {a.name}
@@ -62,7 +62,7 @@ export function StudentFilters({
               <SelectValue placeholder="Especialista" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Especialista</SelectItem>
+              <SelectItem value="all">Todos los Especialistas</SelectItem>
               {specialists.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.name}
@@ -75,7 +75,7 @@ export function StudentFilters({
               <SelectValue placeholder="Espacio" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Espacio</SelectItem>
+              <SelectItem value="all">Todos los Espacios</SelectItem>
               {spaces.map((s) => (
                 <SelectItem key={s.id} value={s.id}>
                   {s.name}
