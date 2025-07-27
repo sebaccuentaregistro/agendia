@@ -191,3 +191,4 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
         </Card>
     );
 }
+
