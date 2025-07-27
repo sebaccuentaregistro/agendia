@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -49,15 +48,20 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
         
         const isCancelled = attendanceRecord?.status === 'cancelled';
         
+        const finalDailyStats = {
+            enrolledCount: dailyOccupancy,
+            capacity: spaceCapacity,
+            utilization: dailyUtilization,
+            vacationingCount,
+            oneTimeAttendeesCount
+        };
+
+        // DEBUG LOG
+        console.log(`[DEBUG] Card: ${structuralData.actividad?.name} at ${session.time}`, { dailyStats: finalDailyStats, isCancelledToday: isCancelled });
+
         return {
             ...structuralData,
-            dailyStats: {
-                enrolledCount: dailyOccupancy,
-                capacity: spaceCapacity,
-                utilization: dailyUtilization,
-                vacationingCount,
-                oneTimeAttendeesCount
-            },
+            dailyStats: finalDailyStats,
             isCancelledToday: isCancelled,
         };
     }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, today]);
