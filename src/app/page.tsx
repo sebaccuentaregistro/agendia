@@ -50,7 +50,6 @@ function DashboardPageContent() {
   const [selectedSessionForStudents, setSelectedSessionForStudents] = useState<Session | null>(null);
   const [sessionForAttendance, setSessionForAttendance] = useState<Session | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
   const [isUpdatingDebts, setIsUpdatingDebts] = useState(false);
   const [isWaitlistSheetOpen, setIsWaitlistSheetOpen] = useState(false);
   const [isRemindersSheetOpen, setIsRemindersSheetOpen] = useState(false);
@@ -315,20 +314,14 @@ function DashboardPageContent() {
   };
   
   const managementCards = [
-    { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, count: specialists.length, description: "Gestiona instructores y sus actividades." },
-    { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, count: actividades.length, description: "Define los tipos de clases que ofreces." },
-    { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, count: spaces.length, description: "Administra las salas y sus capacidades." },
-    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, count: tariffs.length, description: "Configura tus planes de precios." },
-    { id: 'advanced', href: "/?view=advanced", label: "Gestión Avanzada", icon: Settings, count: null, description: "Controla finanzas, operadores y más." },
-  ];
-  
-  const advancedCards = [
-     { id: 'collectionPercentage', href: "/students?filter=overdue", label: "Cobranza", icon: Percent, value: `${collectionPercentage.toFixed(0)}%`, count: null, colorClass: "purple" },
-     { id: 'totalDebt', href: "/students?filter=overdue", label: "Deuda Total", icon: Landmark, value: formatPrice(totalDebt), count: null, colorClass: totalDebt > 0 ? "red" : "purple" },
-     { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, count: operators.length, colorClass: "purple" },
-     { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, count: payments.length, colorClass: "purple" },
-     { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, count: null, colorClass: "purple" },
-     { id: 'activity-log', href: "/activitylog", label: "Registro Actividad", icon: ListChecks, count: null, colorClass: "purple" },
+    { id: 'instructors', href: "/instructors", label: "Especialistas", icon: ClipboardList, description: "Gestiona instructores y sus actividades." },
+    { id: 'specializations', href: "/specializations", label: "Actividades", icon: Star, description: "Define los tipos de clases que ofreces." },
+    { id: 'spaces', href: "/spaces", label: "Espacios", icon: Warehouse, description: "Administra las salas y sus capacidades." },
+    { id: 'tariffs', href: "/tariffs", label: "Aranceles", icon: DollarSign, description: "Configura tus planes de precios." },
+    { id: 'payments', href: "/payments", label: "Pagos", icon: Banknote, description: "Analiza y gestiona los ingresos.", requiresPin: true },
+    { id: 'statistics', href: "/statistics", label: "Estadísticas", icon: LineChart, description: "Métricas clave de tu negocio.", requiresPin: true },
+    { id: 'operators', href: "/operators", label: "Operadores", icon: KeyRound, description: "Gestiona el acceso de tu equipo.", requiresPin: true },
+    { id: 'activity-log', href: "/activitylog", label: "Registro Actividad", icon: ListChecks, description: "Audita acciones importantes.", requiresPin: true },
   ];
 
 
@@ -360,11 +353,11 @@ function DashboardPageContent() {
       {dashboardView !== 'main' && (
         <Button 
           variant="outline" 
-          onClick={() => router.push(dashboardView === 'advanced' ? '/?view=management' : '/')} 
+          onClick={() => router.push('/')} 
           className="mb-4"
         >
             <ArrowLeft className="mr-2 h-4 w-4" /> 
-            {dashboardView === 'advanced' ? 'Volver a Gestión' : 'Volver al Inicio'}
+            Volver al Inicio
         </Button>
       )}
 
@@ -424,69 +417,34 @@ function DashboardPageContent() {
       )}
 
       {dashboardView === 'management' && (
-         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3">
+         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {managementCards.map((card) => (
-                <Link key={card.id} href={card.href}>
-                    <Card className="group relative flex flex-col p-4 bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-primary/50">
+                <Link key={card.id} href={card.href} className="group">
+                    <Card className="relative flex flex-col p-4 bg-card rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-transparent hover:border-primary/50 h-full">
+                         {card.requiresPin && (
+                            <KeyRound className="absolute top-2 right-2 h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                         )}
                         <div className="flex items-center gap-4">
                             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                                 <card.icon className="h-5 w-5" />
                             </div>
                             <div className="flex-1">
                                 <CardTitle className="text-base font-semibold text-foreground">{card.label}</CardTitle>
-                                {card.count !== null && <p className="text-2xl font-bold text-foreground">{card.count}</p>}
                             </div>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-2">{card.description}</p>
+                        <p className="text-xs text-muted-foreground mt-2 flex-grow">{card.description}</p>
                     </Card>
                 </Link>
             ))}
-        </div>
-      )}
-
-      {dashboardView === 'advanced' && isPinVerified && (
-        <div className="space-y-8">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-                {advancedCards.map((card) => (
-                    <Link key={card.id} href={card.href}>
-                        <Card className="group relative flex flex-col items-center justify-center p-2 text-center bg-card rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 aspect-square overflow-hidden border-2 border-transparent hover:border-primary/50">
-                            <div className="flex h-8 w-8 mb-1 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                <card.icon className="h-4 w-4" />
-                            </div>
-                            <CardTitle className="text-lg font-semibold text-foreground">{card.label}</CardTitle>
-                             {card.value ? 
-                                <p className="text-2xl font-bold text-foreground">{card.value}</p> :
-                                card.count !== null && <p className="text-2xl font-bold text-foreground">{card.count}</p>
-                             }
-                        </Card>
-                    </Link>
-                ))}
-            </div>
-            <div className="flex justify-end">
-                <Button onClick={handleUpdateDebts} disabled={isUpdatingDebts}>
-                    {isUpdatingDebts && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <Card className="relative flex flex-col p-4 bg-card rounded-2xl shadow-lg border-2 border-dashed h-full items-center justify-center hover:border-primary transition-colors">
+                <Button variant="ghost" onClick={handleUpdateDebts} disabled={isUpdatingDebts}>
+                     {isUpdatingDebts && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Actualizar Deudas
                 </Button>
-            </div>
+            </Card>
         </div>
       )}
-
-       {dashboardView === 'advanced' && !isPinVerified && (
-           <Card className="flex flex-col items-center justify-center p-12 text-center">
-                <CardHeader>
-                    <CardTitle>Acceso Restringido</CardTitle>
-                    <CardContent>
-                        <p className="mb-4">Necesitas tu PIN de propietario para acceder a esta sección.</p>
-                        <Button onClick={() => setIsPinDialogOpen(true)}>
-                            Verificar PIN
-                        </Button>
-                    </CardContent>
-                </CardHeader>
-           </Card>
-        )}
     
-      <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => { setPinVerified(true); router.push('/?view=advanced'); }} />
-      
       {selectedSessionForStudents && (
          <EnrolledStudentsSheet 
             session={selectedSessionForStudents}

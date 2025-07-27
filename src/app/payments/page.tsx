@@ -124,9 +124,9 @@ function PaymentsPageContent() {
                 <PinDialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen} onPinVerified={() => setPinVerified(true)} />
                 <div className="flex justify-start">
                     <Button variant="outline" asChild>
-                        <Link href="/?view=advanced">
+                        <Link href="/?view=management">
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Volver a Gestión Avanzada
+                            Volver a Gestión
                         </Link>
                     </Button>
                 </div>
@@ -152,9 +152,9 @@ function PaymentsPageContent() {
         <div className="space-y-8">
             <div className="flex justify-start">
                  <Button variant="outline" asChild>
-                    <Link href="/?view=advanced">
+                    <Link href="/?view=management">
                         <ArrowLeft className="mr-2 h-4 w-4" />
-                        Volver a Gestión Avanzada
+                        Volver a Gestión
                     </Link>
                 </Button>
             </div>

@@ -8,7 +8,7 @@ El acceso a estas funciones te permite tener un control total sobre la seguridad
 
 ### 4.1. Acceso a Gestión Avanzada
 
-*   **Cómo acceder:** En la pantalla de `Inicio`, haz clic en la tarjeta de `Gestión`. Dentro, verás una tarjeta especial llamada `Gestión Avanzada`. Al hacer clic, el sistema te pedirá tu PIN de 4 dígitos.
+*   **Cómo acceder:** En la pantalla de `Inicio`, haz clic en la tarjeta de `Gestión`. Las secciones que requieren un nivel de seguridad mayor estarán marcadas con un ícono de candado (o similar). Al hacer clic en una de ellas por primera vez en una sesión, el sistema te pedirá tu PIN de 4 dígitos.
 *   **¿Qué es el PIN de Propietario?** Es una clave de seguridad que garantiza que solo tú puedas acceder a las funciones más sensibles.
 
 ---
@@ -37,8 +37,6 @@ Aquí puedes crear y gestionar los perfiles de los miembros de tu equipo que usa
 *   **Registro de Actividad:** Un historial completo de todas las acciones importantes realizadas en la aplicación (quién registró un pago, quién eliminó una persona, etc.). Esto proporciona total transparencia y control sobre las operaciones de tu estudio.
 
 #### **Cobranza y Deuda**
-*   **Cobranza (%):** Un indicador que muestra el porcentaje de los ingresos potenciales que has logrado recaudar en el mes actual.
-*   **Deuda Total:** La suma total del dinero pendiente de cobro de todos los alumnos con estado "Atrasado".
-*   **Actualizar Deudas:** Un botón que recalcula y actualiza el estado de todos los alumnos, útil para asegurarse de que los datos de deuda estén siempre al día.
+*   **Actualizar Deudas:** Un botón en el panel de Gestión que recalcula y actualiza el estado de todos los alumnos, útil para asegurarse de que los datos de deuda estén siempre al día.
 
 El uso de estas herramientas te dará una visión profunda y un control robusto sobre la salud y la seguridad de tu negocio.
