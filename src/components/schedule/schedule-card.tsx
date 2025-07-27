@@ -87,8 +87,8 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
     const isDailyFull = dailyStats.enrolledCount >= dailyStats.capacity;
     
     const stats = isDailyView ? dailyStats : structuralStats;
-    const displayStats = isDailyView ? dailyStats : dailyStats;
-    const progressColorClass = getProgressColorClass(displayStats.utilization);
+    
+    const progressColorClass = getProgressColorClass(dailyStats.utilization);
     
     return (
         <Card className={cn("flex flex-col bg-white/40 dark:bg-zinc-900/40 backdrop-blur-xl rounded-2xl shadow-lg border-white/20 transition-all duration-300 hover:shadow-xl hover:-translate-y-1", isCancelledToday && "border-destructive/30")}>
@@ -153,10 +153,10 @@ export function ScheduleCard({ session, view = 'structural', isRecoveryMode = fa
                   tabIndex={0}
                 >
                     <div className="flex justify-between items-center text-xs font-semibold">
-                        <span className="text-muted-foreground">{isDailyView ? 'Ocupación de Hoy' : 'Ocupación de Hoy'}</span>
-                        <span className="text-foreground">{`${displayStats.enrolledCount} / ${displayStats.capacity}`}</span>
+                        <span className="text-muted-foreground">Ocupación de Hoy</span>
+                        <span className="text-foreground">{`${dailyStats.enrolledCount} / ${dailyStats.capacity}`}</span>
                     </div>
-                    <Progress value={displayStats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
+                    <Progress value={dailyStats.utilization} indicatorClassName={progressColorClass} className="h-1.5" />
                 </div>
                 { (dailyStats.vacationingCount > 0 || dailyStats.oneTimeAttendeesCount > 0) &&
                     <div 
