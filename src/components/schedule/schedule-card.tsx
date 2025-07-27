@@ -28,7 +28,7 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
     const today = startOfDay(new Date());
     const dateStr = format(today, 'yyyy-MM-dd');
 
-    const { specialist, actividad, space, dailyStats, isCancelledToday } = useMemo(() => {
+    const { specialist, actividad, space, dailyStats, isCancelledToday, debugInfo } = useMemo(() => {
         const structuralData = {
             specialist: specialists.find((i) => i.id === session.instructorId),
             actividad: actividades.find((s) => s.id === session.actividadId),
@@ -56,10 +56,19 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
             oneTimeAttendeesCount
         };
 
+        const debugData = {
+          dateUsed: dateStr,
+          attendanceRecordFound: !!attendanceRecord,
+          oneTimeAttendeesCount: oneTimeAttendeesCount,
+          vacationingCount: vacationingCount,
+          finalEnrolledCount: dailyOccupancy
+        }
+
         return {
             ...structuralData,
             dailyStats: finalDailyStats,
             isCancelledToday: isCancelled,
+            debugInfo: debugData
         };
     }, [session, specialists, actividades, spaces, attendance, people, isPersonOnVacation, dateStr, today]);
 
@@ -132,6 +141,12 @@ export function ScheduleCard({ session }: ScheduleCardProps) {
                     <p className="flex items-center gap-2"><User className="h-4 w-4 text-slate-500" /> {specialist?.name}</p>
                     <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-slate-500" /> {space?.name}</p>
                 </div>
+                {/* --- VISUAL DEBUG BLOCK --- */}
+                <div className="bg-red-500/20 text-red-800 dark:text-red-200 text-xs p-2 rounded-md font-mono">
+                    <p className="font-bold">[DEBUG]</p>
+                    <pre><code>{JSON.stringify(debugInfo, null, 2)}</code></pre>
+                </div>
+                 {/* --- END VISUAL DEBUG BLOCK --- */}
             </CardContent>
              <CardFooter className="flex flex-col gap-2 border-t border-white/20 p-2 mt-auto">
                 <div 
