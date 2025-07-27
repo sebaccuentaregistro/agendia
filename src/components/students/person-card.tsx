@@ -12,14 +12,15 @@ import { CalendarClock, Plane, Heart } from 'lucide-react';
 import type { Person, Tariff, PaymentStatusInfo } from '@/types';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
+type RecoveryStatus = 'none' | 'pending' | 'scheduled';
 
 interface PersonCardProps {
     person: Person;
     tariff?: Tariff;
-    recoveryCreditsCount: number;
+    recoveryStatus: RecoveryStatus;
 }
 
-export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardProps) {
+export function PersonCard({ person, tariff, recoveryStatus }: PersonCardProps) {
     const { isPersonOnVacation } = useStudio();
     const paymentStatusInfo = getStudentPaymentStatus(person, new Date());
     const onVacation = isPersonOnVacation(person, new Date());
@@ -57,6 +58,18 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
 
     const totalDebt = (tariff?.price || 0) * (person.outstandingPayments || 0);
     
+    const getRecoveryTooltipContent = () => {
+        if (recoveryStatus === 'scheduled') return "Tiene un recupero agendado";
+        if (recoveryStatus === 'pending') return "Tiene créditos de recupero pendientes";
+        return "";
+    };
+
+    const getRecoveryIconColor = () => {
+        if (recoveryStatus === 'scheduled') return "text-blue-600 dark:text-blue-400";
+        if (recoveryStatus === 'pending') return "text-amber-600 dark:text-amber-500";
+        return "text-muted-foreground";
+    };
+
     return (
         <Link href={`/students/${person.id}`} className="block">
             <Card className="flex flex-col h-full rounded-2xl shadow-lg border-border/20 bg-card transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-primary">
@@ -84,13 +97,13 @@ export function PersonCard({ person, tariff, recoveryCreditsCount }: PersonCardP
                                     <TooltipContent><p>De vacaciones</p></TooltipContent>
                                  </Tooltip>
                                )}
-                               {recoveryCreditsCount > 0 && (
+                               {recoveryStatus !== 'none' && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
-                                        <div className="h-4 w-4 text-amber-600"><CalendarClock className="h-4 w-4"/></div>
+                                        <div className={cn("h-4 w-4", getRecoveryIconColor())}><CalendarClock className="h-4 w-4"/></div>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>{recoveryCreditsCount} recupero(s) pendiente(s)</p>
+                                        <p>{getRecoveryTooltipContent()}</p>
                                     </TooltipContent>
                                 </Tooltip>
                                )}

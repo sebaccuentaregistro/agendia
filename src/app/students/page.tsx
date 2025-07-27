@@ -5,7 +5,7 @@
 import React, { useState, useMemo, useEffect, Suspense, Fragment } from 'react';
 import { PageHeader } from '@/components/page-header';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, FileDown, Search, AlertCircle, Clock, CheckCircle, ChevronDown, UserX } from 'lucide-react';
+import { PlusCircle, FileDown, Search, AlertCircle, Clock, CheckCircle, ChevronDown, UserX, CalendarClock } from 'lucide-react';
 import type { Person, PaymentReminderInfo, Tariff, SessionAttendance } from '@/types';
 import { useStudio } from '@/context/StudioContext';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -23,6 +23,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format, isAfter, parse, startOfDay } from 'date-fns';
 import { PersonCard } from '@/components/students/person-card';
 import { StudentFilters } from '@/components/students/student-filters';
+
+type RecoveryStatus = 'none' | 'pending' | 'scheduled';
 
 function StudentsPageContent() {
   const { people, inactivePeople, tariffs, attendance, loading, reactivatePerson, sessions } = useStudio();
@@ -62,18 +64,38 @@ function StudentsPageContent() {
     }
   }, [searchParams]);
 
-  const { groupedPeople, filteredInactivePeople, recoveryCreditsMap } = useMemo(() => {
-    if (!isMounted) return { groupedPeople: { overdue: [], upcoming: [], onTime: [] }, filteredInactivePeople: [], recoveryCreditsMap: {} };
+  const { groupedPeople, filteredInactivePeople, recoveryStatusMap } = useMemo(() => {
+    if (!isMounted) return { groupedPeople: { overdue: [], upcoming: [], onTime: [] }, filteredInactivePeople: [], recoveryStatusMap: {} };
     
     const now = new Date();
     const today = startOfDay(now);
     const term = searchTerm.toLowerCase();
 
-    const tempRecoveryCreditsMap: Record<string, number> = {};
-    people.forEach(person => {
-        const credits = (person.recoveryCredits || []).filter(c => c.status === 'available').length;
-        tempRecoveryCreditsMap[person.id] = credits;
+    // --- Start of Recovery Status Logic ---
+    const tempRecoveryStatusMap: Record<string, RecoveryStatus> = {};
+    const futureRecoveries = new Set<string>();
+
+    // 1. Find all people with a scheduled recovery in the future
+    attendance.forEach(record => {
+        const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
+        if (!isBefore(recordDate, today)) {
+            record.oneTimeAttendees?.forEach(id => futureRecoveries.add(id));
+        }
     });
+
+    people.forEach(person => {
+        const hasAvailableCredits = (person.recoveryCredits || []).some(c => c.status === 'available');
+        const hasFutureRecovery = futureRecoveries.has(person.id);
+
+        if (hasFutureRecovery) {
+            tempRecoveryStatusMap[person.id] = 'scheduled';
+        } else if (hasAvailableCredits) {
+            tempRecoveryStatusMap[person.id] = 'pending';
+        } else {
+            tempRecoveryStatusMap[person.id] = 'none';
+        }
+    });
+    // --- End of Recovery Status Logic ---
 
     let filteredActivePeople = people;
 
@@ -83,18 +105,9 @@ function StudentsPageContent() {
         if (filterParam === 'overdue') {
             filteredActivePeople = people.filter(p => getStudentPaymentStatus(p, now).status === 'Atrasado');
         } else if (filterParam === 'pending-recovery') {
-            const futureRecoveries = new Set<string>();
-            attendance.forEach(record => {
-                const recordDate = parse(record.date, 'yyyy-MM-dd', new Date());
-                if (isAfter(recordDate, today) || recordDate.getTime() === today.getTime()) {
-                    record.oneTimeAttendees?.forEach(id => futureRecoveries.add(id));
-                }
-            });
-
             filteredActivePeople = people.filter(p => {
-                const hasAvailableCredits = (p.recoveryCredits || []).some(c => c.status === 'available');
-                const hasFutureRecovery = futureRecoveries.has(p.id);
-                return hasAvailableCredits || hasFutureRecovery;
+                const status = tempRecoveryStatusMap[p.id];
+                return status === 'pending' || status === 'scheduled';
             });
         }
     }
@@ -137,7 +150,7 @@ function StudentsPageContent() {
         .filter(person => person.name.toLowerCase().includes(term) || person.phone.includes(term))
         .sort((a,b) => (a.inactiveDate && b.inactiveDate) ? b.inactiveDate.getTime() - a.inactiveDate.getTime() : a.name.localeCompare(b.name));
       
-    return { groupedPeople: { overdue, upcoming, onTime }, filteredInactivePeople: finalFilteredInactivePeople, recoveryCreditsMap: tempRecoveryCreditsMap };
+    return { groupedPeople: { overdue, upcoming, onTime }, filteredInactivePeople: finalFilteredInactivePeople, recoveryStatusMap: tempRecoveryStatusMap };
   }, [people, inactivePeople, searchTerm, isMounted, attendance, sessions, actividadFilter, specialistFilter, spaceFilter, searchParams]);
 
    const handleExport = () => {
@@ -176,13 +189,13 @@ function StudentsPageContent() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {groupPeople.map((person) => {
                 const tariff = tariffs.find(t => t.id === person.tariffId);
-                const recoveryCreditsCount = recoveryCreditsMap[person.id] || 0;
+                const recoveryStatus = recoveryStatusMap[person.id] || 'none';
                 return (
                  <PersonCard
                     key={person.id}
                     person={person}
                     tariff={tariff}
-                    recoveryCreditsCount={recoveryCreditsCount}
+                    recoveryStatus={recoveryStatus}
                   />
                 );
               })}
