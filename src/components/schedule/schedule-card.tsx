@@ -9,8 +9,8 @@ import { Progress } from '@/components/ui/progress';
 import { useStudio } from '@/context/StudioContext';
 import { cn } from '@/lib/utils';
 import { MoreHorizontal, User, MapPin, Signal, Pencil, Trash2, Users, ClipboardCheck, ListPlus, Bell, CalendarClock, UserPlus, XCircle, RefreshCw } from 'lucide-react';
-import type { Session, Person, SessionAttendance, Day } from '@/types';
-import { format, isAfter, startOfDay, subMinutes, isToday, nextDay } from 'date-fns';
+import type { Session, Person, SessionAttendance } from '@/types';
+import { format, isAfter, startOfDay, subMinutes, isToday, nextDay, type Day } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 interface ScheduleCardProps {

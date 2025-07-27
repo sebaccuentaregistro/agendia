@@ -15,7 +15,7 @@ import { useStudio } from '@/context/StudioContext';
 import { Person, Session } from '@/types';
 import { cn } from '@/lib/utils';
 import { CalendarIcon } from 'lucide-react';
-import { format, nextDay, addDays, isPast, Day, startOfDay } from 'date-fns';
+import { format, nextDay, addDays, isPast, startOfDay, type Day } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
